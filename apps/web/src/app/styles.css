@@ -1,0 +1,21 @@
+:root {
+  color: #102a43;
+  background: #f7fafc;
+  font-family: "Noto Sans Thai", "Leelawadee UI", system-ui, sans-serif;
+  scrollbar-color: #0b7285 #d9e2ec;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+button, input, textarea, select { font: inherit; }
+:focus-visible { outline: 3px solid #0f9d8a; outline-offset: 3px; }
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-thumb { background: #0b7285; border: 3px solid #f7fafc; border-radius: 8px; }
+::-webkit-scrollbar-track { background: #d9e2ec; }
+
+.welcome-shell { display: grid; min-height: 100dvh; place-items: center; padding: 24px; }
+.welcome-panel { width: min(100%, 720px); border: 1px solid #d9e2ec; border-left: 7px solid #0b7285; border-radius: 12px; background: #fff; padding: clamp(32px, 8vw, 72px); }
+.eyebrow { margin: 0 0 12px; color: #0b7285; font-size: .875rem; font-weight: 700; letter-spacing: .04em; }
+h1 { margin: 0; font-size: clamp(2rem, 6vw, 3.75rem); line-height: 1.15; }
+.welcome-copy { max-width: 46ch; margin: 20px 0 0; font-size: 1.125rem; line-height: 1.8; }
+.welcome-status { display: inline-block; margin: 28px 0 0; border-radius: 8px; background: #e6fffa; color: #075e54; padding: 10px 14px; font-weight: 700; }

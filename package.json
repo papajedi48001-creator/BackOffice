@@ -1,0 +1,17 @@
+{
+  "name": "waritch-hospital-back-office",
+  "private": true,
+  "packageManager": "pnpm@11.19.0",
+  "scripts": {
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "test:integration": "pnpm -r test:integration",
+    "build": "pnpm --filter @backoffice/web build && pnpm --filter @backoffice/worker build",
+    "dev:infra": "docker compose -f infra/compose/docker-compose.dev.yml up -d"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.0"
+  }
+}
