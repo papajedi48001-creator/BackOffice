@@ -1,0 +1,20 @@
+name: Build release images
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['r0-*']
+
+jobs:
+  image-policy:
+    runs-on: ubuntu-24.04
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require approved production deployment outside CI
+        run: |
+          echo "This workflow produces candidate images only. Production deployment requires Data Owner approval, a successful backup, migration, health check, and smoke test through the runbook."
+      - name: Build images when Dockerfiles are supplied by the release pipeline
+        run: |
+          test -n "${GITHUB_SHA}"
+          echo "Release image build is delegated to the approved internal registry pipeline; do not deploy from this workflow."
