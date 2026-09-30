@@ -3,3 +3,8 @@ export * from './crypto/national-id';
 export * from './hr/organization-service';
 export * from './hr/person-service';
 export * from './identity/auth-service';
+export * from './access/delegation-service';
+export * from './workflow/request-service';
+export * from './workflow/approval-service';
+export * from './workflow/database-workflow-repository';
+export * from './audit/audit-service';
