@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server';
 import { createDatabase } from '@backoffice/db';
 import { AuditService, AuthorizationService, ExportService } from '@backoffice/core';
 import { requireAuthorized } from '../../../lib/require-authorized';
+import { readRuntimeValue } from '../../../lib/runtime-env';
 
 export async function POST(request: Request): Promise<Response> {
-  const databaseUrl = process.env.DATABASE_URL;
+  const databaseUrl = readRuntimeValue('DATABASE_URL');
   if (!databaseUrl) return NextResponse.json({ error: 'service_unavailable' }, { status: 503 });
   try {
     const session = await requireAuthorized(request);

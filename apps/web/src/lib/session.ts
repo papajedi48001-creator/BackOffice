@@ -1,10 +1,11 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { accessSubjectSchema, type Session } from '@backoffice/contracts';
+import { readRuntimeValue } from './runtime-env';
 
 const cookieName = 'backoffice_session';
 
 function sessionSecret(): string {
-  const configuredSecret = process.env.BACKOFFICE_SESSION_SECRET;
+  const configuredSecret = readRuntimeValue('BACKOFFICE_SESSION_SECRET');
   if (configuredSecret) return configuredSecret;
   if (process.env.NODE_ENV === 'production') throw new Error('BACKOFFICE_SESSION_SECRET is required in production');
   return 'development-session-secret-change-before-deployment';

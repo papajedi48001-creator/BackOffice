@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createDatabase } from '@backoffice/db';
 import { LocalAuthService, type LocalAccountRepository } from '@backoffice/core';
 import { createSessionToken, sessionCookieName } from '../../../../lib/session';
+import { readRuntimeValue } from '../../../../lib/runtime-env';
 
 class DatabaseLocalAccountRepository implements LocalAccountRepository {
   constructor(private readonly database: ReturnType<typeof createDatabase>) {}
@@ -14,7 +15,7 @@ class DatabaseLocalAccountRepository implements LocalAccountRepository {
 export async function POST(request: Request): Promise<Response> {
   try {
     const body = await request.json();
-    const databaseUrl = process.env.DATABASE_URL;
+    const databaseUrl = readRuntimeValue('DATABASE_URL');
     if (!databaseUrl) return NextResponse.json({ error: 'service_unavailable' }, { status: 503 });
     const database = createDatabase(databaseUrl);
     try {

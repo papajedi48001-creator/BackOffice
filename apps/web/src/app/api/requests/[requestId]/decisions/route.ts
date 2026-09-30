@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createDatabase } from '@backoffice/db';
 import { ApprovalService, DatabaseWorkflowRepository, type ActiveDelegationFinder } from '@backoffice/core';
 import { requireAuthorized } from '../../../../../lib/require-authorized';
+import { readRuntimeValue } from '../../../../../lib/runtime-env';
 
 class DatabaseActiveDelegationFinder implements ActiveDelegationFinder {
   constructor(private readonly database: ReturnType<typeof createDatabase>) {}
@@ -12,7 +13,7 @@ class DatabaseActiveDelegationFinder implements ActiveDelegationFinder {
 }
 
 export async function POST(request: Request, context: { params: Promise<{ requestId: string }> }): Promise<Response> {
-  const databaseUrl = process.env.DATABASE_URL;
+  const databaseUrl = readRuntimeValue('DATABASE_URL');
   if (!databaseUrl) return NextResponse.json({ error: 'service_unavailable' }, { status: 503 });
   try {
     const session = await requireAuthorized(request);
