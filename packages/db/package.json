@@ -1,5 +1,14 @@
 {
   "name": "@backoffice/db",
   "private": true,
-  "scripts": { "lint": "eslint src", "typecheck": "tsc --noEmit", "test": "node -e \"\"", "test:integration": "node -e \"\"" }
+  "type": "module",
+  "scripts": { "lint": "eslint src", "typecheck": "tsc --noEmit", "test": "vitest run", "test:integration": "vitest run --config vitest.integration.config.ts", "migrate": "node --experimental-strip-types src/migrate-cli.ts" },
+  "dependencies": {
+    "drizzle-orm": "^0.44.7",
+    "mysql2": "^3.14.4"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "drizzle-kit": "^0.31.4"
+  }
 }

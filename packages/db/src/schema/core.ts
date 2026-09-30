@@ -1,0 +1,4 @@
+import { datetime, mysqlTable, varchar } from 'drizzle-orm/mysql-core';
+export const organizations = mysqlTable('organization', { id: varchar('id', { length: 36 }).primaryKey(), name: varchar('name', { length: 255 }).notNull(), createdAt: datetime('created_at', { mode: 'date' }).notNull() });
+export const sites = mysqlTable('site', { id: varchar('id', { length: 36 }).primaryKey(), organizationId: varchar('organization_id', { length: 36 }).notNull(), name: varchar('name', { length: 255 }).notNull(), createdAt: datetime('created_at', { mode: 'date' }).notNull() });
+export const locations = mysqlTable('location', { id: varchar('id', { length: 36 }).primaryKey(), siteId: varchar('site_id', { length: 36 }).notNull(), name: varchar('name', { length: 255 }).notNull(), createdAt: datetime('created_at', { mode: 'date' }).notNull() });
