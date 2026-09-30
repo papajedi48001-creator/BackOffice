@@ -8,3 +8,8 @@ export * from './workflow/request-service';
 export * from './workflow/approval-service';
 export * from './workflow/database-workflow-repository';
 export * from './audit/audit-service';
+export * from './files/attachment-service';
+export * from './files/scan-service';
+export * from './exports/export-service';
+export * from './outbox/outbox-service';
+export * from './notifications/notification-service';

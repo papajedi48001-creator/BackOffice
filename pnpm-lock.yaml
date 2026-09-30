@@ -59,6 +59,10 @@ importers:
         version: 3.2.7(@types/node@24.19.0)(jsdom@27.4.0)(tsx@4.23.15)
 
   apps/worker:
+    dependencies:
+      '@backoffice/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
     devDependencies:
       '@types/node':
         specifier: ^24.0.0
