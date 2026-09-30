@@ -1,5 +1,15 @@
 {
   "name": "@backoffice/core",
   "private": true,
-  "scripts": { "lint": "eslint src", "typecheck": "tsc --noEmit", "test": "node -e \"\"", "test:integration": "node -e \"\"" }
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "lint": "eslint src", "typecheck": "tsc --noEmit", "test": "vitest run --config vitest.config.ts", "test:integration": "node -e \"\"" },
+  "dependencies": {
+    "@backoffice/contracts": "workspace:*",
+    "@backoffice/db": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "vitest": "^3.2.0"
+  }
 }

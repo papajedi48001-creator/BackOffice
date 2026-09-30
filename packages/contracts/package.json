@@ -1,5 +1,10 @@
 {
   "name": "@backoffice/contracts",
   "private": true,
-  "scripts": { "lint": "eslint src", "typecheck": "tsc --noEmit", "test": "node -e \"\"", "test:integration": "node -e \"\"" }
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "lint": "eslint src", "typecheck": "tsc --noEmit", "test": "node -e \"\"", "test:integration": "node -e \"\"" },
+  "dependencies": {
+    "zod": "^3.24.0"
+  }
 }

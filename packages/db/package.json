@@ -2,6 +2,7 @@
   "name": "@backoffice/db",
   "private": true,
   "type": "module",
+  "exports": { ".": "./src/index.ts" },
   "scripts": { "lint": "eslint src", "typecheck": "tsc --noEmit", "test": "vitest run", "test:integration": "vitest run --config vitest.integration.config.ts", "migrate": "node --experimental-strip-types src/migrate-cli.ts" },
   "dependencies": {
     "drizzle-orm": "^0.44.7",

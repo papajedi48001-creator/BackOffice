@@ -17,6 +17,15 @@ importers:
 
   apps/web:
     dependencies:
+      '@backoffice/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@backoffice/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@backoffice/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       next:
         specifier: ^16.0.0
         version: 16.3.6(@types/node@24.19.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -58,9 +67,27 @@ importers:
         specifier: ^3.2.0
         version: 3.2.7(@types/node@24.19.0)(jsdom@27.4.0)(tsx@4.23.15)
 
-  packages/contracts: {}
+  packages/contracts:
+    dependencies:
+      zod:
+        specifier: ^3.24.0
+        version: 3.25.76
 
-  packages/core: {}
+  packages/core:
+    dependencies:
+      '@backoffice/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@backoffice/db':
+        specifier: workspace:*
+        version: link:../db
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.19.0
+      vitest:
+        specifier: ^3.2.0
+        version: 3.2.7(@types/node@24.19.0)(jsdom@27.4.0)(tsx@4.23.15)
 
   packages/db:
     dependencies:
@@ -1717,6 +1744,9 @@ packages:
   xmlchars@2.2.0:
     resolution: {integrity: sha512-JZnDKK8B0RCDw84FNdDAIpZK+JuJw+s7Lz8nksI7SIuU3UXJJslUthsi+uWBUYOwPFwW7W7PRLRfUKpxjtjFCw==}
 
+  zod@3.25.76:
+    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+
 snapshots:
 
   '@acemir/cssom@0.9.31': {}
@@ -2951,3 +2981,5 @@ snapshots:
   xml-name-validator@5.0.0: {}
 
   xmlchars@2.2.0: {}
+
+  zod@3.25.76: {}
