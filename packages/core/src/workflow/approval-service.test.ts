@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ApprovalService } from './approval-service';
+import type { WorkflowRepository } from './request-service';
+import type { ApprovalStep } from '@backoffice/contracts';
 
 describe('ApprovalService', () => {
   it('rejects an approval by a delegate when the delegate is the requestor', async () => {
@@ -17,13 +19,13 @@ describe('ApprovalService', () => {
   });
 
   it('marks the pending approval step decided before emitting the outbox event', async () => {
-    const savedSteps: Array<{ status: string }> = [];
-    const repository: any = {
-      transaction: async (work: any) => work(repository),
+    const savedSteps: ApprovalStep[] = [];
+    const repository: WorkflowRepository = {
+      transaction: async (work) => work(repository),
       getRequest: async () => ({ id: 'request-1', reference: 'REQ-1', moduleCode: 'maintenance', requestorPersonId: 'person-a', organizationSnapshot: { organizationId: 'unit-a' }, status: 'IN_REVIEW' }),
       getSteps: async () => [{ id: 'step-1', requestId: 'request-1', sequence: 1, assigneeSnapshot: { personId: 'manager-a', organizationId: 'unit-a' }, status: 'PENDING' }],
       saveRequest: async () => undefined, saveDecision: async () => undefined, saveOutbox: async () => undefined,
-      saveStep: async (step: { status: string }) => { savedSteps.push(step); }
+      saveStep: async (step) => { savedSteps.push(step); }
     };
     const service = new ApprovalService(repository, { findActiveFor: async () => null }, () => 'decision-1');
 
