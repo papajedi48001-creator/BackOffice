@@ -78,6 +78,9 @@ importers:
       '@backoffice/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@backoffice/db':
+        specifier: workspace:*
+        version: link:../../packages/db
     devDependencies:
       '@types/node':
         specifier: ^24.0.0

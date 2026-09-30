@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "exports": { ".": "./src/index.ts" },
-  "scripts": { "lint": "eslint src", "typecheck": "tsc --noEmit", "test": "vitest run", "test:integration": "vitest run --config vitest.integration.config.ts", "migrate": "node --experimental-strip-types src/migrate-cli.ts" },
+  "scripts": { "lint": "eslint src", "typecheck": "tsc --noEmit", "test": "vitest run", "test:integration": "vitest run --config vitest.integration.config.ts", "migrate": "node --experimental-strip-types src/migrate-cli.ts", "seed:r0-e2e": "node --experimental-strip-types src/seed-r0-e2e-cli.ts" },
   "dependencies": {
     "drizzle-orm": "^0.44.7",
     "mysql2": "^3.14.4"
