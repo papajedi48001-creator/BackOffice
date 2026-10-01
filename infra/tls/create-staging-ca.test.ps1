@@ -12,6 +12,8 @@ $requiredSnippets = @(
   'backoffice-stg.waritch-hosp.moph.go.th',
   'root-ca.key.pem',
   'Output directory must be outside the repository',
+  '$candidates = @(',
+  'return $candidates[0]',
   'genrsa',
   'req',
   'x509',

@@ -14,10 +14,12 @@ $ErrorActionPreference = 'Stop'
 function Find-OpenSsl {
   $fromPath = Get-Command openssl -ErrorAction SilentlyContinue
   $candidates = @(
-    $fromPath.Source
-    'C:\Program Files\Git\usr\bin\openssl.exe'
-    'C:\Program Files\OpenSSL-Win64\bin\openssl.exe'
-  ) | Where-Object { $_ -and (Test-Path -LiteralPath $_) }
+    @(
+      $fromPath.Source
+      'C:\Program Files\Git\usr\bin\openssl.exe'
+      'C:\Program Files\OpenSSL-Win64\bin\openssl.exe'
+    ) | Where-Object { $_ -and (Test-Path -LiteralPath $_) }
+  )
 
   if ($candidates.Count -eq 0) {
     throw 'OpenSSL was not found. Install OpenSSL or Git for Windows, then run this script again.'
