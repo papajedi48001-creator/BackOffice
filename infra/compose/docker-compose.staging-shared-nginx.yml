@@ -1,0 +1,7 @@
+services:
+  caddy:
+    profiles: ["standalone-edge"]
+
+  web:
+    ports:
+      - "127.0.0.1:${STAGING_WEB_PORT:-3100}:3000"
