@@ -1,0 +1,14 @@
+# Staging-only override: builds immutable local images from the checked-out
+# source tree. Production must reference approved images from the registry.
+services:
+  web:
+    build:
+      context: ../..
+      dockerfile: apps/web/Dockerfile
+    image: ${WEB_IMAGE:?set WEB_IMAGE}
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: apps/worker/Dockerfile
+    image: ${WORKER_IMAGE:?set WORKER_IMAGE}

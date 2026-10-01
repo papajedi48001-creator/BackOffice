@@ -28,6 +28,21 @@ Use this mode when staging shares a Linux VM with an existing Nginx service. It 
    `docker compose --env-file /etc/backoffice/staging.env -f infra/compose/docker-compose.staging.yml -f infra/compose/docker-compose.staging-shared-nginx.yml config`.
 5. Start staging with the same two Compose files. Confirm that `caddy` is absent, the web service listens only at `127.0.0.1:3100`, and HTTPS health checks pass through the approved hostname.
 
+### Temporary source build for staging
+
+When the approved internal registry is not yet available, staging may build the
+web and worker images from a source archive at a recorded Git commit. This is
+only a temporary staging path: production still requires approved immutable
+registry images.
+
+1. Record the commit ID used to create the source archive and unpack it into an
+   operator-controlled directory on the staging VM.
+2. Set `WEB_IMAGE` and `WORKER_IMAGE` to local tags containing that commit ID.
+3. Add `infra/compose/docker-compose.staging-build.yml` to the two shared-Nginx
+   Compose files for `config`, `build`, and `up`.
+4. Record the source commit and resulting local image IDs in the staging change
+   record. Do not promote those local images directly to production.
+
 ## Deploy to production
 
 1. Repeat the staging checks with the identical immutable image tags.
