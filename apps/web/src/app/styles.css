@@ -31,6 +31,9 @@ h1 { margin: 0; font-size: clamp(2rem, 6vw, 3.75rem); line-height: 1.15; }
 .form-error { margin: -4px 0 0; color: #9a3412; font-weight: 700; }
 .sign-in-form > button[type="submit"] { justify-self: start; min-height: 44px; }
 .sign-in-form > button[type="submit"]:disabled { cursor: not-allowed; opacity: .7; }
+.request-create { margin: 20px 0 24px; border: 1px solid #d9e2ec; border-left: 5px solid #0b7285; border-radius: 10px; background: #fff; padding: 20px; }
+.request-create h3 { margin: 0; font-size: 1.2rem; }
+.request-create p { margin: 8px 0 16px; color: #486581; }
 
 .app-shell { display: grid; min-height: 100dvh; grid-template-columns: minmax(220px, 280px) 1fr; }
 .sidebar { padding: 28px 20px; background: #102a43; color: #f0fdfa; }
