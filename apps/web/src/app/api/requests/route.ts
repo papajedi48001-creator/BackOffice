@@ -3,6 +3,7 @@ import { createDatabase } from '@backoffice/db';
 import { DatabaseWorkflowRepository, RequestService, type ApproverResolver } from '@backoffice/core';
 import { requireAuthorized } from '../../../lib/require-authorized';
 import { readRuntimeValue } from '../../../lib/runtime-env';
+import { requestErrorCode } from './request-error-code';
 
 class DatabaseApproverResolver implements ApproverResolver {
   constructor(private readonly database: ReturnType<typeof createDatabase>) {}
@@ -25,6 +26,7 @@ export async function POST(request: Request): Promise<Response> {
     } finally { await database.close(); }
   } catch (error) {
     const status = typeof error === 'object' && error && 'status' in error ? (error as { status: number }).status : 400;
+    console.error('backoffice.request_submission_failed', { code: requestErrorCode(error) });
     return NextResponse.json({ error: status === 401 ? 'unauthenticated' : 'request_not_accepted' }, { status });
   }
 }
