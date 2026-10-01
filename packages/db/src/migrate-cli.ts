@@ -1,7 +1,8 @@
 import { createDatabase } from './client.ts';
 import { runMigrations } from './migrate.ts';
+import { readRuntimeValue } from './runtime-env.ts';
 
-const connectionUrl = process.env.DATABASE_URL;
+const connectionUrl = readRuntimeValue('DATABASE_URL');
 if (!connectionUrl) throw new Error('DATABASE_URL is required to run migrations');
 
 const db = createDatabase(connectionUrl);
