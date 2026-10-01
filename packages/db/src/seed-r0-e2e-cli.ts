@@ -1,14 +1,13 @@
 import { randomBytes, randomUUID, scrypt as scryptCallback } from 'node:crypto';
 import { promisify } from 'node:util';
 import { createDatabase } from './client.ts';
+import { readR0E2eSeedConfig } from './seed-r0-e2e-config.ts';
 
 if (process.env.NODE_ENV === 'production' || process.env.ALLOW_NON_PRODUCTION_SEED !== '1') {
   throw new Error('Refusing to seed: set ALLOW_NON_PRODUCTION_SEED=1 outside production only');
 }
 
-const databaseUrl = process.env.DATABASE_URL;
-const password = process.env.R0_E2E_PASSWORD;
-if (!databaseUrl || !password) throw new Error('DATABASE_URL and R0_E2E_PASSWORD are required');
+const { databaseUrl, password } = readR0E2eSeedConfig();
 
 const db = createDatabase(databaseUrl);
 const scrypt = promisify(scryptCallback);
