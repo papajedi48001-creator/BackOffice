@@ -3,6 +3,7 @@
   background: #f7fafc;
   font-family: "Noto Sans Thai", "Leelawadee UI", system-ui, sans-serif;
   scrollbar-color: #0b7285 #d9e2ec;
+  scrollbar-width: thin;
 }
 
 * { box-sizing: border-box; }
@@ -19,6 +20,17 @@ button, input, textarea, select { font: inherit; }
 h1 { margin: 0; font-size: clamp(2rem, 6vw, 3.75rem); line-height: 1.15; }
 .welcome-copy { max-width: 46ch; margin: 20px 0 0; font-size: 1.125rem; line-height: 1.8; }
 .welcome-status { display: inline-block; margin: 28px 0 0; border-radius: 8px; background: #e6fffa; color: #075e54; padding: 10px 14px; font-weight: 700; }
+.sign-in-form { display: grid; gap: 18px; max-width: 440px; margin-top: 32px; padding-top: 28px; border-top: 1px solid #d9e2ec; }
+.sign-in-caption { margin: 0; color: #486581; font-size: .95rem; }
+.form-field { display: grid; gap: 7px; }
+.form-field label { color: #102a43; font-weight: 700; }
+.form-field input { width: 100%; min-height: 44px; border: 1px solid #9fb3c8; border-radius: 8px; background: #fff; color: #102a43; padding: 9px 12px; }
+.form-field input[aria-invalid="true"] { border-color: #c2410c; }
+.password-field { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+.password-toggle { min-height: 44px; border: 1px solid #0b7285; border-radius: 8px; background: #fff; color: #075e54; cursor: pointer; font-weight: 700; padding: 9px 12px; }
+.form-error { margin: -4px 0 0; color: #9a3412; font-weight: 700; }
+.sign-in-form > button[type="submit"] { justify-self: start; min-height: 44px; }
+.sign-in-form > button[type="submit"]:disabled { cursor: not-allowed; opacity: .7; }
 
 .app-shell { display: grid; min-height: 100dvh; grid-template-columns: minmax(220px, 280px) 1fr; }
 .sidebar { padding: 28px 20px; background: #102a43; color: #f0fdfa; }
