@@ -6,6 +6,7 @@
 - A successful encrypted backup is less than 24 hours old.
 - The release images have been scanned and use the approved immutable release tag.
 - `/etc/backoffice/production.env` and every referenced secret file are owned by the operator, mode `0600`, and are outside Git.
+- The approved MinIO AIStor license is stored as `/etc/backoffice/secrets/minio_license`, mode `0600`; never put its contents in an environment file, image, log, or Git.
 - The Caddy internal CA is trusted on managed client devices, or the Caddy TLS policy has been replaced by an approved certificate policy.
 
 ## Deploy to staging

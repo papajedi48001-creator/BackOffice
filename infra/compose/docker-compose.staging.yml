@@ -57,3 +57,5 @@ secrets:
     file: ${MINIO_ROOT_USER_FILE:?set MINIO_ROOT_USER_FILE}
   minio_root_password:
     file: ${MINIO_ROOT_PASSWORD_FILE:?set MINIO_ROOT_PASSWORD_FILE}
+  minio_license:
+    file: ${MINIO_LICENSE_FILE:?set MINIO_LICENSE_FILE}

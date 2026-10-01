@@ -79,11 +79,11 @@ services:
   minio:
     image: ${MINIO_IMAGE:?set MINIO_IMAGE}
     restart: unless-stopped
-    command: server /data
+    command: ["server", "--license", "/run/secrets/minio_license", "/data"]
     environment:
       MINIO_ROOT_USER_FILE: /run/secrets/minio_root_user
       MINIO_ROOT_PASSWORD_FILE: /run/secrets/minio_root_password
-    secrets: [minio_root_user, minio_root_password]
+    secrets: [minio_root_user, minio_root_password, minio_license]
     volumes: [minio-data:/data]
     networks: [backplane]
     healthcheck:
@@ -117,3 +117,5 @@ secrets:
     file: ${MINIO_ROOT_USER_FILE:?set MINIO_ROOT_USER_FILE}
   minio_root_password:
     file: ${MINIO_ROOT_PASSWORD_FILE:?set MINIO_ROOT_PASSWORD_FILE}
+  minio_license:
+    file: ${MINIO_LICENSE_FILE:?set MINIO_LICENSE_FILE}

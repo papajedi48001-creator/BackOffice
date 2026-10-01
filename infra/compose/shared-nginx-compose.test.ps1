@@ -46,6 +46,9 @@ foreach ($environmentFile in @($stagingEnv, $productionEnv)) {
   if ($environment -notmatch [regex]::Escape('MINIO_IMAGE=registry.example.internal/waritch-backoffice/minio:replace-with-approved-digest')) {
     throw "MinIO image must be an approved private-registry placeholder: $environmentFile"
   }
+  if ($environment -notmatch [regex]::Escape('MINIO_LICENSE_FILE=/etc/backoffice/secrets/minio_license')) {
+    throw "MinIO AIStor requires a file-based license path: $environmentFile"
+  }
 }
 
 Write-Output 'shared Nginx staging override keeps the web service on loopback'
