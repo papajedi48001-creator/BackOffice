@@ -1,4 +1,4 @@
-import type { ApprovalDecision, ApprovalStep, OutboxEvent, SubmittedRequest } from '@backoffice/contracts';
+import type { ApprovalDecision, ApprovalStep, AuditEvent, OutboxEvent, SubmittedRequest } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import type { WorkflowRepository } from './request-service';
 
@@ -14,6 +14,7 @@ export class DatabaseWorkflowRepository implements WorkflowRepository {
   async getSteps(requestId: string): Promise<ApprovalStep[]> { return (await this.database.query<StoredStep>('SELECT id, request_id AS requestId, sequence, assignee_snapshot AS assigneeSnapshot, status FROM approval_step WHERE request_id = ? ORDER BY sequence', [requestId])).map((row) => ({ ...row, sequence: Number(row.sequence), assigneeSnapshot: JSON.parse(row.assigneeSnapshot) })); }
   async saveDecision(decision: ApprovalDecision): Promise<void> { await this.database.execute('INSERT INTO approval_decision (id, approval_step_id, actor_person_id, decision, reason, created_at) VALUES (?, ?, ?, ?, ?, UTC_TIMESTAMP())', [decision.id, decision.approvalStepId, decision.actorPersonId, decision.decision, decision.reason]); }
   async saveOutbox(event: OutboxEvent): Promise<void> { await this.database.execute('INSERT INTO outbox_event (id, type, idempotency_key, payload, occurred_at, processed_at) VALUES (?, ?, ?, ?, ?, ?)', [event.id, event.type, event.idempotencyKey, JSON.stringify(event.payload), toMariaDbDatetime(event.occurredAt), event.processedAt ? toMariaDbDatetime(event.processedAt) : null]); }
+  async appendAudit(event: AuditEvent): Promise<void> { await this.database.execute('INSERT INTO audit_event (id, actor_person_id, action, target_type, target_id, result, metadata, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())', [event.id, event.actorPersonId ?? null, event.action, event.targetType, event.targetId, event.result, event.metadata]); }
 }
 
 function toMariaDbDatetime(isoTimestamp: string): string {

@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { submitRequestInputSchema, type ApprovalDecision, type ApprovalStep, type ApproverSnapshot, type OutboxEvent, type SubmittedRequest } from '@backoffice/contracts';
+import { submitRequestInputSchema, type ApprovalDecision, type ApprovalStep, type ApproverSnapshot, type AuditEvent, type OutboxEvent, type SubmittedRequest } from '@backoffice/contracts';
+import { AuditService } from '../audit/audit-service';
 
 export interface WorkflowRepository {
   transaction<T>(work: (repository: WorkflowRepository) => Promise<T>): Promise<T>;
@@ -9,6 +10,7 @@ export interface WorkflowRepository {
   getSteps(requestId: string): Promise<ApprovalStep[]>;
   saveDecision(decision: ApprovalDecision): Promise<void>;
   saveOutbox(event: OutboxEvent): Promise<void>;
+  appendAudit(event: AuditEvent): Promise<void>;
 }
 
 export interface ApproverResolver { resolve(input: { moduleCode: string; requestorPersonId: string; organizationId: string }): Promise<ApproverSnapshot[]>; }
@@ -27,6 +29,7 @@ export class RequestService {
       await repository.saveRequest(request);
       for (const step of approvalSteps) await repository.saveStep(step);
       await repository.saveOutbox({ id: this.createId(), type: 'workflow.request.submitted', idempotencyKey: `workflow.request.submitted:${requestId}`, payload: { requestId, moduleCode: request.moduleCode }, occurredAt: new Date().toISOString(), processedAt: null });
+      await new AuditService({ append: (event) => repository.appendAudit(event) }, this.createId).recordAudit({ actorPersonId: request.requestorPersonId, action: 'workflow.request.submitted', targetType: 'request', targetId: request.id, result: 'SUCCESS', metadata: { moduleCode: request.moduleCode, requestReference: request.reference, status: request.status, organizationId: request.organizationSnapshot.organizationId } });
       return { ...request, approvalSteps };
     });
   }
