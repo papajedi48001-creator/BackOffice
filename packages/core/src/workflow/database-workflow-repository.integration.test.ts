@@ -55,4 +55,25 @@ describe('DatabaseWorkflowRepository', () => {
     expect(await database.query('SELECT id FROM outbox_event WHERE idempotency_key = ?', [`workflow.request.submitted:${requestId}`])).toEqual([]);
     expect(await database.query<{ id: string }>('SELECT id FROM audit_event WHERE id = ?', [duplicateAuditId])).toEqual([{ id: duplicateAuditId }]);
   });
+
+  it('records only one decision and audit event when concurrent approvals target one request', async () => {
+    await runMigrations(database);
+    const organizationId = randomUUID();
+    const requestorId = randomUUID();
+    const approverId = randomUUID();
+    await database.execute('INSERT INTO organization (id, name, created_at) VALUES (?, ?, UTC_TIMESTAMP())', [organizationId, 'Concurrency unit']);
+    await database.execute('INSERT INTO person (id, national_id_ciphertext, national_id_lookup, created_at) VALUES (?, ?, ?, UTC_TIMESTAMP()), (?, ?, ?, UTC_TIMESTAMP())', [requestorId, 'ciphertext-e', randomUUID(), approverId, 'ciphertext-f', randomUUID()]);
+    const request = await new RequestService(new DatabaseWorkflowRepository(database), { resolve: async () => [{ personId: approverId, organizationId }] }).submitRequest({ moduleCode: 'maintenance', requestorPersonId: requestorId, organizationSnapshot: { organizationId } });
+    const service = new ApprovalService(new DatabaseWorkflowRepository(database), { findActiveFor: async () => null });
+
+    const outcomes = await Promise.allSettled([
+      service.decideRequest({ requestId: request.id, actorPersonId: approverId, decision: 'APPROVE' }),
+      service.decideRequest({ requestId: request.id, actorPersonId: approverId, decision: 'APPROVE' })
+    ]);
+
+    expect(outcomes.filter((outcome) => outcome.status === 'fulfilled')).toHaveLength(1);
+    expect(outcomes.filter((outcome) => outcome.status === 'rejected')).toHaveLength(1);
+    expect(await database.query('SELECT id FROM approval_decision WHERE approval_step_id = ?', [request.approvalSteps[0].id])).toHaveLength(1);
+    expect(await database.query('SELECT id FROM audit_event WHERE target_id = ? AND action = ?', [request.id, 'workflow.request.decided'])).toHaveLength(1);
+  });
 });

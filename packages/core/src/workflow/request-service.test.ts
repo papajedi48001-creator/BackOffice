@@ -37,6 +37,7 @@ class MemoryWorkflowRepository implements WorkflowRepository {
   async saveRequest(request: Omit<SubmittedRequest, 'approvalSteps'>): Promise<void> { this.requests.set(request.id, request); }
   async saveStep(step: ApprovalStep): Promise<void> { this.steps.set(step.requestId, [...(this.steps.get(step.requestId) ?? []), step]); }
   async getRequest(id: string): Promise<Omit<SubmittedRequest, 'approvalSteps'> | null> { return this.requests.get(id) ?? null; }
+  async getRequestForUpdate(id: string): Promise<Omit<SubmittedRequest, 'approvalSteps'> | null> { return this.getRequest(id); }
   async getSteps(requestId: string): Promise<ApprovalStep[]> { return this.steps.get(requestId) ?? []; }
   async saveDecision(decision: ApprovalDecision): Promise<void> { this.decisions.push(decision); }
   async saveOutbox(event: OutboxEvent): Promise<void> { this.outbox.push(event); }

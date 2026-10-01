@@ -6,13 +6,14 @@ import type { ApprovalStep, AuditEvent } from '@backoffice/contracts';
 describe('ApprovalService', () => {
   it('rejects an approval by a delegate when the delegate is the requestor', async () => {
     const service = new ApprovalService({
-      transaction: async (work) => work({} as never),
-      getRequest: async () => ({ id: 'request-1', reference: 'REQ-1', moduleCode: 'maintenance', requestorPersonId: 'person-a', organizationSnapshot: { organizationId: 'unit-a' }, status: 'IN_REVIEW' }),
+      transaction: async (work) => work({ getRequestForUpdate: async () => ({ id: 'request-1', reference: 'REQ-1', moduleCode: 'maintenance', requestorPersonId: 'person-a', organizationSnapshot: { organizationId: 'unit-a' }, status: 'IN_REVIEW' }) } as never),
+      getRequestForUpdate: async () => ({ id: 'request-1', reference: 'REQ-1', moduleCode: 'maintenance', requestorPersonId: 'person-a', organizationSnapshot: { organizationId: 'unit-a' }, status: 'IN_REVIEW' }),
       getSteps: async () => [{ id: 'step-1', requestId: 'request-1', sequence: 1, assigneeSnapshot: { personId: 'manager-a', organizationId: 'unit-a' }, status: 'PENDING' }],
       saveDecision: async () => undefined,
       saveOutbox: async () => undefined,
       saveRequest: async () => undefined,
-      saveStep: async () => undefined
+      saveStep: async () => undefined,
+      appendAudit: async () => undefined
     }, { findActiveFor: async () => ({ delegatorPersonId: 'manager-a', delegatePersonId: 'person-a', moduleCode: 'maintenance' }) }, () => 'decision-1');
 
     await expect(service.decideRequest({ requestId: 'request-1', actorPersonId: 'person-a', decision: 'APPROVE' })).rejects.toThrow('CONFLICT_OF_INTEREST');
@@ -23,6 +24,7 @@ describe('ApprovalService', () => {
     const repository: WorkflowRepository = {
       transaction: async (work) => work(repository),
       getRequest: async () => ({ id: 'request-1', reference: 'REQ-1', moduleCode: 'maintenance', requestorPersonId: 'person-a', organizationSnapshot: { organizationId: 'unit-a' }, status: 'IN_REVIEW' }),
+      getRequestForUpdate: async () => ({ id: 'request-1', reference: 'REQ-1', moduleCode: 'maintenance', requestorPersonId: 'person-a', organizationSnapshot: { organizationId: 'unit-a' }, status: 'IN_REVIEW' }),
       getSteps: async () => [{ id: 'step-1', requestId: 'request-1', sequence: 1, assigneeSnapshot: { personId: 'manager-a', organizationId: 'unit-a' }, status: 'PENDING' }],
       saveRequest: async () => undefined, saveDecision: async () => undefined, saveOutbox: async () => undefined,
       saveStep: async (step) => { savedSteps.push(step); },
@@ -35,11 +37,40 @@ describe('ApprovalService', () => {
     expect(savedSteps).toEqual([{ id: 'step-1', requestId: 'request-1', sequence: 1, assigneeSnapshot: { personId: 'manager-a', organizationId: 'unit-a' }, status: 'APPROVED' }]);
   });
 
-  it('records the approver decision without the decision reason', async () => {
+  it('reads the pending request inside the decision transaction', async () => {
+    const request = { id: 'request-1', reference: 'REQ-1', moduleCode: 'maintenance', requestorPersonId: 'person-a', organizationSnapshot: { organizationId: 'unit-a' }, status: 'IN_REVIEW' as const };
+    const step = { id: 'step-1', requestId: 'request-1', sequence: 1, assigneeSnapshot: { personId: 'manager-a', organizationId: 'unit-a' }, status: 'PENDING' as const };
+    const transactionRepository: WorkflowRepository = {
+      transaction: async (work) => work(transactionRepository),
+      getRequest: async () => { throw new Error('must use locked request read'); },
+      getRequestForUpdate: async () => request,
+      getSteps: async () => [step],
+      saveRequest: async () => undefined,
+      saveStep: async () => undefined,
+      saveDecision: async () => undefined,
+      saveOutbox: async () => undefined,
+      appendAudit: async () => undefined
+    };
+    const repository: WorkflowRepository = {
+      ...transactionRepository,
+      transaction: async (work) => work(transactionRepository),
+      getRequestForUpdate: async () => { throw new Error('must read through transaction'); }
+    };
+    const service = new ApprovalService(repository, { findActiveFor: async () => null }, () => 'decision-1');
+
+    await expect(service.decideRequest({ requestId: 'request-1', actorPersonId: 'manager-a', decision: 'APPROVE' })).resolves.toMatchObject({ approvalStepId: 'step-1' });
+  });
+
+  it.each([
+    ['APPROVE', undefined, 'APPROVED'],
+    ['REJECT', 'contains private detail', 'REJECTED'],
+    ['RETURN', 'contains private detail', 'RETURNED']
+  ] as const)('records %s without the decision reason', async (decision, reason, status) => {
     const auditEvents: AuditEvent[] = [];
     const repository: WorkflowRepository = {
       transaction: async (work) => work(repository),
       getRequest: async () => ({ id: 'request-1', reference: 'REQ-request-1', moduleCode: 'maintenance', requestorPersonId: 'person-a', organizationSnapshot: { organizationId: 'unit-a' }, status: 'IN_REVIEW' }),
+      getRequestForUpdate: async () => ({ id: 'request-1', reference: 'REQ-request-1', moduleCode: 'maintenance', requestorPersonId: 'person-a', organizationSnapshot: { organizationId: 'unit-a' }, status: 'IN_REVIEW' }),
       getSteps: async () => [{ id: 'step-1', requestId: 'request-1', sequence: 1, assigneeSnapshot: { personId: 'manager-a', organizationId: 'unit-a' }, status: 'PENDING' }],
       saveRequest: async () => undefined,
       saveDecision: async () => undefined,
@@ -49,10 +80,11 @@ describe('ApprovalService', () => {
     };
     const service = new ApprovalService(repository, { findActiveFor: async () => null }, () => 'decision-1');
 
-    await service.decideRequest({ requestId: 'request-1', actorPersonId: 'manager-a', decision: 'APPROVE', reason: 'contains private detail' });
+    await service.decideRequest({ requestId: 'request-1', actorPersonId: 'manager-a', decision, reason });
 
     expect(auditEvents).toHaveLength(1);
-    expect(auditEvents[0]).toMatchObject({ actorPersonId: 'manager-a', action: 'workflow.request.decided', targetType: 'request', targetId: 'request-1', result: 'APPROVE' });
-    expect(JSON.parse(auditEvents[0].metadata)).toEqual({ moduleCode: 'maintenance', requestReference: 'REQ-request-1', status: 'APPROVED', organizationId: 'unit-a' });
+    expect(auditEvents[0]).toMatchObject({ actorPersonId: 'manager-a', action: 'workflow.request.decided', targetType: 'request', targetId: 'request-1', result: decision });
+    expect(JSON.parse(auditEvents[0].metadata)).toEqual({ moduleCode: 'maintenance', requestReference: 'REQ-request-1', status, organizationId: 'unit-a' });
+    expect(auditEvents[0].metadata).not.toContain('contains private detail');
   });
 });

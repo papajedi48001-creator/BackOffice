@@ -8,15 +8,15 @@ export type AuditEventRow = {
 };
 
 const actionLabels: Record<AuditEventRow['action'], string> = {
-  'workflow.request.submitted': 'สร้างคำขอ',
-  'workflow.request.decided': 'อนุมัติคำขอ'
+  'workflow.request.submitted': t('auditRequestSubmitted'),
+  'workflow.request.decided': t('auditRequestDecided')
 };
 
 const resultLabels: Record<AuditEventRow['result'], string> = {
-  SUCCESS: 'สำเร็จ',
-  APPROVE: 'อนุมัติแล้ว',
-  REJECT: 'ไม่อนุมัติ',
-  RETURN: 'ส่งกลับแก้ไข'
+  SUCCESS: t('auditResultSuccess'),
+  APPROVE: t('auditResultApproved'),
+  REJECT: t('auditResultRejected'),
+  RETURN: t('auditResultReturned')
 };
 
 export function AuditEventTable({ events }: { events: AuditEventRow[] }) {

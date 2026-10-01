@@ -7,6 +7,7 @@ export interface WorkflowRepository {
   saveRequest(request: Omit<SubmittedRequest, 'approvalSteps'>): Promise<void>;
   saveStep(step: ApprovalStep): Promise<void>;
   getRequest(requestId: string): Promise<Omit<SubmittedRequest, 'approvalSteps'> | null>;
+  getRequestForUpdate(requestId: string): Promise<Omit<SubmittedRequest, 'approvalSteps'> | null>;
   getSteps(requestId: string): Promise<ApprovalStep[]>;
   saveDecision(decision: ApprovalDecision): Promise<void>;
   saveOutbox(event: OutboxEvent): Promise<void>;

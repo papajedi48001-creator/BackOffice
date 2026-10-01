@@ -8,7 +8,7 @@ describe('AuditEventTable', () => {
     render(<AuditEventTable events={events} />);
 
     expect(screen.getByText('REQ-request-1')).toBeInTheDocument();
-    expect(screen.getByText('อนุมัติคำขอ')).toBeInTheDocument();
+    expect(screen.getByText('พิจารณาคำขอ')).toBeInTheDocument();
     expect(screen.getByText('อนุมัติแล้ว')).toBeInTheDocument();
     expect(screen.queryByText('person-a')).not.toBeInTheDocument();
     expect(screen.queryByText('request-1')).not.toBeInTheDocument();
