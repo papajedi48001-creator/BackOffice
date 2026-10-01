@@ -36,6 +36,9 @@ networks:
   edge: {}
   backplane:
     internal: true
+    ipam:
+      config:
+        - subnet: ${BACKOFFICE_BACKPLANE_SUBNET:?set BACKOFFICE_BACKPLANE_SUBNET}
 
 volumes:
   caddy-data: {}

@@ -28,6 +28,13 @@ Use this mode when staging shares a Linux VM with an existing Nginx service. It 
    `docker compose --env-file /etc/backoffice/staging.env -f infra/compose/docker-compose.staging.yml -f infra/compose/docker-compose.staging-shared-nginx.yml config`.
 5. Start staging with the same two Compose files. Confirm that `caddy` is absent, the web service listens only at `127.0.0.1:3100`, and HTTPS health checks pass through the approved hostname.
 
+The staging Docker network must use an allocated CIDR that does not overlap
+hospital clients or routes. Set `BACKOFFICE_BACKPLANE_SUBNET` in
+`/etc/backoffice/staging.env`. Use `infra/scripts/staging-network.sh validate`
+before starting services. If an older network uses a different subnet, run its
+`reset-network` command; it stops only the staging Compose project and retains
+named volumes.
+
 ### Temporary source build for staging
 
 When the approved internal registry is not yet available, staging may build the
