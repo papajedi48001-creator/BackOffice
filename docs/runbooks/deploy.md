@@ -21,6 +21,10 @@
 
 Use this mode when staging shares a Linux VM with an existing Nginx service. It keeps the Back Office web container private on `127.0.0.1:3100`, leaves the current ports `80` and `443` owned by Nginx, and does not start Caddy.
 
+The shared-Nginx override makes the Docker backplane non-internal so Docker can
+NAT the localhost-published web port. This does not publish MariaDB, Redis, or
+MinIO; their Compose services have no host-port mappings.
+
 1. Obtain an internal DNS record and an internal-CA certificate for the approved staging hostname. Do not reuse an unrelated production hostname.
 2. Copy `infra/nginx/backoffice-staging.conf.template` to an operator-controlled Nginx include, replace `__BACKOFFICE_STAGING_HOSTNAME__`, and set the approved certificate paths.
 3. Validate the Nginx configuration before reload: `sudo nginx -t`. Reload only after validation succeeds: `sudo systemctl reload nginx`.

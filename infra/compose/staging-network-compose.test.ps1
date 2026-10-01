@@ -1,23 +1,30 @@
 $ErrorActionPreference = 'Stop'
 
 $composePath = Join-Path $PSScriptRoot 'docker-compose.staging.yml'
+$sharedNginxPath = Join-Path $PSScriptRoot 'docker-compose.staging-shared-nginx.yml'
+$productionPath = Join-Path $PSScriptRoot 'docker-compose.production.yml'
 $environmentPath = Join-Path $PSScriptRoot '.env.staging.example'
 $helperPath = Join-Path $PSScriptRoot '..\scripts\staging-network.sh'
 $attributesPath = Join-Path $PSScriptRoot '..\..\.gitattributes'
 
-foreach ($path in @($composePath, $environmentPath, $helperPath, $attributesPath)) {
+foreach ($path in @($composePath, $sharedNginxPath, $productionPath, $environmentPath, $helperPath, $attributesPath)) {
   if (-not (Test-Path -LiteralPath $path)) {
     throw "Missing staging network artifact: $path"
   }
 }
 
 $compose = Get-Content -LiteralPath $composePath -Raw
+$sharedNginx = Get-Content -LiteralPath $sharedNginxPath -Raw
+$production = Get-Content -LiteralPath $productionPath -Raw
 $environment = Get-Content -LiteralPath $environmentPath -Raw
 $helper = Get-Content -LiteralPath $helperPath -Raw
 $attributes = Get-Content -LiteralPath $attributesPath -Raw
 
 $expectations = @(
   @{ Content = $compose; Snippet = 'subnet: ${BACKOFFICE_BACKPLANE_SUBNET:?set BACKOFFICE_BACKPLANE_SUBNET}' },
+  @{ Content = $sharedNginx; Snippet = 'backplane:' },
+  @{ Content = $sharedNginx; Snippet = 'internal: false' },
+  @{ Content = $production; Snippet = 'internal: true' },
   @{ Content = $environment; Snippet = 'BACKOFFICE_BACKPLANE_SUBNET=10.250.251.0/24' },
   @{ Content = $helper; Snippet = 'reset-network' },
   @{ Content = $helper; Snippet = 'docker compose' },
