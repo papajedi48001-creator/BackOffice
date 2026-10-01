@@ -1,6 +1,6 @@
 import { randomBytes, randomUUID, scrypt as scryptCallback } from 'node:crypto';
 import { promisify } from 'node:util';
-import { createDatabase } from './client';
+import { createDatabase } from './client.ts';
 
 if (process.env.NODE_ENV === 'production' || process.env.ALLOW_NON_PRODUCTION_SEED !== '1') {
   throw new Error('Refusing to seed: set ALLOW_NON_PRODUCTION_SEED=1 outside production only');
