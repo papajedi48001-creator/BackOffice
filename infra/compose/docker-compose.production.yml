@@ -21,6 +21,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
+      HOSTNAME: 0.0.0.0
       DATABASE_URL_FILE: /run/secrets/database_url
       BACKOFFICE_SESSION_SECRET_FILE: /run/secrets/session_secret
       S3_BUCKET: ${S3_BUCKET:?set S3_BUCKET}
