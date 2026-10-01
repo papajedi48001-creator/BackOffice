@@ -6,7 +6,9 @@ param(
 
   [string]$Hostname = 'backoffice-stg.waritch-hosp.moph.go.th',
 
-  [string]$Organization = 'Waritch Hospital'
+  [string]$Organization = 'Waritch Hospital',
+
+  [switch]$ValidateOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -44,6 +46,12 @@ if ($outputFullPath.StartsWith($repositoryRoot, [StringComparison]::OrdinalIgnor
 }
 
 $openSsl = Find-OpenSsl
+if ($ValidateOnly) {
+  Invoke-OpenSsl @('version')
+  Write-Host 'OpenSSL preflight passed. No key or certificate was created.'
+  return
+}
+
 $rootKey = Join-Path $outputFullPath 'root-ca.key.pem'
 $rootCertificate = Join-Path $outputFullPath 'root-ca.crt.pem'
 $rootCertificateDer = Join-Path $outputFullPath 'root-ca.cer'

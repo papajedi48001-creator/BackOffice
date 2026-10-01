@@ -14,6 +14,8 @@ $requiredSnippets = @(
   'Output directory must be outside the repository',
   '$candidates = @(',
   'return $candidates[0]',
+  'ValidateOnly',
+  'OpenSSL preflight passed. No key or certificate was created.',
   'genrsa',
   'req',
   'x509',
