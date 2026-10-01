@@ -8,6 +8,7 @@ import { RequestDetailPanel } from './request-detail-panel';
 
 type RequestRow = { id: string; reference: string; requestorPersonId: string; organizationSnapshot: string; status: 'IN_REVIEW' | 'APPROVED' | 'REJECTED' | 'RETURNED' };
 type StepRow = { assigneeSnapshot: string; status: string };
+type OrganizationRow = { name: string };
 
 export default async function RequestDetailPage({ params }: { params: Promise<{ requestId: string }> }) {
   const { requestId } = await params;
@@ -22,6 +23,7 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
     const step = (await database.query<StepRow>('SELECT assignee_snapshot AS assigneeSnapshot, status FROM approval_step WHERE request_id = ? AND status = ? ORDER BY sequence LIMIT 1', [request.id, 'PENDING']))[0];
     const assigneePersonId = step ? (JSON.parse(step.assigneeSnapshot) as { personId?: string }).personId : undefined;
     const organizationId = (JSON.parse(request.organizationSnapshot) as { organizationId?: string }).organizationId ?? 'ไม่ระบุ';
-    return <RequestDetailPanel requestId={request.id} reference={request.reference} organizationId={organizationId} status={request.status === 'APPROVED' ? 'APPROVED' : 'PENDING'} canApprove={canApproveRequest(session.personId, { status: request.status, assigneePersonId })} />;
+    const organization = organizationId === 'ไม่ระบุ' ? undefined : (await database.query<OrganizationRow>('SELECT name FROM organization WHERE id = ? LIMIT 1', [organizationId]))[0];
+    return <RequestDetailPanel requestId={request.id} reference={request.reference} organizationId={organization?.name ?? 'ไม่ระบุ'} status={request.status === 'APPROVED' ? 'APPROVED' : 'PENDING'} canApprove={canApproveRequest(session.personId, { status: request.status, assigneePersonId })} />;
   } finally { await database.close(); }
 }

@@ -42,6 +42,8 @@ h1 { margin: 0; font-size: clamp(2rem, 6vw, 3.75rem); line-height: 1.15; }
 .sidebar ul { display: grid; gap: 6px; margin: 28px 0; padding: 0; list-style: none; }
 .sidebar a { display: block; border-radius: 7px; color: inherit; padding: 10px 12px; text-decoration: none; }
 .sidebar a:hover { background: #1f4b67; }
+.sign-out-button { width: 100%; border: 1px solid #80cbc4; border-radius: 8px; background: transparent; color: #f0fdfa; cursor: pointer; font-weight: 700; padding: 10px 12px; }
+.sign-out-button:disabled { cursor: not-allowed; opacity: .7; }
 .app-main { padding: clamp(24px, 5vw, 56px); }
 .permission-notice { margin: 0 0 28px; color: #486581; font-size: .9rem; }
 .app-main h2 { margin: 0 0 12px; font-size: clamp(1.6rem, 4vw, 2.25rem); }
