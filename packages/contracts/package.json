@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "exports": { ".": "./src/index.ts" },
-  "scripts": { "lint": "eslint src", "typecheck": "tsc --noEmit", "test": "node -e \"\"", "test:integration": "node -e \"\"" },
+  "scripts": { "lint": "eslint src", "typecheck": "tsc --noEmit", "test": "vitest run", "test:integration": "node -e \"\"" },
   "dependencies": {
     "zod": "^3.24.0"
   }
