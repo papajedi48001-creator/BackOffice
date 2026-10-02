@@ -15,7 +15,9 @@
 2. Validate without starting services: `docker compose --env-file /etc/backoffice/staging.env -f infra/compose/docker-compose.staging.yml config`.
 3. Start the tagged release: `docker compose --env-file /etc/backoffice/staging.env -f infra/compose/docker-compose.staging.yml up -d`.
 4. Run migrations with the web release image, then confirm `/api/health`, local login, a scoped authorization denial, and the audit path.
-5. Check container health, Caddy logs, disk space, backup freshness, queue backlog, and connector error rate through the organization monitoring system.
+5. For the notification release, confirm migration `0001_in_app_notifications.sql` is recorded, the worker is running without notification-consumer errors, and only `notification.in_app` rows are selected by the worker.
+6. Run the notification UAT scenarios using new requests created after this release. Do not replay or mark processed historical `workflow.*` rows.
+7. Check container health, Caddy logs, disk space, backup freshness, queue backlog, and connector error rate through the organization monitoring system.
 
 ### Staging behind an existing Nginx edge
 
@@ -68,3 +70,4 @@ registry images.
 2. Return only `WEB_IMAGE` and `WORKER_IMAGE` to the prior approved tag in the protected environment file.
 3. Run `docker compose ... up -d` with that prior tag and re-check health.
 4. Database rollback requires an approved migration-specific procedure. If data integrity is in doubt, restore only into staging first and escalate to the Data Owner.
+5. The notification migration is additive. Rolling back the web and worker images does not remove notification records or mark historical workflow rows processed; do not drop notification columns or tables during a rollback.
