@@ -22,6 +22,8 @@ jobs:
           --health-interval 10s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 24, cache: pnpm }
@@ -41,6 +43,7 @@ jobs:
       - run: pnpm --filter @backoffice/web test:e2e
       - run: bash infra/compose/compose-config.test.sh
       - run: bash infra/backup/restore-verify.test.sh
+      - run: node infra/ci/trufflehog-default-range.test.mjs
       - uses: trufflesecurity/trufflehog@main
-        with: { path: ./, base: main, head: HEAD }
+        with: { path: ./ }
       - run: pnpm audit --prod --audit-level high
