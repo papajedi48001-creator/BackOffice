@@ -1,10 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { createDatabase } from '@backoffice/db';
-import { NotificationConsumer } from './consumers/notification-consumer';
-import { OutboxConsumer } from './consumers/outbox-consumer';
-import { DatabaseNotificationStore } from './database-notification-store';
-import { DatabaseOutboxRepository } from './database-outbox-repository';
-import { createWorkerRuntime } from './worker-runtime';
+import { NotificationConsumer } from './consumers/notification-consumer.ts';
+import { OutboxConsumer } from './consumers/outbox-consumer.ts';
+import { DatabaseNotificationStore } from './database-notification-store.ts';
+import { DatabaseOutboxRepository } from './database-outbox-repository.ts';
+import { createWorkerRuntime } from './worker-runtime.ts';
 
 function runtimeValue(name: string): string | undefined {
   const direct = process.env[name]?.trim();
