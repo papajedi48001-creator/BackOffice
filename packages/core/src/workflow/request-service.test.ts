@@ -25,6 +25,28 @@ describe('RequestService', () => {
     expect(repository.auditEvents[0]).toMatchObject({ actorPersonId: 'person-a', action: 'workflow.request.submitted', targetType: 'request', targetId: 'request-1', result: 'SUCCESS' });
     expect(JSON.parse(repository.auditEvents[0].metadata)).toEqual({ moduleCode: 'maintenance', requestReference: 'REQ-request-1', status: 'IN_REVIEW', organizationId: 'unit-a' });
   });
+
+  it('notifies the first approver with a safe request event after submission', async () => {
+    const repository = new MemoryWorkflowRepository();
+    const ids = ['request-1', 'step-1', 'step-2', 'workflow-event-1', 'notification-event-1', 'audit-event-1'];
+    const service = new RequestService(repository, { resolve: async () => [
+      { personId: 'manager-a', organizationId: 'unit-a' },
+      { personId: 'manager-b', organizationId: 'unit-a' }
+    ] }, () => ids.shift()!);
+
+    await service.submitRequest({ moduleCode: 'maintenance', requestorPersonId: 'person-a', organizationSnapshot: { organizationId: 'unit-a' } });
+
+    expect(repository.outbox).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: 'workflow.request.submitted' }),
+      expect.objectContaining({
+        type: 'notification.in_app',
+        idempotencyKey: 'notification.in_app:request-submitted:request-1:step:step-1',
+        payload: { recipientPersonId: 'manager-a', requestId: 'request-1', subject: 'มีคำขอรอพิจารณา' }
+      })
+    ]));
+    expect(repository.outbox.find((event) => event.type === 'notification.in_app')?.payload).not.toHaveProperty('reason');
+    expect(repository.outbox.find((event) => event.type === 'notification.in_app')?.payload).not.toHaveProperty('organizationSnapshot');
+  });
 });
 
 class MemoryWorkflowRepository implements WorkflowRepository {
@@ -35,7 +57,11 @@ class MemoryWorkflowRepository implements WorkflowRepository {
   readonly auditEvents: AuditEvent[] = [];
   async transaction<T>(work: (repository: WorkflowRepository) => Promise<T>): Promise<T> { return work(this); }
   async saveRequest(request: Omit<SubmittedRequest, 'approvalSteps'>): Promise<void> { this.requests.set(request.id, request); }
-  async saveStep(step: ApprovalStep): Promise<void> { this.steps.set(step.requestId, [...(this.steps.get(step.requestId) ?? []), step]); }
+  async saveStep(step: ApprovalStep): Promise<void> {
+    const steps = this.steps.get(step.requestId) ?? [];
+    const index = steps.findIndex((candidate) => candidate.id === step.id);
+    this.steps.set(step.requestId, index === -1 ? [...steps, step] : steps.map((candidate) => candidate.id === step.id ? step : candidate));
+  }
   async getRequest(id: string): Promise<Omit<SubmittedRequest, 'approvalSteps'> | null> { return this.requests.get(id) ?? null; }
   async getRequestForUpdate(id: string): Promise<Omit<SubmittedRequest, 'approvalSteps'> | null> { return this.getRequest(id); }
   async getSteps(requestId: string): Promise<ApprovalStep[]> { return this.steps.get(requestId) ?? []; }

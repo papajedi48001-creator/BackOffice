@@ -5,11 +5,13 @@ import { DatabaseWorkflowRepository } from './database-workflow-repository';
 import { RequestService } from './request-service';
 import { ApprovalService } from './approval-service';
 
-const database = createDatabase(process.env.DATABASE_URL ?? 'mysql://backoffice:local-development-only@127.0.0.1:3307/backoffice');
+const databaseUrl = process.env.DATABASE_URL;
+const describeWithDatabase = databaseUrl ? describe : describe.skip;
 
-afterAll(async () => database.close());
+describeWithDatabase('DatabaseWorkflowRepository', () => {
+  const database = databaseUrl ? createDatabase(databaseUrl) : undefined as never;
 
-describe('DatabaseWorkflowRepository', () => {
+  afterAll(async () => database.close());
   it('persists the request, approver snapshot, and submitted outbox event in one workflow transaction', async () => {
     await runMigrations(database);
     const organizationId = randomUUID();
