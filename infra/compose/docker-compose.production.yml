@@ -1,0 +1,122 @@
+services:
+  caddy:
+    image: ${CADDY_IMAGE:?set CADDY_IMAGE}
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      PUBLIC_HOSTNAME: ${PUBLIC_HOSTNAME:?set PUBLIC_HOSTNAME}
+    volumes:
+      - ../caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [edge, backplane]
+    depends_on:
+      web:
+        condition: service_healthy
+
+  web:
+    image: ${WEB_IMAGE:?set WEB_IMAGE}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      DATABASE_URL_FILE: /run/secrets/database_url
+      BACKOFFICE_SESSION_SECRET_FILE: /run/secrets/session_secret
+      S3_BUCKET: ${S3_BUCKET:?set S3_BUCKET}
+      S3_ENDPOINT: http://minio:9000
+      REDIS_URL: redis://redis:6379
+    secrets: [database_url, session_secret]
+    networks: [backplane]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  worker:
+    image: ${WORKER_IMAGE:?set WORKER_IMAGE}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL_FILE: /run/secrets/database_url
+      REDIS_URL: redis://redis:6379
+      S3_BUCKET: ${S3_BUCKET:?set S3_BUCKET}
+      S3_ENDPOINT: http://minio:9000
+    secrets: [database_url]
+    networks: [backplane]
+
+  mariadb:
+    image: ${MARIADB_IMAGE:?set MARIADB_IMAGE}
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${MARIADB_DATABASE:?set MARIADB_DATABASE}
+      MARIADB_USER: ${MARIADB_USER:?set MARIADB_USER}
+      MARIADB_PASSWORD_FILE: /run/secrets/mariadb_password
+      MARIADB_ROOT_PASSWORD_FILE: /run/secrets/mariadb_root_password
+    secrets: [mariadb_password, mariadb_root_password]
+    volumes: [mariadb-data:/var/lib/mysql]
+    networks: [backplane]
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 --silent"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: ${REDIS_IMAGE:?set REDIS_IMAGE}
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [redis-data:/data]
+    networks: [backplane]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  minio:
+    image: ${MINIO_IMAGE:?set MINIO_IMAGE}
+    restart: unless-stopped
+    command: ["server", "--license", "/run/secrets/minio_license", "/data"]
+    environment:
+      MINIO_ROOT_USER_FILE: /run/secrets/minio_root_user
+      MINIO_ROOT_PASSWORD_FILE: /run/secrets/minio_root_password
+    secrets: [minio_root_user, minio_root_password, minio_license]
+    volumes: [minio-data:/data]
+    networks: [backplane]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9000/minio/health/live"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+networks:
+  edge: {}
+  backplane:
+    internal: true
+
+volumes:
+  caddy-data: {}
+  caddy-config: {}
+  mariadb-data: {}
+  redis-data: {}
+  minio-data: {}
+
+secrets:
+  database_url:
+    file: ${DATABASE_URL_FILE:?set DATABASE_URL_FILE}
+  session_secret:
+    file: ${BACKOFFICE_SESSION_SECRET_FILE:?set BACKOFFICE_SESSION_SECRET_FILE}
+  mariadb_password:
+    file: ${MARIADB_PASSWORD_FILE:?set MARIADB_PASSWORD_FILE}
+  mariadb_root_password:
+    file: ${MARIADB_ROOT_PASSWORD_FILE:?set MARIADB_ROOT_PASSWORD_FILE}
+  minio_root_user:
+    file: ${MINIO_ROOT_USER_FILE:?set MINIO_ROOT_USER_FILE}
+  minio_root_password:
+    file: ${MINIO_ROOT_PASSWORD_FILE:?set MINIO_ROOT_PASSWORD_FILE}
+  minio_license:
+    file: ${MINIO_LICENSE_FILE:?set MINIO_LICENSE_FILE}

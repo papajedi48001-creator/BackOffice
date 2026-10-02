@@ -1,0 +1,17 @@
+{
+  "name": "@backoffice/worker",
+  "private": true,
+  "dependencies": { "@backoffice/contracts": "workspace:*", "@backoffice/db": "workspace:*" },
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:integration": "vitest run --passWithNoTests",
+    "build": "tsc --noEmit",
+    "start": "node --experimental-strip-types src/main.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "vitest": "^3.2.0"
+  }
+}

@@ -1,0 +1,64 @@
+services:
+  caddy:
+    extends:
+      file: docker-compose.production.yml
+      service: caddy
+    ports:
+      - "${STAGING_HTTP_PORT:-8080}:80"
+      - "${STAGING_HTTPS_PORT:-8443}:443"
+
+  web:
+    extends:
+      file: docker-compose.production.yml
+      service: web
+
+  worker:
+    extends:
+      file: docker-compose.production.yml
+      service: worker
+
+  mariadb:
+    extends:
+      file: docker-compose.production.yml
+      service: mariadb
+
+  redis:
+    extends:
+      file: docker-compose.production.yml
+      service: redis
+
+  minio:
+    extends:
+      file: docker-compose.production.yml
+      service: minio
+
+networks:
+  edge: {}
+  backplane:
+    internal: true
+    ipam:
+      config:
+        - subnet: ${BACKOFFICE_BACKPLANE_SUBNET:?set BACKOFFICE_BACKPLANE_SUBNET}
+
+volumes:
+  caddy-data: {}
+  caddy-config: {}
+  mariadb-data: {}
+  redis-data: {}
+  minio-data: {}
+
+secrets:
+  database_url:
+    file: ${DATABASE_URL_FILE:?set DATABASE_URL_FILE}
+  session_secret:
+    file: ${BACKOFFICE_SESSION_SECRET_FILE:?set BACKOFFICE_SESSION_SECRET_FILE}
+  mariadb_password:
+    file: ${MARIADB_PASSWORD_FILE:?set MARIADB_PASSWORD_FILE}
+  mariadb_root_password:
+    file: ${MARIADB_ROOT_PASSWORD_FILE:?set MARIADB_ROOT_PASSWORD_FILE}
+  minio_root_user:
+    file: ${MINIO_ROOT_USER_FILE:?set MINIO_ROOT_USER_FILE}
+  minio_root_password:
+    file: ${MINIO_ROOT_PASSWORD_FILE:?set MINIO_ROOT_PASSWORD_FILE}
+  minio_license:
+    file: ${MINIO_LICENSE_FILE:?set MINIO_LICENSE_FILE}

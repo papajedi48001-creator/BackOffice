@@ -1,0 +1,46 @@
+name: R0 quality gates
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  quality:
+    runs-on: ubuntu-24.04
+    services:
+      mariadb:
+        image: mariadb:11.8
+        env:
+          MARIADB_DATABASE: backoffice
+          MARIADB_USER: backoffice
+          MARIADB_PASSWORD: ci-only-password
+          MARIADB_ROOT_PASSWORD: ci-only-root-password
+        ports: [3306:3306]
+        options: >-
+          --health-cmd "mariadb-admin ping -h 127.0.0.1 --silent"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+        env:
+          DATABASE_URL: mysql://backoffice:ci-only-password@127.0.0.1:3306/backoffice
+      - run: pnpm test:integration
+        env:
+          DATABASE_URL: mysql://backoffice:ci-only-password@127.0.0.1:3306/backoffice
+      - run: pnpm --filter @backoffice/db migrate
+        env:
+          DATABASE_URL: mysql://backoffice:ci-only-password@127.0.0.1:3306/backoffice
+      - run: pnpm --filter @backoffice/web build
+      - run: pnpm --filter @backoffice/web test:e2e
+      - run: bash infra/compose/compose-config.test.sh
+      - run: bash infra/backup/restore-verify.test.sh
+      - uses: trufflesecurity/trufflehog@main
+        with: { path: ./, base: main, head: HEAD }
+      - run: pnpm audit --prod --audit-level high

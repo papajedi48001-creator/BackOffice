@@ -1,0 +1,13 @@
+services:
+  caddy:
+    profiles: ["standalone-edge"]
+
+  web:
+    ports:
+      - "127.0.0.1:${STAGING_WEB_PORT:-3100}:3000"
+
+networks:
+  backplane:
+    # Nginx reaches the web container through a localhost-published port.
+    # Keep data services un-published; only this staging override is non-internal.
+    internal: false

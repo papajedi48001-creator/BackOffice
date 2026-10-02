@@ -1,0 +1,2 @@
+# Deployment shell scripts must retain Unix line endings in source archives.
+*.sh text eol=lf
