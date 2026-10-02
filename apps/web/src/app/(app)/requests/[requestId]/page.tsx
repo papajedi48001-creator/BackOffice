@@ -27,6 +27,6 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
     const assigneePersonId = step ? (JSON.parse(step.assigneeSnapshot) as { personId?: string }).personId : undefined;
     const organizationId = (JSON.parse(request.organizationSnapshot) as { organizationId?: string }).organizationId ?? 'ไม่ระบุ';
     const organization = organizationId === 'ไม่ระบุ' ? undefined : (await database.query<OrganizationRow>('SELECT name FROM organization WHERE id = ? LIMIT 1', [organizationId]))[0];
-    return <RequestDetailPanel requestId={request.id} reference={request.reference} organizationId={organization?.name ?? 'ไม่ระบุ'} status={request.status === 'APPROVED' ? 'APPROVED' : 'PENDING'} canApprove={canApproveRequest(session.personId, { status: request.status, assigneePersonId })} />;
+    return <RequestDetailPanel requestId={request.id} reference={request.reference} organizationId={organization?.name ?? 'ไม่ระบุ'} status={request.status} canApprove={canApproveRequest(session.personId, { status: request.status, assigneePersonId })} statusAfterApprove={steps.filter((candidate) => candidate.status === 'PENDING').length > 1 ? 'IN_REVIEW' : 'APPROVED'} />;
   } finally { await database.close(); }
 }

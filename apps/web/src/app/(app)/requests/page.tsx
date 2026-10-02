@@ -20,6 +20,6 @@ export default async function RequestsPage() {
   try {
     const requests = await database.query<RequestRow>('SELECT id, reference, status FROM request WHERE requestor_person_id = ? ORDER BY created_at DESC', [session.personId]);
     const assignment = (await database.query<OrganizationRow>('SELECT organization_id AS organizationId FROM employment_assignment WHERE person_id = ? AND effective_until IS NULL LIMIT 1', [session.personId]))[0];
-    return <section><h2>{t('requestsTitle')}</h2>{assignment && <RequestSubmitForm organizationId={assignment.organizationId} />}<table><thead><tr><th>{t('requestReference')}</th><th>{t('status')}</th></tr></thead><tbody>{requests.length ? requests.map((request) => <tr key={request.id}><td><Link href={`/requests/${request.id}`}>{request.reference}</Link></td><td><StatusBadge status={request.status === 'APPROVED' ? 'APPROVED' : 'PENDING'} /></td></tr>) : <tr><td colSpan={2}>ยังไม่มีคำขอของคุณ</td></tr>}</tbody></table></section>;
+    return <section><h2>{t('requestsTitle')}</h2>{assignment && <RequestSubmitForm organizationId={assignment.organizationId} />}<table><thead><tr><th>{t('requestReference')}</th><th>{t('status')}</th></tr></thead><tbody>{requests.length ? requests.map((request) => <tr key={request.id}><td><Link href={`/requests/${request.id}`}>{request.reference}</Link></td><td><StatusBadge status={request.status} /></td></tr>) : <tr><td colSpan={2}>ยังไม่มีคำขอของคุณ</td></tr>}</tbody></table></section>;
   } finally { await database.close(); }
 }

@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import { t } from '@backoffice/i18n';
-import { StatusBadge } from '../../../../components/status-badge';
+import { StatusBadge, type RequestDisplayStatus } from '../../../../components/status-badge';
 
-export function RequestDetailPanel({ requestId, reference, organizationId, status: initialStatus, canApprove }: { requestId: string; reference: string; organizationId: string; status: 'PENDING' | 'APPROVED'; canApprove: boolean }) {
-  const [status, setStatus] = useState<'PENDING' | 'APPROVED'>(initialStatus);
+export function RequestDetailPanel({ requestId, reference, organizationId, status: initialStatus, canApprove, statusAfterApprove }: { requestId: string; reference: string; organizationId: string; status: RequestDisplayStatus; canApprove: boolean; statusAfterApprove: 'IN_REVIEW' | 'APPROVED' }) {
+  const [status, setStatus] = useState<RequestDisplayStatus>(initialStatus);
+  const [hasDecided, setHasDecided] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(false);
 
@@ -19,7 +20,8 @@ export function RequestDetailPanel({ requestId, reference, organizationId, statu
         body: JSON.stringify({ decision: 'APPROVE' })
       });
       if (!response.ok) throw new Error('DECISION_NOT_ACCEPTED');
-      setStatus('APPROVED');
+      setStatus(statusAfterApprove);
+      setHasDecided(true);
     } catch {
       setError(true);
     } finally {
@@ -27,5 +29,5 @@ export function RequestDetailPanel({ requestId, reference, organizationId, statu
     }
   }
 
-  return <section><h2>{t('requestDetail')}</h2><dl className="detail-list"><div><dt>{t('requestReference')}</dt><dd>{reference}</dd></div><div><dt>{t('requestor')}</dt><dd>{t('samplePerson')}</dd></div><div><dt>{t('organization')}</dt><dd>{organizationId}</dd></div><div><dt>{t('status')}</dt><dd><StatusBadge status={status} /></dd></div></dl>{canApprove && status === 'PENDING' && <button type="button" disabled={isSubmitting} onClick={approveRequest}>{isSubmitting ? t('deciding') : t('approveRequest')}</button>}{error && <p role="alert">{t('decisionNotAccepted')}</p>}</section>;
+  return <section><h2>{t('requestDetail')}</h2><dl className="detail-list"><div><dt>{t('requestReference')}</dt><dd>{reference}</dd></div><div><dt>{t('requestor')}</dt><dd>{t('samplePerson')}</dd></div><div><dt>{t('organization')}</dt><dd>{organizationId}</dd></div><div><dt>{t('status')}</dt><dd><StatusBadge status={status} /></dd></div></dl>{canApprove && status === 'IN_REVIEW' && !hasDecided && <button type="button" disabled={isSubmitting} onClick={approveRequest}>{isSubmitting ? t('deciding') : t('approveRequest')}</button>}{error && <p role="alert">{t('decisionNotAccepted')}</p>}</section>;
 }

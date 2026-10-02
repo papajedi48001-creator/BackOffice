@@ -20,7 +20,7 @@ describe('runMigrations', () => {
         }
         return [] as T[];
       },
-      transaction: async (work) => work(database),
+      transaction: async () => { throw new Error('DDL migrations must not rely on a transaction'); },
       close: async () => undefined
     };
 
@@ -29,6 +29,7 @@ describe('runMigrations', () => {
     expect(queried.some((sql) => sql.includes('CREATE TABLE IF NOT EXISTS schema_migration'))).toBe(false);
     expect(queried.filter((sql) => sql.includes('SELECT version FROM schema_migration'))).toHaveLength(2);
     expect(executed.some((sql) => sql.startsWith('ALTER TABLE notification'))).toBe(true);
+    expect(executed.some((sql) => sql.includes('IF NOT EXISTS'))).toBe(true);
     expect(executed.some((sql) => sql.startsWith('INSERT INTO schema_migration') && sql.endsWith('|["0001_in_app_notifications.sql"]'))).toBe(true);
     expect(executed.some((sql) => sql.includes('CREATE TABLE IF NOT EXISTS organization'))).toBe(false);
   });
