@@ -8,7 +8,7 @@ describe('OutboxConsumer', () => {
     const sent: string[] = [];
     const claimed = new Set<string>();
     const notificationConsumer = new NotificationConsumer(
-      { claim: async (eventId) => { if (claimed.has(eventId)) return false; claimed.add(eventId); return true; } },
+      { claim: async (message) => { if (claimed.has(message.eventId)) return false; claimed.add(message.eventId); return true; } },
       { deliverEmail: async (notification) => { sent.push(notification.eventId); } },
       { deliverInApp: async () => undefined }
     );

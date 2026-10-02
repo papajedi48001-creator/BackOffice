@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { accessSubjectSchema } from './access';
+import { accessSubjectSchema } from './access.ts';
 
 export const localCredentialsSchema = z.object({
   username: z.string().trim().min(1).max(255),

@@ -9,7 +9,7 @@ describe('DatabaseNotificationStore', () => {
       query: async <T extends object>() => (inserted ? [{ id: 'claim-id' }] : []) as T[],
       transaction: async (work) => work({} as never), close: async () => undefined
     });
-    expect(await store.claim('event-1', 'in_app', 'person-1')).toBe(true);
+    expect(await store.claim({ eventId: 'event-1', channel: 'in_app', recipientPersonId: 'person-1', requestId: 'request-1', subject: 'มีคำขอรอพิจารณา' })).toBe(true);
   });
 
   it('does not claim a notification when the idempotent insert is duplicate', async () => {
@@ -18,6 +18,6 @@ describe('DatabaseNotificationStore', () => {
       query: async <T extends object>() => [] as T[],
       transaction: async (work) => work({} as never), close: async () => undefined
     });
-    expect(await store.claim('event-1', 'in_app', 'person-1')).toBe(false);
+    expect(await store.claim({ eventId: 'event-1', channel: 'in_app', recipientPersonId: 'person-1', requestId: 'request-1', subject: 'มีคำขอรอพิจารณา' })).toBe(false);
   });
 });
