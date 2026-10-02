@@ -8,13 +8,21 @@ describe('worker Node ESM runtime', () => {
 
     try {
       execFileSync(
-        process.execPath,
-        ['--experimental-strip-types', '--input-type=module', '--eval', "await import('./main.ts')"],
-        { cwd: fileURLToPath(new URL('.', import.meta.url)), stdio: 'pipe' }
+        process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm',
+        ['start'],
+        {
+          cwd: fileURLToPath(new URL('..', import.meta.url)),
+          env: { ...process.env, DATABASE_URL: '' },
+          stdio: 'pipe',
+          shell: process.platform === 'win32'
+        }
       );
     } catch (error) {
-      const failure = error as { stderr?: Buffer };
-      output = failure.stderr?.toString() ?? '';
+      const failure = error as { stderr?: Buffer; output?: Array<Buffer | string | null> };
+      output = [failure.stderr, ...(failure.output ?? [])]
+        .filter((value): value is Buffer | string => value !== null && value !== undefined)
+        .map((value) => value.toString())
+        .join('');
     }
 
     expect(output).toContain('DATABASE_URL is required');

@@ -7,4 +7,4 @@ COPY packages/contracts ./packages/contracts
 COPY packages/db ./packages/db
 RUN pnpm install --frozen-lockfile
 ENV NODE_ENV=production
-CMD ["node", "--experimental-strip-types", "apps/worker/src/main.ts"]
+CMD ["pnpm", "--filter", "@backoffice/worker", "start"]
