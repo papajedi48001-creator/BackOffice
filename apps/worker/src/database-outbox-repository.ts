@@ -6,7 +6,7 @@ export class DatabaseOutboxRepository implements WorkerOutboxRepository {
   constructor(private readonly database: Database) {}
 
   async pending(): Promise<OutboxEvent[]> {
-    const rows = await this.database.query<{ id: string; type: string; idempotencyKey: string; payload: string; occurredAt: string; processedAt: string | null }>('SELECT id, type, idempotency_key AS idempotencyKey, payload, occurred_at AS occurredAt, processed_at AS processedAt FROM outbox_event WHERE processed_at IS NULL ORDER BY occurred_at LIMIT 50');
+    const rows = await this.database.query<{ id: string; type: string; idempotencyKey: string; payload: string; occurredAt: string; processedAt: string | null }>('SELECT id, type, idempotency_key AS idempotencyKey, payload, occurred_at AS occurredAt, processed_at AS processedAt FROM outbox_event WHERE processed_at IS NULL AND type IN (?, ?) ORDER BY occurred_at LIMIT 50', ['notification.email', 'notification.in_app']);
     return rows.map((row) => ({ ...row, payload: JSON.parse(row.payload) as Record<string, unknown> }));
   }
 
