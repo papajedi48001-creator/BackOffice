@@ -43,6 +43,7 @@ jobs:
       - run: pnpm --filter @backoffice/web test:e2e
       - run: bash infra/compose/compose-config.test.sh
       - run: bash infra/backup/restore-verify.test.sh
+      - run: bash infra/scripts/staging-release-guard.test.sh
       - run: node infra/ci/trufflehog-default-range.test.mjs
       - uses: trufflesecurity/trufflehog@main
         with: { path: ./ }
