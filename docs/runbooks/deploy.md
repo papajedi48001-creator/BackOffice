@@ -56,6 +56,62 @@ registry images.
 4. Record the source commit and resulting local image IDs in the staging change
    record. Do not promote those local images directly to production.
 
+#### Required release guard
+
+When using the temporary source-build path, run the release guard from the
+unpacked release directory. Do not build from `/opt/backoffice-staging/current`:
+that path is a symlink and can still point to a prior release.
+
+The following example uses a short commit ID as the release ID. It builds only
+after the source directory and tags agree, checks the built image artifacts,
+then verifies the `current` symlink after activation. The image variables are
+set on the same Compose command so the build cannot silently reuse stale tags
+from the operator environment file.
+
+```bash
+release_id=6523964
+release_dir="/opt/backoffice-staging/releases/${release_id}"
+web_image="waritch-backoffice/web:${release_id}"
+worker_image="waritch-backoffice/worker:${release_id}"
+
+cd "${release_dir}"
+
+infra/scripts/staging-release-guard.sh prebuild \
+  --release-id "${release_id}" \
+  --release-dir "${release_dir}" \
+  --web-image "${web_image}" \
+  --worker-image "${worker_image}" \
+  --required-source-file apps/web/src/app/api/notifications/route.ts
+
+WEB_IMAGE="${web_image}" WORKER_IMAGE="${worker_image}" \
+  docker compose --env-file /etc/backoffice/staging.env \
+  -f infra/compose/docker-compose.staging.yml \
+  -f infra/compose/docker-compose.staging-shared-nginx.yml \
+  -f infra/compose/docker-compose.staging-build.yml \
+  build web worker
+
+infra/scripts/staging-release-guard.sh postbuild \
+  --release-id "${release_id}" \
+  --release-dir "${release_dir}" \
+  --web-image "${web_image}" \
+  --worker-image "${worker_image}" \
+  --required-web-artifact /app/apps/web/.next/server/app/api/notifications/route.js \
+  --required-worker-artifact /app/apps/worker/src/main.ts
+
+sudo ln -sfn "${release_dir}" /opt/backoffice-staging/current
+
+infra/scripts/staging-release-guard.sh active \
+  --release-id "${release_id}" \
+  --release-dir "${release_dir}" \
+  --web-image "${web_image}" \
+  --worker-image "${worker_image}" \
+  --current-link /opt/backoffice-staging/current
+```
+
+Only after all three commands report `*_OK` may the operator run migrations
+and recreate `web` and `worker`. A guard failure means stop: do not switch
+services, and retain the prior release for rollback.
+
 ## Deploy to production
 
 1. Repeat the staging checks with the identical immutable image tags.
