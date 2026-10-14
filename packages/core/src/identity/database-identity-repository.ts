@@ -27,10 +27,14 @@ export class DatabaseSessionRepository implements SessionRepository {
 export class DatabaseAccessSubjectLoader implements AccessSubjectLoader {
   constructor(private readonly database: Pick<Database, 'query'>) {}
 
-  async load(personId: string): Promise<Pick<AccessSubject, 'roles' | 'dataOwnerModules'>> {
+  async load(personId: string): Promise<Pick<AccessSubject, 'roles' | 'dataOwnerModules' | 'hospitalWideDataOwnerModules'>> {
     const roles = await this.database.query<{ name: string; organizationId: string | null }>('SELECT role.name AS name, role_assignment.organization_id AS organizationId FROM role_assignment JOIN role ON role.id = role_assignment.role_id WHERE role_assignment.person_id = ? ORDER BY role.name, role_assignment.organization_id', [personId]);
-    const owners = await this.database.query<{ moduleCode: string }>('SELECT DISTINCT module_code AS moduleCode FROM data_owner_assignment WHERE person_id = ? ORDER BY module_code', [personId]);
-    return { roles: roles.map((role) => ({ name: role.name, organizationId: role.organizationId ?? null })), dataOwnerModules: owners.map((owner) => owner.moduleCode) };
+    const owners = await this.database.query<{ moduleCode: string; hospitalWide: number | string }>('SELECT module_code AS moduleCode, MAX(organization_id IS NULL) AS hospitalWide FROM data_owner_assignment WHERE person_id = ? GROUP BY module_code ORDER BY module_code', [personId]);
+    return {
+      roles: roles.map((role) => ({ name: role.name, organizationId: role.organizationId ?? null })),
+      dataOwnerModules: owners.map((owner) => owner.moduleCode),
+      hospitalWideDataOwnerModules: owners.filter((owner) => Number(owner.hospitalWide) === 1).map((owner) => owner.moduleCode)
+    };
   }
 }
 

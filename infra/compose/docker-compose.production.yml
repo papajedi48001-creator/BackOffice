@@ -24,10 +24,12 @@ services:
       HOSTNAME: 0.0.0.0
       DATABASE_URL_FILE: /run/secrets/database_url
       BACKOFFICE_SESSION_SECRET_FILE: /run/secrets/session_secret
+      NATIONAL_ID_ENCRYPTION_KEY_FILE: /run/secrets/national_id_encryption_key
+      NATIONAL_ID_LOOKUP_KEY_FILE: /run/secrets/national_id_lookup_key
       S3_BUCKET: ${S3_BUCKET:?set S3_BUCKET}
       S3_ENDPOINT: http://minio:9000
       REDIS_URL: redis://redis:6379
-    secrets: [database_url, session_secret]
+    secrets: [database_url, session_secret, national_id_encryption_key, national_id_lookup_key]
     networks: [backplane]
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3000/api/health"]
@@ -110,6 +112,10 @@ secrets:
     file: ${DATABASE_URL_FILE:?set DATABASE_URL_FILE}
   session_secret:
     file: ${BACKOFFICE_SESSION_SECRET_FILE:?set BACKOFFICE_SESSION_SECRET_FILE}
+  national_id_encryption_key:
+    file: ${NATIONAL_ID_ENCRYPTION_KEY_FILE:?set NATIONAL_ID_ENCRYPTION_KEY_FILE}
+  national_id_lookup_key:
+    file: ${NATIONAL_ID_LOOKUP_KEY_FILE:?set NATIONAL_ID_LOOKUP_KEY_FILE}
   mariadb_password:
     file: ${MARIADB_PASSWORD_FILE:?set MARIADB_PASSWORD_FILE}
   mariadb_root_password:

@@ -17,8 +17,9 @@
 4. Run migrations with the web release image, then confirm `/api/health`, local login, a scoped authorization denial, and the audit path.
 5. For the notification release, confirm migration `0001_in_app_notifications.sql` is recorded, the worker is running without notification-consumer errors, and only `notification.in_app` rows are selected by the worker.
 6. For the outbox retry release, confirm migration `0002_outbox_retry.sql` is recorded. A failing event no longer restarts the worker: it logs `backoffice.worker.outbox_event_failed` with the event ID, type, and an error code, retries with backoff, and is dead-lettered after five attempts. Review dead letters with `SELECT id, type, attempts, last_error, dead_lettered_at FROM outbox_event WHERE dead_lettered_at IS NOT NULL`; fix the cause before clearing `dead_lettered_at`, `next_attempt_at`, and `attempts` for an approved retry, and never mark such an event processed by hand.
-7. Run the notification UAT scenarios using new requests created after this release. Do not replay or mark processed historical `workflow.*` rows.
-8. Check container health, Caddy logs, disk space, backup freshness, queue backlog, and connector error rate through the organization monitoring system.
+7. For the HR master-data release, create two separate 32-byte hex keys (`openssl rand -hex 32`) as `/etc/backoffice/secrets/national_id_encryption_key` and `/etc/backoffice/secrets/national_id_lookup_key`, mode `0600`, and back them up with the database backup key. Losing the encryption key makes stored national IDs unreadable; changing the lookup key breaks matching on re-import. Confirm migration `0004_hr_master_data.sql` is recorded, then have HR check a CSV at `/hr/imports` before importing it.
+8. Run the notification UAT scenarios using new requests created after this release. Do not replay or mark processed historical `workflow.*` rows.
+9. Check container health, Caddy logs, disk space, backup freshness, queue backlog, and connector error rate through the organization monitoring system.
 
 ### Staging behind an existing Nginx edge
 

@@ -10,8 +10,8 @@ export class PersonService {
     const validInput = createPersonInputSchema.parse(input);
     const person: Person = { id: this.createId(), nationalIdMasked: this.protector.mask(validInput.nationalId), createdAt: new Date().toISOString() };
     await this.db.execute(
-      'INSERT INTO person (id, national_id_ciphertext, national_id_lookup, created_at) VALUES (?, ?, ?, UTC_TIMESTAMP())',
-      [person.id, this.protector.encrypt(validInput.nationalId), this.protector.lookup(validInput.nationalId)]
+      'INSERT INTO person (id, national_id_ciphertext, national_id_lookup, national_id_masked, created_at) VALUES (?, ?, ?, ?, UTC_TIMESTAMP())',
+      [person.id, this.protector.encrypt(validInput.nationalId), this.protector.lookup(validInput.nationalId), person.nationalIdMasked]
     );
     return person;
   }

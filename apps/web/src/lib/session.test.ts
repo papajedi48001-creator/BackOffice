@@ -40,7 +40,7 @@ describe('server-side session', () => {
     expect(maxAgeSeconds).toBe(43_200);
     expect(database.sessions[0]?.tokenHash).toBe(hashSessionToken(token));
     expect(JSON.stringify(database.execute.mock.calls)).not.toContain(token);
-    await expect(readSession(requestWithCookie(token))).resolves.toEqual({ authenticated: true, personId: 'person-a', roles: [{ name: 'hr-reader', organizationId: 'unit-a' }], dataOwnerModules: [] });
+    await expect(readSession(requestWithCookie(token))).resolves.toEqual({ authenticated: true, personId: 'person-a', roles: [{ name: 'hr-reader', organizationId: 'unit-a' }], dataOwnerModules: [], hospitalWideDataOwnerModules: [] });
   });
 
   it('returns no session without a cookie, for an unknown token, or without a database', async () => {
