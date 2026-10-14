@@ -44,4 +44,4 @@
 
 ### Task 5: Verify
 
-- [ ] `pnpm lint && pnpm typecheck && pnpm test`, `pnpm test:integration` with MariaDB, `bash infra/backup/restore-verify.test.sh`, `git diff --check`.
+- [x] `pnpm lint && pnpm typecheck && pnpm test`, `pnpm test:integration` with MariaDB, `bash infra/backup/restore-verify.test.sh`, `git diff --check`.
