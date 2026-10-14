@@ -38,9 +38,9 @@
 
 **Files:** `apps/web/src/lib/session.ts`, `apps/web/src/lib/database.ts`, `apps/web/src/lib/require-authorized.ts`, `apps/web/src/app/api/auth/local/**`, protected pages and layout, tests
 
-- [ ] Step 1: Write failing route tests: login sets `Max-Age`, locked login returns 429, sign-out revokes.
-- [ ] Step 2: Make `readSession` async over `SessionService`, update every caller, and wire login/sign-out.
-- [ ] Step 3: Run web tests, typecheck, lint, and production build.
+- [x] Step 1: Write failing route tests: login sets `Max-Age`, locked login returns 429, sign-out revokes.
+- [x] Step 2: Make `readSession` async over `SessionService`, update every caller, and wire login/sign-out.
+- [x] Step 3: Run web tests, typecheck, lint, and production build.
 
 ### Task 5: Verify
 

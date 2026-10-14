@@ -7,7 +7,7 @@ import { readSession } from '../../../lib/session';
 import { NotificationList, type NotificationListItem } from './notification-list';
 
 export default async function NotificationsPage() {
-  const session = readSession(new Request('http://localhost', { headers: await headers() }));
+  const session = await readSession(new Request('http://localhost', { headers: await headers() }));
   if (!session?.personId) redirect('/');
   const databaseUrl = readRuntimeValue('DATABASE_URL');
   if (!databaseUrl) return <section><h2>{t('notificationsTitle')}</h2><p role="alert">{t('notificationLoadError')}</p></section>;

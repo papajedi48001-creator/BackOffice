@@ -1,33 +1,40 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
-import { accessSubjectSchema, type Session } from '@backoffice/contracts';
-import { readRuntimeValue } from './runtime-env';
+import type { Session } from '@backoffice/contracts';
+import { DatabaseAccessSubjectLoader, DatabaseSessionRepository, SessionService } from '@backoffice/core';
+import type { Database } from '@backoffice/db';
+import { getSharedDatabase } from './database';
 
 const cookieName = 'backoffice_session';
 
-function sessionSecret(): string {
-  const configuredSecret = readRuntimeValue('BACKOFFICE_SESSION_SECRET');
-  if (configuredSecret) return configuredSecret;
-  if (process.env.NODE_ENV === 'production') throw new Error('BACKOFFICE_SESSION_SECRET is required in production');
-  return 'development-session-secret-change-before-deployment';
+function sessionService(database: Database): SessionService {
+  return new SessionService(new DatabaseSessionRepository(database), new DatabaseAccessSubjectLoader(database));
 }
 
-function signature(payload: string): string {
-  return createHmac('sha256', sessionSecret()).update(payload).digest('base64url');
+function readSessionToken(request: Request): string | null {
+  return request.headers.get('cookie')?.split(';').map((value) => value.trim()).find((value) => value.startsWith(`${cookieName}=`))?.slice(cookieName.length + 1) || null;
 }
 
-export function createSessionToken(session: Session): string {
-  const payload = Buffer.from(JSON.stringify(accessSubjectSchema.parse(session))).toString('base64url');
-  return `${payload}.${signature(payload)}`;
+export async function readSession(request: Request): Promise<Session | null> {
+  const token = readSessionToken(request);
+  const database = token ? getSharedDatabase() : null;
+  if (!token || !database) return null;
+  return sessionService(database).resolve(token);
 }
 
-export function readSession(request: Request): Session | null {
-  const token = request.headers.get('cookie')?.split(';').map((value) => value.trim()).find((value) => value.startsWith(`${cookieName}=`))?.slice(cookieName.length + 1);
-  if (!token) return null;
-  const [payload, receivedSignature] = token.split('.');
-  if (!payload || !receivedSignature) return null;
-  const expectedSignature = signature(payload);
-  if (receivedSignature.length !== expectedSignature.length || !timingSafeEqual(Buffer.from(receivedSignature), Buffer.from(expectedSignature))) return null;
-  try { return accessSubjectSchema.parse(JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'))); } catch { return null; }
+export async function startSession(personId: string): Promise<{ token: string; maxAgeSeconds: number }> {
+  const database = getSharedDatabase();
+  if (!database) throw new Error('SESSION_STORE_UNAVAILABLE');
+  return sessionService(database).start(personId);
+}
+
+export async function endSession(request: Request): Promise<string | null> {
+  const token = readSessionToken(request);
+  const database = token ? getSharedDatabase() : null;
+  if (!token || !database) return null;
+  return sessionService(database).revoke(token);
+}
+
+export function sessionCookieOptions(maxAgeSeconds: number) {
+  return { httpOnly: true, sameSite: 'lax' as const, secure: process.env.NODE_ENV === 'production', path: '/', maxAge: maxAgeSeconds };
 }
 
 export const sessionCookieName = cookieName;

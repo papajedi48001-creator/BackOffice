@@ -12,7 +12,7 @@ type RequestRow = { id: string; reference: string; status: 'IN_REVIEW' | 'APPROV
 type OrganizationRow = { organizationId: string };
 
 export default async function RequestsPage() {
-  const session = readSession(new Request('http://localhost', { headers: await headers() }));
+  const session = await readSession(new Request('http://localhost', { headers: await headers() }));
   if (!session?.personId) redirect('/');
   const databaseUrl = readRuntimeValue('DATABASE_URL');
   if (!databaseUrl) return <section><h2>{t('requestsTitle')}</h2><p role="alert">ไม่สามารถอ่านรายการคำขอได้</p></section>;

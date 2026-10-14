@@ -10,6 +10,7 @@ export * from './workflow/request-service';
 export * from './workflow/approval-service';
 export * from './workflow/database-workflow-repository';
 export * from './audit/audit-service';
+export * from './audit/database-audit-repository';
 export * from './files/attachment-service';
 export * from './files/scan-service';
 export * from './exports/export-service';
