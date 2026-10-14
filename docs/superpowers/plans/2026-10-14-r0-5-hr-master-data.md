@@ -23,8 +23,8 @@
 
 **Files:** `packages/core/src/hr/master-data-import.ts`, `packages/core/src/hr/hr-directory.ts`, integration test
 
-- [ ] Step 1: Failing MariaDB tests: apply creates rows and one audit event, re-apply is a no-op, a changed org closes the old assignment, an invalid row writes nothing, scoped listing.
-- [ ] Step 2: Implement the service (one transaction) and directory queries.
+- [x] Step 1: Failing MariaDB tests: apply creates rows and one audit event, re-apply is a no-op, a changed org closes the old assignment, an invalid row writes nothing, scoped listing.
+- [x] Step 2: Implement the service (one transaction) and directory queries.
 
 ### Task 4: Web
 

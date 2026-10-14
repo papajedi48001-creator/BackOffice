@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { emptyExistingMasterData, validateMasterData, type ExistingMasterData } from './master-data-validation';
-
-/** Builds a valid Thai national ID from a 12-digit prefix. */
-export function nationalId(prefix: string): string {
-  const sum = [...prefix].reduce((total, digit, index) => total + Number(digit) * (13 - index), 0);
-  return `${prefix}${(11 - (sum % 11)) % 10}`;
-}
+import { nationalId } from './national-id-fixture';
 
 const lookup = (value: string) => `lookup:${value}`;
 const organizationsHeader = 'code,name,parent_code';
