@@ -16,8 +16,8 @@
 
 **Files:** `packages/db/migrations/0003_session_and_login_throttle.sql`, `packages/db/src/migrate.ts`, `packages/db/src/migrate.test.ts`, `packages/db/src/schema/access.ts`, `infra/backup/restore-verify.sh`
 
-- [ ] Step 1: Extend `migrate.test.ts` to expect `0003_session_and_login_throttle.sql`; see it fail.
-- [ ] Step 2: Add the migration (`user_session`, `login_throttle`, `role_name_unique`), Drizzle tables, and `user_session` in the restore check; run db tests and `restore-verify.test.sh`.
+- [x] Step 1: Extend `migrate.test.ts` to expect `0003_session_and_login_throttle.sql`; see it fail.
+- [x] Step 2: Add the migration (`user_session`, `login_throttle`, `role_name_unique`), Drizzle tables, and `user_session` in the restore check; run db tests and `restore-verify.test.sh`.
 
 ### Task 2: Session service
 
