@@ -23,10 +23,10 @@
 | ข้อมูลบุคลากรที่เพิ่ม | `employee_code` (รหัสบุคลากร, unique), `display_name`, `position_title` (ตำแหน่งงาน), `employment_status` (`ACTIVE`/`INACTIVE`), `national_id_masked` | พอสำหรับระบุตัว แสดงในคำขอ และเลือกผู้อนุมัติ; คอลัมน์ใหม่เป็น NULL ได้เพื่อให้ migration เป็นแบบ additive แต่การนำเข้าบังคับกรอก |
 | ข้อมูลหน่วยงานที่เพิ่ม | `code` (unique), `parent_id` | อ้างอิงข้ามไฟล์ด้วยรหัส และแสดงเป็นลำดับชั้นได้ |
 | การปิดเลขประจำตัวประชาชน | แสดงเฉพาะ 3 หลักท้าย `X-XXXX-XXXXX-12-3`, เก็บผลไว้ใน `national_id_masked` ตอนนำเข้า | หน้ารายการไม่ต้องถอดรหัส จึงไม่ต้องให้ทุก request เข้าถึงกุญแจเข้ารหัส |
-| รูปแบบไฟล์ | CSV UTF-8 (มีหรือไม่มี BOM) มีแถวหัวตาราง; ไฟล์หน่วยงาน `code,name,parent_code`; ไฟล์บุคลากร `employee_code,national_id,display_name,position_title,organization_code,manager_employee_code,effective_from,status` | Excel บันทึก "CSV UTF-8" ได้ ไม่ต้องเพิ่ม dependency อ่าน .xlsx |
+| รูปแบบไฟล์ | CSV UTF-8 (มีหรือไม่มี BOM) มีแถวหัวตาราง; ไฟล์หน่วยงาน `code,name,parent_code`; ไฟล์บุคลากร `employee_code,national_id,display_name,position_title,organization_code,manager_employee_code,effective_from,status` | Excel บันทึก "CSV UTF-8" ได้ ไม่ต้องเพิ่ม dependency อ่าน .xlsx; วันที่รับ `YYYY-MM-DD` หรือ `D/M/YYYY` และปี พ.ศ. (มากกว่า 2400) แปลงเป็น ค.ศ. ให้ เพราะ HR มักกรอกแบบนี้; `position_title`, `manager_employee_code`, `status` (ว่าง = `ACTIVE`) และ `parent_code` เว้นได้ |
 | ขั้นตอน | `validate` (ตรวจอย่างเดียว คืนรายงาน) แล้วจึง `apply` ซึ่งตรวจซ้ำและบันทึกทั้งหมดใน transaction เดียว ถ้ามีแถวผิดแม้แถวเดียวจะไม่บันทึกเลย | HR เห็นข้อผิดพลาดทั้งหมดก่อน และข้อมูลไม่ค้างครึ่งทาง |
-| นำเข้าซ้ำ | upsert ตามรหัส; คนที่มี `employee_code` เดิมแต่เลขประจำตัวประชาชนไม่ตรง หรือเลขตรงกับคนอื่น ถือเป็นแถวผิด | นำเข้าแก้ไขรอบถัดไปได้ โดยไม่สร้างคนซ้ำ |
-| ประวัติการสังกัด | ถ้าหน่วยงานหรือผู้บังคับบัญชาเปลี่ยน ปิดรายการเดิมด้วย `effective_until = effective_from` ใหม่ แล้วเพิ่มรายการใหม่; ถ้าเหมือนเดิมไม่แก้ | รักษา **ประวัติการสังกัด** ตาม CONTEXT.md และไม่กระทบ **ภาพผู้อนุมัติ ณ เวลายื่น** ของคำขอเดิม |
+| นำเข้าซ้ำ | upsert ตามรหัส; บุคลากรเดิมที่ยังไม่มีรหัสแต่เลขประจำตัวประชาชนตรงกันจะได้รับรหัสจากไฟล์; คนที่มี `employee_code` เดิมแต่เลขประจำตัวประชาชนไม่ตรง หรือเลขตรงกับคนอื่น ถือเป็นแถวผิด | นำเข้าแก้ไขรอบถัดไปได้ โดยไม่สร้างคนซ้ำ |
+| ประวัติการสังกัด | ถ้าหน่วยงานหรือผู้บังคับบัญชาเปลี่ยน ปิดรายการเดิมด้วย `effective_until = effective_from` ใหม่ แล้วเพิ่มรายการใหม่ (วันที่ใหม่ต้องหลังวันที่ของรายการเดิม); ถ้าเหมือนเดิมไม่แก้ | รักษา **ประวัติการสังกัด** ตาม CONTEXT.md และไม่กระทบ **ภาพผู้อนุมัติ ณ เวลายื่น** ของคำขอเดิม |
 | ขนาด | ไม่เกิน 2 MB และ 5,000 แถวต่อไฟล์ | เกินจำนวนบุคลากรของโรงพยาบาลชุมชนหลายเท่า และกันการใช้หน่วยความจำเกิน |
 | สิทธิ์นำเข้า | `hr.person.manage` ระดับทั้งโรงพยาบาล (บทบาทที่ไม่ผูกหน่วยงาน) และเป็นเจ้าของข้อมูลโมดูล `hr` | การนำเข้ากระทบทุกหน่วยงาน |
 | สิทธิ์ดูรายการ | `hr.person.read`; บทบาทระดับโรงพยาบาลเห็นทุกคน, บทบาทที่ผูกหน่วยงานเห็นเฉพาะบุคลากรที่สังกัดหน่วยงานนั้นอยู่ปัจจุบัน | ตรงกับ `AuthorizationService` ที่ตรวจขอบเขตหน่วยงานแบบตรงตัว |
@@ -38,8 +38,8 @@
 
 - `packages/db/migrations/0004_hr_master_data.sql` และ Drizzle schema ใน `schema/hr.ts`, `schema/core.ts`
 - `packages/core/src/hr/csv.ts`: `parseCsv(text)` รองรับ quote, `""`, CRLF และ BOM
+- `packages/core/src/hr/master-data-validation.ts`: `validateMasterData(files, existing, lookup)` คืน `{ organizations, people, errors }` โดยไม่แตะ DB
 - `packages/core/src/hr/master-data-import.ts`
-  - `validateMasterData(files, existing)` คืน `{ organizations, people, errors }` (บริสุทธิ์ ไม่แตะ DB นอกจากข้อมูลที่ส่งเข้ามา)
   - `MasterDataImportService.validate(files)` / `.apply(files, actorPersonId)` อ่านข้อมูลเดิม ตรวจ แล้วเขียนใน transaction
 - `packages/core/src/hr/hr-directory.ts`: `HrDirectory.listPeople(scope)` และ `.listOrganizations()`
 - `apps/web/src/app/api/hr/imports/route.ts`: `POST` multipart (`organizations`, `people`, `mode`)
@@ -47,7 +47,7 @@
 
 ## Error codes
 
-`MISSING_COLUMN`, `REQUIRED`, `TOO_LONG`, `INVALID_NATIONAL_ID`, `INVALID_DATE`, `INVALID_STATUS`, `DUPLICATE_CODE`, `DUPLICATE_NATIONAL_ID`, `NATIONAL_ID_CONFLICT`, `UNKNOWN_ORGANIZATION`, `UNKNOWN_MANAGER`, `SELF_MANAGER`, `PARENT_CYCLE`, `TOO_MANY_ROWS`, `FILE_TOO_LARGE`
+`INVALID_CSV`, `MISSING_COLUMN`, `REQUIRED`, `TOO_LONG`, `INVALID_NATIONAL_ID`, `INVALID_DATE`, `INVALID_STATUS`, `DUPLICATE_CODE`, `DUPLICATE_NATIONAL_ID`, `NATIONAL_ID_CONFLICT`, `UNKNOWN_ORGANIZATION`, `UNKNOWN_MANAGER`, `SELF_MANAGER`, `PARENT_CYCLE`, `EFFECTIVE_DATE_NOT_AFTER_CURRENT`, `TOO_MANY_ROWS`, `FILE_TOO_LARGE`
 
 ## Out of scope
 

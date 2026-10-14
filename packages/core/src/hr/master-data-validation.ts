@@ -1,0 +1,187 @@
+import { parseCsv } from './csv';
+
+export type MasterDataFile = 'organizations' | 'people';
+export type MasterDataErrorCode =
+  | 'INVALID_CSV' | 'MISSING_COLUMN' | 'TOO_MANY_ROWS' | 'REQUIRED' | 'TOO_LONG' | 'INVALID_NATIONAL_ID' | 'INVALID_DATE' | 'INVALID_STATUS'
+  | 'DUPLICATE_CODE' | 'DUPLICATE_NATIONAL_ID' | 'NATIONAL_ID_CONFLICT' | 'UNKNOWN_ORGANIZATION' | 'UNKNOWN_MANAGER' | 'SELF_MANAGER'
+  | 'PARENT_CYCLE' | 'EFFECTIVE_DATE_NOT_AFTER_CURRENT';
+
+/** A validation problem. It names the cell, never its value, so national IDs cannot leak through the report. */
+export interface MasterDataError { file: MasterDataFile; row: number | null; column: string | null; code: MasterDataErrorCode; }
+export interface MasterDataFiles { organizations?: string; people?: string; }
+export type EmploymentStatus = 'ACTIVE' | 'INACTIVE';
+
+export interface ExistingOrganization { id: string; code: string | null; name: string; parentId: string | null; }
+export interface ExistingAssignment { organizationId: string; managerPersonId: string | null; effectiveFrom: Date; }
+export interface ExistingPerson { id: string; employeeCode: string | null; nationalIdLookup: string; displayName: string | null; positionTitle: string | null; employmentStatus: string; assignment: ExistingAssignment | null; }
+export interface ExistingMasterData { organizations: ExistingOrganization[]; people: ExistingPerson[]; }
+
+export interface OrganizationImportRow { row: number; code: string; name: string; parentCode: string | null; existingOrganizationId: string | null; }
+export interface PersonImportRow {
+  row: number; employeeCode: string; nationalId: string; displayName: string; positionTitle: string | null; organizationCode: string;
+  managerEmployeeCode: string | null; effectiveFrom: Date; status: EmploymentStatus; existingPersonId: string | null;
+}
+export interface MasterDataValidation { organizations: OrganizationImportRow[]; people: PersonImportRow[]; errors: MasterDataError[]; }
+
+export const emptyExistingMasterData: ExistingMasterData = { organizations: [], people: [] };
+export const maxImportRows = 5_000;
+
+const organizationColumns = { required: ['code', 'name'], optional: ['parent_code'] };
+const peopleColumns = { required: ['employee_code', 'national_id', 'display_name', 'organization_code', 'effective_from'], optional: ['position_title', 'manager_employee_code', 'status'] };
+const codeLength = 32;
+const textLength = 255;
+const bangkokOffsetMs = 7 * 60 * 60 * 1000;
+
+type Cells = Record<string, string>;
+interface Table { rows: { row: number; cells: Cells }[]; }
+
+export function validateMasterData(files: MasterDataFiles, existing: ExistingMasterData, lookup: (nationalId: string) => string): MasterDataValidation {
+  const errors: MasterDataError[] = [];
+  const organizationTable = files.organizations === undefined ? null : readTable('organizations', files.organizations, organizationColumns.required, errors);
+  const peopleTable = files.people === undefined ? null : readTable('people', files.people, peopleColumns.required, errors);
+  const organizations = organizationTable ? validateOrganizations(organizationTable, existing, errors) : [];
+  const knownOrganizationCodes = new Set([...existing.organizations.flatMap((organization) => organization.code ? [organization.code] : []), ...organizationTable?.rows.map(({ cells }) => cells.code).filter(Boolean) ?? []]);
+  const people = peopleTable ? validatePeople(peopleTable, existing, knownOrganizationCodes, organizations, lookup, errors) : [];
+  return { organizations, people, errors };
+}
+
+function readTable(file: MasterDataFile, text: string, requiredColumns: string[], errors: MasterDataError[]): Table | null {
+  let records: string[][];
+  try { records = parseCsv(text); } catch { errors.push({ file, row: null, column: null, code: 'INVALID_CSV' }); return null; }
+  const header = (records[0] ?? []).map((name) => name.trim().toLowerCase());
+  const missing = requiredColumns.filter((column) => !header.includes(column));
+  for (const column of missing) errors.push({ file, row: null, column, code: 'MISSING_COLUMN' });
+  if (missing.length > 0) return null;
+  if (records.length - 1 > maxImportRows) { errors.push({ file, row: null, column: null, code: 'TOO_MANY_ROWS' }); return null; }
+  // Row numbers match the spreadsheet: the header is row 1.
+  return { rows: records.slice(1).map((record, index) => ({ row: index + 2, cells: Object.fromEntries(header.map((name, column) => [name, (record[column] ?? '').trim()])) })) };
+}
+
+function validateOrganizations(table: Table, existing: ExistingMasterData, errors: MasterDataError[]): OrganizationImportRow[] {
+  const existingByCode = new Map(existing.organizations.flatMap((organization) => organization.code ? [[organization.code, organization] as const] : []));
+  const codeById = new Map(existing.organizations.map((organization) => [organization.id, organization.code]));
+  const fileCodes = new Set(table.rows.map(({ cells }) => cells.code).filter(Boolean));
+  const parentByCode = new Map<string, string | null>(existing.organizations.flatMap((organization) => organization.code ? [[organization.code, organization.parentId ? codeById.get(organization.parentId) ?? null : null] as const] : []));
+  for (const { cells } of table.rows) if (cells.code) parentByCode.set(cells.code, cells.parent_code || null);
+  const seen = new Set<string>();
+  const result: OrganizationImportRow[] = [];
+  for (const { row, cells } of table.rows) {
+    const rowErrors: MasterDataError[] = [];
+    const fail = (column: string, code: MasterDataErrorCode) => rowErrors.push({ file: 'organizations', row, column, code });
+    const { code, name } = cells;
+    const parentCode = cells.parent_code || null;
+    if (!code) fail('code', 'REQUIRED');
+    else if (code.length > codeLength) fail('code', 'TOO_LONG');
+    else if (seen.has(code)) fail('code', 'DUPLICATE_CODE');
+    if (code) seen.add(code);
+    if (!name) fail('name', 'REQUIRED');
+    else if (name.length > textLength) fail('name', 'TOO_LONG');
+    if (parentCode && !fileCodes.has(parentCode) && !existingByCode.has(parentCode)) fail('parent_code', 'UNKNOWN_ORGANIZATION');
+    else if (parentCode && code && reachesAncestor(parentCode, code, parentByCode)) fail('parent_code', 'PARENT_CYCLE');
+    errors.push(...rowErrors);
+    if (rowErrors.length === 0) result.push({ row, code: code!, name: name!, parentCode, existingOrganizationId: existingByCode.get(code!)?.id ?? null });
+  }
+  return result;
+}
+
+function reachesAncestor(start: string, target: string, parentByCode: Map<string, string | null>): boolean {
+  let current: string | null | undefined = start;
+  for (let steps = 0; current && steps <= parentByCode.size; steps += 1) {
+    if (current === target) return true;
+    current = parentByCode.get(current);
+  }
+  return false;
+}
+
+function validatePeople(table: Table, existing: ExistingMasterData, knownOrganizationCodes: Set<string>, organizations: OrganizationImportRow[], lookup: (nationalId: string) => string, errors: MasterDataError[]): PersonImportRow[] {
+  const existingByCode = new Map(existing.people.flatMap((person) => person.employeeCode ? [[person.employeeCode, person] as const] : []));
+  const existingByLookup = new Map(existing.people.map((person) => [person.nationalIdLookup, person]));
+  const organizationIdByCode = new Map(existing.organizations.flatMap((organization) => organization.code ? [[organization.code, organization.id] as const] : []));
+  for (const organization of organizations) if (!organization.existingOrganizationId) organizationIdByCode.delete(organization.code);
+  const fileCodes = new Set(table.rows.map(({ cells }) => cells.employee_code).filter(Boolean));
+  const personIdByCode = new Map<string, string>();
+  for (const { cells } of table.rows) {
+    const match = cells.employee_code ? existingByCode.get(cells.employee_code) ?? existingByLookup.get(safeLookup(cells.national_id, lookup) ?? '') : undefined;
+    if (match && cells.employee_code) personIdByCode.set(cells.employee_code, match.id);
+  }
+  for (const [code, person] of existingByCode) if (!personIdByCode.has(code)) personIdByCode.set(code, person.id);
+  const seenCodes = new Set<string>();
+  const seenNationalIds = new Set<string>();
+  const result: PersonImportRow[] = [];
+  for (const { row, cells } of table.rows) {
+    const rowErrors: MasterDataError[] = [];
+    const fail = (column: string, code: MasterDataErrorCode) => rowErrors.push({ file: 'people', row, column, code });
+    const employeeCode = cells.employee_code;
+    if (!employeeCode) fail('employee_code', 'REQUIRED');
+    else if (employeeCode.length > codeLength) fail('employee_code', 'TOO_LONG');
+    else if (seenCodes.has(employeeCode)) fail('employee_code', 'DUPLICATE_CODE');
+    if (employeeCode) seenCodes.add(employeeCode);
+    const nationalId = (cells.national_id ?? '').replace(/[\s-]/g, '');
+    if (!nationalId) fail('national_id', 'REQUIRED');
+    else if (!isValidNationalId(nationalId)) fail('national_id', 'INVALID_NATIONAL_ID');
+    else if (seenNationalIds.has(nationalId)) fail('national_id', 'DUPLICATE_NATIONAL_ID');
+    if (isValidNationalId(nationalId)) seenNationalIds.add(nationalId);
+    const displayName = cells.display_name;
+    if (!displayName) fail('display_name', 'REQUIRED');
+    else if (displayName.length > textLength) fail('display_name', 'TOO_LONG');
+    const positionTitle = cells.position_title || null;
+    if (positionTitle && positionTitle.length > textLength) fail('position_title', 'TOO_LONG');
+    const effectiveFrom = cells.effective_from ? parseBangkokDate(cells.effective_from) : null;
+    if (!cells.effective_from) fail('effective_from', 'REQUIRED');
+    else if (!effectiveFrom) fail('effective_from', 'INVALID_DATE');
+    const status = parseStatus(cells.status);
+    if (!status) fail('status', 'INVALID_STATUS');
+    const organizationCode = cells.organization_code;
+    if (!organizationCode) fail('organization_code', 'REQUIRED');
+    else if (!knownOrganizationCodes.has(organizationCode)) fail('organization_code', 'UNKNOWN_ORGANIZATION');
+    const managerEmployeeCode = cells.manager_employee_code || null;
+    if (managerEmployeeCode && managerEmployeeCode === employeeCode) fail('manager_employee_code', 'SELF_MANAGER');
+    else if (managerEmployeeCode && !fileCodes.has(managerEmployeeCode) && !existingByCode.has(managerEmployeeCode)) fail('manager_employee_code', 'UNKNOWN_MANAGER');
+
+    let existingPerson: ExistingPerson | undefined;
+    if (employeeCode && isValidNationalId(nationalId)) {
+      const nationalIdLookup = lookup(nationalId);
+      const byCode = existingByCode.get(employeeCode);
+      const byLookup = existingByLookup.get(nationalIdLookup);
+      if ((byCode && byCode.nationalIdLookup !== nationalIdLookup) || (byLookup?.employeeCode && byLookup.employeeCode !== employeeCode)) fail('national_id', 'NATIONAL_ID_CONFLICT');
+      else existingPerson = byCode ?? byLookup;
+    }
+    const current = existingPerson?.assignment;
+    if (current && effectiveFrom && organizationCode) {
+      const changed = organizationIdByCode.get(organizationCode) !== current.organizationId || (managerEmployeeCode ? personIdByCode.get(managerEmployeeCode) ?? null : null) !== current.managerPersonId;
+      if (changed && effectiveFrom.getTime() <= current.effectiveFrom.getTime()) fail('effective_from', 'EFFECTIVE_DATE_NOT_AFTER_CURRENT');
+    }
+    errors.push(...rowErrors);
+    if (rowErrors.length === 0) result.push({ row, employeeCode: employeeCode!, nationalId, displayName: displayName!, positionTitle, organizationCode: organizationCode!, managerEmployeeCode, effectiveFrom: effectiveFrom!, status: status!, existingPersonId: existingPerson?.id ?? null });
+  }
+  return result;
+}
+
+function safeLookup(value: string | undefined, lookup: (nationalId: string) => string): string | null {
+  const nationalId = (value ?? '').replace(/[\s-]/g, '');
+  return isValidNationalId(nationalId) ? lookup(nationalId) : null;
+}
+
+export function isValidNationalId(value: string): boolean {
+  if (!/^\d{13}$/.test(value)) return false;
+  const sum = [...value.slice(0, 12)].reduce((total, digit, index) => total + Number(digit) * (13 - index), 0);
+  return (11 - (sum % 11)) % 10 === Number(value[12]);
+}
+
+function parseStatus(value: string | undefined): EmploymentStatus | null {
+  const normalised = (value ?? '').toUpperCase();
+  if (!normalised) return 'ACTIVE';
+  return normalised === 'ACTIVE' || normalised === 'INACTIVE' ? normalised : null;
+}
+
+/** Accepts YYYY-MM-DD or D/M/YYYY; a year after 2400 is read as Buddhist era. Returns Bangkok midnight as a UTC instant. */
+function parseBangkokDate(value: string): Date | null {
+  const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(value);
+  const dayFirst = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(value);
+  const [year, month, day] = iso ? [Number(iso[1]), Number(iso[2]), Number(iso[3])] : dayFirst ? [Number(dayFirst[3]), Number(dayFirst[2]), Number(dayFirst[1])] : [NaN, NaN, NaN];
+  const gregorianYear = year > 2400 ? year - 543 : year;
+  const utc = Date.UTC(gregorianYear, month - 1, day);
+  const check = new Date(utc);
+  if (Number.isNaN(utc) || check.getUTCFullYear() !== gregorianYear || check.getUTCMonth() !== month - 1 || check.getUTCDate() !== day) return null;
+  return new Date(utc - bangkokOffsetMs);
+}

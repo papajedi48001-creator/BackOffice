@@ -16,8 +16,8 @@
 
 **Files:** `packages/core/src/hr/csv.ts`, `packages/core/src/hr/master-data-validation.ts`, tests
 
-- [ ] Step 1: Failing tests for quoting, BOM, CRLF, and every error code in the spec, plus "report never contains the national ID".
-- [ ] Step 2: Implement `parseCsv` and `validateMasterData`.
+- [x] Step 1: Failing tests for quoting, BOM, CRLF, and every error code in the spec, plus "report never contains the national ID".
+- [x] Step 2: Implement `parseCsv` and `validateMasterData`.
 
 ### Task 3: Import service and directory
 
