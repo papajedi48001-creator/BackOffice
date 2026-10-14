@@ -3,13 +3,13 @@ export interface WorkerRuntime {
   stop(): void;
 }
 
-export function createWorkerRuntime(options: { publishBatch(): Promise<unknown>; intervalMs: number }): WorkerRuntime {
+export function createWorkerRuntime(options: { publishBatch(): Promise<unknown>; intervalMs: number; onError?(error: unknown): void }): WorkerRuntime {
   let timer: ReturnType<typeof setInterval> | undefined;
   let running = false;
   const publish = async () => {
     if (running) return;
     running = true;
-    try { await options.publishBatch(); } finally { running = false; }
+    try { await options.publishBatch(); } catch (error) { options.onError?.(error); } finally { running = false; }
   };
   return {
     start() {

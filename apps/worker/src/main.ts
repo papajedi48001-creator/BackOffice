@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { createDatabase } from '@backoffice/db';
 import { NotificationConsumer } from './consumers/notification-consumer.ts';
-import { OutboxConsumer } from './consumers/outbox-consumer.ts';
+import { OutboxConsumer, toFailureCode } from './consumers/outbox-consumer.ts';
 import { DatabaseNotificationStore } from './database-notification-store.ts';
 import { DatabaseOutboxRepository } from './database-outbox-repository.ts';
 import { createWorkerRuntime } from './worker-runtime.ts';
@@ -23,7 +23,11 @@ const notifications = new NotificationConsumer(
   { deliverInApp: async () => undefined }
 );
 const consumer = new OutboxConsumer(new DatabaseOutboxRepository(database), notifications);
-const runtime = createWorkerRuntime({ publishBatch: () => consumer.publishOutboxBatch(), intervalMs: Number(process.env.WORKER_POLL_INTERVAL_MS ?? '5000') });
+const runtime = createWorkerRuntime({
+  publishBatch: () => consumer.publishOutboxBatch(),
+  intervalMs: Number(process.env.WORKER_POLL_INTERVAL_MS ?? '5000'),
+  onError: (error) => console.error('backoffice.worker.batch_failed', { code: toFailureCode(error) })
+});
 
 runtime.start();
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
