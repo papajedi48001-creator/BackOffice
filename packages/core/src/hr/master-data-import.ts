@@ -22,7 +22,7 @@ export class MasterDataImportService {
   constructor(private readonly database: Pick<Database, 'query' | 'transaction'>, private readonly protector: NationalIdProtector, private readonly createId: () => string = randomUUID) {}
 
   async validate(files: MasterDataFiles): Promise<MasterDataImportResult> {
-    const existing = await loadExistingMasterData(this.database as QueryDatabase);
+    const existing = await loadExistingMasterData(this.database);
     const validation = validateMasterData(files, existing, (value) => this.protector.lookup(value));
     if (validation.errors.length > 0) return { ok: false, errors: validation.errors };
     return { ok: true, summary: this.plan(validation, existing).summary };
@@ -113,7 +113,7 @@ function assignmentChanged(row: MasterDataValidation['people'][number], stored: 
   return current.organizationId !== organizationIdByCode.get(row.organizationCode) || current.managerPersonId !== managerId;
 }
 
-export async function loadExistingMasterData(database: QueryDatabase, options: { forUpdate?: boolean } = {}): Promise<ExistingMasterData> {
+export async function loadExistingMasterData(database: Pick<Database, 'query'>, options: { forUpdate?: boolean } = {}): Promise<ExistingMasterData> {
   const lock = options.forUpdate ? ' FOR UPDATE' : '';
   const organizations = await database.query<StoredOrganization>(`SELECT id, code, name, parent_id AS parentId FROM organization${lock}`);
   // Timestamps are formatted in SQL so the driver's local time zone never shifts them.
