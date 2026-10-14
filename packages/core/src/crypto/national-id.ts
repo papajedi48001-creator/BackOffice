@@ -31,7 +31,8 @@ export class NationalIdProtector {
     return createHmac('sha256', this.lookupKey).update(nationalId, 'utf8').digest('hex');
   }
 
+  /** Keeps only the last three digits, in the usual 1-4-5-2-1 grouping. */
   mask(nationalId: string): string {
-    return `${nationalId[0]}-${nationalId.slice(1, 5)}-${nationalId.slice(5, 10)}-${nationalId.slice(10, 12)}-${nationalId[12]}`;
+    return `X-XXXX-XXXXX-${nationalId.slice(10, 12)}-${nationalId[12]}`;
   }
 }

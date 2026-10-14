@@ -9,8 +9,8 @@
 
 **Files:** `packages/db/migrations/0004_hr_master_data.sql`, `packages/db/src/migrate.ts`, `packages/db/src/migrate.test.ts`, `packages/db/src/schema/{hr,core}.ts`, `packages/core/src/crypto/national-id.ts`, `packages/core/src/hr/person-service*.ts`
 
-- [ ] Step 1: Failing tests: migrate test expects 0004; `mask('1234567890123')` is `X-XXXX-XXXXX-12-3`.
-- [ ] Step 2: Add the migration, schema columns and the real mask; `PersonService` stores `national_id_masked`.
+- [x] Step 1: Failing tests: migrate test expects 0004; `mask('1234567890123')` is `X-XXXX-XXXXX-12-3`.
+- [x] Step 2: Add the migration, schema columns and the real mask; `PersonService` stores `national_id_masked`.
 
 ### Task 2: CSV parser and validation
 
