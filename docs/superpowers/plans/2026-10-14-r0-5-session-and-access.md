@@ -21,18 +21,18 @@
 
 ### Task 2: Session service
 
-**Files:** `packages/core/src/identity/session-service.ts`, `session-service.test.ts`, `database-session-repository.ts`, `database-session-repository.integration.test.ts`
+**Files:** `packages/core/src/identity/session-service.ts`, `session-service.test.ts`, `database-identity-repository.ts`, `database-identity-repository.integration.test.ts`
 
-- [ ] Step 1: Write failing unit tests for start/resolve/revoke, idle and absolute expiry, hashed storage, and per-request access loading.
-- [ ] Step 2: Implement `SessionService` and the MariaDB repository and access loader.
-- [ ] Step 3: Integration test against MariaDB: start → resolve with scoped roles → revoke.
+- [x] Step 1: Write failing unit tests for start/resolve/revoke, idle and absolute expiry, hashed storage, and per-request access loading.
+- [x] Step 2: Implement `SessionService` and the MariaDB repository and access loader.
+- [x] Step 3: Integration test against MariaDB: start → resolve with scoped roles → revoke.
 
 ### Task 3: Login hardening
 
-**Files:** `packages/core/src/identity/auth-service.ts`, `auth-service.test.ts`, `database-login-throttle.ts`, integration test
+**Files:** `packages/core/src/identity/auth-service.ts`, `auth-service.test.ts`, `database-identity-repository.ts` (`DatabaseLoginThrottle`), integration test
 
-- [ ] Step 1: Write failing tests: lock after five failures, success clears the counter, unknown username still hashes, success/failure audit.
-- [ ] Step 2: Implement throttle, dummy-hash verification, and audit recording.
+- [x] Step 1: Write failing tests: lock after five failures, success clears the counter, unknown username still hashes, success/failure audit.
+- [x] Step 2: Implement throttle, dummy-hash verification, and audit recording.
 
 ### Task 4: Web integration
 
