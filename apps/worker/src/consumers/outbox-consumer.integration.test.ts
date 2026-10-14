@@ -12,7 +12,7 @@ describe('OutboxConsumer', () => {
       { deliverEmail: async (notification) => { sent.push(notification.eventId); } },
       { deliverInApp: async () => undefined }
     );
-    const consumer = new OutboxConsumer({ pending: async () => [event], markProcessed: async () => undefined }, notificationConsumer);
+    const consumer = new OutboxConsumer({ pending: async () => [event], markProcessed: async () => undefined, markFailed: async () => undefined }, notificationConsumer);
 
     await consumer.publishOutboxBatch();
     await consumer.publishOutboxBatch();

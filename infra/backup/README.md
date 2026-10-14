@@ -11,7 +11,7 @@ set +a
 infra/backup/backup.sh
 ```
 
-Run a restore drill on a staging host/project only. The restore script decrypts the archive, restores MariaDB and attachment objects into a separate Compose project, and checks that `foundation_person` is queryable:
+Run a restore drill on a staging host/project only. The restore script decrypts the archive, restores MariaDB and attachment objects into a separate Compose project, checks that every table in `required_tables` (including `person`, `request`, `audit_event`, and `outbox_event`) is queryable, and confirms that `schema_migration` records every migration version declared in `packages/db/src/migrate.ts`:
 
 ```bash
 set -a
