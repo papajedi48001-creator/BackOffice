@@ -30,10 +30,10 @@
 
 **Files:** `apps/web/src/app/api/hr/imports/route.ts`, `apps/web/src/lib/national-id.ts`, `(app)/hr/{people,organizations,imports}`, layout navigation, i18n, tests
 
-- [ ] Step 1: Failing route tests (401, 403, 413, 422 with report, 200 apply) and page tests (masked ID only, scope).
-- [ ] Step 2: Implement route, pages and import form.
-- [ ] Step 3: Add national ID key secrets to production compose and the deploy runbook; add terms to CONTEXT.md.
+- [x] Step 1: Failing route tests (401, 403, 413, 422 with report, 200 apply) and page tests (masked ID only, scope).
+- [x] Step 2: Implement route, pages and import form.
+- [x] Step 3: Add national ID key secrets to production compose and the deploy runbook; add terms to CONTEXT.md.
 
 ### Task 5: Verify
 
-- [ ] `pnpm lint && pnpm typecheck && pnpm test`, `pnpm test:integration` with MariaDB, `bash infra/backup/restore-verify.test.sh`, `git diff --check`, `next build`.
+- [x] `pnpm lint && pnpm typecheck && pnpm test`, `pnpm test:integration` with MariaDB, `bash infra/backup/restore-verify.test.sh`, `git diff --check`, `next build`.
