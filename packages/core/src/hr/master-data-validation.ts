@@ -1,4 +1,4 @@
-import { parseCsv } from './csv';
+import { parseCsvRecords, type CsvRecord } from './csv';
 
 export type MasterDataFile = 'organizations' | 'people';
 export type MasterDataErrorCode =
@@ -20,6 +20,8 @@ export interface OrganizationImportRow { row: number; code: string; name: string
 export interface PersonImportRow {
   row: number; employeeCode: string; nationalId: string; displayName: string; positionTitle: string | null; organizationCode: string;
   managerEmployeeCode: string | null; effectiveFrom: Date; status: EmploymentStatus; existingPersonId: string | null;
+  /** True when the import must start a new assignment: a new person, or a different unit or manager. */
+  assignmentChanged: boolean;
 }
 export interface MasterDataValidation { organizations: OrganizationImportRow[]; people: PersonImportRow[]; errors: MasterDataError[]; }
 
@@ -46,15 +48,15 @@ export function validateMasterData(files: MasterDataFiles, existing: ExistingMas
 }
 
 function readTable(file: MasterDataFile, text: string, requiredColumns: string[], errors: MasterDataError[]): Table | null {
-  let records: string[][];
-  try { records = parseCsv(text); } catch { errors.push({ file, row: null, column: null, code: 'INVALID_CSV' }); return null; }
-  const header = (records[0] ?? []).map((name) => name.trim().toLowerCase());
+  let records: CsvRecord[];
+  try { records = parseCsvRecords(text); } catch { errors.push({ file, row: null, column: null, code: 'INVALID_CSV' }); return null; }
+  const header = (records[0]?.cells ?? []).map((name) => name.trim().toLowerCase());
   const missing = requiredColumns.filter((column) => !header.includes(column));
   for (const column of missing) errors.push({ file, row: null, column, code: 'MISSING_COLUMN' });
   if (missing.length > 0) return null;
   if (records.length - 1 > maxImportRows) { errors.push({ file, row: null, column: null, code: 'TOO_MANY_ROWS' }); return null; }
-  // Row numbers match the spreadsheet: the header is row 1.
-  return { rows: records.slice(1).map((record, index) => ({ row: index + 2, cells: Object.fromEntries(header.map((name, column) => [name, (record[column] ?? '').trim()])) })) };
+  // Row numbers are the line each record starts on, so they match the spreadsheet even after blank lines.
+  return { rows: records.slice(1).map((record) => ({ row: record.line, cells: Object.fromEntries(header.map((name, column) => [name, (record.cells[column] ?? '').trim()])) })) };
 }
 
 function validateOrganizations(table: Table, existing: ExistingMasterData, errors: MasterDataError[]): OrganizationImportRow[] {
@@ -96,15 +98,17 @@ function reachesAncestor(start: string, target: string, parentByCode: Map<string
 function validatePeople(table: Table, existing: ExistingMasterData, knownOrganizationCodes: Set<string>, organizations: OrganizationImportRow[], lookup: (nationalId: string) => string, errors: MasterDataError[]): PersonImportRow[] {
   const existingByCode = new Map(existing.people.flatMap((person) => person.employeeCode ? [[person.employeeCode, person] as const] : []));
   const existingByLookup = new Map(existing.people.map((person) => [person.nationalIdLookup, person]));
+  // Units and people created by this import get placeholder ids, which never equal a stored id, so moving to them always counts as a change.
   const organizationIdByCode = new Map(existing.organizations.flatMap((organization) => organization.code ? [[organization.code, organization.id] as const] : []));
-  for (const organization of organizations) if (!organization.existingOrganizationId) organizationIdByCode.delete(organization.code);
+  for (const organization of organizations) if (!organization.existingOrganizationId) organizationIdByCode.set(organization.code, `new:${organization.code}`);
   const fileCodes = new Set(table.rows.map(({ cells }) => cells.employee_code).filter(Boolean));
   const personIdByCode = new Map<string, string>();
+  for (const [code, person] of existingByCode) personIdByCode.set(code, person.id);
   for (const { cells } of table.rows) {
-    const match = cells.employee_code ? existingByCode.get(cells.employee_code) ?? existingByLookup.get(safeLookup(cells.national_id, lookup) ?? '') : undefined;
-    if (match && cells.employee_code) personIdByCode.set(cells.employee_code, match.id);
+    if (!cells.employee_code || existingByCode.has(cells.employee_code)) continue;
+    const adopted = existingByLookup.get(safeLookup(cells.national_id, lookup) ?? '');
+    personIdByCode.set(cells.employee_code, adopted && !adopted.employeeCode ? adopted.id : `new:${cells.employee_code}`);
   }
-  for (const [code, person] of existingByCode) if (!personIdByCode.has(code)) personIdByCode.set(code, person.id);
   const seenCodes = new Set<string>();
   const seenNationalIds = new Set<string>();
   const result: PersonImportRow[] = [];
@@ -147,12 +151,10 @@ function validatePeople(table: Table, existing: ExistingMasterData, knownOrganiz
       else existingPerson = byCode ?? byLookup;
     }
     const current = existingPerson?.assignment;
-    if (current && effectiveFrom && organizationCode) {
-      const changed = organizationIdByCode.get(organizationCode) !== current.organizationId || (managerEmployeeCode ? personIdByCode.get(managerEmployeeCode) ?? null : null) !== current.managerPersonId;
-      if (changed && effectiveFrom.getTime() <= current.effectiveFrom.getTime()) fail('effective_from', 'EFFECTIVE_DATE_NOT_AFTER_CURRENT');
-    }
+    const assignmentChanged = !current || organizationIdByCode.get(organizationCode ?? '') !== current.organizationId || (managerEmployeeCode ? personIdByCode.get(managerEmployeeCode) ?? null : null) !== current.managerPersonId;
+    if (current && assignmentChanged && effectiveFrom && effectiveFrom.getTime() <= current.effectiveFrom.getTime()) fail('effective_from', 'EFFECTIVE_DATE_NOT_AFTER_CURRENT');
     errors.push(...rowErrors);
-    if (rowErrors.length === 0) result.push({ row, employeeCode: employeeCode!, nationalId, displayName: displayName!, positionTitle, organizationCode: organizationCode!, managerEmployeeCode, effectiveFrom: effectiveFrom!, status: status!, existingPersonId: existingPerson?.id ?? null });
+    if (rowErrors.length === 0) result.push({ row, employeeCode: employeeCode!, nationalId, displayName: displayName!, positionTitle, organizationCode: organizationCode!, managerEmployeeCode, effectiveFrom: effectiveFrom!, status: status!, existingPersonId: existingPerson?.id ?? null, assignmentChanged });
   }
   return result;
 }

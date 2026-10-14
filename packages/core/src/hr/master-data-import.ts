@@ -61,7 +61,7 @@ export class MasterDataImportService {
     for (const row of validation.people) {
       const stored = row.existingPersonId ? personById.get(row.existingPersonId) : undefined;
       if (stored && (stored.employeeCode !== row.employeeCode || stored.displayName !== row.displayName || stored.positionTitle !== row.positionTitle || stored.employmentStatus !== row.status)) summary.peopleUpdated += 1;
-      if (assignmentChanged(row, stored, organizationIdByCode, personIdByCode)) summary.assignmentsChanged += 1;
+      if (row.assignmentChanged) summary.assignmentsChanged += 1;
     }
     return { summary, organizationIdByCode, personIdByCode };
   }
@@ -95,7 +95,7 @@ export class MasterDataImportService {
     for (const row of validation.people) {
       const id = personIdByCode.get(row.employeeCode)!;
       const stored = personById.get(id);
-      if (!assignmentChanged(row, stored, organizationIdByCode, personIdByCode)) continue;
+      if (!row.assignmentChanged) continue;
       const effectiveFrom = toMariaDbDatetime(row.effectiveFrom);
       if (stored?.assignment) await database.execute('UPDATE employment_assignment SET effective_until = ? WHERE person_id = ? AND effective_until IS NULL', [effectiveFrom, id]);
       await database.execute(
@@ -106,12 +106,6 @@ export class MasterDataImportService {
   }
 }
 
-function assignmentChanged(row: MasterDataValidation['people'][number], stored: ExistingMasterData['people'][number] | undefined, organizationIdByCode: Map<string, string>, personIdByCode: Map<string, string>): boolean {
-  const current = stored?.assignment;
-  if (!current) return true;
-  const managerId = row.managerEmployeeCode ? personIdByCode.get(row.managerEmployeeCode) ?? null : null;
-  return current.organizationId !== organizationIdByCode.get(row.organizationCode) || current.managerPersonId !== managerId;
-}
 
 export async function loadExistingMasterData(database: Pick<Database, 'query'>, options: { forUpdate?: boolean } = {}): Promise<ExistingMasterData> {
   const lock = options.forUpdate ? ' FOR UPDATE' : '';

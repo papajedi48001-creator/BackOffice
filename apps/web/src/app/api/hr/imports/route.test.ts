@@ -9,7 +9,7 @@ vi.mock('@backoffice/core', async (importOriginal) => ({ ...await importOriginal
 
 import { POST } from './route';
 
-const hrManager = { authenticated: true, personId: 'person-a', roles: [{ name: 'hr-manager', organizationId: null }], dataOwnerModules: ['hr'] };
+const hrManager = { authenticated: true, personId: 'person-a', roles: [{ name: 'hr-manager', organizationId: null }], dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: ['hr'] };
 const summary = { organizationsCreated: 1, organizationsUpdated: 0, peopleCreated: 2, peopleUpdated: 0, assignmentsChanged: 2 };
 
 function upload(mode: string, people = 'employee_code,national_id\n') {
@@ -33,7 +33,7 @@ describe('POST /api/hr/imports', () => {
     expect((await upload('validate')).status).toBe(401);
     ready({ ...hrManager, roles: [{ name: 'hr-manager', organizationId: 'unit-a' }] });
     expect((await upload('validate')).status).toBe(403);
-    ready({ ...hrManager, dataOwnerModules: [] });
+    ready({ ...hrManager, hospitalWideDataOwnerModules: [] });
     expect((await upload('validate')).status).toBe(403);
     expect(mocks.validate).not.toHaveBeenCalled();
   });
@@ -68,6 +68,14 @@ describe('POST /api/hr/imports', () => {
     expect((await upload('apply', 'x'.repeat(2 * 1024 * 1024 + 1))).status).toBe(413);
     expect((await upload('delete')).status).toBe(400);
     expect(mocks.apply).not.toHaveBeenCalled();
+  });
+
+  it('stops reading a body larger than two files without trusting Content-Length', async () => {
+    ready();
+    const oversized = new ReadableStream({ start(controller) { controller.enqueue(new Uint8Array(5 * 1024 * 1024)); controller.close(); } });
+    const response = await POST(new Request('http://localhost/api/hr/imports', { method: 'POST', headers: { 'content-type': 'multipart/form-data; boundary=x' }, body: oversized, duplex: 'half' } as RequestInit));
+
+    expect(response.status).toBe(413);
   });
 
   it('answers 503 when the database or national ID keys are missing', async () => {

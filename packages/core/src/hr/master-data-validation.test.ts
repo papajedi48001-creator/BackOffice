@@ -93,6 +93,22 @@ describe('validateMasterData', () => {
     expect(result.people.map((person) => person.existingPersonId)).toEqual(['p2', null]);
   });
 
+  it('numbers rows as the spreadsheet does when the file has blank lines', () => {
+    expect(codes(validateMasterData({ organizations: 'code,name\n\nA,\n' }, emptyExistingMasterData, lookup))).toEqual(['organizations:3:name:REQUIRED']);
+  });
+
+  it('treats a manager who is new in this file as a change to the current assignment', () => {
+    const existing: ExistingMasterData = {
+      organizations: [{ id: 'org-hosp', code: 'HOSP', name: 'โรงพยาบาล', parentId: null }],
+      people: [{ id: 'p1', employeeCode: 'E001', nationalIdLookup: lookup(director), displayName: 'ผอ.', positionTitle: null, employmentStatus: 'ACTIVE', assignment: { organizationId: 'org-hosp', managerPersonId: null, effectiveFrom: new Date('2026-09-30T17:00:00Z') } }]
+    };
+    const result = validateMasterData({ people: people(`E001,${director},ผอ.,,HOSP,E002,2026-09-01,`, `E002,${nurse},หัวหน้าใหม่,,HOSP,,2026-09-01,`) }, existing, lookup);
+
+    expect(codes(result)).toEqual(['people:2:effective_from:EFFECTIVE_DATE_NOT_AFTER_CURRENT']);
+    expect(validateMasterData({ people: people(`E001,${director},ผอ.,,HOSP,E002,2026-11-01,`, `E002,${nurse},หัวหน้าใหม่,,HOSP,,2026-11-01,`) }, existing, lookup).people.map((row) => row.assignmentChanged)).toEqual([true, true]);
+    expect(validateMasterData({ people: people(`E001,${director},ผอ.,,HOSP,,2026-11-01,`) }, existing, lookup).people.map((row) => row.assignmentChanged)).toEqual([false]);
+  });
+
   it('limits a file to 5,000 rows', () => {
     const rows = Array.from({ length: 5_001 }, (_, index) => `C${index},หน่วย ${index},`);
     expect(codes(validateMasterData({ organizations: organizations(...rows) }, emptyExistingMasterData, lookup))).toEqual(['organizations:-:-:TOO_MANY_ROWS']);

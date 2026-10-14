@@ -22,6 +22,7 @@ describeWithDatabase('identity repositories against MariaDB', () => {
     await database.execute('INSERT INTO role (id, name, created_at) VALUES (?, ?, UTC_TIMESTAMP())', [roleId, roleName]);
     await database.execute('INSERT INTO role_assignment (id, person_id, role_id, organization_id, created_at) VALUES (?, ?, ?, ?, UTC_TIMESTAMP())', [randomUUID(), personId, roleId, organizationId]);
     await database.execute('INSERT INTO data_owner_assignment (id, module_code, organization_id, person_id, created_at) VALUES (?, ?, NULL, ?, UTC_TIMESTAMP())', [randomUUID(), 'hr', personId]);
+    await database.execute('INSERT INTO data_owner_assignment (id, module_code, organization_id, person_id, created_at) VALUES (?, ?, ?, ?, UTC_TIMESTAMP())', [randomUUID(), 'maintenance', organizationId, personId]);
   });
   afterAll(async () => database.close());
 
@@ -31,7 +32,7 @@ describeWithDatabase('identity repositories against MariaDB', () => {
 
     const stored = await database.query<{ tokenHash: string; lifetime: number }>('SELECT token_hash AS tokenHash, TIMESTAMPDIFF(SECOND, created_at, expires_at) AS lifetime FROM user_session WHERE person_id = ?', [personId]);
     expect(stored).toEqual([{ tokenHash: hashSessionToken(token), lifetime: 43_200 }]);
-    await expect(sessions.resolve(token)).resolves.toEqual({ authenticated: true, personId, roles: [{ name: roleName, organizationId }], dataOwnerModules: ['hr'] });
+    await expect(sessions.resolve(token)).resolves.toEqual({ authenticated: true, personId, roles: [{ name: roleName, organizationId }], dataOwnerModules: ['hr', 'maintenance'], hospitalWideDataOwnerModules: ['hr'] });
 
     await expect(sessions.revoke(token)).resolves.toBe(personId);
     await expect(sessions.resolve(token)).resolves.toBeNull();

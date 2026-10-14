@@ -7,7 +7,9 @@ export const accessSubjectSchema = z.object({
   authenticated: z.boolean(),
   personId: z.string().min(1).nullable().optional(),
   roles: z.array(z.object({ name: z.string().min(1), organizationId: z.string().min(1).nullable().optional() })),
-  dataOwnerModules: z.array(z.string().min(1))
+  dataOwnerModules: z.array(z.string().min(1)),
+  /** Modules this person owns for the whole hospital, not just one unit. */
+  hospitalWideDataOwnerModules: z.array(z.string().min(1)).optional()
 });
 
 export type AccessSubject = z.infer<typeof accessSubjectSchema>;

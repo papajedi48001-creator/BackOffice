@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseCsv } from './csv';
+import { parseCsv, parseCsvRecords } from './csv';
 
 describe('parseCsv', () => {
   it('reads quoted cells, escaped quotes, CRLF, a BOM, and Thai text', () => {
@@ -14,5 +14,9 @@ describe('parseCsv', () => {
 
   it('rejects an unterminated quote', () => {
     expect(() => parseCsv('a,b\n"open,x\n')).toThrow('INVALID_CSV');
+  });
+
+  it('reports the spreadsheet line each record starts on, counting blank lines and quoted line breaks', () => {
+    expect(parseCsvRecords('a,b\n\n"x\ny",1\nz,2\n').map((record) => record.line)).toEqual([1, 3, 5]);
   });
 });

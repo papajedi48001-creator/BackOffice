@@ -23,9 +23,9 @@ export class AuthorizationService {
     return [...new Set(permittedRoles.map((role) => role.organizationId as string))];
   }
 
-  /** For actions that touch every unit at once, such as a master-data import. */
+  /** For actions that touch every unit at once, such as a master-data import: needs an unscoped role and, where required, hospital-wide data ownership. */
   canActHospitalWide(subject: AccessSubject, action: Permission, moduleCode: string): boolean {
     if (this.organizationScope(subject, action) !== 'all') return false;
-    return !requiresDataOwner(action) || subject.dataOwnerModules.includes(moduleCode);
+    return !requiresDataOwner(action) || (subject.hospitalWideDataOwnerModules ?? []).includes(moduleCode);
   }
 }
