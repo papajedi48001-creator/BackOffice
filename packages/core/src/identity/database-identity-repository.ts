@@ -47,24 +47,27 @@ export class DatabaseLoginThrottle implements LoginThrottle {
   private readonly windowSeconds: number;
   private readonly lockSeconds: number;
 
-  constructor(private readonly database: Pick<Database, 'execute' | 'query'>, options: { maxFailures?: number; windowSeconds?: number; lockSeconds?: number } = {}) {
+  constructor(private readonly database: Pick<Database, 'execute' | 'transaction'>, options: { maxFailures?: number; windowSeconds?: number; lockSeconds?: number } = {}) {
     this.maxFailures = options.maxFailures ?? 5;
     this.windowSeconds = options.windowSeconds ?? 15 * 60;
     this.lockSeconds = options.lockSeconds ?? 15 * 60;
   }
 
-  async isLocked(key: string): Promise<boolean> {
-    const row = (await this.database.query<{ locked: number | string }>('SELECT locked_until IS NOT NULL AND locked_until > UTC_TIMESTAMP() AS locked FROM login_throttle WHERE key_hash = ? LIMIT 1', [key]))[0];
-    return Number(row?.locked ?? 0) === 1;
-  }
-
-  async recordFailure(key: string): Promise<void> {
-    // ON DUPLICATE KEY UPDATE assigns left to right, so window_started_at is reassigned last while the other expressions still read the stored window.
-    const inWindow = 'window_started_at > UTC_TIMESTAMP() - INTERVAL ? SECOND';
-    await this.database.execute(
-      `INSERT INTO login_throttle (key_hash, failures, window_started_at, locked_until) VALUES (?, 1, UTC_TIMESTAMP(), IF(1 >= ?, UTC_TIMESTAMP() + INTERVAL ? SECOND, NULL)) ON DUPLICATE KEY UPDATE locked_until = IF(${inWindow}, IF(failures + 1 >= ?, UTC_TIMESTAMP() + INTERVAL ? SECOND, locked_until), NULL), failures = IF(${inWindow}, failures + 1, 1), window_started_at = IF(${inWindow}, window_started_at, UTC_TIMESTAMP())`,
-      [key, this.maxFailures, this.lockSeconds, this.windowSeconds, this.maxFailures, this.lockSeconds, this.windowSeconds, this.windowSeconds]
-    );
+  async reserveAttempt(key: string): Promise<boolean> {
+    const now = 'UTC_TIMESTAMP()';
+    const locked = `(locked_until IS NOT NULL AND locked_until > ${now})`;
+    // A streak starts over once its window has passed (unless locked) or its lock has expired.
+    const stale = `((window_started_at <= ${now} - INTERVAL ? SECOND AND NOT ${locked}) OR (locked_until IS NOT NULL AND locked_until <= ${now}))`;
+    // The row lock taken by the upsert serialises concurrent attempts until this transaction commits, so the count read back is this attempt's own.
+    // ON DUPLICATE KEY UPDATE assigns left to right: failures and window_started_at read the stored lock, and locked_until reads the new failures.
+    return this.database.transaction(async (transaction) => {
+      await transaction.execute(
+        `INSERT INTO login_throttle (key_hash, failures, window_started_at, locked_until) VALUES (?, 1, ${now}, IF(1 >= ?, ${now} + INTERVAL ? SECOND, NULL)) ON DUPLICATE KEY UPDATE failures = IF(${stale}, 1, failures + 1), window_started_at = IF(${stale}, ${now}, window_started_at), locked_until = IF(failures >= ?, IF(${locked}, locked_until, ${now} + INTERVAL ? SECOND), NULL)`,
+        [key, this.maxFailures, this.lockSeconds, this.windowSeconds, this.windowSeconds, this.maxFailures, this.lockSeconds]
+      );
+      const row = (await transaction.query<{ failures: number }>('SELECT failures FROM login_throttle WHERE key_hash = ?', [key]))[0];
+      return Number(row?.failures ?? 0) <= this.maxFailures;
+    });
   }
 
   async reset(key: string): Promise<void> {

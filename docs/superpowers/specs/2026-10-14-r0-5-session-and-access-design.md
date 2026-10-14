@@ -23,9 +23,9 @@
 | อายุ session | idle 30 นาที, สูงสุด 12 ชั่วโมงนับจาก login | ครอบคลุมหนึ่งเวรงาน, เครื่องที่ทิ้งไว้หมดอายุเร็ว |
 | สิทธิ์ | โหลด `role_assignment` + `data_owner_assignment` ทุก request จาก DB | ถอนสิทธิ์มีผลทันที |
 | การจับคู่ role → permission | คงไว้ในโค้ด (`packages/core/src/access/policy.ts`) และทำ `role.name` ให้ unique | permission ถูกตรวจในโค้ดอยู่แล้ว ตาราง `role_permission` จะเพิ่มเมื่อมีหน้าจัดการบทบาท |
-| จำกัดการเดารหัสผ่าน | ล็อก username 15 นาทีหลังผิด 5 ครั้งภายใน 15 นาที (ตาราง `login_throttle` keyed ด้วย SHA-256 ของ username ตัวพิมพ์เล็ก) | ไม่พึ่ง IP ซึ่งผ่าน proxy และเชื่อถือไม่ได้; ระยะล็อกสั้นจำกัดผลของการถูกล็อกโดยคนอื่น |
+| จำกัดการเดารหัสผ่าน | ล็อกบัญชี 15 นาทีเมื่อพยายาม 5 ครั้งภายใน 15 นาทีโดยไม่สำเร็จ ตาราง `login_throttle` keyed ด้วย SHA-256 ของ id บัญชี (หรือของ username ตัวพิมพ์เล็กเมื่อไม่พบบัญชี) นับครั้งแบบ atomic ใน transaction ก่อนตรวจรหัสผ่าน | ไม่พึ่ง IP ซึ่งผ่าน proxy และเชื่อถือไม่ได้; key ตามบัญชีเพราะ collation ของ MariaDB ไม่สนตัวพิมพ์/วรรณยุกต์ จึงหลาย username สะกดต่างกันชี้บัญชีเดียว; นับก่อนตรวจเพื่อกันการยิงพร้อมกัน; ระยะล็อกสั้นจำกัดผลของการถูกล็อกโดยคนอื่น |
 | timing | ถ้าไม่พบ username ยังคำนวณ scrypt กับ hash หลอก | ไม่ให้เดา username จากเวลา |
-| บันทึกการตรวจสอบ | `identity.local_login` ผล `SUCCESS` (actor = บุคลากร) หรือ `FAILURE` (actor = null) เมื่อพบบัญชี; `identity.local_logout` เมื่อออกจากระบบ | ไม่บันทึก username ที่ไม่มีอยู่ เพราะไม่มี target และอาจเป็นรหัสผ่านที่พิมพ์ผิดช่อง |
+| บันทึกการตรวจสอบ | `identity.local_login` ผล `SUCCESS` (actor = บุคลากร) หรือ `FAILURE` (actor = null); เมื่อไม่พบบัญชี target เป็น nil UUID; `identity.local_logout` เมื่อออกจากระบบ | ไม่บันทึก username เพราะอาจเป็นรหัสผ่านที่พิมพ์ผิดช่อง; บันทึกทุกความล้มเหลวเพื่อให้สองกรณีใช้เวลาเท่ากันและเห็นการเดาบัญชี |
 
 session ที่เป็น cookie แบบเดิมจะใช้ไม่ได้หลัง deploy ผู้ใช้ต้อง login ใหม่หนึ่งครั้ง
 
@@ -50,7 +50,7 @@ session ที่เป็น cookie แบบเดิมจะใช้ไม�
 ## Verification
 
 - unit: session หมดอายุตาม idle/absolute, revoked ใช้ไม่ได้, token ใน DB เป็น hash, สิทธิ์มาจาก loader ทุกครั้ง
-- unit: ล็อกหลังผิดครบ, login สำเร็จล้างตัวนับ, ไม่พบ username ยังรัน scrypt, audit สำเร็จ/ล้มเหลว
-- integration (MariaDB): migration 0003, start → resolve → revoke, การโหลด role ตามหน่วยงาน, throttle
+- unit: ล็อกหลังผิดครบ, username สะกดต่างกันใช้ตัวนับเดียว, login สำเร็จล้างตัวนับ, ไม่พบ username ยังรัน scrypt, audit สำเร็จ/ล้มเหลว
+- integration (MariaDB): migration 0003, start → resolve → revoke, การโหลด role ตามหน่วยงาน, throttle, ยิงพร้อมกันผ่านไม่เกิน 5 ครั้ง
 - web: route login ตั้ง cookie ที่มี Max-Age, sign-out revoke, หน้าที่ป้องกันยังทำงานเมื่อ `readSession` เป็น async
 - `pnpm lint && pnpm typecheck && pnpm test && pnpm test:integration`

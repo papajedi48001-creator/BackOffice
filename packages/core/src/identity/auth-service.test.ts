@@ -5,14 +5,14 @@ import { LocalAuthService, hashPassword, type LoginThrottle } from './auth-servi
 class MemoryThrottle implements LoginThrottle {
   readonly failures = new Map<string, number>();
   constructor(private readonly limit = 5) {}
-  async isLocked(key: string) { return (this.failures.get(key) ?? 0) >= this.limit; }
-  async recordFailure(key: string) { this.failures.set(key, (this.failures.get(key) ?? 0) + 1); }
+  async reserveAttempt(key: string) { const attempts = (this.failures.get(key) ?? 0) + 1; this.failures.set(key, attempts); return attempts <= this.limit; }
   async reset(key: string) { this.failures.delete(key); }
 }
 
 async function setup() {
   const passwordHash = await hashPassword('correct-password');
-  const findByUsername = vi.fn(async (username: string) => username === 'hr.admin' ? { id: 'account-a', personId: 'person-a', username, passwordHash } : null);
+  // Mirrors MariaDB's accent- and case-insensitive collation on local_account.username.
+  const findByUsername = vi.fn(async (username: string) => username.normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase() === 'hr.admin' ? { id: 'account-a', personId: 'person-a', username: 'hr.admin', passwordHash } : null);
   const audits: AuditInput[] = [];
   const throttle = new MemoryThrottle();
   const service = new LocalAuthService({ findByUsername }, { throttle, audit: { recordAudit: async (input) => { audits.push(input); } } });
@@ -49,13 +49,21 @@ describe('LocalAuthService', () => {
     expect(throttle.failures.size).toBe(0);
   });
 
-  it('counts failures for an unknown username without auditing it and still verifies a password hash', async () => {
+  it('shares one lockout across every spelling that finds the same account', async () => {
+    const { service } = await setup();
+    for (const username of ['hr.admin', 'HR.ádmin', 'hr.àdmin', 'ｈｒ.admin', 'hr.admín']) await expect(service.authenticateLocal({ username, password: 'wrong' })).rejects.toThrow('INVALID_CREDENTIALS');
+
+    await expect(service.authenticateLocal({ username: 'hr.ädmin', password: 'correct-password' })).rejects.toThrow('LOGIN_LOCKED');
+  });
+
+  it('counts and audits failures for an unknown username like a known one and still verifies a password hash', async () => {
     const { service, audits, throttle } = await setup();
     const started = performance.now();
     await expect(service.authenticateLocal({ username: 'nobody', password: 'guess' })).rejects.toThrow('INVALID_CREDENTIALS');
     const elapsed = performance.now() - started;
 
-    expect(audits).toEqual([]);
+    expect(audits).toEqual([{ actorPersonId: null, action: 'identity.local_login', targetType: 'local_account', targetId: '00000000-0000-0000-0000-000000000000', result: 'FAILURE', metadata: {} }]);
+    expect(JSON.stringify(audits)).not.toContain('nobody');
     expect([...throttle.failures.values()]).toEqual([1]);
     expect(elapsed).toBeGreaterThan(5);
   });

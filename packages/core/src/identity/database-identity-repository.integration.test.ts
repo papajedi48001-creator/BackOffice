@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDatabase, runMigrations } from '@backoffice/db';
-import { LocalAuthService, hashPassword, loginThrottleKey } from './auth-service';
+import { LocalAuthService, accountThrottleKey, hashPassword, loginThrottleKey } from './auth-service';
 import { DatabaseAccessSubjectLoader, DatabaseLocalAccountRepository, DatabaseLoginThrottle, DatabaseSessionRepository } from './database-identity-repository';
 import { SessionService, hashSessionToken } from './session-service';
 
@@ -45,29 +45,37 @@ describeWithDatabase('identity repositories against MariaDB', () => {
     await expect(sessions.resolve(token)).resolves.toBeNull();
   });
 
-  it('locks a username after five failures and clears it after the window has passed', async () => {
+  it('locks an account after five failures and clears it after the lock has passed', async () => {
     const username = `user-${randomUUID()}`;
-    await database.execute('INSERT INTO local_account (id, person_id, username, password_hash, created_at) VALUES (?, ?, ?, ?, UTC_TIMESTAMP())', [randomUUID(), personId, username, await hashPassword('correct-password')]);
-    const throttle = new DatabaseLoginThrottle(database);
-    const auth = new LocalAuthService(new DatabaseLocalAccountRepository(database), { throttle });
+    const accountId = randomUUID();
+    await database.execute('INSERT INTO local_account (id, person_id, username, password_hash, created_at) VALUES (?, ?, ?, ?, UTC_TIMESTAMP())', [accountId, personId, username, await hashPassword('correct-password')]);
+    const auth = new LocalAuthService(new DatabaseLocalAccountRepository(database), { throttle: new DatabaseLoginThrottle(database) });
+    const key = accountThrottleKey(accountId);
 
-    for (let attempt = 0; attempt < 4; attempt += 1) await expect(auth.authenticateLocal({ username, password: 'wrong' })).rejects.toThrow('INVALID_CREDENTIALS');
-    await expect(throttle.isLocked(loginThrottleKey(username))).resolves.toBe(false);
-    await expect(auth.authenticateLocal({ username, password: 'wrong' })).rejects.toThrow('INVALID_CREDENTIALS');
+    for (let attempt = 0; attempt < 5; attempt += 1) await expect(auth.authenticateLocal({ username, password: 'wrong' })).rejects.toThrow('INVALID_CREDENTIALS');
     await expect(auth.authenticateLocal({ username, password: 'correct-password' })).rejects.toThrow('LOGIN_LOCKED');
 
-    await database.execute('UPDATE login_throttle SET locked_until = UTC_TIMESTAMP() - INTERVAL 1 SECOND, window_started_at = UTC_TIMESTAMP() - INTERVAL 16 MINUTE WHERE key_hash = ?', [loginThrottleKey(username)]);
+    await database.execute('UPDATE login_throttle SET locked_until = UTC_TIMESTAMP() - INTERVAL 1 SECOND, window_started_at = UTC_TIMESTAMP() - INTERVAL 16 MINUTE WHERE key_hash = ?', [key]);
     await expect(auth.authenticateLocal({ username, password: 'correct-password' })).resolves.toMatchObject({ personId });
-    await expect(database.query('SELECT key_hash FROM login_throttle WHERE key_hash = ?', [loginThrottleKey(username)])).resolves.toEqual([]);
+    await expect(database.query('SELECT key_hash FROM login_throttle WHERE key_hash = ?', [key])).resolves.toEqual([]);
   });
 
-  it('starts a fresh window after an old failure streak expires', async () => {
+  it('admits at most five of many parallel attempts', async () => {
+    const key = loginThrottleKey(`burst-${randomUUID()}`);
+    const throttle = new DatabaseLoginThrottle(database);
+
+    const admitted = await Promise.all(Array.from({ length: 50 }, () => throttle.reserveAttempt(key)));
+
+    expect(admitted.filter(Boolean)).toHaveLength(5);
+  });
+
+  it('starts a fresh window after an old attempt streak expires', async () => {
     const key = loginThrottleKey(`stale-${randomUUID()}`);
     const throttle = new DatabaseLoginThrottle(database);
-    for (let attempt = 0; attempt < 4; attempt += 1) await throttle.recordFailure(key);
+    for (let attempt = 0; attempt < 4; attempt += 1) await throttle.reserveAttempt(key);
     await database.execute('UPDATE login_throttle SET window_started_at = UTC_TIMESTAMP() - INTERVAL 16 MINUTE WHERE key_hash = ?', [key]);
-    await throttle.recordFailure(key);
 
+    await expect(throttle.reserveAttempt(key)).resolves.toBe(true);
     await expect(database.query('SELECT failures, locked_until AS lockedUntil FROM login_throttle WHERE key_hash = ?', [key])).resolves.toEqual([{ failures: 1, lockedUntil: null }]);
   });
 });

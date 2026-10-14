@@ -21,18 +21,20 @@ export interface LocalAccountRepository {
 }
 
 export interface LoginThrottle {
-  isLocked(key: string): Promise<boolean>;
-  recordFailure(key: string): Promise<void>;
+  /** Counts an attempt before the password is checked; false means the key is locked. */
+  reserveAttempt(key: string): Promise<boolean>;
   reset(key: string): Promise<void>;
 }
 
 export interface LoginAuditRecorder { recordAudit(input: AuditInput): Promise<void>; }
 export interface LocalAuthentication { personId: string; accountId: string; }
 
-const unlimitedThrottle: LoginThrottle = { isLocked: async () => false, recordFailure: async () => undefined, reset: async () => undefined };
+const unlimitedThrottle: LoginThrottle = { reserveAttempt: async () => true, reset: async () => undefined };
 const noAudit: LoginAuditRecorder = { recordAudit: async () => undefined };
 // Verified when the username does not exist so an unknown account costs the same scrypt work as a wrong password.
 const unknownAccountHash = `scrypt$${randomBytes(16).toString('base64url')}$${randomBytes(64).toString('base64url')}`;
+// Audit target for a failed login whose username matched no account; the username itself is never recorded.
+const unknownAccountId = '00000000-0000-0000-0000-000000000000';
 
 export class LocalAuthService {
   private readonly throttle: LoginThrottle;
@@ -45,13 +47,13 @@ export class LocalAuthService {
 
   async authenticateLocal(credentials: LocalCredentials): Promise<LocalAuthentication> {
     const validCredentials = localCredentialsSchema.parse(credentials);
-    const throttleKey = loginThrottleKey(validCredentials.username);
-    if (await this.throttle.isLocked(throttleKey)) throw new Error('LOGIN_LOCKED');
     const account = await this.accounts.findByUsername(validCredentials.username);
+    // Key by account so every spelling the database collation matches to it shares one lockout.
+    const throttleKey = account ? accountThrottleKey(account.id) : loginThrottleKey(validCredentials.username);
+    if (!(await this.throttle.reserveAttempt(throttleKey))) throw new Error('LOGIN_LOCKED');
     const passwordMatches = await verifyPassword(validCredentials.password, account?.passwordHash ?? unknownAccountHash);
     if (!account || !passwordMatches) {
-      await this.throttle.recordFailure(throttleKey);
-      if (account) await this.audit.recordAudit({ actorPersonId: null, action: 'identity.local_login', targetType: 'local_account', targetId: account.id, result: 'FAILURE', metadata: {} });
+      await this.audit.recordAudit({ actorPersonId: null, action: 'identity.local_login', targetType: 'local_account', targetId: account?.id ?? unknownAccountId, result: 'FAILURE', metadata: {} });
       throw new Error('INVALID_CREDENTIALS');
     }
     await this.throttle.reset(throttleKey);
@@ -62,6 +64,10 @@ export class LocalAuthService {
 
 export function loginThrottleKey(username: string): string {
   return createHash('sha256').update(username.trim().toLowerCase(), 'utf8').digest('hex');
+}
+
+export function accountThrottleKey(accountId: string): string {
+  return createHash('sha256').update(`account:${accountId}`, 'utf8').digest('hex');
 }
 
 export async function hashPassword(password: string): Promise<string> {
