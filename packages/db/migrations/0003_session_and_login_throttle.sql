@@ -1,0 +1,3 @@
+CREATE TABLE IF NOT EXISTS user_session (id CHAR(36) PRIMARY KEY, token_hash CHAR(64) NOT NULL, person_id CHAR(36) NOT NULL, created_at DATETIME NOT NULL, last_seen_at DATETIME NOT NULL, expires_at DATETIME NOT NULL, revoked_at DATETIME NULL, UNIQUE KEY user_session_token_hash_unique (token_hash), KEY user_session_person_index (person_id, revoked_at), CONSTRAINT user_session_person_fk FOREIGN KEY (person_id) REFERENCES person(id)) DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS login_throttle (key_hash CHAR(64) PRIMARY KEY, failures INT NOT NULL DEFAULT 0, window_started_at DATETIME NOT NULL, locked_until DATETIME NULL) DEFAULT CHARSET=utf8mb4;
+ALTER TABLE role ADD UNIQUE KEY IF NOT EXISTS role_name_unique (name);

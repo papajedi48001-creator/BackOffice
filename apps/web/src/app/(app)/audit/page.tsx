@@ -12,7 +12,7 @@ const auditActions = new Set<AuditEventRow['action']>(['workflow.request.submitt
 const auditResults = new Set<AuditEventRow['result']>(['SUCCESS', 'APPROVE', 'REJECT', 'RETURN']);
 
 export default async function AuditPage() {
-  const session = readSession(new Request('http://localhost', { headers: await headers() }));
+  const session = await readSession(new Request('http://localhost', { headers: await headers() }));
   if (!session?.personId) {
     redirect('/');
     return null;

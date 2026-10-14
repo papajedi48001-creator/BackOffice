@@ -12,7 +12,7 @@ type OrganizationRow = { name: string };
 
 export default async function RequestDetailPage({ params }: { params: Promise<{ requestId: string }> }) {
   const { requestId } = await params;
-  const session = readSession(new Request('http://localhost', { headers: await headers() }));
+  const session = await readSession(new Request('http://localhost', { headers: await headers() }));
   if (!session?.personId) redirect('/');
   const databaseUrl = readRuntimeValue('DATABASE_URL');
   if (!databaseUrl) return <p role="alert">ไม่สามารถอ่านรายละเอียดคำขอได้</p>;

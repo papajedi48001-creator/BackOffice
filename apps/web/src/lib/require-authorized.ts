@@ -7,7 +7,7 @@ export class AuthorizationError extends Error {
 }
 
 export async function requireAuthorized(request: Request, action?: Permission, resource?: AccessResource, authorizer = new AuthorizationService()): Promise<Session> {
-  const session = readSession(request);
+  const session = await readSession(request);
   if (!session?.authenticated || !session.personId) throw new AuthorizationError(401);
   if (action && resource && !(await authorizer.canAccess(session, action, resource)).allowed) throw new AuthorizationError(403);
   return session;

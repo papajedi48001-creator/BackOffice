@@ -7,7 +7,7 @@ import { readRuntimeValue } from '../../lib/runtime-env';
 
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const requestHeaders = await headers();
-  const session = readSession(new Request('http://localhost', { headers: requestHeaders }));
+  const session = await readSession(new Request('http://localhost', { headers: requestHeaders }));
   if (!session?.authenticated) redirect('/');
   const roleNames = new Set(session.roles.map((role) => role.name));
   const databaseUrl = readRuntimeValue('DATABASE_URL');
