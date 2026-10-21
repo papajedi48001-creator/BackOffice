@@ -26,6 +26,11 @@ function bangkokMidnightUtc(date: string): number {
   return midnight - offsetMs;
 }
 
+export function bangkokDayStart(date: string): Date {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error('INVALID_DATES');
+  return new Date(bangkokMidnightUtc(date));
+}
+
 export function toBookingRanges(input: { dates: string[]; startMinute: number; endMinute: number }, now: Date): BookingRange[] {
   const { openMinute, closeMinute, slotMinutes, maxAdvanceDays } = roomBookingPolicy;
   const { startMinute, endMinute } = input;

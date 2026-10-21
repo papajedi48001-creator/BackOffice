@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bangkokDate, buddhistYear, rangesOverlap, toBookingRanges } from './booking-days';
+import { bangkokDate, bangkokDayStart, buddhistYear, rangesOverlap, toBookingRanges } from './booking-days';
 
 // 2026-11-01 10:00 Bangkok
 const now = new Date('2026-11-01T03:00:00Z');
@@ -62,5 +62,14 @@ describe('rangesOverlap', () => {
   });
   it('detects a partial overlap', () => {
     expect(rangesOverlap({ startsAt: at(2), endsAt: at(5) }, { startsAt: at(4), endsAt: at(6) })).toBe(true);
+  });
+});
+
+describe('bangkokDayStart', () => {
+  it('returns the UTC instant of midnight in Bangkok', () => {
+    expect(bangkokDayStart('2026-11-02')).toEqual(new Date('2026-11-01T17:00:00Z'));
+  });
+  it('rejects an impossible date', () => {
+    expect(() => bangkokDayStart('2026-02-30')).toThrow('INVALID_DATES');
   });
 });
