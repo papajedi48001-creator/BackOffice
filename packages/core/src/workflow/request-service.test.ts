@@ -118,6 +118,61 @@ describe('RequestService', () => {
       expect(repository.cancellations).toHaveLength(0);
     });
   });
+
+  describe('resubmitRequest', () => {
+    async function returned(resolve: () => Promise<{ personId: string; organizationId: string }[]>) {
+      const repository = new MemoryWorkflowRepository();
+      let next = 0;
+      const service = new RequestService(repository, { resolve }, () => `id-${++next}`);
+      await repository.saveRequest({ id: 'request-1', reference: 'REQ-request-1', moduleCode: 'maintenance', requestorPersonId: 'person-a', organizationSnapshot: { organizationId: 'unit-a' }, status: 'RETURNED' });
+      await repository.saveStep({ id: 'step-1', requestId: 'request-1', sequence: 1, assigneeSnapshot: { personId: 'manager-a', organizationId: 'unit-a' }, status: 'RETURNED' });
+      await repository.saveStep({ id: 'step-2', requestId: 'request-1', sequence: 2, assigneeSnapshot: { personId: 'manager-b', organizationId: 'unit-a' }, status: 'CANCELLED' });
+      return { repository, service };
+    }
+
+    it('adds a new pending step after the old ones and notifies the new approver', async () => {
+      const resolverCalls: unknown[] = [];
+      const { repository, service } = await returned(async (...args: unknown[]) => { resolverCalls.push(args[0]); return [{ personId: 'manager-c', organizationId: 'unit-a' }]; });
+
+      const request = await service.resubmitRequest({ requestId: 'request-1', actorPersonId: 'person-a' });
+
+      expect(resolverCalls).toEqual([{ moduleCode: 'maintenance', requestorPersonId: 'person-a', organizationId: 'unit-a' }]);
+      expect(request.status).toBe('IN_REVIEW');
+      expect(repository.requests.get('request-1')?.status).toBe('IN_REVIEW');
+      expect(request.approvalSteps.map((step) => [step.sequence, step.status])).toEqual([[1, 'RETURNED'], [2, 'CANCELLED'], [3, 'PENDING']]);
+      const newStep = request.approvalSteps[2]!;
+      expect(newStep.assigneeSnapshot).toEqual({ personId: 'manager-c', organizationId: 'unit-a' });
+      expect(repository.steps.get('request-1')?.find((step) => step.id === newStep.id)?.status).toBe('PENDING');
+      expect(repository.outbox).toEqual([
+        expect.objectContaining({ type: 'workflow.request.resubmitted', payload: { requestId: 'request-1', moduleCode: 'maintenance' } }),
+        expect.objectContaining({ type: 'notification.in_app', idempotencyKey: `notification.in_app:request-resubmitted:request-1:step:${newStep.id}`, payload: { recipientPersonId: 'manager-c', requestId: 'request-1', subject: 'มีคำขอรอพิจารณา' } })
+      ]);
+      expect(repository.auditEvents).toEqual([expect.objectContaining({ actorPersonId: 'person-a', action: 'workflow.request.resubmitted', targetId: 'request-1', result: 'SUCCESS' })]);
+    });
+
+    it('stays returned when no approver can be found', async () => {
+      const { repository, service } = await returned(async () => []);
+      await expect(service.resubmitRequest({ requestId: 'request-1', actorPersonId: 'person-a' })).rejects.toThrow('NO_APPROVER');
+      expect(repository.requests.get('request-1')?.status).toBe('RETURNED');
+      expect(repository.steps.get('request-1')).toHaveLength(2);
+    });
+
+    it('refuses a request that was not returned', async () => {
+      const { repository, service } = await returned(async () => [{ personId: 'manager-c', organizationId: 'unit-a' }]);
+      await repository.saveRequest({ ...repository.requests.get('request-1')!, status: 'IN_REVIEW' });
+      await expect(service.resubmitRequest({ requestId: 'request-1', actorPersonId: 'person-a' })).rejects.toThrow('REQUEST_NOT_RETURNED');
+    });
+
+    it('refuses someone who is not the requestor', async () => {
+      const { service } = await returned(async () => [{ personId: 'manager-c', organizationId: 'unit-a' }]);
+      await expect(service.resubmitRequest({ requestId: 'request-1', actorPersonId: 'manager-a' })).rejects.toThrow('NOT_REQUESTOR');
+    });
+
+    it('refuses an unknown request', async () => {
+      const { service } = await returned(async () => [{ personId: 'manager-c', organizationId: 'unit-a' }]);
+      await expect(service.resubmitRequest({ requestId: 'missing', actorPersonId: 'person-a' })).rejects.toThrow('REQUEST_NOT_FOUND');
+    });
+  });
 });
 
 class MemoryWorkflowRepository implements WorkflowRepository {
