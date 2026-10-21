@@ -1,5 +1,5 @@
 import type { AccessSubject } from '@backoffice/contracts';
-import { AuthorizationService } from '@backoffice/core';
+import { AuthorizationService, RoomBookingQueries } from '@backoffice/core';
 import type { Database } from '@backoffice/db';
 import type { MessageKey } from '@backoffice/i18n';
 import type { NavigationItem } from '../components/app-shell';
@@ -36,7 +36,11 @@ export const moduleRegistry: readonly ModuleEntry[] = [
   { code: 'access-roles', href: '/access/roles', labelKey: 'roles', descriptionKey: 'moduleRolesDescription', icon: 'shield', group: 'governance', status: 'live', visible: hasRole('hr-manager') },
   { code: 'access-delegations', href: '/access/delegations', labelKey: 'delegations', descriptionKey: 'moduleDelegationsDescription', icon: 'delegate', group: 'governance', status: 'live', visible: hasRole('hr-manager') },
   { code: 'audit', href: '/audit', labelKey: 'audit', descriptionKey: 'moduleAuditDescription', icon: 'audit', group: 'governance', status: 'live', visible: everyone },
-  planned('room-booking', '/rooms', 'moduleRoomBooking', 'moduleRoomBookingDescription', 'room'),
+  {
+    code: 'room-booking', href: '/rooms', labelKey: 'moduleRoomBooking', descriptionKey: 'moduleRoomBookingDescription', icon: 'room', group: 'services', status: 'live', visible: everyone,
+    // Bookings waiting for this approver; anyone without the approver role gets 0 without a query.
+    badge: async (db, subject) => subject.personId ? (await new RoomBookingQueries(db).pendingForApprover({ personId: subject.personId, roles: subject.roles })).length : 0
+  },
   planned('maintenance', '/maintenance', 'moduleMaintenance', 'moduleMaintenanceDescription', 'wrench'),
   planned('inventory', '/inventory', 'moduleInventory', 'moduleInventoryDescription', 'package'),
   planned('fleet', '/fleet', 'moduleFleet', 'moduleFleetDescription', 'car'),

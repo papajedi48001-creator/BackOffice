@@ -6,7 +6,7 @@ root_dir="$(cd "${script_dir}/../.." && pwd)"
 compose_file="${STAGING_COMPOSE_FILE:-${root_dir}/infra/compose/docker-compose.staging.yml}"
 env_file="${STAGING_COMPOSE_ENV_FILE:-${root_dir}/infra/compose/.env.production.example}"
 project_name="${STAGING_COMPOSE_PROJECT_NAME:-waritch-backoffice-restore}"
-required_tables=(schema_migration person organization employment_assignment request approval_step audit_event outbox_event notification user_session)
+required_tables=(schema_migration person organization employment_assignment request approval_step audit_event outbox_event notification user_session room room_booking room_booking_day)
 
 if [[ "${1:-}" == "--check" ]]; then
   command -v docker >/dev/null

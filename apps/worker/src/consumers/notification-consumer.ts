@@ -12,7 +12,7 @@ export class NotificationConsumer {
     if (inAppPayload && !inAppPayload.success) throw new Error('INVALID_NOTIFICATION_EVENT');
     const recipientPersonId = inAppPayload?.data.recipientPersonId ?? (typeof event.payload.recipientPersonId === 'string' ? event.payload.recipientPersonId : null);
     if (!recipientPersonId) throw new Error('INVALID_NOTIFICATION_EVENT');
-    const message: NotificationMessage = { eventId: event.id, recipientPersonId, channel, requestId: inAppPayload?.data.requestId ?? null, subject: inAppPayload?.data.subject ?? (typeof event.payload.subject === 'string' ? event.payload.subject : 'มีงานในระบบ Back Office') };
+    const message: NotificationMessage = { eventId: event.id, recipientPersonId, channel, requestId: inAppPayload?.data.requestId ?? null, targetPath: inAppPayload?.data.targetPath ?? null, subject: inAppPayload?.data.subject ?? (typeof event.payload.subject === 'string' ? event.payload.subject : 'มีงานในระบบ Back Office') };
     if (!(await this.store.claim(message))) return;
     if (channel === 'email') await this.email.deliverEmail(message); else await this.inApp.deliverInApp(message);
   }
