@@ -160,9 +160,9 @@ function lan() {
     console.error('x No LAN address found. Set BACKOFFICE_LAN_HOST to this machine\'s IP address.');
     process.exit(1);
   }
-  const port = env.BACKOFFICE_LAN_PORT ?? '8443';
+  const port = process.env.BACKOFFICE_LAN_PORT ?? env.BACKOFFICE_LAN_PORT ?? '8443';
   step(`Starting the HTTPS proxy for ${host}`);
-  run('docker', ['compose', '-f', composeFile, '--profile', 'lan', 'up', '-d', 'https-lan'], { env: { ...env, BACKOFFICE_LAN_HOST: host } });
+  run('docker', ['compose', '-f', composeFile, '--profile', 'lan', 'up', '-d', 'https-lan'], { env: { ...env, BACKOFFICE_LAN_HOST: host, BACKOFFICE_LAN_PORT: port } });
   console.log(`\nOK Other machines on the LAN can open https://${host}:${port}`);
   if (candidates.length > 1) console.log(`  Other addresses on this machine: ${candidates.filter((a) => a !== host).join(', ')} (set BACKOFFICE_LAN_HOST to pick one)`);
   console.log('  The web app must be running (`node scripts/setup-local.mjs web`), and the firewall must allow inbound TCP on that port.');
