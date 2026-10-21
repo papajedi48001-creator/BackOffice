@@ -14,8 +14,8 @@ const mocks = vi.hoisted(() => ({
 vi.mock('next/headers', () => ({ headers: mocks.headers }));
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect }));
 vi.mock('@backoffice/db', () => ({ createDatabase: mocks.createDatabase }));
-vi.mock('../../../lib/runtime-env', () => ({ readRuntimeValue: mocks.readRuntimeValue }));
-vi.mock('../../../lib/session', () => ({ readSession: mocks.readSession }));
+vi.mock('../../../../lib/runtime-env', () => ({ readRuntimeValue: mocks.readRuntimeValue }));
+vi.mock('../../../../lib/session', () => ({ readSession: mocks.readSession }));
 
 import AuditPage from './page';
 

@@ -1,10 +1,11 @@
 import type { AccessSubject } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { describe, expect, it, vi } from 'vitest';
-import { moduleLabel, moduleRegistry, navigationFor, visibleModules } from './modules';
+import { moduleLabel, moduleRegistry, moduleSections, navigationFor, visibleModules } from './modules';
 
 const subject = (overrides: Partial<AccessSubject> = {}): AccessSubject => ({ authenticated: true, personId: 'p', roles: [], dataOwnerModules: [], ...overrides });
 const hrefs = (value: AccessSubject) => navigationFor(value).map((item) => item.href);
+const sectionHrefs = (code: string, value: AccessSubject) => moduleSections(code, value).map((section) => section.href);
 
 describe('module registry', () => {
   it('has unique codes and hrefs', () => {
@@ -12,22 +13,29 @@ describe('module registry', () => {
     expect(new Set(moduleRegistry.map((entry) => entry.href)).size).toBe(moduleRegistry.length);
   });
 
-  it('shows no HR or access modules to a user without roles', () => {
-    expect(hrefs(subject())).toEqual(['/dashboard', '/requests', '/notifications', '/audit', '/rooms']);
+  it('shows one entry per module and no sub-pages to a user without roles', () => {
+    expect(hrefs(subject())).toEqual(['/dashboard', '/requests', '/notifications', '/access', '/rooms']);
+    expect(sectionHrefs('access', subject())).toEqual(['/access/audit']);
+    expect(sectionHrefs('hr', subject())).toEqual([]);
   });
 
-  it('shows people and units to hr-reader', () => {
-    const result = hrefs(subject({ roles: [{ name: 'hr-reader', organizationId: 'unit-1' }] }));
-    expect(result).toEqual(expect.arrayContaining(['/hr/people', '/hr/organizations']));
-    expect(result).not.toContain('/hr/imports');
-    expect(result).not.toContain('/access/roles');
+  it('gives hr-reader the HR module with people and units only', () => {
+    const reader = subject({ roles: [{ name: 'hr-reader', organizationId: 'unit-1' }] });
+    expect(hrefs(reader)).toContain('/hr');
+    expect(hrefs(reader).filter((href) => href.startsWith('/hr/'))).toEqual([]);
+    expect(sectionHrefs('hr', reader)).toEqual(['/hr/people', '/hr/organizations']);
+    expect(sectionHrefs('access', reader)).toEqual(['/access/audit']);
   });
 
   it('shows import only to hospital-wide hr-manager data owners', () => {
-    expect(hrefs(subject({ roles: [{ name: 'hr-manager', organizationId: null }], dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: ['hr'] }))).toContain('/hr/imports');
-    const scoped = hrefs(subject({ roles: [{ name: 'hr-manager', organizationId: 'unit-1' }], dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: [] }));
-    expect(scoped).not.toContain('/hr/imports');
-    expect(scoped).toEqual(expect.arrayContaining(['/access/roles', '/access/delegations']));
+    expect(sectionHrefs('hr', subject({ roles: [{ name: 'hr-manager', organizationId: null }], dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: ['hr'] }))).toContain('/hr/imports');
+    const scoped = subject({ roles: [{ name: 'hr-manager', organizationId: 'unit-1' }], dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: [] });
+    expect(sectionHrefs('hr', scoped)).not.toContain('/hr/imports');
+    expect(sectionHrefs('access', scoped)).toEqual(['/access/roles', '/access/delegations', '/access/audit']);
+  });
+
+  it('keeps every section inside its module path', () => {
+    for (const entry of moduleRegistry) for (const section of entry.sections ?? []) expect(section.href.startsWith(`${entry.href}/`)).toBe(true);
   });
 
   it('never puts planned modules in navigation but lists them in visibleModules', () => {
