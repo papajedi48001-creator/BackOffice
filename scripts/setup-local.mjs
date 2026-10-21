@@ -17,7 +17,10 @@ const envFile = path.join(root, '.env');
 const composeFile = 'infra/compose/docker-compose.dev.yml';
 
 function run(command, args, { env = {}, allowFailure = false, quiet = false } = {}) {
-  const result = spawnSync(command, args, { cwd: root, stdio: quiet ? 'ignore' : 'inherit', shell: process.platform === 'win32' && command === 'pnpm', env: { ...process.env, ...env } });
+  // pnpm is a .cmd shim on Windows and needs a shell; every argument here is a fixed script value.
+  const viaShell = process.platform === 'win32' && command === 'pnpm';
+  const options = { cwd: root, stdio: quiet ? 'ignore' : 'inherit', shell: viaShell, env: { ...process.env, ...env } };
+  const result = viaShell ? spawnSync([command, ...args].join(' '), options) : spawnSync(command, args, options);
   if (result.status !== 0 && !allowFailure) {
     console.error(`\nx ${command} ${args.join(' ')} failed`);
     process.exit(result.status ?? 1);
