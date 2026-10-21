@@ -3,6 +3,8 @@
 # certificate with its own local CA, so browsers show a warning the first time.
 {
 	auto_https disable_redirects
+	# Clients send no SNI when they connect by IP address; pick the LAN certificate for them.
+	default_sni {$BACKOFFICE_LAN_HOST}
 }
 
 https://{$BACKOFFICE_LAN_HOST}:8443, https://localhost:8443 {

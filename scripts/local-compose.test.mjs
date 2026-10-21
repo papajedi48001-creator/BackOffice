@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 
@@ -34,4 +35,10 @@ test('the lan profile adds an HTTPS proxy only when asked for', { skip: !hasDock
   const { services } = renderCompose({ BACKOFFICE_LAN_HOST: '192.0.2.10', BACKOFFICE_LAN_PORT: '8443' }, ['lan']);
   assert.deepEqual(publishedPorts(services['https-lan']), ['8443:8443']);
   assert.equal(services['https-lan'].environment.BACKOFFICE_LAN_HOST, '192.0.2.10');
+});
+
+test('the LAN Caddyfile serves its certificate to clients that connect by IP', () => {
+  const caddyfile = readFileSync(new URL('../infra/compose/Caddyfile.lan', import.meta.url), 'utf8');
+  // Browsers send no SNI for https://<ip>:8443; without default_sni the TLS handshake fails.
+  assert.match(caddyfile, /^\s*default_sni \{\$BACKOFFICE_LAN_HOST\}\s*$/m);
 });

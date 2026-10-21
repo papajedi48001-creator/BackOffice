@@ -92,7 +92,11 @@ function writeEnvIfMissing(ports) {
 function migrateWithRetry(env) {
   step('Running migrations (waiting for MariaDB to accept connections)');
   for (let attempt = 1; attempt <= 30; attempt++) {
-    if (run('pnpm', ['--filter', '@backoffice/db', 'migrate'], { env, allowFailure: true })) return;
+    // Connection errors are expected while MariaDB boots; only the last attempt prints its output.
+    if (run('pnpm', ['--filter', '@backoffice/db', 'migrate'], { env, allowFailure: true, quiet: attempt < 30 })) {
+      console.log('Migrations applied.');
+      return;
+    }
     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 2000);
   }
   console.error('x MariaDB did not become ready. Check `docker compose -f infra/compose/docker-compose.dev.yml logs mariadb`.');
