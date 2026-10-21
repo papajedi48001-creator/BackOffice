@@ -16,6 +16,16 @@ describe('AuditEventTable', () => {
     expect(screen.queryByText('1234567890123')).not.toBeInTheDocument();
   });
 
+  it('labels cancellations and resubmissions', () => {
+    render(<AuditEventTable events={[
+      { createdAt: '2026-10-01T07:00:00.000Z', action: 'workflow.request.cancelled', result: 'SUCCESS', requestReference: 'REQ-1' },
+      { createdAt: '2026-10-01T08:00:00.000Z', action: 'workflow.request.resubmitted', result: 'SUCCESS', requestReference: 'REQ-2' }
+    ]} />);
+
+    expect(screen.getByText('ยกเลิกคำขอ')).toBeInTheDocument();
+    expect(screen.getByText('ส่งคำขออีกครั้ง')).toBeInTheDocument();
+  });
+
   it('renders the existing empty state when the actor has no events', () => {
     render(<AuditEventTable events={[]} />);
 

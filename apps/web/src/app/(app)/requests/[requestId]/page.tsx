@@ -3,12 +3,12 @@ import { headers } from 'next/headers';
 import { createDatabase } from '@backoffice/db';
 import { readRuntimeValue } from '../../../../lib/runtime-env';
 import { readSession } from '../../../../lib/session';
-import { canApproveRequest, canViewRequest } from '../../../../lib/request-access';
+import { RequestHistory } from '@backoffice/core';
+import { canApproveRequest, canCancelRequest, canResubmitRequest, canViewRequest } from '../../../../lib/request-access';
+import type { RequestDisplayStatus } from '../../../../components/status-badge';
 import { RequestDetailPanel } from './request-detail-panel';
 
-type RequestRow = { id: string; reference: string; requestorPersonId: string; organizationSnapshot: string; status: 'IN_REVIEW' | 'APPROVED' | 'REJECTED' | 'RETURNED' };
-type StepRow = { assigneeSnapshot: string; status: string };
-type OrganizationRow = { name: string };
+type RequestRow = { id: string; reference: string; requestorPersonId: string; status: RequestDisplayStatus };
 
 export default async function RequestDetailPage({ params }: { params: Promise<{ requestId: string }> }) {
   const { requestId } = await params;
@@ -18,15 +18,17 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
   if (!databaseUrl) return <p role="alert">ไม่สามารถอ่านรายละเอียดคำขอได้</p>;
   const database = createDatabase(databaseUrl);
   try {
-    const request = (await database.query<RequestRow>('SELECT id, reference, requestor_person_id AS requestorPersonId, organization_snapshot AS organizationSnapshot, status FROM request WHERE id = ? LIMIT 1', [requestId]))[0];
+    const request = (await database.query<RequestRow>('SELECT id, reference, requestor_person_id AS requestorPersonId, status FROM request WHERE id = ? LIMIT 1', [requestId]))[0];
     if (!request) notFound();
-    const steps = await database.query<StepRow>('SELECT assignee_snapshot AS assigneeSnapshot, status FROM approval_step WHERE request_id = ? ORDER BY sequence', [request.id]);
-    const step = steps.find((candidate) => candidate.status === 'PENDING');
-    const approverPersonIds = steps.map((candidate) => (JSON.parse(candidate.assigneeSnapshot) as { personId?: string }).personId).filter((personId): personId is string => Boolean(personId));
-    if (!canViewRequest(session.personId, { requestorPersonId: request.requestorPersonId, approverPersonIds })) notFound();
-    const assigneePersonId = step ? (JSON.parse(step.assigneeSnapshot) as { personId?: string }).personId : undefined;
-    const organizationId = (JSON.parse(request.organizationSnapshot) as { organizationId?: string }).organizationId ?? 'ไม่ระบุ';
-    const organization = organizationId === 'ไม่ระบุ' ? undefined : (await database.query<OrganizationRow>('SELECT name FROM organization WHERE id = ? LIMIT 1', [organizationId]))[0];
-    return <RequestDetailPanel requestId={request.id} reference={request.reference} organizationId={organization?.name ?? 'ไม่ระบุ'} status={request.status} canApprove={canApproveRequest(session.personId, { status: request.status, assigneePersonId })} statusAfterApprove={steps.filter((candidate) => candidate.status === 'PENDING').length > 1 ? 'IN_REVIEW' : 'APPROVED'} />;
+    const history = await new RequestHistory(database).load(request.id);
+    if (!history) notFound();
+    if (!canViewRequest(session.personId, { requestorPersonId: request.requestorPersonId, approverPersonIds: history.steps.map((step) => step.assigneePersonId).filter(Boolean) })) notFound();
+    const pendingSteps = history.steps.filter((step) => step.status === 'PENDING');
+    const actions = {
+      approve: canApproveRequest(session.personId, { status: request.status, assigneePersonId: pendingSteps[0]?.assigneePersonId }),
+      cancel: canCancelRequest(session.personId, request),
+      resubmit: canResubmitRequest(session.personId, request)
+    };
+    return <RequestDetailPanel requestId={request.id} reference={request.reference} requestorName={history.requestorName} organizationName={history.organizationName} status={request.status} history={history.entries} actions={actions} statusAfterApprove={pendingSteps.length > 1 ? 'IN_REVIEW' : 'APPROVED'} />;
   } finally { await database.close(); }
 }

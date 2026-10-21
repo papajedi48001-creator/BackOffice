@@ -2,14 +2,16 @@ import { t } from '@backoffice/i18n';
 
 export type AuditEventRow = {
   createdAt: string;
-  action: 'workflow.request.submitted' | 'workflow.request.decided';
+  action: 'workflow.request.submitted' | 'workflow.request.decided' | 'workflow.request.cancelled' | 'workflow.request.resubmitted';
   result: 'SUCCESS' | 'APPROVE' | 'REJECT' | 'RETURN';
   requestReference: string | null;
 };
 
 const actionLabels: Record<AuditEventRow['action'], string> = {
   'workflow.request.submitted': t('auditRequestSubmitted'),
-  'workflow.request.decided': t('auditRequestDecided')
+  'workflow.request.decided': t('auditRequestDecided'),
+  'workflow.request.cancelled': t('auditRequestCancelled'),
+  'workflow.request.resubmitted': t('auditRequestResubmitted')
 };
 
 const resultLabels: Record<AuditEventRow['result'], string> = {

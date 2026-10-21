@@ -37,6 +37,22 @@ describe('AuditPage', () => {
     expect(screen.queryByText('do-not-render')).not.toBeInTheDocument();
   });
 
+  it('keeps cancellation and resubmission events', async () => {
+    mocks.headers.mockResolvedValue(new Headers());
+    mocks.readSession.mockReturnValue({ authenticated: true, personId: 'person-a', roles: [] });
+    mocks.readRuntimeValue.mockReturnValue('mysql://test');
+    mocks.query.mockResolvedValue([
+      { createdAt: '2026-10-01T07:00:00.000Z', action: 'workflow.request.cancelled', result: 'SUCCESS', metadata: '{"requestReference":"REQ-cancelled"}' },
+      { createdAt: '2026-10-01T08:00:00.000Z', action: 'workflow.request.resubmitted', result: 'SUCCESS', metadata: '{"requestReference":"REQ-resubmitted"}' }
+    ]);
+    mocks.createDatabase.mockReturnValue({ query: mocks.query, close: mocks.close });
+
+    render(await AuditPage());
+
+    expect(screen.getByText('REQ-cancelled')).toBeInTheDocument();
+    expect(screen.getByText('REQ-resubmitted')).toBeInTheDocument();
+  });
+
   it('redirects unauthenticated users before querying audit data', async () => {
     mocks.headers.mockResolvedValue(new Headers());
     mocks.readSession.mockReturnValue(null);
