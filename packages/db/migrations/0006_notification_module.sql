@@ -1,0 +1,1 @@
+ALTER TABLE notification ADD COLUMN IF NOT EXISTS module_code VARCHAR(64) NULL;

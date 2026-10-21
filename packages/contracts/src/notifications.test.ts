@@ -26,6 +26,15 @@ describe('notificationEventPayloadSchema', () => {
       .toEqual({ recipientPersonId: 'person-1', subject: 'การจองห้องได้รับอนุมัติ (RB-2569-0001)', targetPath: '/rooms/bookings/booking-1' });
   });
 
+  it('keeps the code of the module that sent the notification', () => {
+    expect(notificationEventPayloadSchema.parse({ recipientPersonId: 'person-1', subject: 'การจองห้องได้รับอนุมัติ', targetPath: '/rooms/bookings/booking-1', moduleCode: 'room-booking' }))
+      .toMatchObject({ moduleCode: 'room-booking' });
+  });
+
+  it.each(['Room Booking', 'room_booking', '1rooms', ''])('rejects a malformed module code %s', (moduleCode) => {
+    expect(notificationEventPayloadSchema.safeParse({ recipientPersonId: 'person-1', subject: 'แจ้งเตือน', requestId: 'request-1', moduleCode }).success).toBe(false);
+  });
+
   it.each(['//evil.example/path', 'https://evil.example', 'rooms/bookings/1', '/rooms?reason=x'])('rejects an unsafe target path %s', (targetPath) => {
     expect(notificationEventPayloadSchema.safeParse({ recipientPersonId: 'person-1', subject: 'แจ้งเตือน', targetPath }).success).toBe(false);
   });

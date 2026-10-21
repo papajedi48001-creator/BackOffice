@@ -159,3 +159,4 @@ a.module-tile:hover .module-go { color: #0b7285; transform: translateX(2px); }
 .request-history li:last-child { border-bottom: 0; }
 .request-history time { color: #486581; font-size: .9rem; }
 .request-history .history-reason { margin: 0; white-space: pre-wrap; }
+.notification-module { color: #0b7285; font-weight: 700; }

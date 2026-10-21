@@ -1,7 +1,7 @@
 import type { AccessSubject } from '@backoffice/contracts';
 import { AuthorizationService, RoomBookingQueries } from '@backoffice/core';
 import type { Database } from '@backoffice/db';
-import type { MessageKey } from '@backoffice/i18n';
+import { t, type MessageKey } from '@backoffice/i18n';
 import type { NavigationItem } from '../components/app-shell';
 
 export type ModuleGroup = 'mine' | 'people' | 'services' | 'governance';
@@ -58,4 +58,10 @@ export function visibleModules(subject: AccessSubject): ModuleEntry[] {
 
 export function navigationFor(subject: AccessSubject): NavigationItem[] {
   return [{ href: '/dashboard', label: 'dashboard' }, ...visibleModules(subject).filter((entry) => entry.status === 'live').map((entry) => ({ href: entry.href, label: entry.labelKey }))];
+}
+
+// Label shown in the central inbox, e.g. "[จองห้องประชุม]". Notifications from before module codes existed came from requests.
+export function moduleLabel(code: string | null): string {
+  const entry = moduleRegistry.find((candidate) => candidate.code === (code ?? 'requests'));
+  return entry ? t(entry.labelKey) : t('appName');
 }

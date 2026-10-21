@@ -107,7 +107,7 @@ describe('ApprovalService', () => {
     expect(repository.steps).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'step-1', status: 'APPROVED' }), expect.objectContaining({ id: 'step-2', status: 'PENDING' })]));
     expect(repository.outbox).toEqual(expect.arrayContaining([expect.objectContaining({
       type: 'notification.in_app',
-      payload: { recipientPersonId: 'manager-b', requestId: 'request-1', subject: 'มีคำขอรอพิจารณา' }
+      payload: { recipientPersonId: 'manager-b', requestId: 'request-1', moduleCode: 'requests', subject: 'มีคำขอรอพิจารณา' }
     })]));
   });
 
@@ -128,7 +128,7 @@ describe('ApprovalService', () => {
     expect(repository.request.status).toBe(status);
     expect(repository.outbox).toEqual(expect.arrayContaining([expect.objectContaining({
       type: 'notification.in_app',
-      payload: { recipientPersonId: 'person-a', requestId: 'request-1', subject }
+      payload: { recipientPersonId: 'person-a', requestId: 'request-1', moduleCode: 'requests', subject }
     })]));
     expect(repository.outbox.find((event) => event.type === 'notification.in_app')?.payload).not.toHaveProperty('reason');
   });
