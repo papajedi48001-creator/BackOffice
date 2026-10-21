@@ -78,6 +78,30 @@ describeWithDatabase('DatabaseWorkflowRepository', () => {
     expect(await database.query('SELECT id FROM approval_decision WHERE approval_step_id = ?', [request.approvalSteps[0].id])).toHaveLength(1);
     expect(await database.query('SELECT id FROM audit_event WHERE target_id = ? AND action = ?', [request.id, 'workflow.request.decided'])).toHaveLength(1);
   });
+  it('lets only one of a concurrent cancellation and approval win', async () => {
+    await runMigrations(database);
+    const organizationId = randomUUID();
+    const requestorId = randomUUID();
+    const approverId = randomUUID();
+    await database.execute('INSERT INTO organization (id, name, created_at) VALUES (?, ?, UTC_TIMESTAMP())', [organizationId, 'Cancellation race unit']);
+    await database.execute('INSERT INTO person (id, national_id_ciphertext, national_id_lookup, created_at) VALUES (?, ?, ?, UTC_TIMESTAMP()), (?, ?, ?, UTC_TIMESTAMP())', [requestorId, 'ciphertext-race-a', randomUUID(), approverId, 'ciphertext-race-b', randomUUID()]);
+    const requests = new RequestService(new DatabaseWorkflowRepository(database), { resolve: async () => [{ personId: approverId, organizationId }] });
+    const request = await requests.submitRequest({ moduleCode: 'maintenance', requestorPersonId: requestorId, organizationSnapshot: { organizationId } });
+
+    const outcomes = await Promise.allSettled([
+      requests.cancelRequest({ requestId: request.id, actorPersonId: requestorId, reason: 'ไม่ต้องการแล้ว' }),
+      new ApprovalService(new DatabaseWorkflowRepository(database), { findActiveFor: async () => null }).decideRequest({ requestId: request.id, actorPersonId: approverId, decision: 'APPROVE' })
+    ]);
+
+    expect(outcomes.filter((outcome) => outcome.status === 'fulfilled')).toHaveLength(1);
+    const [row] = await database.query<{ status: string }>('SELECT status FROM request WHERE id = ?', [request.id]);
+    const cancellations = await database.query('SELECT id FROM request_cancellation WHERE request_id = ?', [request.id]);
+    const decisions = await database.query('SELECT decision.id FROM approval_decision decision JOIN approval_step step ON step.id = decision.approval_step_id WHERE step.request_id = ?', [request.id]);
+    expect(['CANCELLED', 'APPROVED']).toContain(row?.status);
+    expect(cancellations.length + decisions.length).toBe(1);
+    await database.execute('UPDATE outbox_event SET processed_at = UTC_TIMESTAMP() WHERE processed_at IS NULL AND JSON_VALUE(payload, \'$.requestId\') = ?', [request.id]);
+  });
+
   it('orders steps by number and stores cancellation reasons', async () => {
     await runMigrations(database);
     const organizationId = randomUUID();

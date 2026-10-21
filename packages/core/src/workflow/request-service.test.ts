@@ -47,6 +47,77 @@ describe('RequestService', () => {
     expect(repository.outbox.find((event) => event.type === 'notification.in_app')?.payload).not.toHaveProperty('reason');
     expect(repository.outbox.find((event) => event.type === 'notification.in_app')?.payload).not.toHaveProperty('organizationSnapshot');
   });
+
+  describe('cancelRequest', () => {
+    const reason = 'ไม่ต้องการใช้บริการแล้ว';
+    async function submitted(status: SubmittedRequest['status'] = 'IN_REVIEW') {
+      const repository = new MemoryWorkflowRepository();
+      let next = 0;
+      const service = new RequestService(repository, { resolve: async () => [{ personId: 'manager-a', organizationId: 'unit-a' }, { personId: 'manager-b', organizationId: 'unit-a' }] }, () => `id-${++next}`);
+      const request = await service.submitRequest({ moduleCode: 'maintenance', requestorPersonId: 'person-a', organizationSnapshot: { organizationId: 'unit-a' } });
+      if (status !== 'IN_REVIEW') {
+        await repository.saveRequest({ ...repository.requests.get(request.id)!, status });
+        if (status === 'RETURNED') await repository.saveStep({ ...request.approvalSteps[0], status: 'RETURNED' });
+      }
+      repository.outbox.length = 0;
+      repository.auditEvents.length = 0;
+      return { repository, service, request };
+    }
+
+    it('cancels an in-review request, closes pending steps and notifies the pending approver', async () => {
+      const { repository, service, request } = await submitted();
+
+      const cancelled = await service.cancelRequest({ requestId: request.id, actorPersonId: 'person-a', reason });
+
+      expect(cancelled.status).toBe('CANCELLED');
+      expect(repository.requests.get(request.id)?.status).toBe('CANCELLED');
+      expect(repository.steps.get(request.id)?.map((step) => step.status)).toEqual(['CANCELLED', 'CANCELLED']);
+      expect(repository.cancellations).toEqual([expect.objectContaining({ requestId: request.id, actorPersonId: 'person-a', reason })]);
+      expect(repository.outbox).toEqual(expect.arrayContaining([
+        expect.objectContaining({ type: 'workflow.request.cancelled', idempotencyKey: `workflow.request.cancelled:${request.id}`, payload: { requestId: request.id, moduleCode: 'maintenance' } }),
+        expect.objectContaining({ type: 'notification.in_app', idempotencyKey: `notification.in_app:request-cancelled:${request.id}:recipient:manager-a`, payload: { recipientPersonId: 'manager-a', requestId: request.id, subject: 'คำขอถูกยกเลิก' } })
+      ]));
+      expect(repository.outbox).toHaveLength(2);
+      expect(repository.auditEvents).toEqual([expect.objectContaining({ actorPersonId: 'person-a', action: 'workflow.request.cancelled', targetId: request.id, result: 'SUCCESS' })]);
+      expect(JSON.stringify(repository.outbox)).not.toContain(reason);
+      expect(JSON.stringify(repository.auditEvents)).not.toContain(reason);
+    });
+
+    it('cancels a returned request without notifying anyone', async () => {
+      const { repository, service, request } = await submitted('RETURNED');
+
+      await service.cancelRequest({ requestId: request.id, actorPersonId: 'person-a', reason });
+
+      expect(repository.requests.get(request.id)?.status).toBe('CANCELLED');
+      expect(repository.steps.get(request.id)?.map((step) => step.status)).toEqual(['RETURNED', 'CANCELLED']);
+      expect(repository.outbox.map((event) => event.type)).toEqual(['workflow.request.cancelled']);
+      expect(JSON.stringify(repository.outbox)).not.toContain(reason);
+      expect(JSON.stringify(repository.auditEvents)).not.toContain(reason);
+    });
+
+    it('refuses someone who is not the requestor', async () => {
+      const { repository, service, request } = await submitted();
+      await expect(service.cancelRequest({ requestId: request.id, actorPersonId: 'manager-a', reason })).rejects.toThrow('NOT_REQUESTOR');
+      expect(repository.requests.get(request.id)?.status).toBe('IN_REVIEW');
+    });
+
+    it('refuses an unknown request', async () => {
+      const { service } = await submitted();
+      await expect(service.cancelRequest({ requestId: 'missing', actorPersonId: 'person-a', reason })).rejects.toThrow('REQUEST_NOT_FOUND');
+    });
+
+    it('refuses to cancel an approved request', async () => {
+      const { repository, service, request } = await submitted('APPROVED');
+      await expect(service.cancelRequest({ requestId: request.id, actorPersonId: 'person-a', reason })).rejects.toThrow('REQUEST_NOT_CANCELLABLE');
+      expect(repository.cancellations).toHaveLength(0);
+    });
+
+    it('requires a reason', async () => {
+      const { repository, service, request } = await submitted();
+      await expect(service.cancelRequest({ requestId: request.id, actorPersonId: 'person-a', reason: '   ' })).rejects.toThrow('REASON_REQUIRED');
+      expect(repository.cancellations).toHaveLength(0);
+    });
+  });
 });
 
 class MemoryWorkflowRepository implements WorkflowRepository {
