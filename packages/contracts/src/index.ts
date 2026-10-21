@@ -6,3 +6,4 @@ export * from './audit.ts';
 export * from './outbox.ts';
 export * from './files.ts';
 export * from './notifications.ts';
+export * from './rooms.ts';

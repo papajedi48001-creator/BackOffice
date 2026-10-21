@@ -9,7 +9,7 @@ import { ReasonForm } from './reason-form';
 type ReasonAction = 'REJECT' | 'RETURN' | 'CANCEL';
 type HistoryEntry = RequestHistoryView['entries'][number];
 
-const historyLabel: Record<HistoryEntry['kind'], MessageKey> = { APPROVE: 'auditResultApproved', REJECT: 'auditResultRejected', RETURN: 'auditResultReturned', CANCEL: 'historyCancelled' };
+const historyLabel: Record<HistoryEntry['kind'], MessageKey> = { APPROVE: 'auditResultApproved', REJECT: 'auditResultRejected', RETURN: 'auditResultReturned', CANCEL: 'requestHistoryCancelled' };
 const bangkokTime = new Intl.DateTimeFormat('th-TH-u-ca-buddhist', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Bangkok' });
 
 export function RequestDetailPanel({ requestId, reference, requestorName, organizationName, status: initialStatus, history, actions, statusAfterApprove }: {

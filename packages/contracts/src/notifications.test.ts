@@ -20,4 +20,13 @@ describe('notificationEventPayloadSchema', () => {
       subject: 'มีคำขอรอพิจารณา'
     })).toEqual({ recipientPersonId: 'person-1', requestId: 'request-1', subject: 'มีคำขอรอพิจารณา' });
   });
+
+  it('accepts a notification that links to a page other than a request', () => {
+    expect(notificationEventPayloadSchema.parse({ recipientPersonId: 'person-1', subject: 'การจองห้องได้รับอนุมัติ (RB-2569-0001)', targetPath: '/rooms/bookings/booking-1' }))
+      .toEqual({ recipientPersonId: 'person-1', subject: 'การจองห้องได้รับอนุมัติ (RB-2569-0001)', targetPath: '/rooms/bookings/booking-1' });
+  });
+
+  it.each(['//evil.example/path', 'https://evil.example', 'rooms/bookings/1', '/rooms?reason=x'])('rejects an unsafe target path %s', (targetPath) => {
+    expect(notificationEventPayloadSchema.safeParse({ recipientPersonId: 'person-1', subject: 'แจ้งเตือน', targetPath }).success).toBe(false);
+  });
 });
