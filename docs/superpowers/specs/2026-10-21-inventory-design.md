@@ -1,6 +1,6 @@
 # Inventory Design (R2 คลังพัสดุ)
 
-**Status:** draft for review
+**Status:** approved 2026-10-21
 **Date:** 2026-10-21
 **Source:** คำขอของผู้ใช้ในเธรด "ระบบคลังพัสดุ" และการสัมภาษณ์ออกแบบ 12 ข้อ (2026-10-21), แผนแม่บท `2026-09-30-waritch-hospital-back-office-design.md` (R2 Inventory), กติกาการเชื่อมระบบ `docs/integration/modules.md`
 
