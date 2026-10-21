@@ -2,8 +2,8 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createDatabase } from '@backoffice/db';
 import { t } from '@backoffice/i18n';
-import { readRuntimeValue } from '../../../lib/runtime-env';
-import { readSession } from '../../../lib/session';
+import { readRuntimeValue } from '../../../../lib/runtime-env';
+import { readSession } from '../../../../lib/session';
 import { AuditEventTable, type AuditEventRow } from './audit-event-table';
 
 type StoredAuditEventRow = { createdAt: string | Date; action: string; result: string; metadata: string };

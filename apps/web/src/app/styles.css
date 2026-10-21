@@ -160,3 +160,8 @@ a.module-tile:hover .module-go { color: #0b7285; transform: translateX(2px); }
 .request-history time { color: #486581; font-size: .9rem; }
 .request-history .history-reason { margin: 0; white-space: pre-wrap; }
 .notification-module { color: #0b7285; font-weight: 700; }
+.module-subnav { margin: 0 0 20px; border-bottom: 1px solid #d9e2ec; }
+.module-subnav ul { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.module-subnav a { display: inline-block; min-height: 44px; border-bottom: 3px solid transparent; color: #334e68; padding: 10px 14px; text-decoration: none; }
+.module-subnav a:hover { color: #0b7285; }
+.module-subnav a[aria-current="page"] { border-bottom-color: #0b7285; color: #0b7285; font-weight: 700; }
