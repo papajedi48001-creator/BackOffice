@@ -16,10 +16,12 @@
 - เมื่อขั้นหนึ่ง `REJECT`/`RETURN` ขั้นถัดไปของสายอนุมัติยังค้างเป็น `PENDING`
 - `StatusBadge` รู้จัก 4 สถานะ และ CSS มีสีให้แค่ 2 สถานะ
 - `approval_step.sequence` เป็น `VARCHAR` และหน้ารายละเอียดเรียงด้วย SQL `ORDER BY sequence` ซึ่งจะเรียง "10" ก่อน "2"
+- หน้าหลัก (`/dashboard`) แสดง "รอพิจารณา" และ "การแจ้งเตือน" เป็น 0 ตายตัว ไม่ได้อ่านข้อมูลจริง
+- ปุ่ม "เข้าสู่ระบบ" ในหน้าแรกไม่มีสไตล์ (เป็นปุ่มเริ่มต้นของเบราว์เซอร์)
 
 ## Scope
 
-ทำในรอบนี้: ปุ่มไม่อนุมัติ/ส่งกลับพร้อมเหตุผล, ยกเลิก, ส่งใหม่หลังถูกส่งกลับ, ชื่อผู้ขอจริง, ประวัติการพิจารณา, สถานะครบทุกค่า
+ทำในรอบนี้: ปุ่มไม่อนุมัติ/ส่งกลับพร้อมเหตุผล, ยกเลิก, ส่งใหม่หลังถูกส่งกลับ, ชื่อผู้ขอจริง, ประวัติการพิจารณา, สถานะครบทุกค่า, ตัวเลขจริงบนหน้าหลัก, สไตล์ปุ่มเข้าสู่ระบบ
 
 ไม่ทำในรอบนี้ (แยก spec): เนื้อหาคำขอ (หัวข้อ รายละเอียด สถานที่) และ `DRAFT`, กล่องงานรอพิจารณาของผู้อนุมัติ, ผู้แทนเปิดดูคำขอ, สายอนุมัติหลายขั้นตามชนิดคำขอ, การประกาศผลประโยชน์ทับซ้อน
 
@@ -37,6 +39,8 @@
 | ประวัติการพิจารณา | แสดงทุกการตัดสินและการยกเลิก: เวลา (Asia/Bangkok), ผู้กระทำ, ผล, เหตุผล | ผู้ขอต้องรู้ว่าทำไมถูกส่งกลับจึงแก้ไขได้; เห็นได้เฉพาะคนที่เปิดคำขอได้อยู่แล้ว |
 | การแจ้งเตือน | ยกเลิก: แจ้งผู้อนุมัติที่รออยู่ ("คำขอถูกยกเลิก"); ส่งใหม่: แจ้งผู้อนุมัติขั้นแรกของรอบใหม่ ("มีคำขอรอพิจารณา") | ข้อความไม่มีเหตุผลหรือข้อมูลอ่อนไหว |
 | เหตุการณ์และบันทึกการตรวจสอบ | outbox `workflow.request.cancelled`, `workflow.request.resubmitted`; audit action เดียวกัน ผล `SUCCESS`; เขียนใน transaction เดียวกับการเปลี่ยนสถานะ | ตามกติกา workflow + audit + outbox ใน transaction เดียว |
+| ตัวเลขบนหน้าหลัก | "รอพิจารณา" = จำนวนขั้น `PENDING` ที่ผู้ใช้เป็นผู้อนุมัติของขั้นถัดไปในคำขอ `IN_REVIEW`; "การแจ้งเตือน" = จำนวน notification ของผู้ใช้ที่ `read_at IS NULL`; แต่ละตัวเลขเป็นลิงก์ไป `/requests` และ `/notifications` | นับเฉพาะของผู้ใช้เองจาก session ฝั่งเซิร์ฟเวอร์; ถ้าฐานข้อมูลใช้ไม่ได้แสดง "–" แทน 0 เพื่อไม่ให้เข้าใจผิด |
+| ปุ่มเข้าสู่ระบบ | ใช้คลาสปุ่มหลักเดียวกับปุ่มอื่นของระบบตาม DESIGN.md (สีหลัก, ขนาดสัมผัสอย่างน้อย 44px, focus ring) | ความสม่ำเสมอของหน้าจอ |
 | ความพร้อมกัน | ทุกการเปลี่ยนสถานะล็อกแถวคำขอด้วย `SELECT ... FOR UPDATE` ก่อนตรวจสถานะ | กันยกเลิกกับอนุมัติชนกัน |
 
 ## Lifecycle
@@ -59,7 +63,8 @@ RETURNED  --cancel (ผู้ขอ)--> CANCELLED
 - `ApprovalService.decideRequest` ปิดขั้น `PENDING` ที่เหลือเมื่อ `REJECT`/`RETURN`
 - `WorkflowRepository` เพิ่ม `saveCancellation`; `DatabaseWorkflowRepository` เรียงขั้นด้วย `CAST`
 - `packages/core/src/workflow/request-history.ts`: `RequestHistory.load(requestId)` คืนผู้ขอ หน่วยงาน และรายการประวัติพร้อมชื่อ (ใช้กับหน้ารายละเอียด)
-- `apps/web`: `POST /api/requests/[id]/cancellation`, `POST /api/requests/[id]/resubmission`; ปุ่มและฟอร์มเหตุผลใน `request-detail-panel`; `StatusBadge` ครบทุกสถานะพร้อม CSS; หน้า audit แสดง action ใหม่
+- `packages/core/src/workflow/dashboard-summary.ts`: `loadDashboardSummary(db, personId)` คืน `{ pendingApprovals, unreadNotifications }`
+- `apps/web`: `POST /api/requests/[id]/cancellation`, `POST /api/requests/[id]/resubmission`; ปุ่มและฟอร์มเหตุผลใน `request-detail-panel`; `StatusBadge` ครบทุกสถานะพร้อม CSS; หน้า audit แสดง action ใหม่; `/dashboard` อ่านตัวเลขจริง; ปุ่มใน `local-sign-in-form` ใช้คลาสปุ่มหลัก
 
 ## Error handling
 
@@ -70,6 +75,6 @@ RETURNED  --cancel (ผู้ขอ)--> CANCELLED
 ## Verification
 
 - unit (core): ยกเลิกได้/ไม่ได้ตามสถานะและผู้กระทำ, ส่งใหม่สร้างขั้นใหม่และแจ้งผู้อนุมัติ, `REJECT`/`RETURN` ปิดขั้นที่เหลือ, ไม่มีเหตุผลใน audit/outbox/notification
-- integration (MariaDB): ยกเลิกและส่งใหม่เขียนสถานะ ขั้น outbox และ audit ใน transaction เดียว, การเรียงขั้นเมื่อมีมากกว่า 9 ขั้น, ประวัติพร้อมชื่อ
-- web: route ตอบ 401/404/409/422/200, ปุ่มแสดงตามบทบาทและสถานะ, ฟอร์มเหตุผลบังคับกรอก, หน้ารายละเอียดแสดงชื่อจริงและประวัติ
+- integration (MariaDB): ยกเลิกและส่งใหม่เขียนสถานะ ขั้น outbox และ audit ใน transaction เดียว, การเรียงขั้นเมื่อมีมากกว่า 9 ขั้น, ประวัติพร้อมชื่อ, ตัวเลขหน้าหลักนับเฉพาะของผู้ใช้
+- web: route ตอบ 401/404/409/422/200, ปุ่มแสดงตามบทบาทและสถานะ, ฟอร์มเหตุผลบังคับกรอก, หน้ารายละเอียดแสดงชื่อจริงและประวัติ, หน้าหลักแสดงตัวเลขจริงและ "–" เมื่อฐานข้อมูลใช้ไม่ได้
 - `pnpm lint && pnpm typecheck && pnpm test && pnpm test:integration`, `bash infra/backup/restore-verify.test.sh`, `git diff --check`, `next build`
