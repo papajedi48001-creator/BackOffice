@@ -39,7 +39,7 @@ it('puts counts on the requests and notifications tiles and on module badges', (
 
 it('greets by name and shows the Buddhist-era date', () => {
   render(<ModuleLauncher modules={[]} badges={{}} summary={summary} today={today} />);
-  expect(screen.getByRole('heading', { name: 'สวัสดี คุณสมชาย ใจดี' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'สวัสดี สมชาย ใจดี' })).toBeInTheDocument();
   expect(screen.getByText(/21 ตุลาคม 2569/)).toBeInTheDocument();
   expect(screen.getByText(/กลุ่มงานบริหารทั่วไป/)).toBeInTheDocument();
 });

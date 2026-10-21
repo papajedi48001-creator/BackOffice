@@ -28,7 +28,7 @@ function Section({ id, title, entries, countFor }: { id: string; title: string; 
 export function ModuleLauncher({ modules, badges, summary, today }: { modules: ModuleEntry[]; badges: Record<string, number | undefined>; summary: LauncherSummary; today: Date }) {
   const countFor = (entry: ModuleEntry) => entry.code === 'requests' ? summary.pendingApprovals : entry.code === 'notifications' ? summary.unreadNotifications : badges[entry.code];
   const live = modules.filter((entry) => entry.status === 'live');
-  const greeting = summary.displayName ? `${t('launcherGreeting')} คุณ${summary.displayName}` : t('launcherGreeting');
+  const greeting = summary.displayName ? `${t('launcherGreeting')} ${summary.displayName}` : t('launcherGreeting');
   const stat = (value: number | null) => value === null ? '–' : String(value);
   return <div className="launcher">
     <section className="launcher-hero">

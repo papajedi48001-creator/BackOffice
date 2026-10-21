@@ -8,5 +8,5 @@ import type { NavigationItem } from './app-shell';
 export function SidebarNav({ items }: { items: NavigationItem[] }) {
   const pathname = usePathname();
   const isCurrent = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
-  return <nav aria-label={t('appName')}><ul>{items.map((item) => <li key={item.href}><Link href={item.href} aria-current={isCurrent(item.href) ? 'page' : undefined}>{t(item.label)}{item.badge ? <span aria-label={t('unreadNotifications')}>{item.badge}</span> : null}</Link></li>)}</ul></nav>;
+  return <nav aria-label={t('appName')}><ul>{items.map((item) => <li key={item.href}><Link href={item.href} aria-current={isCurrent(item.href) ? 'page' : undefined}>{t(item.label)}{item.badge ? <span className="nav-badge" aria-label={t('unreadNotifications')}>{item.badge}</span> : null}</Link></li>)}</ul></nav>;
 }
