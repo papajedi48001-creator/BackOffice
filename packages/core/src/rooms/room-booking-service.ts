@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { decideRoomBookingInputSchema, notificationEventPayloadSchema, ROOM_BOOKING_MODULE, submitRoomBookingInputSchema, type DecideRoomBookingInput, type Permission, type RoomActor, type RoomBookingHistoryAction, type SubmitRoomBookingInput } from '@backoffice/contracts';
+import { cancelRoomBookingInputSchema, decideRoomBookingInputSchema, notificationEventPayloadSchema, ROOM_BOOKING_MODULE, submitRoomBookingInputSchema, type CancelRoomBookingInput, type DecideRoomBookingInput, type Permission, type RoomActor, type RoomBookingHistoryAction, type SubmitRoomBookingInput } from '@backoffice/contracts';
 import { AuthorizationService } from '../access/authorization-service';
 import { AuditService } from '../audit/audit-service';
 import { buddhistYear, toBookingRanges, type TimeRange } from './booking-days';
@@ -70,6 +70,40 @@ export class RoomBookingService {
       const historyId = await this.record(repository, booking, actor.personId, approved ? 'APPROVED' : 'REJECTED', approved ? null : valid.reason!, approved ? 'room_booking.approved' : 'room_booking.rejected', activeDays);
       await this.notify(repository, booking, historyId, booking.bookerPersonId, approved ? `การจองห้องได้รับอนุมัติ (${booking.reference})` : `การจองห้องไม่ได้รับอนุมัติ (${booking.reference})`);
       return booking;
+    });
+  }
+
+  async cancel(actor: RoomActor, input: CancelRoomBookingInput): Promise<{ booking: RoomBookingRecord; releasedDayCount: number }> {
+    const valid = cancelRoomBookingInputSchema.parse(input);
+    return this.repository.transaction(async (repository) => {
+      const locked = await repository.getBookingForUpdate(valid.bookingId);
+      if (!locked) throw new Error('BOOKING_NOT_FOUND');
+      const isBooker = locked.booking.bookerPersonId === actor.personId;
+      const isApprover = await this.isAllowed(actor, 'room.booking.decide', locked.room);
+      if (!isBooker && !isApprover) throw new Error('FORBIDDEN');
+      if (locked.booking.status !== 'PENDING' && locked.booking.status !== 'APPROVED') throw new Error('CANCEL_NOT_ALLOWED');
+      const now = this.now();
+      const activeDays = locked.days.filter((day) => day.status === 'ACTIVE');
+      const started = activeDays.some((day) => day.startsAt <= now);
+      if (isApprover ? !activeDays.some((day) => day.endsAt > now) : started && locked.booking.status !== 'APPROVED') throw new Error('CANCEL_NOT_ALLOWED');
+
+      let booking = locked.booking;
+      let releasedDayCount = 0;
+      let historyId: string;
+      if (!started) {
+        booking = { ...booking, status: 'CANCELLED' };
+        await repository.updateBookingStatus(booking.id, booking.status, booking.decidedByPersonId);
+        historyId = await this.record(repository, booking, actor.personId, 'CANCELLED', valid.reason, 'room_booking.cancelled', activeDays.length);
+      } else {
+        const futureDays = activeDays.filter((day) => day.startsAt > now);
+        if (futureDays.length === 0) throw new Error('NOTHING_TO_RELEASE');
+        await repository.releaseDays(futureDays.map((day) => day.id), now);
+        releasedDayCount = futureDays.length;
+        historyId = await this.record(repository, booking, actor.personId, 'DAYS_RELEASED', valid.reason, 'room_booking.days_released', releasedDayCount);
+      }
+      if (!isBooker) await this.notify(repository, booking, historyId, booking.bookerPersonId, `การจองห้องถูกยกเลิกโดยผู้ดูแล (${booking.reference})`);
+      else if (locked.booking.status === 'APPROVED' && booking.decidedByPersonId) await this.notify(repository, booking, historyId, booking.decidedByPersonId, `ผู้จองยกเลิกการจองห้อง (${booking.reference})`);
+      return { booking, releasedDayCount };
     });
   }
 
