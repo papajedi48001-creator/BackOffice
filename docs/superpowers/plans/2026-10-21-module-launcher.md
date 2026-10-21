@@ -205,11 +205,11 @@ The spec places `loadDashboardSummary` in `apps/web/src/lib`. This plan places i
 
 **Interfaces:** Produces `notificationEventPayloadSchema` with `moduleCode?: string` matching `/^[a-z][a-z0-9-]*$/`; `NotificationMessage.moduleCode: string | null`; `moduleLabel(null) === t('requests')`, unknown code → `t('appName')`.
 
-- [ ] Step 1: Failing tests — contract accepts `moduleCode: 'room-booking'`, rejects `'Room Booking'`; consumer passes `moduleCode` through to the in-app provider; `NotificationList` renders `[จองห้องประชุม] การจองได้รับการอนุมัติ` for `moduleCode: 'room-booking'` and `[คำขอ] มีคำขอรอพิจารณา` for `moduleCode: null`; request submission outbox payload has `moduleCode: 'requests'`.
-- [ ] Step 2: Run `pnpm --filter @backoffice/contracts test`, worker, core, web → FAIL.
-- [ ] Step 3: Implement; the module label is a `<span class="notification-module">` before the subject inside the button so screen readers read it.
-- [ ] Step 4: Run the four suites and `DATABASE_URL=... pnpm --filter @backoffice/db test:integration` → PASS.
-- [ ] Step 5: Commit `feat: tag every notification with the module that sent it`
+- [x] Step 1: Failing tests — contract accepts `moduleCode: 'room-booking'`, rejects `'Room Booking'`; consumer passes `moduleCode` through to the in-app provider; `NotificationList` renders `[จองห้องประชุม] การจองได้รับการอนุมัติ` for `moduleCode: 'room-booking'` and `[คำขอ] มีคำขอรอพิจารณา` for `moduleCode: null`; request submission outbox payload has `moduleCode: 'requests'`.
+- [x] Step 2: Run `pnpm --filter @backoffice/contracts test`, worker, core, web → FAIL.
+- [x] Step 3: Implement; the module label is a `<span class="notification-module">` before the subject inside the button so screen readers read it.
+- [x] Step 4: Run the four suites and `DATABASE_URL=... pnpm --filter @backoffice/db test:integration` → PASS.
+- [x] Step 5: Commit `feat: tag every notification with the module that sent it`
 
 ### Task 4: Sign-in button, DESIGN.md, screenshots, verification
 

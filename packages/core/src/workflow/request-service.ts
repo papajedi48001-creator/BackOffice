@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { cancelRequestInputSchema, notificationEventPayloadSchema, resubmitRequestInputSchema, submitRequestInputSchema, type ApprovalDecision, type ApprovalStep, type ApproverSnapshot, type AuditEvent, type OutboxEvent, type RequestCancellation, type SubmittedRequest } from '@backoffice/contracts';
 import { AuditService } from '../audit/audit-service';
+import { REQUESTS_MODULE } from './requests-module';
 
 export interface WorkflowRepository {
   transaction<T>(work: (repository: WorkflowRepository) => Promise<T>): Promise<T>;
@@ -32,7 +33,7 @@ export class RequestService {
       for (const step of approvalSteps) await repository.saveStep(step);
       await repository.saveOutbox({ id: this.createId(), type: 'workflow.request.submitted', idempotencyKey: `workflow.request.submitted:${requestId}`, payload: { requestId, moduleCode: request.moduleCode }, occurredAt: new Date().toISOString(), processedAt: null });
       const firstStep = approvalSteps[0]!;
-      await repository.saveOutbox({ id: this.createId(), type: 'notification.in_app', idempotencyKey: `notification.in_app:request-submitted:${requestId}:step:${firstStep.id}`, payload: notificationEventPayloadSchema.parse({ recipientPersonId: firstStep.assigneeSnapshot.personId, requestId, subject: 'มีคำขอรอพิจารณา' }), occurredAt: new Date().toISOString(), processedAt: null });
+      await repository.saveOutbox({ id: this.createId(), type: 'notification.in_app', idempotencyKey: `notification.in_app:request-submitted:${requestId}:step:${firstStep.id}`, payload: notificationEventPayloadSchema.parse({ moduleCode: REQUESTS_MODULE, recipientPersonId: firstStep.assigneeSnapshot.personId, requestId, subject: 'มีคำขอรอพิจารณา' }), occurredAt: new Date().toISOString(), processedAt: null });
       await new AuditService({ append: (event) => repository.appendAudit(event) }, this.createId).recordAudit({ actorPersonId: request.requestorPersonId, action: 'workflow.request.submitted', targetType: 'request', targetId: request.id, result: 'SUCCESS', metadata: { moduleCode: request.moduleCode, requestReference: request.reference, status: request.status, organizationId: request.organizationSnapshot.organizationId } });
       return { ...request, approvalSteps };
     });
@@ -54,7 +55,7 @@ export class RequestService {
       await repository.saveCancellation({ id: this.createId(), requestId: request.id, actorPersonId: validInput.actorPersonId, reason: validInput.reason });
       await repository.saveOutbox({ id: this.createId(), type: 'workflow.request.cancelled', idempotencyKey: `workflow.request.cancelled:${request.id}`, payload: { requestId: request.id, moduleCode: request.moduleCode }, occurredAt: new Date().toISOString(), processedAt: null });
       const pendingApprover = request.status === 'IN_REVIEW' ? pendingSteps[0]?.assigneeSnapshot.personId : undefined;
-      if (pendingApprover) await repository.saveOutbox({ id: this.createId(), type: 'notification.in_app', idempotencyKey: `notification.in_app:request-cancelled:${request.id}:recipient:${pendingApprover}`, payload: notificationEventPayloadSchema.parse({ recipientPersonId: pendingApprover, requestId: request.id, subject: 'คำขอถูกยกเลิก' }), occurredAt: new Date().toISOString(), processedAt: null });
+      if (pendingApprover) await repository.saveOutbox({ id: this.createId(), type: 'notification.in_app', idempotencyKey: `notification.in_app:request-cancelled:${request.id}:recipient:${pendingApprover}`, payload: notificationEventPayloadSchema.parse({ moduleCode: REQUESTS_MODULE, recipientPersonId: pendingApprover, requestId: request.id, subject: 'คำขอถูกยกเลิก' }), occurredAt: new Date().toISOString(), processedAt: null });
       await new AuditService({ append: (event) => repository.appendAudit(event) }, this.createId).recordAudit({ actorPersonId: validInput.actorPersonId, action: 'workflow.request.cancelled', targetType: 'request', targetId: request.id, result: 'SUCCESS', metadata: { moduleCode: request.moduleCode, requestReference: request.reference, status: cancelled.status, organizationId: request.organizationSnapshot.organizationId } });
       return cancelled;
     });
@@ -77,7 +78,7 @@ export class RequestService {
       for (const step of newSteps) await repository.saveStep(step);
       const firstStep = newSteps[0]!;
       await repository.saveOutbox({ id: this.createId(), type: 'workflow.request.resubmitted', idempotencyKey: `workflow.request.resubmitted:${request.id}:step:${firstStep.id}`, payload: { requestId: request.id, moduleCode: request.moduleCode }, occurredAt: new Date().toISOString(), processedAt: null });
-      await repository.saveOutbox({ id: this.createId(), type: 'notification.in_app', idempotencyKey: `notification.in_app:request-resubmitted:${request.id}:step:${firstStep.id}`, payload: notificationEventPayloadSchema.parse({ recipientPersonId: firstStep.assigneeSnapshot.personId, requestId: request.id, subject: 'มีคำขอรอพิจารณา' }), occurredAt: new Date().toISOString(), processedAt: null });
+      await repository.saveOutbox({ id: this.createId(), type: 'notification.in_app', idempotencyKey: `notification.in_app:request-resubmitted:${request.id}:step:${firstStep.id}`, payload: notificationEventPayloadSchema.parse({ moduleCode: REQUESTS_MODULE, recipientPersonId: firstStep.assigneeSnapshot.personId, requestId: request.id, subject: 'มีคำขอรอพิจารณา' }), occurredAt: new Date().toISOString(), processedAt: null });
       await new AuditService({ append: (event) => repository.appendAudit(event) }, this.createId).recordAudit({ actorPersonId: validInput.actorPersonId, action: 'workflow.request.resubmitted', targetType: 'request', targetId: request.id, result: 'SUCCESS', metadata: { moduleCode: request.moduleCode, requestReference: request.reference, status: resubmitted.status, organizationId: request.organizationSnapshot.organizationId } });
       return { ...resubmitted, approvalSteps: [...existingSteps, ...newSteps] };
     });

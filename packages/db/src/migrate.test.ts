@@ -27,7 +27,7 @@ describe('runMigrations', () => {
     await runMigrations(database);
 
     expect(queried.some((sql) => sql.includes('CREATE TABLE IF NOT EXISTS schema_migration'))).toBe(false);
-    expect(queried.filter((sql) => sql.includes('SELECT version FROM schema_migration'))).toHaveLength(7);
+    expect(queried.filter((sql) => sql.includes('SELECT version FROM schema_migration'))).toHaveLength(8);
     expect(executed.some((sql) => sql.startsWith('ALTER TABLE notification'))).toBe(true);
     expect(executed.some((sql) => sql.includes('IF NOT EXISTS'))).toBe(true);
     expect(executed.some((sql) => sql.startsWith('INSERT INTO schema_migration') && sql.endsWith('|["0001_in_app_notifications.sql"]'))).toBe(true);
@@ -44,6 +44,8 @@ describe('runMigrations', () => {
     }
     expect(executed.some((sql) => sql.startsWith('ALTER TABLE notification') && sql.includes('target_path'))).toBe(true);
     expect(executed.some((sql) => sql.startsWith('INSERT INTO schema_migration') && sql.endsWith('|["0005_room_booking.sql"]'))).toBe(true);
+    expect(executed.some((sql) => sql.startsWith('ALTER TABLE notification') && sql.includes('module_code'))).toBe(true);
+    expect(executed.some((sql) => sql.startsWith('INSERT INTO schema_migration') && sql.endsWith('|["0006_notification_module.sql"]'))).toBe(true);
     expect(executed.some((sql) => sql.startsWith('CREATE TABLE IF NOT EXISTS request_cancellation'))).toBe(true);
     expect(executed.some((sql) => sql.startsWith('INSERT INTO schema_migration') && sql.endsWith('|["0007_request_cancellation.sql"]'))).toBe(true);
     expect(executed.some((sql) => sql.includes('CREATE TABLE IF NOT EXISTS organization'))).toBe(false);

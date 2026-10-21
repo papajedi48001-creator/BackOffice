@@ -1,7 +1,7 @@
 import type { AccessSubject } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { describe, expect, it, vi } from 'vitest';
-import { moduleRegistry, navigationFor, visibleModules } from './modules';
+import { moduleLabel, moduleRegistry, navigationFor, visibleModules } from './modules';
 
 const subject = (overrides: Partial<AccessSubject> = {}): AccessSubject => ({ authenticated: true, personId: 'p', roles: [], dataOwnerModules: [], ...overrides });
 const hrefs = (value: AccessSubject) => navigationFor(value).map((item) => item.href);
@@ -48,5 +48,20 @@ describe('module registry', () => {
     expect(await roomBooking.badge!(database, subject())).toBe(0);
     expect(query).not.toHaveBeenCalled();
     expect(await roomBooking.badge!(database, subject({ roles: [{ name: 'room-booking-approver', organizationId: null }] }))).toBe(2);
+  });
+});
+
+describe('moduleLabel', () => {
+  it('names the module that sent a notification', () => {
+    expect(moduleLabel('room-booking')).toBe('จองห้องประชุม');
+    expect(moduleLabel('requests')).toBe('คำขอ');
+  });
+
+  it('treats older notifications without a module as requests', () => {
+    expect(moduleLabel(null)).toBe('คำขอ');
+  });
+
+  it('falls back to the system name for an unknown module', () => {
+    expect(moduleLabel('not-registered')).toBe('ระบบ Back Office');
   });
 });
