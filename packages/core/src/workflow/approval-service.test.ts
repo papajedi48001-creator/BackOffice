@@ -144,6 +144,14 @@ describe('ApprovalService', () => {
     expect(repository.outbox).toEqual([]);
     expect(repository.decisions).toEqual([]);
   });
+  it.each(['REJECT', 'RETURN'] as const)('cancels the later pending steps when a request is %s-ed', async (decision) => {
+    const step = (id: string, sequence: number) => ({ id, requestId: 'request-1', sequence, assigneeSnapshot: { personId: `manager-${sequence}`, organizationId: 'unit-a' }, status: 'PENDING' as const });
+    const repository = new DecisionWorkflowRepository({ request: { id: 'request-1', reference: 'REQ-1', moduleCode: 'maintenance', requestorPersonId: 'person-a', organizationSnapshot: { organizationId: 'unit-a' }, status: 'IN_REVIEW' }, steps: [step('step-1', 1), step('step-2', 2), step('step-3', 3)] });
+
+    await new ApprovalService(repository, { findActiveFor: async () => null }).decideRequest({ requestId: 'request-1', actorPersonId: 'manager-1', decision, reason: 'ข้อมูลไม่ครบ' });
+
+    expect(repository.steps.map((candidate) => candidate.status)).toEqual([decision === 'REJECT' ? 'REJECTED' : 'RETURNED', 'CANCELLED', 'CANCELLED']);
+  });
 });
 
 class DecisionWorkflowRepository implements WorkflowRepository {
