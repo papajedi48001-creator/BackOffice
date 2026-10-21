@@ -3,7 +3,7 @@ import { createDatabase } from '@backoffice/db';
 import { requireAuthorized } from '../../../lib/require-authorized';
 import { readRuntimeValue } from '../../../lib/runtime-env';
 
-type NotificationRow = { id: string; requestId: string; subject: string; readAt: string | null; createdAt: string };
+type NotificationRow = { id: string; requestId: string | null; targetPath: string | null; subject: string; readAt: string | null; createdAt: string };
 
 export async function GET(request: Request): Promise<Response> {
   const databaseUrl = readRuntimeValue('DATABASE_URL');
@@ -12,7 +12,7 @@ export async function GET(request: Request): Promise<Response> {
     const session = await requireAuthorized(request);
     const database = createDatabase(databaseUrl);
     try {
-      const notifications = await database.query<NotificationRow>('SELECT id, request_id AS requestId, subject, read_at AS readAt, created_at AS createdAt FROM notification WHERE recipient_person_id = ? AND channel = ? ORDER BY created_at DESC', [session.personId!, 'in_app']);
+      const notifications = await database.query<NotificationRow>('SELECT id, request_id AS requestId, target_path AS targetPath, subject, read_at AS readAt, created_at AS createdAt FROM notification WHERE recipient_person_id = ? AND channel = ? ORDER BY created_at DESC', [session.personId!, 'in_app']);
       const count = (await database.query<{ unreadCount: number }>('SELECT COUNT(*) AS unreadCount FROM notification WHERE recipient_person_id = ? AND channel = ? AND read_at IS NULL', [session.personId!, 'in_app']))[0];
       return NextResponse.json({ notifications, unreadCount: Number(count?.unreadCount ?? 0) });
     } finally { await database.close(); }

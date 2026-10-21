@@ -228,3 +228,15 @@ Rules per spec "การยกเลิก". Actor is booker if `personId === b
 - `room_booking_history.created_at` is `DATETIME(6)` so entries made in the same second keep their order.
 - Domain outbox events (`room_booking.*`) are not emitted: the worker only consumes notification events and nothing else subscribes yet; audit + history carry the record.
 - Verified end to end against a local MariaDB and `next start`: manager adds room and add-ons, booker books 5, 6, 9 Nov, a clashing booking shows the clash, approver approves, worker delivers in-app notifications that open the booking page.
+
+## Review follow-ups (2026-10-21)
+
+Whole-branch review returned "with fixes". Each fix was test-first:
+
+- [x] Approval queue leaves out the approver's own bookings and pending bookings whose active days have all ended; those show as "หมดเวลา ไม่ได้พิจารณา" (integration test, `booking-state.test.ts`).
+- [x] Decide and cancel answer `BOOKING_NOT_FOUND` to people who may not see the booking; approver release button only while future days remain.
+- [x] Booking form caps the end date (`first + 13` days, `today + 90`) and refuses a longer range with a message instead of cutting it.
+- [x] Manage page edits rooms and add-ons in place and warns with the count of bookings still to come before closing a room.
+- [x] Calendar day view (`/rooms?view=day&date=`), and an unusable `week`/`date` falls back to today instead of a 500.
+- [x] Index `(status, starts_at)` on `room_booking_day` for the all-rooms calendar; `GET /api/notifications` returns `targetPath` and a nullable `requestId`.
+- [x] Deploy runbook: run the migration, then switch web and worker images together. ADR 0001 notes sequence-row waiting and the host-timezone assumption (`timezone: 'Z'` left for a separate change because it affects every module).

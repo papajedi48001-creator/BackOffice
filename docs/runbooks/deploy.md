@@ -121,6 +121,7 @@ services, and retain the prior release for rollback.
 3. Start production with `docker compose --env-file /etc/backoffice/production.env -f infra/compose/docker-compose.production.yml up -d`.
 4. Run the migration and health checks; do not expose data-service ports to troubleshoot.
 5. Record release tag, migration, health result, and approving Data Owner in the change record.
+6. Releases that change the notification payload or the read response (for example `0005_room_booking.sql`, which adds `notification.target_path` and makes the read route return `{href}`) must run the migration first and then switch `WEB_IMAGE` and `WORKER_IMAGE` together. An older worker dead-letters room notifications it cannot parse, and an older browser bundle cannot follow `{href}`; ask users to reload after the release.
 
 ## Rollback
 
