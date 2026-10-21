@@ -8,7 +8,8 @@
     "test": "pnpm -r test",
     "test:integration": "pnpm -r test:integration",
     "build": "pnpm --filter @backoffice/web build && pnpm --filter @backoffice/worker build",
-    "dev:infra": "docker compose -f infra/compose/docker-compose.dev.yml up -d"
+    "dev:infra": "docker compose -f infra/compose/docker-compose.dev.yml up -d",
+    "seed:demo": "pnpm --filter @backoffice/core seed:demo"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

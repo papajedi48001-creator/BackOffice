@@ -2,14 +2,23 @@
   "name": "@backoffice/core",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
-  "scripts": { "lint": "eslint src", "typecheck": "tsc --noEmit", "test": "vitest run --config vitest.config.ts", "test:integration": "vitest run --config vitest.integration.config.ts" },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --config vitest.config.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "seed:demo": "tsx src/dev/seed-local-demo-cli.ts"
+  },
   "dependencies": {
     "@backoffice/contracts": "workspace:*",
     "@backoffice/db": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
+    "tsx": "4.23.15",
     "vitest": "^3.2.0"
   }
 }

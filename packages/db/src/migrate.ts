@@ -11,6 +11,7 @@ export async function runMigrations(db: Database): Promise<void> {
     if (applied.length > 0) continue;
     const migration = await readFile(resolve(import.meta.dirname, `../migrations/${version}`), 'utf8');
     for (const statement of migration.split(';').map((sql) => sql.trim()).filter(Boolean)) await db.execute(statement);
-    await db.execute('INSERT INTO schema_migration (version, applied_at) VALUES (?, UTC_TIMESTAMP())', [version]);
+    // Every statement is idempotent (IF NOT EXISTS), so a runner that lost the race to record a version only skips the row.
+    await db.execute('INSERT IGNORE INTO schema_migration (version, applied_at) VALUES (?, UTC_TIMESTAMP())', [version]);
   }
 }
