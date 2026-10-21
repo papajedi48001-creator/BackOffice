@@ -46,3 +46,15 @@ it('shows the Thai message for a rule the server rejects', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'ยื่นจองห้อง' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('จำนวนผู้เข้าประชุมเกินความจุห้อง');
 });
+
+it('limits the end date to 14 days and 90 days ahead, and refuses a longer range instead of cutting it short', () => {
+  render(<BookingForm rooms={rooms} addons={addons} today="2026-11-01" />);
+  fireEvent.change(screen.getByLabelText('วันที่เริ่ม'), { target: { value: '2026-11-05' } });
+  expect(screen.getByLabelText('วันที่สิ้นสุด')).toHaveAttribute('max', '2026-11-18');
+  expect(screen.getByLabelText('วันที่เริ่ม')).toHaveAttribute('max', '2027-01-30');
+
+  fireEvent.change(screen.getByLabelText('วันที่สิ้นสุด'), { target: { value: '2026-11-25' } });
+  expect(screen.getByRole('alert')).toHaveTextContent('จองได้ไม่เกิน 14 วันต่อครั้ง');
+  expect(screen.queryAllByRole('checkbox', { name: /พ.ย. 2569/ })).toHaveLength(0);
+  expect(screen.getByRole('button', { name: 'ยื่นจองห้อง' })).toBeDisabled();
+});

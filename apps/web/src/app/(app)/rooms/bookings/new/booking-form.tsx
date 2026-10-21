@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { roomBookingPolicy } from '@backoffice/contracts';
 import { t } from '@backoffice/i18n';
-import { bangkokToday, datesBetween, formatBangkokDate, formatBangkokTime, timeOptions } from '../../../../../lib/bangkok-time';
+import { addDays, bangkokToday, datesBetween, formatBangkokDate, formatBangkokTime, timeOptions } from '../../../../../lib/bangkok-time';
 import { roomErrorMessage } from '../../room-display';
 
 export interface BookableRoom { id: string; name: string; capacity: number; place: string; }
@@ -24,7 +25,12 @@ export function BookingForm({ rooms, addons, today }: { rooms: BookableRoom[]; a
   const [error, setError] = useState<string | null>(null);
   const [conflicts, setConflicts] = useState<Conflict[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const range = useMemo(() => datesBetween(firstDate, lastDate < firstDate ? firstDate : lastDate).slice(0, 14), [firstDate, lastDate]);
+  const lastBookable = addDays(today, roomBookingPolicy.maxAdvanceDays);
+  const lastAllowed = [addDays(firstDate, roomBookingPolicy.maxDays - 1), lastBookable].sort()[0]!;
+  const span = useMemo(() => datesBetween(firstDate, lastDate < firstDate ? firstDate : lastDate), [firstDate, lastDate]);
+  // A longer range is refused outright rather than silently cut to the first 14 days.
+  const tooLong = span.length > roomBookingPolicy.maxDays;
+  const range = tooLong ? [] : span;
   const times = timeOptions();
 
   function toggleDay(date: string) {
@@ -52,9 +58,10 @@ export function BookingForm({ rooms, addons, today }: { rooms: BookableRoom[]; a
   return <form className="room-form" onSubmit={submit}>
     <div className="form-field"><label htmlFor="booking-room">{t('roomField')}</label><select id="booking-room" value={roomId} onChange={(event) => setRoomId(event.target.value)}>{rooms.map((room) => <option key={room.id} value={room.id}>{room.name} ({room.place}, {room.capacity} คน)</option>)}</select></div>
     <div className="form-row">
-      <div className="form-field"><label htmlFor="booking-first">{t('bookingStartDate')}</label><input id="booking-first" type="date" min={today} value={firstDate} onChange={(event) => setFirstDate(event.target.value)} required /></div>
-      <div className="form-field"><label htmlFor="booking-last">{t('bookingEndDate')}</label><input id="booking-last" type="date" min={firstDate} value={lastDate} onChange={(event) => setLastDate(event.target.value)} required /></div>
+      <div className="form-field"><label htmlFor="booking-first">{t('bookingStartDate')}</label><input id="booking-first" type="date" min={today} max={lastBookable} value={firstDate} onChange={(event) => setFirstDate(event.target.value)} required /></div>
+      <div className="form-field"><label htmlFor="booking-last">{t('bookingEndDate')}</label><input id="booking-last" type="date" min={firstDate} max={lastAllowed} value={lastDate} onChange={(event) => setLastDate(event.target.value)} required /></div>
     </div>
+    {tooLong && <p role="alert" className="form-error">{t('bookingRangeTooLong')}</p>}
     <fieldset className="room-days"><legend>{t('bookingDays')}</legend>{range.map((date) => <label key={date}><input type="checkbox" checked={!excluded.has(date)} onChange={() => toggleDay(date)} />{formatBangkokDate(date)}</label>)}</fieldset>
     <div className="form-row">
       <div className="form-field"><label htmlFor="booking-start">{t('bookingStartTime')}</label><select id="booking-start" value={startMinute} onChange={(event) => setStartMinute(Number(event.target.value))}>{times.slice(0, -1).map((time) => <option key={time.value} value={time.value}>{time.label}</option>)}</select></div>
@@ -72,6 +79,6 @@ export function BookingForm({ rooms, addons, today }: { rooms: BookableRoom[]; a
     })}</fieldset>}
     {conflicts.length > 0 && <div role="alert" className="room-conflicts"><p>{t('bookingConflictTitle')}</p><ul>{conflicts.map((conflict) => <li key={conflict.startsAt}>{formatBangkokDate(bangkokToday(new Date(conflict.startsAt)))} {formatBangkokTime(conflict.startsAt)}–{formatBangkokTime(conflict.endsAt)}</li>)}</ul></div>}
     {error && <p role="alert" className="form-error">{error}</p>}
-    <button type="submit" disabled={submitting || !roomId}>{submitting ? t('submittingBooking') : t('submitBooking')}</button>
+    <button type="submit" disabled={submitting || !roomId || tooLong}>{submitting ? t('submittingBooking') : t('submitBooking')}</button>
   </form>;
 }
