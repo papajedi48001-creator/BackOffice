@@ -140,8 +140,10 @@ function web() {
     step('Building the web app');
     run('pnpm', ['--filter', '@backoffice/web', 'build'], { env });
   }
-  step('Starting the web app on http://localhost:3000');
-  run('pnpm', ['--filter', '@backoffice/web', 'start', '--', '-p', env.BACKOFFICE_WEB_PORT ?? '3000'], { env });
+  const port = env.BACKOFFICE_WEB_PORT ?? '3000';
+  step(`Starting the web app on http://localhost:${port}`);
+  // pnpm forwards extra arguments to the script; a literal "--" would reach next as a directory name.
+  run('pnpm', ['--filter', '@backoffice/web', 'start', '-p', port], { env });
 }
 
 function worker() {
