@@ -35,7 +35,7 @@ describe('SessionService', () => {
     const sessions = service(repository);
     const { token } = await sessions.start('person-a');
 
-    await expect(sessions.resolve(token)).resolves.toEqual({ authenticated: true, personId: 'person-a', roles: [{ name: 'hr-reader', organizationId: 'unit-of-person-a' }], dataOwnerModules: ['hr'] });
+    await expect(sessions.resolve(token)).resolves.toEqual({ authenticated: true, personId: 'person-a', roles: [{ name: 'hr-reader', organizationId: 'unit-of-person-a' }], dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: [] });
 
     const revokedAccess = new SessionService(repository, { load: async () => ({ roles: [], dataOwnerModules: [] }) });
     await expect(revokedAccess.resolve(token)).resolves.toMatchObject({ roles: [], dataOwnerModules: [] });

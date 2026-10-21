@@ -8,7 +8,7 @@ export interface SessionRepository {
   touch(sessionId: string): Promise<void>;
   revoke(sessionId: string): Promise<void>;
 }
-export interface AccessSubjectLoader { load(personId: string): Promise<Pick<AccessSubject, 'roles' | 'dataOwnerModules'>>; }
+export interface AccessSubjectLoader { load(personId: string): Promise<Pick<AccessSubject, 'roles' | 'dataOwnerModules' | 'hospitalWideDataOwnerModules'>>; }
 export interface SessionServiceOptions { idleTimeoutSeconds?: number; absoluteTimeoutSeconds?: number; touchIntervalSeconds?: number; createId?: () => string; createToken?: () => string; }
 
 export class SessionService {
@@ -37,7 +37,7 @@ export class SessionService {
     if (!session) return null;
     if (session.idleSeconds >= this.touchIntervalSeconds) await this.sessions.touch(session.id);
     const access = await this.access.load(session.personId);
-    return { authenticated: true, personId: session.personId, roles: access.roles, dataOwnerModules: access.dataOwnerModules };
+    return { authenticated: true, personId: session.personId, roles: access.roles, dataOwnerModules: access.dataOwnerModules, hospitalWideDataOwnerModules: access.hospitalWideDataOwnerModules ?? [] };
   }
 
   async revoke(token: string): Promise<string | null> {

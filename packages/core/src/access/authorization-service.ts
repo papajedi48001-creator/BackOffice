@@ -14,4 +14,18 @@ export class AuthorizationService {
     }
     return { allowed: true, reason: 'allowed' };
   }
+
+  /** Units whose people this subject may see for `action`: `all` when any granting role is hospital-wide. */
+  organizationScope(subject: AccessSubject, action: Permission): 'all' | string[] {
+    if (!subject.authenticated || !subject.personId) return [];
+    const permittedRoles = subject.roles.filter((role) => roleGrantsPermission(role.name, action));
+    if (permittedRoles.some((role) => role.organizationId === null || role.organizationId === undefined)) return 'all';
+    return [...new Set(permittedRoles.map((role) => role.organizationId as string))];
+  }
+
+  /** For actions that touch every unit at once, such as a master-data import: needs an unscoped role and, where required, hospital-wide data ownership. */
+  canActHospitalWide(subject: AccessSubject, action: Permission, moduleCode: string): boolean {
+    if (this.organizationScope(subject, action) !== 'all') return false;
+    return !requiresDataOwner(action) || (subject.hospitalWideDataOwnerModules ?? []).includes(moduleCode);
+  }
 }
