@@ -19,3 +19,8 @@ it('says so when a day has no bookings', () => {
   render(<RoomCalendar dates={['2026-11-07']} entries={[]} />);
   expect(screen.getByText('ไม่มีการจองในวันนี้')).toBeInTheDocument();
 });
+
+it('links each day heading to that day when given a day link', () => {
+  render(<RoomCalendar dates={['2026-11-07']} entries={[]} dayHref={(date) => `/rooms?view=day&date=${date}`} />);
+  expect(screen.getByRole('link', { name: /7 พ.ย. 2569/ })).toHaveAttribute('href', '/rooms?view=day&date=2026-11-07');
+});
