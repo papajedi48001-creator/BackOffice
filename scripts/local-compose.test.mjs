@@ -1,3 +1,4 @@
+/* global URL, process -- Node script outside the workspace packages */
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';

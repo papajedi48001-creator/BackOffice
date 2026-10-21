@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* global process, console -- Node script outside the workspace packages */
 // Local development setup for other developers' machines. See docs/runbooks/local-setup.md.
 //   node scripts/setup-local.mjs          install, write .env, start MariaDB + Redis, migrate, seed demo data
 //   node scripts/setup-local.mjs web      build and start the web app on port 3000 with .env loaded
