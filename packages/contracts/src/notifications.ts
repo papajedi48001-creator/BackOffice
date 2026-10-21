@@ -10,5 +10,5 @@ export const notificationEventPayloadSchema = z.object({
   subject: z.string().trim().min(1).max(255)
 }).refine((payload) => payload.requestId !== undefined || payload.targetPath !== undefined, { message: 'requestId or targetPath is required', path: ['requestId'] });
 export type NotificationEventPayload = z.infer<typeof notificationEventPayloadSchema>;
-export interface NotificationMessage { eventId: string; recipientPersonId: string; channel: NotificationChannel; requestId: string | null; subject: string; }
+export interface NotificationMessage { eventId: string; recipientPersonId: string; channel: NotificationChannel; requestId: string | null; targetPath: string | null; subject: string; }
 export interface LineNotificationProvider { send(message: NotificationMessage): Promise<void>; }

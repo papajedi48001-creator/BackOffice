@@ -13,15 +13,26 @@ describe('PATCH /api/notifications/:notificationId/read', () => {
   it('returns the linked request only after a recipient-owned notification is marked read', async () => {
     mocks.readRuntimeValue.mockReturnValue('mysql://test');
     mocks.requireAuthorized.mockResolvedValue({ personId: 'person-a' });
-    mocks.query.mockResolvedValue([{ requestId: 'request-1' }]);
+    mocks.query.mockResolvedValue([{ requestId: 'request-1', targetPath: null }]);
     mocks.createDatabase.mockReturnValue({ query: mocks.query, execute: mocks.execute, close: mocks.close });
 
     const response = await PATCH(new Request('http://localhost'), { params: Promise.resolve({ notificationId: 'notice-1' }) });
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ requestId: 'request-1' });
+    expect(await response.json()).toEqual({ href: '/requests/request-1' });
     expect(mocks.query).toHaveBeenCalledWith(expect.stringContaining('recipient_person_id = ?'), ['notice-1', 'person-a', 'in_app']);
     expect(mocks.execute).toHaveBeenCalledWith(expect.stringContaining('WHERE id = ? AND recipient_person_id = ? AND read_at IS NULL'), ['notice-1', 'person-a']);
+  });
+
+  it('opens the target path of a notification that does not link to a request', async () => {
+    mocks.readRuntimeValue.mockReturnValue('mysql://test');
+    mocks.requireAuthorized.mockResolvedValue({ personId: 'person-a' });
+    mocks.query.mockResolvedValue([{ requestId: null, targetPath: '/rooms/bookings/booking-1' }]);
+    mocks.createDatabase.mockReturnValue({ query: mocks.query, execute: mocks.execute, close: mocks.close });
+
+    const response = await PATCH(new Request('http://localhost'), { params: Promise.resolve({ notificationId: 'notice-2' }) });
+
+    expect(await response.json()).toEqual({ href: '/rooms/bookings/booking-1' });
   });
 
   it('returns the same not-found response for an unknown or non-owned notification', async () => {

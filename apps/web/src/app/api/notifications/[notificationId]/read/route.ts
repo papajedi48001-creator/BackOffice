@@ -11,10 +11,11 @@ export async function PATCH(request: Request, context: { params: Promise<{ notif
     const { notificationId } = await context.params;
     const database = createDatabase(databaseUrl);
     try {
-      const notification = (await database.query<{ requestId: string }>('SELECT request_id AS requestId FROM notification WHERE id = ? AND recipient_person_id = ? AND channel = ? LIMIT 1', [notificationId, session.personId!, 'in_app']))[0];
-      if (!notification?.requestId) return NextResponse.json({ error: 'not_found' }, { status: 404 });
+      const notification = (await database.query<{ requestId: string | null; targetPath: string | null }>('SELECT request_id AS requestId, target_path AS targetPath FROM notification WHERE id = ? AND recipient_person_id = ? AND channel = ? LIMIT 1', [notificationId, session.personId!, 'in_app']))[0];
+      const href = notification?.targetPath ?? (notification?.requestId ? `/requests/${notification.requestId}` : null);
+      if (!href) return NextResponse.json({ error: 'not_found' }, { status: 404 });
       await database.execute('UPDATE notification SET read_at = UTC_TIMESTAMP() WHERE id = ? AND recipient_person_id = ? AND read_at IS NULL', [notificationId, session.personId!]);
-      return NextResponse.json({ requestId: notification.requestId });
+      return NextResponse.json({ href });
     } finally { await database.close(); }
   } catch (error) {
     const status = typeof error === 'object' && error && 'status' in error ? (error as { status: number }).status : 400;

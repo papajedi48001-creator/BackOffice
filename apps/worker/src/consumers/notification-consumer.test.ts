@@ -20,7 +20,7 @@ describe('NotificationConsumer', () => {
 
     await consumer.consume({ id: 'event-1', type: 'notification.in_app', idempotencyKey: 'key-1', payload: { recipientPersonId: 'person-1', requestId: 'request-1', subject: 'มีคำขอรอพิจารณา' }, occurredAt: new Date().toISOString(), processedAt: null });
 
-    expect(claimed).toEqual([{ eventId: 'event-1', channel: 'in_app', recipientPersonId: 'person-1', requestId: 'request-1', subject: 'มีคำขอรอพิจารณา' }]);
-    expect(delivered).toEqual([{ eventId: 'event-1', channel: 'in_app', recipientPersonId: 'person-1', requestId: 'request-1', subject: 'มีคำขอรอพิจารณา' }]);
+    expect(claimed).toEqual([{ eventId: 'event-1', channel: 'in_app', recipientPersonId: 'person-1', requestId: 'request-1', targetPath: null, subject: 'มีคำขอรอพิจารณา' }]);
+    expect(delivered).toEqual([{ eventId: 'event-1', channel: 'in_app', recipientPersonId: 'person-1', requestId: 'request-1', targetPath: null, subject: 'มีคำขอรอพิจารณา' }]);
   });
 });
