@@ -43,7 +43,7 @@ describe('POST /api/requests/[requestId]/resubmission', () => {
   it.each([
     ['NO_APPROVER', 422, 'no_approver'],
     ['REQUEST_NOT_RETURNED', 409, 'request_not_returned'],
-    ['NOT_REQUESTOR', 404, 'not_requestor']
+    ['NOT_REQUESTOR', 404, 'request_not_found']
   ])('maps %s to %i', async (code, status, error) => {
     ready();
     vi.spyOn(console, 'error').mockImplementation(() => undefined);

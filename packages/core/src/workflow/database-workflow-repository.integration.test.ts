@@ -94,6 +94,10 @@ describeWithDatabase('DatabaseWorkflowRepository', () => {
     ]);
 
     expect(outcomes.filter((outcome) => outcome.status === 'fulfilled')).toHaveLength(1);
+    // The loser must fail on the status check, not on a lock or snapshot error (MariaDB 11.8 raises ER_CHECKREAD
+    // when a consistent read runs before the row lock).
+    const loser = outcomes.find((outcome): outcome is PromiseRejectedResult => outcome.status === 'rejected');
+    expect(['REQUEST_NOT_CANCELLABLE', 'REQUEST_NOT_PENDING']).toContain((loser?.reason as Error).message);
     const [row] = await database.query<{ status: string }>('SELECT status FROM request WHERE id = ?', [request.id]);
     const cancellations = await database.query('SELECT id FROM request_cancellation WHERE request_id = ?', [request.id]);
     const decisions = await database.query('SELECT decision.id FROM approval_decision decision JOIN approval_step step ON step.id = decision.approval_step_id WHERE step.request_id = ?', [request.id]);

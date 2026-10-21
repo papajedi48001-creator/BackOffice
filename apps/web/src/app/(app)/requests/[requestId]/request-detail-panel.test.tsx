@@ -17,8 +17,8 @@ const base: PanelProps = {
 
 const badge = () => document.querySelector('.status')?.textContent;
 
-function respond(ok = true) {
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok }));
+function respond(ok = true, status = ok ? 200 : 400, body: unknown = {}) {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok, status, json: async () => body }));
 }
 
 afterEach(() => { vi.unstubAllGlobals(); });
@@ -110,6 +110,29 @@ describe('RequestDetailPanel', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('ไม่สามารถบันทึกรายการได้');
     expect(badge()).toBe('รอพิจารณา');
     expect(screen.getByRole('textbox', { name: 'เหตุผล' })).toHaveValue('ไม่ต้องการแล้ว');
+  });
+
+  it('tells the user to reload when the request changed meanwhile', async () => {
+    respond(false, 409, { error: 'request_not_cancellable' });
+    render(<RequestDetailPanel {...base} actions={{ approve: false, cancel: true, resubmit: false }} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'ยกเลิกคำขอ' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'เหตุผล' }), { target: { value: 'ไม่ต้องการแล้ว' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ยืนยัน' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('สถานะคำขอเปลี่ยนแล้ว กรุณาโหลดหน้าใหม่');
+    expect(screen.queryByRole('button', { name: 'ยกเลิกคำขอ' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'เหตุผล' })).not.toBeInTheDocument();
+  });
+
+  it('explains when no approver can be found for a resubmission', async () => {
+    respond(false, 422, { error: 'no_approver' });
+    render(<RequestDetailPanel {...base} status="RETURNED" actions={{ approve: false, cancel: true, resubmit: true }} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'ส่งพิจารณาอีกครั้ง' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('ไม่พบผู้อนุมัติของหน่วยงาน กรุณาติดต่อฝ่ายบุคคล');
+    expect(badge()).toBe('ส่งกลับแก้ไข');
   });
 
   it('hides every action when none is allowed', () => {

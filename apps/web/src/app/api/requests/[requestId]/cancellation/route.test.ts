@@ -44,7 +44,8 @@ describe('POST /api/requests/[requestId]/cancellation', () => {
   });
 
   it.each([
-    ['NOT_REQUESTOR', 404, 'not_requestor'],
+    ['NOT_REQUESTOR', 404, 'request_not_found'],
+    ['REQUEST_NOT_FOUND', 404, 'request_not_found'],
     ['REQUEST_NOT_CANCELLABLE', 409, 'request_not_cancellable'],
     ['REASON_REQUIRED', 422, 'reason_required']
   ])('maps %s to %i without logging the reason', async (code, status, error) => {

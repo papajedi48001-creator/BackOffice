@@ -26,20 +26,31 @@ export function RequestDetailPanel({ requestId, reference, requestorName, organi
   const [hasActed, setHasActed] = useState(false);
   const [openForm, setOpenForm] = useState<ReasonAction | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<MessageKey | null>(null);
+  const [isStale, setIsStale] = useState(false);
   const path = `/api/requests/${encodeURIComponent(requestId)}`;
 
   async function send(url: string, body: object, nextStatus: RequestDisplayStatus) {
     setIsSubmitting(true);
-    setError(false);
+    setError(null);
     try {
       const response = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-      if (!response.ok) throw new Error('ACTION_NOT_ACCEPTED');
+      if (!response.ok) {
+        if (response.status === 409) {
+          setIsStale(true);
+          setOpenForm(null);
+          setError('requestChangedMeanwhile');
+          return;
+        }
+        const failure = await response.json().catch(() => null) as { error?: string } | null;
+        setError(failure?.error === 'no_approver' ? 'requestNoApprover' : 'actionNotAccepted');
+        return;
+      }
       setStatus(nextStatus);
       setHasActed(true);
       setOpenForm(null);
     } catch {
-      setError(true);
+      setError('actionNotAccepted');
     } finally {
       setIsSubmitting(false);
     }
@@ -53,7 +64,7 @@ export function RequestDetailPanel({ requestId, reference, requestorName, organi
   const canApprove = actions.approve && status === 'IN_REVIEW';
   const canCancel = actions.cancel && (status === 'IN_REVIEW' || status === 'RETURNED');
   const canResubmit = actions.resubmit && status === 'RETURNED';
-  const showActions = !hasActed && !openForm && (canApprove || canCancel || canResubmit);
+  const showActions = !hasActed && !isStale && !openForm && (canApprove || canCancel || canResubmit);
 
   return <section>
     <h2>{t('requestDetail')}</h2>
@@ -70,9 +81,9 @@ export function RequestDetailPanel({ requestId, reference, requestorName, organi
       {canResubmit && <button type="button" disabled={isSubmitting} onClick={() => send(`${path}/resubmission`, {}, 'IN_REVIEW')}>{t('actionResubmit')}</button>}
       {canCancel && <button type="button" className="button-danger" disabled={isSubmitting} onClick={() => setOpenForm('CANCEL')}>{t('actionCancelRequest')}</button>}
     </div>}
-    {openForm && !hasActed && <ReasonForm isSubmitting={isSubmitting} onConfirm={confirmReason} onClose={() => { setOpenForm(null); setError(false); }} />}
+    {openForm && !hasActed && <ReasonForm isSubmitting={isSubmitting} onConfirm={confirmReason} onClose={() => { setOpenForm(null); setError(null); }} />}
     {hasActed && <p className="action-saved" role="status">{t('actionSaved')}</p>}
-    {error && <p role="alert" className="form-error">{t('actionNotAccepted')}</p>}
+    {error && <p role="alert" className="form-error">{t(error)}</p>}
     <h3 id="request-history-heading">{t('requestHistory')}</h3>
     {history.length
       ? <ul className="request-history" aria-labelledby="request-history-heading">{history.map((entry, index) => <li key={`${entry.at}-${index}`}>

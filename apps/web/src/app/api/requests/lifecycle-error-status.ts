@@ -20,5 +20,7 @@ export function lifecycleFailure(error: unknown): Response {
   console.error('backoffice.request_lifecycle_failed', { code });
   if (code === 'UNAUTHENTICATED') return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
   if (code === 'FORBIDDEN') return NextResponse.json({ error: 'forbidden' }, { status: 403 });
-  return NextResponse.json({ error: code.toLowerCase() }, { status: lifecycleErrorStatus(code) });
+  const status = lifecycleErrorStatus(code);
+  // Both 404 cases share one body so a caller cannot tell an unknown request from someone else's.
+  return NextResponse.json({ error: status === 404 ? 'request_not_found' : code.toLowerCase() }, { status });
 }
