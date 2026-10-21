@@ -23,6 +23,11 @@ export default async function ProtectedLayout({ children }: { children: React.Re
   const navigation: NavigationItem[] = [{ href: '/dashboard', label: 'dashboard' }, { href: '/requests', label: 'requests' }, { href: '/notifications', label: 'notifications', badge: unreadNotifications }, { href: '/audit', label: 'audit' }];
   if (roleNames.has('hr-reader') || roleNames.has('hr-manager')) navigation.splice(1, 0, { href: '/hr/people', label: 'people' }, { href: '/hr/organizations', label: 'organizations' });
   if (new AuthorizationService().canActHospitalWide(session, 'hr.person.manage', 'hr')) navigation.splice(3, 0, { href: '/hr/imports', label: 'hrImport' });
+  const authorization = new AuthorizationService();
+  const covers = (permission: 'room.booking.decide' | 'room.manage') => { const scope = authorization.organizationScope(session, permission); return scope === 'all' || scope.length > 0; };
+  navigation.splice(navigation.findIndex((item) => item.href === '/notifications'), 0, { href: '/rooms', label: 'rooms' });
+  if (covers('room.booking.decide')) navigation.splice(navigation.findIndex((item) => item.href === '/notifications'), 0, { href: '/rooms/approvals', label: 'roomApprovals' });
+  if (covers('room.manage')) navigation.splice(navigation.findIndex((item) => item.href === '/notifications'), 0, { href: '/rooms/manage', label: 'roomManage' });
   if (roleNames.has('hr-manager')) navigation.push({ href: '/access/roles', label: 'roles' }, { href: '/access/delegations', label: 'delegations' });
   return <AppShell navigation={navigation}>{children}</AppShell>;
 }
