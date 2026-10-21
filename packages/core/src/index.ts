@@ -19,3 +19,4 @@ export * from './files/scan-service';
 export * from './exports/export-service';
 export * from './outbox/outbox-service';
 export * from './notifications/notification-service';
+export * from './dashboard/dashboard-summary';
