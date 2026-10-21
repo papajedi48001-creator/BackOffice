@@ -197,6 +197,18 @@ The spec places `loadDashboardSummary` in `apps/web/src/lib`. This plan places i
 - [ ] **Step 6: Run** `pnpm --filter @backoffice/web test`. Expected: all pass.
 - [ ] **Step 7: Commit** with the message `feat(web): show modules as an icon launcher on the main page`.
 
+### Task 5 (added after spec change): Central notifications carry the module
+
+**Files:** `packages/db/migrations/0006_notification_module.sql` (`ALTER TABLE notification ADD COLUMN IF NOT EXISTS module_code VARCHAR(64) NULL`), `packages/db/src/migrate.ts`, Drizzle schema, `packages/contracts/src/notifications.ts`(+test), worker in-app store and consumer (+tests), `packages/core/src/workflow/{request,approval}-service.ts`, `apps/web/src/app/(app)/notifications/{page.tsx,notification-list.tsx}` (+test), `apps/web/src/lib/modules.ts` (`moduleLabel(code: string | null): string`)
+
+**Interfaces:** Produces `notificationEventPayloadSchema` with `moduleCode?: string` matching `/^[a-z][a-z0-9-]*$/`; `NotificationMessage.moduleCode: string | null`; `moduleLabel(null) === t('requests')`, unknown code → `t('appName')`.
+
+- [ ] Step 1: Failing tests — contract accepts `moduleCode: 'room-booking'`, rejects `'Room Booking'`; consumer passes `moduleCode` through to the in-app provider; `NotificationList` renders `[จองห้องประชุม] การจองได้รับการอนุมัติ` for `moduleCode: 'room-booking'` and `[คำขอ] มีคำขอรอพิจารณา` for `moduleCode: null`; request submission outbox payload has `moduleCode: 'requests'`.
+- [ ] Step 2: Run `pnpm --filter @backoffice/contracts test`, worker, core, web → FAIL.
+- [ ] Step 3: Implement; the module label is a `<span class="notification-module">` before the subject inside the button so screen readers read it.
+- [ ] Step 4: Run the four suites and `DATABASE_URL=... pnpm --filter @backoffice/db test:integration` → PASS.
+- [ ] Step 5: Commit `feat: tag every notification with the module that sent it`
+
 ### Task 4: Sign-in button, DESIGN.md, screenshots, verification
 
 **Files:**

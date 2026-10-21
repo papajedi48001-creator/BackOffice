@@ -32,6 +32,7 @@
 | เมนูด้านซ้าย | สร้างจาก registry (เฉพาะ `live` ที่มองเห็น) เพิ่ม `aria-current="page"` และแถบสีบนรายการที่เปิดอยู่ | layout ไม่ต้องรู้จักโมดูล |
 | DESIGN.md | เพิ่มข้อยกเว้น: หน้าหลักใช้ตารางปุ่มโมดูลได้ (ขอบเส้น เงาเบาเฉพาะตอน hover ไม่มี gradient) หน้าทำงานอื่นยังไม่ใช้ card จำนวนมาก | ให้กติกาออกแบบตรงกับหน้าจอจริง |
 | ปุ่มเข้าสู่ระบบ | ใช้สไตล์ปุ่มหลักเดียวกับปุ่มอื่น (สี hospital-blue, สูงอย่างน้อย 44px, focus ring) | หน้าแรกดูเป็นระบบเดียวกัน |
+| การแจ้งเตือนกลาง | ทุกโมดูลแจ้งผู้ใช้ผ่านศูนย์การแจ้งเตือนกลางเท่านั้น: เขียน outbox `notification.in_app` ใน transaction เดียวกับการเปลี่ยนสถานะ payload เพิ่ม `moduleCode` (รหัสเดียวกับ registry); worker เก็บลงคอลัมน์ใหม่ `notification.module_code` (migration `0006_notification_module.sql`, NULL ได้); หน้าการแจ้งเตือนแสดง `[ชื่อโมดูล] หัวข้อ` เช่น "[จองห้องประชุม] การจองได้รับการอนุมัติ" โดยชื่อมาจาก `labelKey` ใน registry; แถวเดิมที่ไม่มี `module_code` ถือเป็น `requests` | ผู้ใช้เห็นทุกเรื่องในกล่องเดียวและรู้ว่ามาจากโมดูลไหน; ชื่อโมดูลไม่ถูกเก็บซ้ำใน subject จึงเปลี่ยนชื่อได้ที่เดียว; `moduleCode` ไม่บังคับใน schema เพื่อไม่ทำให้ event เก่าใน outbox ล้ม แต่กติกาการเชื่อมบังคับให้โมดูลใหม่ส่ง |
 | กติกาเชื่อมโมดูล | `docs/integration/modules.md` อธิบายวิธีเสียบโมดูลใหม่: รายการใน registry, เลข migration, permission, การแจ้งเตือน, audit action, ศัพท์ใน CONTEXT.md | เธรดโมดูลทำตามเอกสารเดียวกัน เธรดนี้เป็นผู้ดูแลเอกสาร |
 
 ## Components and interfaces
@@ -44,6 +45,10 @@
 - `(app)/layout.tsx` และ `components/app-shell.tsx`: ใช้ `navigationFor`; ตัวนับแจ้งเตือนในเมนูคงเดิม
 - `packages/i18n/src/th.ts`: ชื่อกลุ่ม คำอธิบายโมดูล "เร็ว ๆ นี้" คำทักทาย
 - `styles.css`: `.launcher-*`, `.module-*`, `aria-current` ในเมนู, ปุ่มเข้าสู่ระบบ, มือถือ 2 คอลัมน์ซ่อนคำอธิบาย
+- `packages/db/migrations/0006_notification_module.sql`, Drizzle schema, `migrate.ts`
+- `packages/contracts/src/notifications.ts`: `moduleCode` (ไม่บังคับ, รูปแบบ `^[a-z][a-z0-9-]*$`) ใน payload และ `NotificationMessage`
+- worker: เก็บ `module_code`; `RequestService`/`ApprovalService` ส่ง `moduleCode: 'requests'`
+- `(app)/notifications`: แสดงป้ายชื่อโมดูลนำหน้าหัวข้อ
 - `DESIGN.md`, `docs/integration/modules.md`
 
 ## Error handling
@@ -56,5 +61,6 @@
 - unit: `visibleModules` ตามบทบาท (ไม่มีบทบาท, hr-reader, hr-manager แบบระบุหน่วยงาน/ทั้งโรงพยาบาล), `planned` ไม่อยู่ในเมนู, ลำดับกลุ่ม, ไม่มี `code` ซ้ำ
 - component: launcher แสดงลิงก์สำหรับ live และไม่ใช่ลิงก์สำหรับ planned, ป้ายมีข้อความสำหรับ screen reader, "–" เมื่อไม่มีตัวเลข
 - integration (MariaDB): นับคำขอรอพิจารณาเฉพาะขั้นแรกที่ค้างของผู้ใช้ ไม่นับของคนอื่นหรือคำขอที่ปิดแล้ว, นับแจ้งเตือนยังไม่อ่าน
+- การแจ้งเตือน: payload รับ/ปฏิเสธ `moduleCode`, worker เก็บ `module_code`, หน้าแสดง "[จองห้องประชุม] ..." และ "[คำขอ] ..." สำหรับแถวที่ไม่มีรหัส
 - ภาพหน้าจอ desktop และมือถือด้วย Playwright เทียบกับภาพตัวอย่าง
 - `pnpm lint && pnpm typecheck && pnpm test && pnpm test:integration`, `git diff --check`, `next build`

@@ -31,7 +31,8 @@
 |---|---|---|---|
 | 0000–0004 | foundation, notifications, outbox retry, session, HR master data | — | merged |
 | 0005 | `0005_room_booking.sql` | ระบบจองห้องประชุม | กำลังพัฒนา |
-| 0006 | `0006_request_cancellation.sql` | วงจรคำขอ (เธรดนี้) | กำลังพัฒนา |
+| 0006 | `0006_notification_module.sql` | หน้าหลักและการแจ้งเตือนกลาง (เธรดนี้) | กำลังพัฒนา |
+| 0007 | `0007_request_cancellation.sql` | วงจรคำขอ (เธรดนี้) | กำลังพัฒนา |
 
 - ตารางของโมดูลใช้ prefix ของโมดูล (`room_*`) และอ้างอิงบุคลากรด้วย `person.id` เท่านั้น
 - เก็บเวลาเป็น UTC แสดงเป็น Asia/Bangkok
@@ -46,6 +47,14 @@
 - เปลี่ยนสถานะ + audit + outbox ใน transaction เดียว
 - audit action ชื่อ `<module>.<entity>.<verb>`; metadata ใช้คีย์ที่อยู่ใน redact allowlist เท่านั้น
 - ห้ามมีเลขบัตรประชาชน รหัสผ่าน token เหตุผลการตัดสิน หรือเนื้อหาไฟล์แนบ ใน URL, log, audit metadata, notification หรือ outbox payload
+- **แจ้งผู้ใช้ผ่านศูนย์การแจ้งเตือนกลางเท่านั้น** ห้ามสร้างตารางหรือหน้าการแจ้งเตือนของโมดูลเอง: เขียน outbox `type: 'notification.in_app'` ด้วย `notificationEventPayloadSchema` ใน transaction เดียวกับการเปลี่ยนสถานะ และ **ต้องใส่ `moduleCode`** เป็นรหัสเดียวกับ registry หน้าการแจ้งเตือนจะแสดง `[ชื่อโมดูล] subject` เอง จึงห้ามใส่ชื่อโมดูลใน `subject`
+
+```ts
+notificationEventPayloadSchema.parse({ recipientPersonId, moduleCode: 'room-booking', targetPath: `/rooms/bookings/${bookingId}`, subject: 'การจองได้รับการอนุมัติ' })
+// ผู้ใช้เห็น: [จองห้องประชุม] การจองได้รับการอนุมัติ
+```
+
+- `idempotencyKey` ของ outbox ใช้รูปแบบ `notification.in_app:<module>:<event>:<id>`
 - การแจ้งเตือนที่ไม่ใช่คำขอกลางให้ลิงก์ผ่าน `notification.target_path` (เพิ่มโดยโมดูลจองห้อง) ค่าต้องขึ้นต้นด้วย `/` และไม่มี `//`
 - ชื่อ action ใหม่ต้องมีคำแปลไทยในหน้าบันทึกการตรวจสอบ
 
