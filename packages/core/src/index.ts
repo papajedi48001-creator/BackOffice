@@ -25,3 +25,4 @@ export * from './rooms/room-booking-service';
 export * from './rooms/room-catalog-service';
 export * from './rooms/database-room-booking-repository';
 export * from './rooms/room-booking-queries';
+export * from './dashboard/dashboard-summary';

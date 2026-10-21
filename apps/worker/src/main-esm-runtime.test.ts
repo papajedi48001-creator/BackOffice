@@ -2,6 +2,9 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
+// Spawning `pnpm start` takes several seconds when the other workspaces' suites run alongside it.
+const spawnTimeoutMs = 30_000;
+
 describe('worker Node ESM runtime', () => {
   it('resolves worker modules before validating its required database configuration', () => {
     let output = '';
@@ -27,5 +30,5 @@ describe('worker Node ESM runtime', () => {
 
     expect(output).toContain('DATABASE_URL is required');
     expect(output).not.toContain('ERR_MODULE_NOT_FOUND');
-  });
+  }, spawnTimeoutMs);
 });
