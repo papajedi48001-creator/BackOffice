@@ -27,7 +27,7 @@ describe('runMigrations', () => {
     await runMigrations(database);
 
     expect(queried.some((sql) => sql.includes('CREATE TABLE IF NOT EXISTS schema_migration'))).toBe(false);
-    expect(queried.filter((sql) => sql.includes('SELECT version FROM schema_migration'))).toHaveLength(4);
+    expect(queried.filter((sql) => sql.includes('SELECT version FROM schema_migration'))).toHaveLength(5);
     expect(executed.some((sql) => sql.startsWith('ALTER TABLE notification'))).toBe(true);
     expect(executed.some((sql) => sql.includes('IF NOT EXISTS'))).toBe(true);
     expect(executed.some((sql) => sql.startsWith('INSERT INTO schema_migration') && sql.endsWith('|["0001_in_app_notifications.sql"]'))).toBe(true);
@@ -36,6 +36,11 @@ describe('runMigrations', () => {
     expect(executed.some((sql) => sql.startsWith('CREATE TABLE IF NOT EXISTS user_session'))).toBe(true);
     expect(executed.some((sql) => sql.startsWith('CREATE TABLE IF NOT EXISTS login_throttle'))).toBe(true);
     expect(executed.some((sql) => sql.startsWith('INSERT INTO schema_migration') && sql.endsWith('|["0003_session_and_login_throttle.sql"]'))).toBe(true);
+    for (const table of ['room', 'room_addon', 'room_booking', 'room_booking_day', 'room_booking_addon', 'room_booking_history', 'room_booking_sequence']) {
+      expect(executed.some((sql) => sql.startsWith(`CREATE TABLE IF NOT EXISTS ${table} (`))).toBe(true);
+    }
+    expect(executed.some((sql) => sql.startsWith('ALTER TABLE notification') && sql.includes('target_path'))).toBe(true);
+    expect(executed.some((sql) => sql.startsWith('INSERT INTO schema_migration') && sql.endsWith('|["0004_room_booking.sql"]'))).toBe(true);
     expect(executed.some((sql) => sql.includes('CREATE TABLE IF NOT EXISTS organization'))).toBe(false);
   });
 });
