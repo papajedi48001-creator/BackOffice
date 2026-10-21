@@ -105,6 +105,15 @@ describeWithDatabase('room booking on MariaDB', () => {
     expect((await queries.myBookings(bookerId)).map((entry) => entry.id)).toContain(booking.id);
   });
 
+  it('counts the bookings a room still has to come', async () => {
+    const room = await createRoom();
+    await service().submit(booker, input(room.id, ['2026-11-24', '2026-11-25']));
+    const queries = new RoomBookingQueries(database);
+    const count = async (at: string) => (await queries.listRooms({ bookableOnly: false }, new Date(at))).find((item) => item.id === room.id)?.upcomingBookingCount;
+    expect(await count('2026-11-01T00:00:00Z')).toBe(1);
+    expect(await count('2026-11-26T00:00:00Z')).toBe(0);
+  });
+
   it('leaves out pending bookings that have already ended and the approver\'s own bookings', async () => {
     const room = await createRoom();
     const ended = await service().submit(booker, input(room.id, ['2026-11-24']));

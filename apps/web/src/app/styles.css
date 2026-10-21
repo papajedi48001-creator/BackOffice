@@ -98,6 +98,8 @@ section > .organization-tree { padding-left: 0; border-left: 0; }
 .room-conflicts p { margin: 0 0 6px; font-weight: 700; }
 .form-actions { display: flex; flex-wrap: wrap; gap: 12px; }
 .app-main button.button-danger { background: #fff; color: #9a3412; box-shadow: inset 0 0 0 2px #c2410c; }
+.app-main button.button-secondary { background: #fff; color: #0b7285; box-shadow: inset 0 0 0 2px #0b7285; }
+.row-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .plain-list { margin: 0; padding-left: 18px; font-weight: 400; }
 .booking-history { display: grid; gap: 10px; padding-left: 20px; }
 .booking-history p { margin: 4px 0 0; color: #486581; }

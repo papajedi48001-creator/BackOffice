@@ -4,7 +4,8 @@ import { AuthorizationService } from '../access/authorization-service';
 import { fromMariaDbDate, fromMariaDbDatetime, toMariaDbDatetime } from './database-room-booking-repository';
 import type { RoomAddonDetails, RoomDetails } from './room-catalog-service';
 
-export interface RoomListItem extends RoomDetails { ownerOrganizationName: string | null; }
+/** `upcomingBookingCount`: pending or approved bookings with an active day yet to end, shown before a manager closes the room. */
+export interface RoomListItem extends RoomDetails { ownerOrganizationName: string | null; upcomingBookingCount: number; }
 /** Public calendar entry: what every signed-in person may see. */
 export interface RoomCalendarEntry { bookingId: string; reference: string; roomId: string; roomName: string; date: string; startsAt: Date; endsAt: Date; status: RoomBookingStatus; title: string; bookerName: string | null; bookerOrganizationName: string | null; }
 export interface RoomBookingSummary { id: string; reference: string; roomName: string; title: string; status: RoomBookingStatus; firstDate: string; lastDate: string; startMinute: number; endMinute: number; activeDayCount: number; lastEndsAt: Date | null; bookerName: string | null; bookerOrganizationName: string | null; }
@@ -32,12 +33,15 @@ function toSummary(row: SummaryRow): RoomBookingSummary {
 export class RoomBookingQueries {
   constructor(private readonly database: Pick<Database, 'query'>, private readonly authorizer: AuthorizationService = new AuthorizationService()) {}
 
-  async listRooms(options: { bookableOnly: boolean }): Promise<RoomListItem[]> {
-    const rows = await this.database.query<Omit<RoomListItem, 'isBookable'> & { isBookable: number }>(
-      `SELECT r.id, r.name, r.place, r.capacity, r.equipment, r.owner_organization_id AS ownerOrganizationId, r.is_bookable AS isBookable, o.name AS ownerOrganizationName
-       FROM room r LEFT JOIN organization o ON o.id = r.owner_organization_id ${options.bookableOnly ? 'WHERE r.is_bookable = 1' : ''} ORDER BY r.name`
+  async listRooms(options: { bookableOnly: boolean }, now: Date = new Date()): Promise<RoomListItem[]> {
+    const rows = await this.database.query<Omit<RoomListItem, 'isBookable' | 'upcomingBookingCount'> & { isBookable: number; upcomingBookingCount: number | string }>(
+      `SELECT r.id, r.name, r.place, r.capacity, r.equipment, r.owner_organization_id AS ownerOrganizationId, r.is_bookable AS isBookable, o.name AS ownerOrganizationName,
+         (SELECT COUNT(DISTINCT b.id) FROM room_booking b JOIN room_booking_day d ON d.booking_id = b.id
+          WHERE b.room_id = r.id AND b.status IN ('PENDING', 'APPROVED') AND d.status = 'ACTIVE' AND d.ends_at > ?) AS upcomingBookingCount
+       FROM room r LEFT JOIN organization o ON o.id = r.owner_organization_id ${options.bookableOnly ? 'WHERE r.is_bookable = 1' : ''} ORDER BY r.name`,
+      [toMariaDbDatetime(now)]
     );
-    return rows.map((row) => ({ ...row, capacity: Number(row.capacity), isBookable: Boolean(row.isBookable) }));
+    return rows.map((row) => ({ ...row, capacity: Number(row.capacity), isBookable: Boolean(row.isBookable), upcomingBookingCount: Number(row.upcomingBookingCount) }));
   }
 
   async listAddons(options: { activeOnly: boolean }): Promise<RoomAddonDetails[]> {
