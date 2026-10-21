@@ -105,3 +105,78 @@ describe('RoomBookingService.submit', () => {
     await expect(service.submit(booker, { ...submission, dates: ['2026-11-06'], startMinute: 720, endMinute: 780 })).resolves.toMatchObject({ status: 'PENDING' });
   });
 });
+
+describe('RoomBookingService.decide', () => {
+  it('approves a pending booking and tells the booker', async () => {
+    const { repository, service } = setup();
+    const booking = await service.submit(booker, submission);
+    repository.outbox = [];
+
+    const decided = await service.decide(approver, { bookingId: booking.id, decision: 'APPROVE' });
+
+    expect(decided).toMatchObject({ status: 'APPROVED', decidedByPersonId: 'approver' });
+    expect(repository.bookings.get(booking.id)).toMatchObject({ status: 'APPROVED', decidedByPersonId: 'approver' });
+    expect(repository.history.at(-1)).toMatchObject({ action: 'APPROVED', actorPersonId: 'approver', reason: null });
+    expect(repository.audit.at(-1)).toMatchObject({ action: 'room_booking.approved', actorPersonId: 'approver' });
+    expect(notifications(repository)).toEqual([{ recipientPersonId: 'booker', subject: 'การจองห้องได้รับอนุมัติ (RB-2569-0001)', targetPath: `/rooms/bookings/${booking.id}` }]);
+  });
+
+  it('keeps the rejection reason in the booking history only', async () => {
+    const { repository, service } = setup();
+    const booking = await service.submit(booker, submission);
+
+    await service.decide(approver, { bookingId: booking.id, decision: 'REJECT', reason: 'ห้องปิดปรับปรุงช่วงนั้น' });
+
+    expect(repository.bookings.get(booking.id)?.status).toBe('REJECTED');
+    expect(repository.history.at(-1)).toMatchObject({ action: 'REJECTED', reason: 'ห้องปิดปรับปรุงช่วงนั้น' });
+    expect(notifications(repository).at(-1)).toMatchObject({ recipientPersonId: 'booker', subject: 'การจองห้องไม่ได้รับอนุมัติ (RB-2569-0001)' });
+    expect(JSON.stringify([repository.audit, repository.outbox])).not.toContain('ปิดปรับปรุง');
+  });
+
+  it('frees the rejected days for other bookings', async () => {
+    const { service } = setup();
+    const booking = await service.submit(booker, submission);
+    await service.decide(approver, { bookingId: booking.id, decision: 'REJECT', reason: 'ไม่ผ่าน' });
+    await expect(service.submit({ personId: 'someone-else', roles: [] }, submission)).resolves.toMatchObject({ status: 'PENDING' });
+  });
+
+  it('requires a reason to reject', async () => {
+    const { service } = setup();
+    const booking = await service.submit(booker, submission);
+    await expect(service.decide(approver, { bookingId: booking.id, decision: 'REJECT' })).rejects.toThrow('REASON_REQUIRED');
+  });
+
+  it('does not let an approver decide their own booking', async () => {
+    const { service } = setup();
+    const booking = await service.submit(approver, submission);
+    await expect(service.decide(approver, { bookingId: booking.id, decision: 'APPROVE' })).rejects.toThrow('CONFLICT_OF_INTEREST');
+  });
+
+  it.each([
+    ['without the approver role', booker],
+    ['scoped to another organization', { personId: 'other-unit-approver', roles: [{ name: 'room-booking-approver', organizationId: 'other-unit' }] }]
+  ])('forbids a decision by someone %s', async (_label, actor) => {
+    const { service } = setup();
+    const booking = await service.submit({ personId: 'someone-else', roles: [] }, submission);
+    await expect(service.decide(actor, { bookingId: booking.id, decision: 'APPROVE' })).rejects.toThrow('FORBIDDEN');
+  });
+
+  it('reports an unknown booking as not found', async () => {
+    const { service } = setup();
+    await expect(service.decide(approver, { bookingId: 'missing', decision: 'APPROVE' })).rejects.toThrow('BOOKING_NOT_FOUND');
+  });
+
+  it('refuses to decide twice', async () => {
+    const { service } = setup();
+    const booking = await service.submit(booker, submission);
+    await service.decide(approver, { bookingId: booking.id, decision: 'APPROVE' });
+    await expect(service.decide(approver, { bookingId: booking.id, decision: 'REJECT', reason: 'เปลี่ยนใจ' })).rejects.toThrow('BOOKING_NOT_PENDING');
+  });
+
+  it('refuses to decide after the last day has ended', async () => {
+    const { service, clock } = setup();
+    const booking = await service.submit(booker, submission);
+    clock.now = new Date('2026-11-07T05:00:00Z');
+    await expect(service.decide(approver, { bookingId: booking.id, decision: 'APPROVE' })).rejects.toThrow('BOOKING_NOT_PENDING');
+  });
+});

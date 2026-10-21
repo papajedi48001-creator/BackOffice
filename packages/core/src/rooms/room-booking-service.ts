@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { notificationEventPayloadSchema, ROOM_BOOKING_MODULE, submitRoomBookingInputSchema, type Permission, type RoomActor, type RoomBookingHistoryAction, type SubmitRoomBookingInput } from '@backoffice/contracts';
+import { decideRoomBookingInputSchema, notificationEventPayloadSchema, ROOM_BOOKING_MODULE, submitRoomBookingInputSchema, type DecideRoomBookingInput, type Permission, type RoomActor, type RoomBookingHistoryAction, type SubmitRoomBookingInput } from '@backoffice/contracts';
 import { AuthorizationService } from '../access/authorization-service';
 import { AuditService } from '../audit/audit-service';
 import { buddhistYear, toBookingRanges, type TimeRange } from './booking-days';
@@ -49,6 +49,26 @@ export class RoomBookingService {
       await this.notify(repository, booking, historyId, actor.personId, `ยื่นจองห้องแล้ว รออนุมัติ (${booking.reference})`);
       const approvers = (await repository.findApproverPersonIds(room.ownerOrganizationId)).filter((personId) => personId !== actor.personId);
       for (const personId of approvers) await this.notify(repository, booking, historyId, personId, `มีการจองห้องรออนุมัติ (${booking.reference})`);
+      return booking;
+    });
+  }
+
+  async decide(actor: RoomActor, input: DecideRoomBookingInput): Promise<RoomBookingRecord> {
+    const valid = decideRoomBookingInputSchema.parse(input);
+    if (valid.decision === 'REJECT' && !valid.reason) throw new Error('REASON_REQUIRED');
+    return this.repository.transaction(async (repository) => {
+      const locked = await repository.getBookingForUpdate(valid.bookingId);
+      if (!locked) throw new Error('BOOKING_NOT_FOUND');
+      if (!(await this.isAllowed(actor, 'room.booking.decide', locked.room))) throw new Error('FORBIDDEN');
+      if (locked.booking.bookerPersonId === actor.personId) throw new Error('CONFLICT_OF_INTEREST');
+      const now = this.now();
+      if (locked.booking.status !== 'PENDING' || !locked.days.some((day) => day.status === 'ACTIVE' && day.endsAt > now)) throw new Error('BOOKING_NOT_PENDING');
+      const approved = valid.decision === 'APPROVE';
+      const booking: RoomBookingRecord = { ...locked.booking, status: approved ? 'APPROVED' : 'REJECTED', decidedByPersonId: actor.personId };
+      await repository.updateBookingStatus(booking.id, booking.status, booking.decidedByPersonId);
+      const activeDays = locked.days.filter((day) => day.status === 'ACTIVE').length;
+      const historyId = await this.record(repository, booking, actor.personId, approved ? 'APPROVED' : 'REJECTED', approved ? null : valid.reason!, approved ? 'room_booking.approved' : 'room_booking.rejected', activeDays);
+      await this.notify(repository, booking, historyId, booking.bookerPersonId, approved ? `การจองห้องได้รับอนุมัติ (${booking.reference})` : `การจองห้องไม่ได้รับอนุมัติ (${booking.reference})`);
       return booking;
     });
   }
