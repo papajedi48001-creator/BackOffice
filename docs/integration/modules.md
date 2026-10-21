@@ -55,6 +55,7 @@ notificationEventPayloadSchema.parse({ recipientPersonId, moduleCode: 'room-book
 ```
 
 - `idempotencyKey` ของ outbox ใช้รูปแบบ `notification.in_app:<module>:<event>:<id>`
+- ผู้ใช้กดการแจ้งเตือนแล้วระบบเปิดหน้าของโมดูลให้อัตโนมัติ: ใส่ `targetPath` เป็นหน้าที่เกี่ยวข้องเสมอ (เช่น หน้ารายละเอียดการจอง)
 - การแจ้งเตือนที่ไม่ใช่คำขอกลางให้ลิงก์ผ่าน `notification.target_path` (เพิ่มโดยโมดูลจองห้อง) ค่าต้องขึ้นต้นด้วย `/` และไม่มี `//`
 - ชื่อ action ใหม่ต้องมีคำแปลไทยในหน้าบันทึกการตรวจสอบ
 

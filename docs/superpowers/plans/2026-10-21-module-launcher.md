@@ -199,6 +199,8 @@ The spec places `loadDashboardSummary` in `apps/web/src/lib`. This plan places i
 
 ### Task 5 (added after spec change): Central notifications carry the module
 
+**Ships as a second PR after the room booking PR merges.** That branch already adds `notification.target_path`, `targetPath` in the payload, and click-through in the read route and list (commit 905c078). This task builds `moduleCode` on top of it, so the two branches never edit the same notification files at the same time. Every notification click opens `targetPath` when set; otherwise it opens `/requests/<requestId>`.
+
 **Files:** `packages/db/migrations/0006_notification_module.sql` (`ALTER TABLE notification ADD COLUMN IF NOT EXISTS module_code VARCHAR(64) NULL`), `packages/db/src/migrate.ts`, Drizzle schema, `packages/contracts/src/notifications.ts`(+test), worker in-app store and consumer (+tests), `packages/core/src/workflow/{request,approval}-service.ts`, `apps/web/src/app/(app)/notifications/{page.tsx,notification-list.tsx}` (+test), `apps/web/src/lib/modules.ts` (`moduleLabel(code: string | null): string`)
 
 **Interfaces:** Produces `notificationEventPayloadSchema` with `moduleCode?: string` matching `/^[a-z][a-z0-9-]*$/`; `NotificationMessage.moduleCode: string | null`; `moduleLabel(null) === t('requests')`, unknown code → `t('appName')`.
