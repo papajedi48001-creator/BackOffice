@@ -22,3 +22,6 @@ export * from './notifications/notification-service';
 export * from './rooms/booking-days';
 export * from './rooms/room-booking-repository';
 export * from './rooms/room-booking-service';
+export * from './rooms/room-catalog-service';
+export * from './rooms/database-room-booking-repository';
+export * from './rooms/room-booking-queries';
