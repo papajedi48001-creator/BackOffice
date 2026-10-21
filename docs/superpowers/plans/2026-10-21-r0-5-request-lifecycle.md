@@ -85,7 +85,7 @@
   )
   ```
 
-- [ ] **Step 1: Write the failing tests.**
+- [x] **Step 1: Write the failing tests.**
   - Contract tests:
     - `cancelRequestInputSchema` rejects `reason: '   '` and `'x'.repeat(2001)`, and accepts `'x'.repeat(2000)`.
     - `decideRequestInputSchema` rejects a 2001-character reason.
@@ -93,15 +93,15 @@
     - Save steps with sequences 1 to 10 in shuffled order; `getSteps` returns `[1,2,...,10]`.
     - `saveCancellation` stores a row that a `SELECT reason FROM request_cancellation WHERE request_id = ?` reads back.
   - `migrate.test.ts` expects `0007_request_cancellation.sql` to be last.
-- [ ] **Step 2: Run the tests and confirm they fail.**
+- [x] **Step 2: Run the tests and confirm they fail.**
   - Commands:
     - `pnpm --filter @backoffice/contracts test`
     - `pnpm --filter @backoffice/db test`
     - `DATABASE_URL=mysql://backoffice:ci-only-password@127.0.0.1:3306/backoffice pnpm --filter @backoffice/core exec vitest run src/workflow/database-workflow-repository.integration.test.ts`
   - Expected: FAIL.
-- [ ] **Step 3: Implement the schemas, the migration, the Drizzle table, `saveCancellation` and the CAST ordering.**
-- [ ] **Step 4: Run the same commands.** Expected: PASS.
-- [ ] **Step 5: Commit.** Message: `feat(workflow): store cancellations and order steps numerically`.
+- [x] **Step 3: Implement the schemas, the migration, the Drizzle table, `saveCancellation` and the CAST ordering.**
+- [x] **Step 4: Run the same commands.** Expected: PASS.
+- [x] **Step 5: Commit.** Message: `feat(workflow): store cancellations and order steps numerically`.
 
 ### Task 2: Closing a round closes the steps left in it
 
@@ -111,11 +111,11 @@
 **Interfaces:**
 - Consumes the `'CANCELLED'` step status from Task 1.
 
-- [ ] **Step 1: Write the failing test.** For a request with 3 PENDING steps, `decideRequest` with `REJECT` (and, in a separate case, `RETURN`) on step 1 saves step 1 as `REJECTED` (or `RETURNED`), and steps 2 and 3 as `CANCELLED`.
-- [ ] **Step 2: Run** `pnpm --filter @backoffice/core exec vitest run src/workflow/approval-service.test.ts`. Expected: FAIL.
-- [ ] **Step 3: Implement.** After saving the decided step, call `saveStep({...s, status: 'CANCELLED'})` for each later PENDING step when the decision is not `APPROVE`.
-- [ ] **Step 4: Run the test.** Expected: PASS.
-- [ ] **Step 5: Commit.** Message: `fix(workflow): cancel leftover steps when a request is rejected or returned`.
+- [x] **Step 1: Write the failing test.** For a request with 3 PENDING steps, `decideRequest` with `REJECT` (and, in a separate case, `RETURN`) on step 1 saves step 1 as `REJECTED` (or `RETURNED`), and steps 2 and 3 as `CANCELLED`.
+- [x] **Step 2: Run** `pnpm --filter @backoffice/core exec vitest run src/workflow/approval-service.test.ts`. Expected: FAIL.
+- [x] **Step 3: Implement.** After saving the decided step, call `saveStep({...s, status: 'CANCELLED'})` for each later PENDING step when the decision is not `APPROVE`.
+- [x] **Step 4: Run the test.** Expected: PASS.
+- [x] **Step 5: Commit.** Message: `fix(workflow): cancel leftover steps when a request is rejected or returned`.
 
 ### Task 3: Cancel a request
 
@@ -131,7 +131,7 @@
   - `NOT_REQUESTOR`
   - `REQUEST_NOT_CANCELLABLE`
 
-- [ ] **Step 1: Write the failing unit tests**, using the in-memory repository pattern already in `request-service.test.ts`:
+- [x] **Step 1: Write the failing unit tests**, using the in-memory repository pattern already in `request-service.test.ts`:
   - The requester cancels `IN_REVIEW`:
     - The status becomes `CANCELLED` and the PENDING steps become `CANCELLED`.
     - `saveCancellation` gets the reason.
@@ -143,12 +143,12 @@
   - Cancelling an `APPROVED` request gives `REQUEST_NOT_CANCELLABLE`.
   - A blank reason gives `REASON_REQUIRED`.
   - `JSON.stringify` of every outbox payload and audit event contains no reason text.
-- [ ] **Step 2: Write the failing integration test.**
+- [x] **Step 2: Write the failing integration test.**
   - Submit a request, then run `cancelRequest` and `ApprovalService.decideRequest(APPROVE)` concurrently with `Promise.allSettled`.
   - Exactly one is fulfilled.
   - The final status is either `CANCELLED` or `APPROVED`, never both.
-- [ ] **Step 3: Run** `pnpm --filter @backoffice/core exec vitest run src/workflow`, with `DATABASE_URL` set for the integration test. Expected: FAIL.
-- [ ] **Step 4: Implement.**
+- [x] **Step 3: Run** `pnpm --filter @backoffice/core exec vitest run src/workflow`, with `DATABASE_URL` set for the integration test. Expected: FAIL.
+- [x] **Step 4: Implement.**
   - Do all of the following in one `repository.transaction`:
     - `getRequestForUpdate`
     - check the requester and the status
@@ -160,8 +160,8 @@
   - Idempotency keys:
     - `workflow.request.cancelled:<requestId>`
     - `notification.in_app:request-cancelled:<requestId>:recipient:<id>`
-- [ ] **Step 5: Run the tests.** Expected: PASS.
-- [ ] **Step 6: Commit.** Message: `feat(workflow): let requesters cancel a request with a reason`.
+- [x] **Step 5: Run the tests.** Expected: PASS.
+- [x] **Step 6: Commit.** Message: `feat(workflow): let requesters cancel a request with a reason`.
 
 ### Task 4: Resubmit after return
 
@@ -172,7 +172,7 @@
 - Produces: `RequestService.resubmitRequest(input): Promise<SubmittedRequest>`. The return value includes all steps, old and new.
 - Errors: `REQUEST_NOT_FOUND`, `NOT_REQUESTOR`, `REQUEST_NOT_RETURNED`, `NO_APPROVER`.
 
-- [ ] **Step 1: Write the failing tests.**
+- [x] **Step 1: Write the failing tests.**
   - A RETURNED request with steps 1 (`RETURNED`) and 2 (`CANCELLED`), where the resolver returns 1 approver:
     - A new step with sequence 3 and status `PENDING` is created.
     - The status becomes `IN_REVIEW`.
@@ -182,10 +182,10 @@
   - When the resolver returns `[]`, it throws `NO_APPROVER`, and `saveRequest` is never called with `IN_REVIEW`.
   - Resubmitting an `IN_REVIEW` request gives `REQUEST_NOT_RETURNED`.
   - A non-requester gets `NOT_REQUESTOR`.
-- [ ] **Step 2: Run the tests.** Expected: FAIL.
-- [ ] **Step 3: Implement.** Resolve approvers with the request's `moduleCode` and `organizationSnapshot.organizationId`. Number the new steps from `max(sequence) + 1`.
-- [ ] **Step 4: Run the tests.** Expected: PASS.
-- [ ] **Step 5: Commit.** Message: `feat(workflow): let requesters resubmit a returned request`.
+- [x] **Step 2: Run the tests.** Expected: FAIL.
+- [x] **Step 3: Implement.** Resolve approvers with the request's `moduleCode` and `organizationSnapshot.organizationId`. Number the new steps from `max(sequence) + 1`.
+- [x] **Step 4: Run the tests.** Expected: PASS.
+- [x] **Step 5: Commit.** Message: `feat(workflow): let requesters resubmit a returned request`.
 
 ### Task 5: Request history read model
 
@@ -206,7 +206,7 @@
   - Names use `COALESCE(display_name, employee_code, 'ไม่ระบุ')`.
   - `organizationName` falls back to `'ไม่ระบุ'`.
 
-- [ ] **Step 1: Write the failing integration test.**
+- [x] **Step 1: Write the failing integration test.**
   - Seed a requester with `display_name` `นางสาวมาลี ดีงาม`, an approver with only an `employee_code` `E001`, and one with neither.
   - Seed a decision (RETURN, with a reason), a cancellation, and 10 steps.
   - Expect:
@@ -215,10 +215,10 @@
     - entries in time order, each with its reason;
     - steps sorted as 1 to 10.
   - An unknown id returns `null`.
-- [ ] **Step 2: Run the test.** Expected: FAIL.
-- [ ] **Step 3: Implement.** Use one query per part: the request with its requester and organization; the steps; and the decisions and cancellations joined with `UNION ALL`.
-- [ ] **Step 4: Run the test.** Expected: PASS.
-- [ ] **Step 5: Commit.** Message: `feat(workflow): read a request's history with real names`.
+- [x] **Step 2: Run the test.** Expected: FAIL.
+- [x] **Step 3: Implement.** Use one query per part: the request with its requester and organization; the steps; and the decisions and cancellations joined with `UNION ALL`.
+- [x] **Step 4: Run the test.** Expected: PASS.
+- [x] **Step 5: Commit.** Message: `feat(workflow): read a request's history with real names`.
 
 ### Task 6: Cancellation and resubmission API
 
@@ -242,7 +242,7 @@
   - Log `backoffice.request_lifecycle_failed` with `{ code }` only.
 - Each route test file starts with `// @vitest-environment node`.
 
-- [ ] **Step 1: Write the failing route tests.** Mock `@backoffice/core` and `../../../../../lib/require-authorized` the same way the existing decisions route tests do.
+- [x] **Step 1: Write the failing route tests.** Mock `@backoffice/core` and `../../../../../lib/require-authorized` the same way the existing decisions route tests do.
   - Cancellation:
     - 401 when unauthenticated.
     - 404 when the service throws `NOT_REQUESTOR`.
@@ -255,10 +255,10 @@
     - 422 when the service throws `NO_APPROVER`.
     - 409 when it throws `REQUEST_NOT_RETURNED`.
   - 503 when `DATABASE_URL` is empty.
-- [ ] **Step 2: Run** `pnpm --filter @backoffice/web exec vitest run src/app/api/requests`. Expected: FAIL.
-- [ ] **Step 3: Implement.**
-- [ ] **Step 4: Run the same command.** Expected: PASS.
-- [ ] **Step 5: Commit.** Message: `feat(web): add cancellation and resubmission endpoints`.
+- [x] **Step 2: Run** `pnpm --filter @backoffice/web exec vitest run src/app/api/requests`. Expected: FAIL.
+- [x] **Step 3: Implement.**
+- [x] **Step 4: Run the same command.** Expected: PASS.
+- [x] **Step 5: Commit.** Message: `feat(web): add cancellation and resubmission endpoints`.
 
 ### Task 7: Detail page, actions and history UI
 
@@ -282,7 +282,7 @@
   - `canResubmitRequest(actor, { requestorPersonId, status })` returns true for the requester when the status is `RETURNED`.
   - `RequestDetailPanel` props: `{ requestId, reference, requestorName, organizationName, status, history: RequestHistoryView['entries'], actions: { approve: boolean; cancel: boolean; resubmit: boolean }, statusAfterApprove }`.
 
-- [ ] **Step 1: Write the failing tests.**
+- [x] **Step 1: Write the failing tests.**
   - The StatusBadge test covers `CANCELLED` (shows `ยกเลิกแล้ว`), alongside the 4 existing statuses.
   - Panel test, approver view:
     - Clicking `ไม่อนุมัติ` shows a `เหตุผล` textbox.
@@ -296,8 +296,8 @@
   - The panel shows `requestorName` and does not show `ตัวอย่างบุคลากร`.
   - History: each entry shows the actor, the result label, the reason, and the time formatted in Asia/Bangkok. For `2026-10-21T03:00:00Z`, expect the text `21 ต.ค. 2569 10:00`, produced with `Intl.DateTimeFormat('th-TH-u-ca-buddhist', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Bangkok' })`.
   - Audit table: it shows labels for `workflow.request.cancelled` (`ยกเลิกคำขอ`) and `workflow.request.resubmitted` (`ส่งคำขออีกครั้ง`), and the page filter includes both.
-- [ ] **Step 2: Run** `pnpm --filter @backoffice/web test`. Expected: FAIL.
-- [ ] **Step 3: Implement.**
+- [x] **Step 2: Run** `pnpm --filter @backoffice/web test`. Expected: FAIL.
+- [x] **Step 3: Implement.**
   - The page uses `RequestHistory.load`, so the old SQL `ORDER BY sequence` goes away. View access still uses `canViewRequest` with every step's assignee.
   - The reason form is an inline `<form>` with a `<label>เหตุผล</label>`, a `<textarea maxLength={2000} required>`, `ยืนยัน`, and `ยกเลิก` to close it.
   - CSS status classes:
@@ -306,18 +306,18 @@
     - `.status-cancelled`: `#eef2f6` / `#486581`
     - `.status-in_review` keeps the existing pending colours.
   - The danger action (`ไม่อนุมัติ`, `ยกเลิกคำขอ`) uses an outline style in alert colour, distinct by intent.
-- [ ] **Step 4: Run the tests.** Expected: PASS.
-- [ ] **Step 5: Commit.** Message: `feat(web): approve, reject, return, cancel and resubmit from the request page`.
+- [x] **Step 4: Run the tests.** Expected: PASS.
+- [x] **Step 5: Commit.** Message: `feat(web): approve, reject, return, cancel and resubmit from the request page`.
 
 ### Task 8: Verification and screenshots
 
-- [ ] **Step 1: Run the checks** and record their real output:
+- [x] **Step 1: Run the checks** and record their real output:
   - `pnpm lint && pnpm typecheck && pnpm test`
   - `DATABASE_URL=... pnpm test:integration`
   - `bash infra/backup/restore-verify.test.sh`
   - `git diff --check`
   - `pnpm --filter @backoffice/web build`
-- [ ] **Step 2: Take screenshots.**
+- [x] **Step 2: Take screenshots.**
   - Start the production server against `backoffice_demo` and seed a RETURNED request with history.
   - Capture the requester view and the approver view at 1440×900 and 390×844, saving them to `/mnt/project-files/screenshots/2026-10-21/request-*.png`.
-- [ ] **Step 3: Commit** any fixes. Then tick the checkboxes in this plan.
+- [x] **Step 3: Commit** any fixes. Then tick the checkboxes in this plan.
