@@ -16,3 +16,6 @@ export * from './files/scan-service';
 export * from './exports/export-service';
 export * from './outbox/outbox-service';
 export * from './notifications/notification-service';
+export * from './rooms/booking-days';
+export * from './rooms/room-booking-repository';
+export * from './rooms/room-booking-service';
