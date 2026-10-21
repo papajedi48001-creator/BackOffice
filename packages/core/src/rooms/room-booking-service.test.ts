@@ -155,10 +155,16 @@ describe('RoomBookingService.decide', () => {
   it.each([
     ['without the approver role', booker],
     ['scoped to another organization', { personId: 'other-unit-approver', roles: [{ name: 'room-booking-approver', organizationId: 'other-unit' }] }]
-  ])('forbids a decision by someone %s', async (_label, actor) => {
+  ])('answers not found to a decision by someone %s', async (_label, actor) => {
     const { service } = setup();
     const booking = await service.submit({ personId: 'someone-else', roles: [] }, submission);
-    await expect(service.decide(actor, { bookingId: booking.id, decision: 'APPROVE' })).rejects.toThrow('FORBIDDEN');
+    await expect(service.decide(actor, { bookingId: booking.id, decision: 'APPROVE' })).rejects.toThrow('BOOKING_NOT_FOUND');
+  });
+
+  it('forbids the booker from deciding without the approver role', async () => {
+    const { service } = setup();
+    const booking = await service.submit(booker, submission);
+    await expect(service.decide(booker, { bookingId: booking.id, decision: 'APPROVE' })).rejects.toThrow('FORBIDDEN');
   });
 
   it('reports an unknown booking as not found', async () => {
@@ -273,10 +279,10 @@ describe('RoomBookingService.cancel', () => {
     await expect(service.cancel(booker, { bookingId: booking.id, reason: 'ยกเลิก' })).rejects.toThrow('CANCEL_NOT_ALLOWED');
   });
 
-  it('forbids someone who is neither the booker nor an approver', async () => {
+  it('answers not found to someone who is neither the booker nor an approver', async () => {
     const { service } = setup();
     const booking = await service.submit(booker, submission);
-    await expect(service.cancel({ personId: 'someone-else', roles: [] }, { bookingId: booking.id, reason: 'แกล้ง' })).rejects.toThrow('FORBIDDEN');
+    await expect(service.cancel({ personId: 'someone-else', roles: [] }, { bookingId: booking.id, reason: 'แกล้ง' })).rejects.toThrow('BOOKING_NOT_FOUND');
   });
 
   it('requires a reason', async () => {

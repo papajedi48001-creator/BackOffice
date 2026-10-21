@@ -5,6 +5,7 @@ import { pageActor } from '../../../../../lib/actor';
 import { bangkokToday, formatBangkokDate, formatBangkokTime, formatMinutes } from '../../../../../lib/bangkok-time';
 import { getSharedDatabase } from '../../../../../lib/database';
 import { historyActionLabel, RoomStatusBadge } from '../../room-display';
+import { bookingViewState } from '../../booking-state';
 import { BookingActions } from './booking-actions';
 
 export default async function RoomBookingDetailPage({ params }: { params: Promise<{ bookingId: string }> }) {
@@ -15,22 +16,12 @@ export default async function RoomBookingDetailPage({ params }: { params: Promis
   const { bookingId } = await params;
   const booking = await new RoomBookingQueries(database).detail(bookingId, actor);
   if (!booking) notFound();
-  const now = new Date();
-  const activeDays = booking.days.filter((day) => day.status === 'ACTIVE');
-  const started = activeDays.some((day) => day.startsAt <= now);
-  const ended = !activeDays.some((day) => day.endsAt > now);
-  const open = booking.status === 'PENDING' || booking.status === 'APPROVED';
-  // Mirrors RoomBookingService.cancel; the server re-checks every rule.
-  const cancelAction = !open || ended ? null
-    : booking.viewerCanDecide ? (started ? 'release' : 'cancel')
-    : booking.viewerIsBooker ? (!started ? 'cancel' : booking.status === 'APPROVED' && activeDays.some((day) => day.startsAt > now) ? 'release' : null)
-    : null;
-  const canDecide = booking.viewerCanDecide && !booking.viewerIsBooker && booking.status === 'PENDING' && !ended;
+  const { expired, canDecide, cancelAction } = bookingViewState(booking, new Date());
   return <section>
     <h2>{t('roomBookingDetailTitle')}</h2>
     <dl className="detail-list">
       <div><dt>{t('bookingReference')}</dt><dd>{booking.reference}</dd></div>
-      <div><dt>{t('status')}</dt><dd><RoomStatusBadge status={booking.status} /></dd></div>
+      <div><dt>{t('status')}</dt><dd><RoomStatusBadge status={booking.status} expired={expired} /></dd></div>
       <div><dt>{t('roomField')}</dt><dd>{booking.roomName} ({booking.roomPlace})</dd></div>
       <div><dt>{t('bookingTitle')}</dt><dd>{booking.title}</dd></div>
       <div><dt>{t('bookingBooker')}</dt><dd>{[booking.bookerName, booking.bookerOrganizationName].filter(Boolean).join(' · ')}</dd></div>

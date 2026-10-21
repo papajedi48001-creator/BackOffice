@@ -17,6 +17,6 @@ export default async function MyRoomBookingsPage() {
   return <section>
     <div className="page-heading"><h2>{t('myRoomBookings')}</h2><nav className="page-actions"><Link className="button-link" href="/rooms/bookings/new">{t('bookRoom')}</Link></nav></div>
     <h3>{t('upcomingBookings')}</h3><BookingTable bookings={bookings.filter(isUpcoming).reverse()} />
-    <h3>{t('pastBookings')}</h3><BookingTable bookings={bookings.filter((booking) => !isUpcoming(booking))} />
+    <h3>{t('pastBookings')}</h3><BookingTable bookings={bookings.filter((booking) => !isUpcoming(booking)).map((booking) => ({ ...booking, expired: booking.status === 'PENDING' }))} />
   </section>;
 }

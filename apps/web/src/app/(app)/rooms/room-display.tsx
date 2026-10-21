@@ -4,7 +4,9 @@ import type { RoomBookingHistoryAction, RoomBookingStatus } from '@backoffice/co
 const statusLabel: Record<RoomBookingStatus, MessageKey> = { PENDING: 'roomStatusPending', APPROVED: 'roomStatusApproved', REJECTED: 'roomStatusRejected', CANCELLED: 'roomStatusCancelled' };
 const historyLabel: Record<RoomBookingHistoryAction, MessageKey> = { SUBMITTED: 'historySubmitted', APPROVED: 'historyApproved', REJECTED: 'historyRejected', CANCELLED: 'historyCancelled', DAYS_RELEASED: 'historyDaysReleased' };
 
-export function RoomStatusBadge({ status }: { status: RoomBookingStatus }) {
+/** `expired` marks a pending booking whose days have all ended without a decision. */
+export function RoomStatusBadge({ status, expired = false }: { status: RoomBookingStatus; expired?: boolean }) {
+  if (expired) return <span className="status status-expired">{t('roomStatusExpired')}</span>;
   return <span className={`status status-${status.toLowerCase()}`}>{t(statusLabel[status])}</span>;
 }
 

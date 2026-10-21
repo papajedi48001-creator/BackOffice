@@ -104,4 +104,15 @@ describeWithDatabase('room booking on MariaDB', () => {
     expect(await queries.pendingForApprover({ personId: otherBookerId, roles: [{ name: 'room-booking-approver', organizationId: bookerUnit }] })).toEqual([]);
     expect((await queries.myBookings(bookerId)).map((entry) => entry.id)).toContain(booking.id);
   });
+
+  it('leaves out pending bookings that have already ended and the approver\'s own bookings', async () => {
+    const room = await createRoom();
+    const ended = await service().submit(booker, input(room.id, ['2026-11-24']));
+    const upcoming = await service().submit(booker, input(room.id, ['2026-11-27']));
+    const own = await service().submit(approver, input(room.id, ['2026-11-28']));
+    const pending = (await new RoomBookingQueries(database).pendingForApprover(approver, new Date('2026-11-26T00:00:00Z'))).map((entry) => entry.id);
+    expect(pending).toContain(upcoming.id);
+    expect(pending).not.toContain(ended.id);
+    expect(pending).not.toContain(own.id);
+  });
 });

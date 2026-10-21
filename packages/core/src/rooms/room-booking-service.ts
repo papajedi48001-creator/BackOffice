@@ -59,8 +59,10 @@ export class RoomBookingService {
     return this.repository.transaction(async (repository) => {
       const locked = await repository.getBookingForUpdate(valid.bookingId);
       if (!locked) throw new Error('BOOKING_NOT_FOUND');
-      if (!(await this.isAllowed(actor, 'room.booking.decide', locked.room))) throw new Error('FORBIDDEN');
-      if (locked.booking.bookerPersonId === actor.personId) throw new Error('CONFLICT_OF_INTEREST');
+      const isBooker = locked.booking.bookerPersonId === actor.personId;
+      // Someone who may not see the booking is told it does not exist, as the detail page does.
+      if (!(await this.isAllowed(actor, 'room.booking.decide', locked.room))) throw new Error(isBooker ? 'FORBIDDEN' : 'BOOKING_NOT_FOUND');
+      if (isBooker) throw new Error('CONFLICT_OF_INTEREST');
       const now = this.now();
       if (locked.booking.status !== 'PENDING' || !locked.days.some((day) => day.status === 'ACTIVE' && day.endsAt > now)) throw new Error('BOOKING_NOT_PENDING');
       const approved = valid.decision === 'APPROVE';
@@ -80,7 +82,7 @@ export class RoomBookingService {
       if (!locked) throw new Error('BOOKING_NOT_FOUND');
       const isBooker = locked.booking.bookerPersonId === actor.personId;
       const isApprover = await this.isAllowed(actor, 'room.booking.decide', locked.room);
-      if (!isBooker && !isApprover) throw new Error('FORBIDDEN');
+      if (!isBooker && !isApprover) throw new Error('BOOKING_NOT_FOUND');
       if (locked.booking.status !== 'PENDING' && locked.booking.status !== 'APPROVED') throw new Error('CANCEL_NOT_ALLOWED');
       const now = this.now();
       const activeDays = locked.days.filter((day) => day.status === 'ACTIVE');
