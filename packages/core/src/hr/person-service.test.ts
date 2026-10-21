@@ -14,7 +14,8 @@ describe('PersonService', () => {
 
     const person = await service.createPerson({ nationalId: '1234567890123' });
 
-    expect(person.nationalIdMasked).toBe('1-2345-67890-12-3');
+    expect(person.nationalIdMasked).toBe('X-XXXX-XXXXX-12-3');
+    expect(inserted[0]).toContain('X-XXXX-XXXXX-12-3');
     expect(JSON.stringify(person)).not.toContain('1234567890123');
     expect(JSON.stringify(person)).not.toContain('ciphertext');
     expect(inserted).toHaveLength(1);

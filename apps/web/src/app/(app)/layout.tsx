@@ -2,6 +2,7 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { AppShell, type NavigationItem } from '../../components/app-shell';
 import { readSession } from '../../lib/session';
+import { AuthorizationService } from '@backoffice/core';
 import { createDatabase } from '@backoffice/db';
 import { readRuntimeValue } from '../../lib/runtime-env';
 
@@ -21,6 +22,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
   }
   const navigation: NavigationItem[] = [{ href: '/dashboard', label: 'dashboard' }, { href: '/requests', label: 'requests' }, { href: '/notifications', label: 'notifications', badge: unreadNotifications }, { href: '/audit', label: 'audit' }];
   if (roleNames.has('hr-reader') || roleNames.has('hr-manager')) navigation.splice(1, 0, { href: '/hr/people', label: 'people' }, { href: '/hr/organizations', label: 'organizations' });
+  if (new AuthorizationService().canActHospitalWide(session, 'hr.person.manage', 'hr')) navigation.splice(3, 0, { href: '/hr/imports', label: 'hrImport' });
   if (roleNames.has('hr-manager')) navigation.push({ href: '/access/roles', label: 'roles' }, { href: '/access/delegations', label: 'delegations' });
   return <AppShell navigation={navigation}>{children}</AppShell>;
 }
