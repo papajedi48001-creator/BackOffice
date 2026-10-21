@@ -1,6 +1,6 @@
 # R0.5 Request Lifecycle Completion Design
 
-**Status:** draft for review
+**Status:** approved 2026-10-21 (ผู้ใช้สั่งให้ทำต่อโดยไม่ต้องหยุดถาม)
 **Date:** 2026-10-21
 **Source:** code review finding P1-1 (workflow incomplete), the request detail page still showing "ตัวอย่างบุคลากร", and the lifecycle in `2026-09-30-waritch-hospital-back-office-design.md` (Workflow section)
 
@@ -52,7 +52,7 @@ RETURNED  --cancel (ผู้ขอ)--> CANCELLED
 
 ## Components and interfaces
 
-- `packages/db/migrations/0006_request_cancellation.sql` และ Drizzle schema
+- `packages/db/migrations/0007_request_cancellation.sql` และ Drizzle schema
 - `packages/core/src/workflow/request-service.ts`
   - `cancelRequest({ requestId, actorPersonId, reason })` คืนคำขอที่ปิดแล้ว; error `REQUEST_NOT_FOUND`, `NOT_REQUESTOR`, `REQUEST_NOT_CANCELLABLE`, `REASON_REQUIRED`
   - `resubmitRequest({ requestId, actorPersonId })`; error `NOT_REQUESTOR`, `REQUEST_NOT_RETURNED`, `NO_APPROVER`
