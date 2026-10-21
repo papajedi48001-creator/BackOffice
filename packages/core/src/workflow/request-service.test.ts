@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { RequestService, type WorkflowRepository } from './request-service';
-import type { ApprovalDecision, ApprovalStep, AuditEvent, OutboxEvent, SubmittedRequest } from '@backoffice/contracts';
+import type { ApprovalDecision, ApprovalStep, AuditEvent, OutboxEvent, RequestCancellation, SubmittedRequest } from '@backoffice/contracts';
 
 describe('RequestService', () => {
   it('keeps the approver snapshot when the requestor changes employment after submission', async () => {
@@ -55,6 +55,7 @@ class MemoryWorkflowRepository implements WorkflowRepository {
   readonly decisions: ApprovalDecision[] = [];
   readonly outbox: OutboxEvent[] = [];
   readonly auditEvents: AuditEvent[] = [];
+  readonly cancellations: RequestCancellation[] = [];
   async transaction<T>(work: (repository: WorkflowRepository) => Promise<T>): Promise<T> { return work(this); }
   async saveRequest(request: Omit<SubmittedRequest, 'approvalSteps'>): Promise<void> { this.requests.set(request.id, request); }
   async saveStep(step: ApprovalStep): Promise<void> {
@@ -66,6 +67,7 @@ class MemoryWorkflowRepository implements WorkflowRepository {
   async getRequestForUpdate(id: string): Promise<Omit<SubmittedRequest, 'approvalSteps'> | null> { return this.getRequest(id); }
   async getSteps(requestId: string): Promise<ApprovalStep[]> { return this.steps.get(requestId) ?? []; }
   async saveDecision(decision: ApprovalDecision): Promise<void> { this.decisions.push(decision); }
+  async saveCancellation(cancellation: RequestCancellation): Promise<void> { this.cancellations.push(cancellation); }
   async saveOutbox(event: OutboxEvent): Promise<void> { this.outbox.push(event); }
   async appendAudit(event: AuditEvent): Promise<void> { this.auditEvents.push(event); }
 }

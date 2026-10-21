@@ -26,7 +26,7 @@ describe('ApprovalService', () => {
       getRequest: async () => ({ id: 'request-1', reference: 'REQ-1', moduleCode: 'maintenance', requestorPersonId: 'person-a', organizationSnapshot: { organizationId: 'unit-a' }, status: 'IN_REVIEW' }),
       getRequestForUpdate: async () => ({ id: 'request-1', reference: 'REQ-1', moduleCode: 'maintenance', requestorPersonId: 'person-a', organizationSnapshot: { organizationId: 'unit-a' }, status: 'IN_REVIEW' }),
       getSteps: async () => [{ id: 'step-1', requestId: 'request-1', sequence: 1, assigneeSnapshot: { personId: 'manager-a', organizationId: 'unit-a' }, status: 'PENDING' }],
-      saveRequest: async () => undefined, saveDecision: async () => undefined, saveOutbox: async () => undefined,
+      saveRequest: async () => undefined, saveDecision: async () => undefined, saveCancellation: async () => undefined, saveOutbox: async () => undefined,
       saveStep: async (step) => { savedSteps.push(step); },
       appendAudit: async () => undefined
     };
@@ -48,6 +48,7 @@ describe('ApprovalService', () => {
       saveRequest: async () => undefined,
       saveStep: async () => undefined,
       saveDecision: async () => undefined,
+      saveCancellation: async () => undefined,
       saveOutbox: async () => undefined,
       appendAudit: async () => undefined
     };
@@ -74,6 +75,7 @@ describe('ApprovalService', () => {
       getSteps: async () => [{ id: 'step-1', requestId: 'request-1', sequence: 1, assigneeSnapshot: { personId: 'manager-a', organizationId: 'unit-a' }, status: 'PENDING' }],
       saveRequest: async () => undefined,
       saveDecision: async () => undefined,
+      saveCancellation: async () => undefined,
       saveOutbox: async () => undefined,
       saveStep: async () => undefined,
       appendAudit: async (event) => { auditEvents.push(event); }
@@ -163,5 +165,6 @@ class DecisionWorkflowRepository implements WorkflowRepository {
   async saveStep(step: ApprovalStep): Promise<void> { this.steps = this.steps.map((candidate) => candidate.id === step.id ? step : candidate); }
   async saveDecision(decision: import('@backoffice/contracts').ApprovalDecision): Promise<void> { this.decisions.push(decision); }
   async saveOutbox(event: import('@backoffice/contracts').OutboxEvent): Promise<void> { this.outbox.push(event); }
+  async saveCancellation(): Promise<void> {}
   async appendAudit(): Promise<void> {}
 }

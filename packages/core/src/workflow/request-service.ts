@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { notificationEventPayloadSchema, submitRequestInputSchema, type ApprovalDecision, type ApprovalStep, type ApproverSnapshot, type AuditEvent, type OutboxEvent, type SubmittedRequest } from '@backoffice/contracts';
+import { notificationEventPayloadSchema, submitRequestInputSchema, type ApprovalDecision, type ApprovalStep, type ApproverSnapshot, type AuditEvent, type OutboxEvent, type RequestCancellation, type SubmittedRequest } from '@backoffice/contracts';
 import { AuditService } from '../audit/audit-service';
 
 export interface WorkflowRepository {
@@ -10,6 +10,7 @@ export interface WorkflowRepository {
   getRequestForUpdate(requestId: string): Promise<Omit<SubmittedRequest, 'approvalSteps'> | null>;
   getSteps(requestId: string): Promise<ApprovalStep[]>;
   saveDecision(decision: ApprovalDecision): Promise<void>;
+  saveCancellation(cancellation: RequestCancellation): Promise<void>;
   saveOutbox(event: OutboxEvent): Promise<void>;
   appendAudit(event: AuditEvent): Promise<void>;
 }

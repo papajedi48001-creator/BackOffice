@@ -78,4 +78,20 @@ describeWithDatabase('DatabaseWorkflowRepository', () => {
     expect(await database.query('SELECT id FROM approval_decision WHERE approval_step_id = ?', [request.approvalSteps[0].id])).toHaveLength(1);
     expect(await database.query('SELECT id FROM audit_event WHERE target_id = ? AND action = ?', [request.id, 'workflow.request.decided'])).toHaveLength(1);
   });
+  it('orders steps by number and stores cancellation reasons', async () => {
+    await runMigrations(database);
+    const organizationId = randomUUID();
+    const requestorId = randomUUID();
+    await database.execute('INSERT INTO organization (id, name, created_at) VALUES (?, ?, UTC_TIMESTAMP())', [organizationId, 'Ordering unit']);
+    await database.execute('INSERT INTO person (id, national_id_ciphertext, national_id_lookup, created_at) VALUES (?, ?, ?, UTC_TIMESTAMP())', [requestorId, 'ciphertext', randomUUID()]);
+    const repository = new DatabaseWorkflowRepository(database);
+    const requestId = randomUUID();
+    await repository.saveRequest({ id: requestId, reference: `REQ-${requestId}`, moduleCode: 'workflow', requestorPersonId: requestorId, organizationSnapshot: { organizationId }, status: 'IN_REVIEW' });
+    for (const sequence of [7, 10, 1, 3, 2, 9, 4, 8, 6, 5]) await repository.saveStep({ id: randomUUID(), requestId, sequence, assigneeSnapshot: { personId: requestorId, organizationId }, status: 'PENDING' });
+
+    expect((await repository.getSteps(requestId)).map((step) => step.sequence)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+
+    await repository.saveCancellation({ id: randomUUID(), requestId, actorPersonId: requestorId, reason: 'ไม่ต้องใช้แล้ว' });
+    expect(await database.query<{ reason: string }>('SELECT reason FROM request_cancellation WHERE request_id = ?', [requestId])).toEqual([{ reason: 'ไม่ต้องใช้แล้ว' }]);
+  });
 });
