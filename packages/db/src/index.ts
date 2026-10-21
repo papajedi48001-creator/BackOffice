@@ -1,4 +1,4 @@
-export { createDatabase, type Database } from './client.ts';
+export { createDatabase, type Database, type TransactionOptions } from './client.ts';
 export { runMigrations } from './migrate.ts';
 
 export async function seedPerson(db: import('./client.ts').Database, input: { personId: string; nationalIdCiphertext: string; nationalIdLookup: string }): Promise<void> {

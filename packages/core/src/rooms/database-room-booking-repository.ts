@@ -30,7 +30,8 @@ export class DatabaseRoomBookingRepository implements RoomBookingRepository {
   constructor(private readonly database: Database) {}
 
   transaction<T>(work: (repository: RoomBookingRepository) => Promise<T>): Promise<T> {
-    return this.database.transaction((database) => work(new DatabaseRoomBookingRepository(database)));
+    // Concurrent submits lock the room and the shared sequence row after other bookings commit; see TransactionOptions.
+    return this.database.transaction((database) => work(new DatabaseRoomBookingRepository(database)), { isolationLevel: 'READ COMMITTED' });
   }
 
   async lockRoom(roomId: string): Promise<RoomRecord | null> {
