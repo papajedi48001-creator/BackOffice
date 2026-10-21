@@ -1,0 +1,13 @@
+# Local development only: HTTPS in front of the web app on the host, so the
+# Secure session cookie works for other machines on the LAN. Caddy signs the
+# certificate with its own local CA, so browsers show a warning the first time.
+{
+	auto_https disable_redirects
+	# Clients send no SNI when they connect by IP address; pick the LAN certificate for them.
+	default_sni {$BACKOFFICE_LAN_HOST}
+}
+
+https://{$BACKOFFICE_LAN_HOST}:8443, https://localhost:8443 {
+	tls internal
+	reverse_proxy host.docker.internal:{$BACKOFFICE_WEB_PORT}
+}
