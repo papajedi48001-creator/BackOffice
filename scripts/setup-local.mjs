@@ -9,7 +9,7 @@ import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { networkInterfaces } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { findSeedDemo, lanAddresses, parseEnv, renderEnv } from './setup-local-lib.mjs';
+import { findSeedDemo, isPortFree, lanAddresses, parseEnv, renderEnv } from './setup-local-lib.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const envFile = path.join(root, '.env');
@@ -19,19 +19,19 @@ const composeFile = 'infra/compose/docker-compose.dev.yml';
 function run(command, args, { env = {}, allowFailure = false, quiet = false } = {}) {
   const result = spawnSync(command, args, { cwd: root, stdio: quiet ? 'ignore' : 'inherit', shell: process.platform === 'win32' && command === 'pnpm', env: { ...process.env, ...env } });
   if (result.status !== 0 && !allowFailure) {
-    console.error(`\nโ– ${command} ${args.join(' ')} failed`);
+    console.error(`\nx ${command} ${args.join(' ')} failed`);
     process.exit(result.status ?? 1);
   }
   return result.status === 0;
 }
 
 function step(message) {
-  console.log(`\nโ–ถ ${message}`);
+  console.log(`\n==> ${message}`);
 }
 
 function loadEnv() {
   if (!existsSync(envFile)) {
-    console.error('โ– .env not found. Run `node scripts/setup-local.mjs` first.');
+    console.error('x .env not found. Run `node scripts/setup-local.mjs` first.');
     process.exit(1);
   }
   return parseEnv(readFileSync(envFile, 'utf8'));
@@ -45,22 +45,44 @@ function checkTools() {
   if (Number(process.versions.node.split('.')[0]) < 24) missing.push(`Node 24 (found ${process.versions.node})`);
   if (!run('pnpm', ['--version'], { allowFailure: true, quiet: true })) missing.push('pnpm (npm install -g pnpm@11.19.0)');
   if (missing.length) {
-    console.error(`โ– Missing: ${missing.join(', ')}`);
+    console.error(`x Missing: ${missing.join(', ')}`);
     process.exit(1);
   }
 }
 
-function writeEnvIfMissing() {
+function hostPorts() {
+  const source = existsSync(envFile) ? parseEnv(readFileSync(envFile, 'utf8')) : process.env;
+  return {
+    dbPort: Number(source.BACKOFFICE_DB_PORT ?? 3307),
+    redisPort: Number(source.BACKOFFICE_REDIS_PORT ?? 6379),
+    minioPort: Number(source.BACKOFFICE_MINIO_PORT ?? 9000)
+  };
+}
+
+/** Fails early with a clear fix when another program already holds a port Docker needs to publish. */
+async function checkPortsFree(ports, services, env) {
+  const wanted = { mariadb: ['BACKOFFICE_DB_PORT', ports.dbPort], redis: ['BACKOFFICE_REDIS_PORT', ports.redisPort], minio: ['BACKOFFICE_MINIO_PORT', ports.minioPort] };
+  const busy = [];
+  for (const service of services) {
+    const running = spawnSync('docker', ['compose', '-f', composeFile, 'ps', '--status', 'running', '-q', service], { cwd: root, encoding: 'utf8', env: { ...process.env, ...env } });
+    if (running.stdout?.trim()) continue; // our own container already holds the port
+    const [variable, port] = wanted[service];
+    if (!(await isPortFree(port))) busy.push(`  ${service}: port ${port} is in use -> set ${variable} to a free port`);
+  }
+  if (!busy.length) return;
+  console.error(`x Ports already in use:\n${busy.join('\n')}`);
+  console.error(existsSync(envFile)
+    ? '  Change the BACKOFFICE_*_PORT lines in .env and the matching port in DATABASE_URL / REDIS_URL, then run again.'
+    : '  Example (PowerShell): $env:BACKOFFICE_DB_PORT=3310; node scripts/setup-local.mjs\n  Example (bash): BACKOFFICE_DB_PORT=3310 node scripts/setup-local.mjs');
+  process.exit(1);
+}
+
+function writeEnvIfMissing(ports) {
   if (existsSync(envFile)) {
     step('.env already exists; keeping it');
     return;
   }
   step('Writing .env with fresh local secrets');
-  const ports = {
-    dbPort: Number(process.env.BACKOFFICE_DB_PORT ?? 3307),
-    redisPort: Number(process.env.BACKOFFICE_REDIS_PORT ?? 6379),
-    minioPort: Number(process.env.BACKOFFICE_MINIO_PORT ?? 9000)
-  };
   writeFileSync(envFile, renderEnv(readFileSync(path.join(root, '.env.example'), 'utf8'), ports));
 }
 
@@ -70,7 +92,7 @@ function migrateWithRetry(env) {
     if (run('pnpm', ['--filter', '@backoffice/db', 'migrate'], { env, allowFailure: true })) return;
     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 2000);
   }
-  console.error('โ– MariaDB did not become ready. Check `docker compose -f infra/compose/docker-compose.dev.yml logs mariadb`.');
+  console.error('x MariaDB did not become ready. Check `docker compose -f infra/compose/docker-compose.dev.yml logs mariadb`.');
   process.exit(1);
 }
 
@@ -83,14 +105,16 @@ function workspacePackages() {
   return [read(root, true), ...children];
 }
 
-function setup() {
+async function setup() {
   checkTools();
   step('Installing dependencies');
   run('pnpm', ['install', '--frozen-lockfile']);
-  writeEnvIfMissing();
+  const services = process.argv.includes('--with-minio') ? ['mariadb', 'redis', 'minio'] : ['mariadb', 'redis'];
+  const ports = hostPorts();
+  await checkPortsFree(ports, services, existsSync(envFile) ? loadEnv() : {});
+  writeEnvIfMissing(ports);
   const env = loadEnv();
   step('Starting MariaDB and Redis');
-  const services = process.argv.includes('--with-minio') ? ['mariadb', 'redis', 'minio'] : ['mariadb', 'redis'];
   run('docker', ['compose', '-f', composeFile, 'up', '-d', ...services], { env });
   migrateWithRetry(env);
   const seed = findSeedDemo(workspacePackages());
@@ -100,7 +124,7 @@ function setup() {
   } else {
     console.log('\n! seed:demo is not available on this branch yet; no demo accounts were created.');
   }
-  console.log('\nโ” Ready. Next: `node scripts/setup-local.mjs web` and open http://localhost:3000');
+  console.log('\nOK Ready. Next: `node scripts/setup-local.mjs web` and open http://localhost:3000');
 }
 
 function web() {
@@ -123,13 +147,13 @@ function lan() {
   const candidates = lanAddresses(networkInterfaces());
   const host = process.env.BACKOFFICE_LAN_HOST ?? env.BACKOFFICE_LAN_HOST ?? candidates[0];
   if (!host) {
-    console.error('โ– No LAN address found. Set BACKOFFICE_LAN_HOST to this machine\'s IP address.');
+    console.error('x No LAN address found. Set BACKOFFICE_LAN_HOST to this machine\'s IP address.');
     process.exit(1);
   }
   const port = env.BACKOFFICE_LAN_PORT ?? '8443';
   step(`Starting the HTTPS proxy for ${host}`);
   run('docker', ['compose', '-f', composeFile, '--profile', 'lan', 'up', '-d', 'https-lan'], { env: { ...env, BACKOFFICE_LAN_HOST: host } });
-  console.log(`\nโ” Other machines on the LAN can open https://${host}:${port}`);
+  console.log(`\nOK Other machines on the LAN can open https://${host}:${port}`);
   if (candidates.length > 1) console.log(`  Other addresses on this machine: ${candidates.filter((a) => a !== host).join(', ')} (set BACKOFFICE_LAN_HOST to pick one)`);
   console.log('  The web app must be running (`node scripts/setup-local.mjs web`), and the firewall must allow inbound TCP on that port.');
 }
@@ -140,4 +164,4 @@ if (!commands[command]) {
   console.error(`Unknown command "${command}". Use one of: ${Object.keys(commands).join(', ')}`);
   process.exit(1);
 }
-commands[command]();
+await commands[command]();

@@ -1,7 +1,8 @@
-﻿import assert from 'node:assert/strict';
+import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { findSeedDemo, lanAddresses, parseEnv, renderEnv } from './setup-local-lib.mjs';
+import { createServer } from 'node:net';
+import { findSeedDemo, isPortFree, lanAddresses, parseEnv, renderEnv } from './setup-local-lib.mjs';
 
 const example = readFileSync(new URL('../.env.example', import.meta.url), 'utf8');
 
@@ -58,4 +59,16 @@ test('lanAddresses lists external IPv4 addresses with physical adapters first', 
     docker0: [{ family: 'IPv4', address: '172.17.0.1', internal: false }]
   };
   assert.deepEqual(lanAddresses(interfaces), ['192.168.1.20', '172.18.160.1', '172.17.0.1']);
+});
+
+test('isPortFree reports a port another process is listening on as busy', async () => {
+  const server = createServer();
+  await new Promise((resolve) => server.listen(0, '0.0.0.0', resolve));
+  const { port } = server.address();
+  try {
+    assert.equal(await isPortFree(port), false);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+  assert.equal(await isPortFree(port), true);
 });

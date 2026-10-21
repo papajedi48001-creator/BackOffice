@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto';
+import { createServer } from 'node:net';
 
 /** Password set for the backoffice user in infra/compose/docker-compose.dev.yml. */
 const devDatabasePassword = 'local-development-only';
@@ -46,4 +47,13 @@ export function lanAddresses(interfaces) {
   const entries = Object.entries(interfaces).flatMap(([name, addresses]) =>
     (addresses ?? []).filter((a) => a.family === 'IPv4' && !a.internal).map((a) => ({ name, address: a.address })));
   return [...entries.filter((e) => !virtualAdapter.test(e.name)), ...entries.filter((e) => virtualAdapter.test(e.name))].map((e) => e.address);
+}
+
+/** True when nothing is listening on the host port, so Docker can publish it. */
+export function isPortFree(port) {
+  return new Promise((resolve) => {
+    const server = createServer();
+    server.once('error', () => resolve(false));
+    server.listen(port, '0.0.0.0', () => server.close(() => resolve(true)));
+  });
 }
