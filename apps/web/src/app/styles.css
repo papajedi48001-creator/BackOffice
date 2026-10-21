@@ -29,7 +29,8 @@ h1 { margin: 0; font-size: clamp(2rem, 6vw, 3.75rem); line-height: 1.15; }
 .password-field { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
 .password-toggle { min-height: 44px; border: 1px solid #0b7285; border-radius: 8px; background: #fff; color: #075e54; cursor: pointer; font-weight: 700; padding: 9px 12px; }
 .form-error { margin: -4px 0 0; color: #9a3412; font-weight: 700; }
-.sign-in-form > button[type="submit"] { justify-self: start; min-height: 44px; }
+.sign-in-form > button[type="submit"] { justify-self: start; min-height: 44px; border: 0; border-radius: 8px; background: #0b7285; color: #fff; cursor: pointer; font-weight: 700; padding: 11px 20px; }
+.sign-in-form > button[type="submit"]:hover:not(:disabled) { background: #095c6b; }
 .sign-in-form > button[type="submit"]:disabled { cursor: not-allowed; opacity: .7; }
 .request-create { margin: 20px 0 24px; border: 1px solid #d9e2ec; border-left: 5px solid #0b7285; border-radius: 10px; background: #fff; padding: 20px; }
 .request-create h3 { margin: 0; font-size: 1.2rem; }
