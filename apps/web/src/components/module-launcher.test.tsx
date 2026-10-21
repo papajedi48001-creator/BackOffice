@@ -9,8 +9,8 @@ const summary = { displayName: 'สมชาย ใจดี', organizationName:
 const today = new Date('2026-10-21T03:00:00Z');
 
 it('links live modules and does not link planned ones', () => {
-  render(<ModuleLauncher modules={[...byCode('requests', 'hr-people'), ...planned]} badges={{}} summary={summary} today={today} />);
-  expect(screen.getByRole('link', { name: /บุคลากร/ })).toHaveAttribute('href', '/hr/people');
+  render(<ModuleLauncher modules={[...byCode('requests', 'hr'), ...planned]} badges={{}} summary={summary} today={today} />);
+  expect(screen.getByRole('link', { name: /งานบุคคล/ })).toHaveAttribute('href', '/hr');
   expect(screen.queryByRole('link', { name: /งานซ่อม/ })).toBeNull();
   expect(screen.getByText('งานซ่อม').closest('[aria-disabled="true"]')).not.toBeNull();
   expect(screen.getAllByText('เร็ว ๆ นี้')).toHaveLength(planned.length);
@@ -30,7 +30,7 @@ it('shows a dash when counts are unavailable', () => {
 });
 
 it('puts counts on the requests and notifications tiles and on module badges', () => {
-  const live = { ...byCode('audit')[0]!, code: 'room-booking-live', href: '/rooms-live' };
+  const live = { ...byCode('access')[0]!, code: 'room-booking-live', href: '/rooms-live' };
   render(<ModuleLauncher modules={[...byCode('requests', 'notifications'), live]} badges={{ 'room-booking-live': 4 }} summary={summary} today={today} />);
   expect(screen.getByLabelText('3 รายการรอดำเนินการ')).toBeInTheDocument();
   expect(screen.getByLabelText('5 รายการรอดำเนินการ')).toBeInTheDocument();
