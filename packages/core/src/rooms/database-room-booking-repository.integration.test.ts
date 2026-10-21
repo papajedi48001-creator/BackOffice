@@ -63,7 +63,7 @@ describeWithDatabase('room booking on MariaDB', () => {
       expect.objectContaining({ date: '2026-11-06' })
     ]);
     const outbox = await database.query<{ payload: string }>('SELECT payload FROM outbox_event WHERE idempotency_key LIKE ?', ['notification.in_app:room-booking:%']);
-    expect(outbox.map((row) => JSON.parse(row.payload)).filter((payload) => payload.targetPath === `/rooms/bookings/${booking.id}`).map((payload) => payload.recipientPersonId).sort()).toEqual([approverId, bookerId].sort());
+    expect(outbox.map((row) => JSON.parse(row.payload)).filter((payload) => payload.targetPath === `/rooms/bookings/${booking.id}`).map((payload) => payload.recipientPersonId)).toEqual(expect.arrayContaining([approverId, bookerId])); // hospital-wide approvers in a shared database are notified too
   });
 
   it('hides released days and rejected bookings from the calendar and frees them', async () => {

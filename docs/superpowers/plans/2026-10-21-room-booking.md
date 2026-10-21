@@ -1,6 +1,6 @@
 # Room Booking Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** บุคลากรจองห้องประชุมได้ (หลายวันในครั้งเดียว) ธุรการพิจารณา ยกเลิก/คืนวันพร้อมเหตุผล ทุกคนเห็นปฏิทินออนไลน์ และผู้จองได้รับแจ้งทุกขั้น
 
@@ -48,11 +48,11 @@
 - `interface RoomActor { personId: string; roles: AccessSubject['roles'] }`
 - Permission enum gains `'room.manage' | 'room.booking.decide'`
 
-- [ ] **Step 1: Failing tests** — `rooms.test.ts`: rejects 15 dates; rejects empty title after trim; rejects quantity 0; cancel requires reason. `authorization-service.test.ts`: `room-booking-approver` scoped to unit-a may `room.booking.decide` on `{moduleCode:'room-booking', organizationId:'unit-a'}` and not on unit-b; `room-manager` may `room.manage` without data-owner assignment.
-- [ ] **Step 2:** `pnpm --filter @backoffice/contracts test && pnpm --filter @backoffice/core test -- authorization` → FAIL (module missing)
-- [ ] **Step 3:** Implement schemas and policy entries.
-- [ ] **Step 4:** same command → PASS
-- [ ] **Step 5:** `git commit -m "feat(rooms): add room booking contracts and permissions"`
+- [x] **Step 1: Failing tests** — `rooms.test.ts`: rejects 15 dates; rejects empty title after trim; rejects quantity 0; cancel requires reason. `authorization-service.test.ts`: `room-booking-approver` scoped to unit-a may `room.booking.decide` on `{moduleCode:'room-booking', organizationId:'unit-a'}` and not on unit-b; `room-manager` may `room.manage` without data-owner assignment.
+- [x] **Step 2:** `pnpm --filter @backoffice/contracts test && pnpm --filter @backoffice/core test -- authorization` → FAIL (module missing)
+- [x] **Step 3:** Implement schemas and policy entries.
+- [x] **Step 4:** same command → PASS
+- [x] **Step 5:** `git commit -m "feat(rooms): add room booking contracts and permissions"`
 
 ### Task 2: Booking time rules
 
@@ -64,17 +64,17 @@
 - `toBookingRanges(input: { dates: string[]; startMinute: number; endMinute: number }, now: Date): { date: string; startsAt: Date; endsAt: Date }[]` sorted by date; throws `Error('INVALID_DATES')` (bad/duplicate date), `Error('INVALID_TIME_RANGE')`, `Error('OUTSIDE_BOOKING_WINDOW')`
 - `rangesOverlap(a, b): boolean` (half-open)
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
   - `toBookingRanges({dates:['2026-11-05'], startMinute:420, endMinute:540}, now)` → startsAt `2026-11-05T00:00:00Z`, endsAt `02:00Z`
   - 06:30 start, 20:30 end, 09:15 start, start ≥ end → `INVALID_TIME_RANGE`
   - first range starting before `now` → `OUTSIDE_BOOKING_WINDOW`; date = today(Bangkok)+91 → `OUTSIDE_BOOKING_WINDOW`; +90 → ok
   - duplicate date or `'2026-02-30'` → `INVALID_DATES`
   - `bangkokDate(new Date('2026-12-31T18:00:00Z'))` → `'2027-01-01'`; `buddhistYear` of that → `2570`
   - `rangesOverlap` 09–12 vs 12–15 → false; 09–12 vs 11–13 → true
-- [ ] **Step 2:** `pnpm --filter @backoffice/core test -- booking-days` → FAIL
-- [ ] **Step 3:** Implement with UTC arithmetic using `utcOffsetMinutes` (no Intl dependency).
-- [ ] **Step 4:** → PASS
-- [ ] **Step 5:** `git commit -m "feat(rooms): validate booking dates and times in Bangkok time"`
+- [x] **Step 2:** `pnpm --filter @backoffice/core test -- booking-days` → FAIL
+- [x] **Step 3:** Implement with UTC arithmetic using `utcOffsetMinutes` (no Intl dependency).
+- [x] **Step 4:** → PASS
+- [x] **Step 5:** `git commit -m "feat(rooms): validate booking dates and times in Bangkok time"`
 
 ### Task 3: Database schema and notification target
 
@@ -94,21 +94,21 @@ Tables (CHAR(36) ids, utf8mb4, FKs as in 0003):
 
 Notification payload: `notificationEventPayloadSchema` = `{ recipientPersonId, subject, requestId?: string, targetPath?: string matching /^\/(?!\/)[A-Za-z0-9/_-]*$/ }` refined so at least one of requestId/targetPath is present.
 
-- [ ] **Step 1: Failing tests** — `migrate.test.ts` expects `0004_room_booking.sql` last; `notifications.test.ts` accepts `{recipientPersonId, subject, targetPath:'/rooms/bookings/abc'}`, rejects `targetPath:'//evil.example'` and a payload with neither id nor path.
-- [ ] **Step 2:** `pnpm --filter @backoffice/db test && pnpm --filter @backoffice/contracts test && bash infra/backup/restore-verify.test.sh` → FAIL
-- [ ] **Step 3:** Write migration, Drizzle schema, registry, restore list, payload schema.
-- [ ] **Step 4:** same → PASS
-- [ ] **Step 5:** `git commit -m "feat(db): add room booking tables and notification target path"`
+- [x] **Step 1: Failing tests** — `migrate.test.ts` expects `0004_room_booking.sql` last; `notifications.test.ts` accepts `{recipientPersonId, subject, targetPath:'/rooms/bookings/abc'}`, rejects `targetPath:'//evil.example'` and a payload with neither id nor path.
+- [x] **Step 2:** `pnpm --filter @backoffice/db test && pnpm --filter @backoffice/contracts test && bash infra/backup/restore-verify.test.sh` → FAIL
+- [x] **Step 3:** Write migration, Drizzle schema, registry, restore list, payload schema.
+- [x] **Step 4:** same → PASS
+- [x] **Step 5:** `git commit -m "feat(db): add room booking tables and notification target path"`
 
 ### Task 4: Notification delivery follows targetPath
 
 **Files:** Modify `packages/contracts/src/notifications.ts` (`NotificationMessage.targetPath: string | null`), `packages/core/src/notifications/notification-service.ts`, `apps/worker/src/database-notification-store.ts` (+test), `apps/web/src/app/api/notifications/route.ts`, `apps/web/src/app/api/notifications/[notificationId]/read/route.ts` (+tests), `apps/web/src/app/(app)/notifications/notification-list.tsx` (+test)
 
-- [ ] **Step 1: Failing tests** — store inserts `target_path`; read route returns `{ href: '/rooms/bookings/b1' }` when target_path set, `{ href: '/requests/r1' }` otherwise, 404 when neither; list navigates to `href`.
-- [ ] **Step 2:** `pnpm --filter @backoffice/worker test && pnpm --filter @backoffice/web test -- notification` → FAIL
-- [ ] **Step 3:** Implement.
-- [ ] **Step 4:** → PASS
-- [ ] **Step 5:** `git commit -m "feat(notifications): link notifications to non-request targets"`
+- [x] **Step 1: Failing tests** — store inserts `target_path`; read route returns `{ href: '/rooms/bookings/b1' }` when target_path set, `{ href: '/requests/r1' }` otherwise, 404 when neither; list navigates to `href`.
+- [x] **Step 2:** `pnpm --filter @backoffice/worker test && pnpm --filter @backoffice/web test -- notification` → FAIL
+- [x] **Step 3:** Implement.
+- [x] **Step 4:** → PASS
+- [x] **Step 5:** `git commit -m "feat(notifications): link notifications to non-request targets"`
 
 ### Task 5: Submit a booking
 
@@ -142,25 +142,25 @@ class RoomBookingService { constructor(repository, authorizer = new Authorizatio
 ```
 Reference: `RB-${buddhistYear(now)}-${String(seq).padStart(4,'0')}`.
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
   - happy path: booking `PENDING`, 3 days `ACTIVE`, reference `RB-2569-0001`, history `SUBMITTED`, audit `room_booking.submitted` with metadata keys exactly `bookingReference, roomId, status, dayCount`
   - outbox: notification to booker (`ยื่นจองห้องแล้ว รออนุมัติ (RB-2569-0001)`, targetPath `/rooms/bookings/<id>`) and to each approver except the booker; no payload contains the title
   - room missing → `ROOM_NOT_FOUND`; not bookable → `ROOM_NOT_BOOKABLE`; attendee > capacity → `OVER_CAPACITY`; inactive addon → `INVALID_ADDON`
   - existing active day 10:00–12:00 → `BookingConflictError` listing that range; adjacent 12:00–13:00 succeeds
-- [ ] **Step 2:** `pnpm --filter @backoffice/core test -- room-booking-service` → FAIL
-- [ ] **Step 3:** Implement `submit` (lock room → validate → conflicts → sequence → insert → history → audit → outbox).
-- [ ] **Step 4:** → PASS
-- [ ] **Step 5:** `git commit -m "feat(rooms): submit room bookings with conflict prevention"`
+- [x] **Step 2:** `pnpm --filter @backoffice/core test -- room-booking-service` → FAIL
+- [x] **Step 3:** Implement `submit` (lock room → validate → conflicts → sequence → insert → history → audit → outbox).
+- [x] **Step 4:** → PASS
+- [x] **Step 5:** `git commit -m "feat(rooms): submit room bookings with conflict prevention"`
 
 ### Task 6: Decide a booking
 
 **Files:** Modify `room-booking-service.ts`, `room-booking-service.test.ts`
 
-- [ ] **Step 1: Failing tests** — approve → `APPROVED`, `decidedByPersonId`, history `APPROVED`, notification `การจองห้องได้รับอนุมัติ (RB-…)`; reject without reason → `REASON_REQUIRED`; reject stores reason only in history; booker deciding own → `CONFLICT_OF_INTEREST`; actor without role or wrong org scope → `FORBIDDEN`; status not `PENDING` or all days ended → `BOOKING_NOT_PENDING`
-- [ ] **Step 2:** run → FAIL
-- [ ] **Step 3:** Implement `decide`.
-- [ ] **Step 4:** → PASS
-- [ ] **Step 5:** `git commit -m "feat(rooms): approve or reject room bookings"`
+- [x] **Step 1: Failing tests** — approve → `APPROVED`, `decidedByPersonId`, history `APPROVED`, notification `การจองห้องได้รับอนุมัติ (RB-…)`; reject without reason → `REASON_REQUIRED`; reject stores reason only in history; booker deciding own → `CONFLICT_OF_INTEREST`; actor without role or wrong org scope → `FORBIDDEN`; status not `PENDING` or all days ended → `BOOKING_NOT_PENDING`
+- [x] **Step 2:** run → FAIL
+- [x] **Step 3:** Implement `decide`.
+- [x] **Step 4:** → PASS
+- [x] **Step 5:** `git commit -m "feat(rooms): approve or reject room bookings"`
 
 ### Task 7: Cancel and release days
 
@@ -168,11 +168,11 @@ Reference: `RB-${buddhistYear(now)}-${String(seq).padStart(4,'0')}`.
 
 Rules per spec "การยกเลิก". Actor is booker if `personId === bookerPersonId`, else must hold `room.booking.decide` in scope (else `FORBIDDEN`). Booker who also holds the role is treated as approver for timing.
 
-- [ ] **Step 1: Failing tests** — booker before start → `CANCELLED`, days untouched, approver who decided gets `ผู้จองยกเลิกการจองห้อง (RB-…)` when it was `APPROVED`; booker after first day started on `APPROVED` → only days with `startsAt > now` released, today kept, status stays `APPROVED`, history `DAYS_RELEASED`, audit `room_booking.days_released`; booker after start with no future days → `NOTHING_TO_RELEASE`; booker on `PENDING` after start → `CANCEL_NOT_ALLOWED`; approver after last day ended → `CANCEL_NOT_ALLOWED`; approver mid-booking releases remaining and booker gets `การจองห้องถูกยกเลิกโดยผู้ดูแล (RB-…)`; empty reason rejected by schema
-- [ ] **Step 2:** run → FAIL
-- [ ] **Step 3:** Implement `cancel`.
-- [ ] **Step 4:** → PASS
-- [ ] **Step 5:** `git commit -m "feat(rooms): cancel bookings and release remaining days"`
+- [x] **Step 1: Failing tests** — booker before start → `CANCELLED`, days untouched, approver who decided gets `ผู้จองยกเลิกการจองห้อง (RB-…)` when it was `APPROVED`; booker after first day started on `APPROVED` → only days with `startsAt > now` released, today kept, status stays `APPROVED`, history `DAYS_RELEASED`, audit `room_booking.days_released`; booker after start with no future days → `NOTHING_TO_RELEASE`; booker on `PENDING` after start → `CANCEL_NOT_ALLOWED`; approver after last day ended → `CANCEL_NOT_ALLOWED`; approver mid-booking releases remaining and booker gets `การจองห้องถูกยกเลิกโดยผู้ดูแล (RB-…)`; empty reason rejected by schema
+- [x] **Step 2:** run → FAIL
+- [x] **Step 3:** Implement `cancel`.
+- [x] **Step 4:** → PASS
+- [x] **Step 5:** `git commit -m "feat(rooms): cancel bookings and release remaining days"`
 
 ### Task 8: Catalog service, database repository, calendar query
 
@@ -182,11 +182,11 @@ Rules per spec "การยกเลิก". Actor is booker if `personId === b
 - `RoomCatalogService(repository, authorizer, createId)`: `createRoom(actor, input)`, `updateRoom(actor, roomId, input)`, `createAddon(actor, input)`, `updateAddon(actor, addonId, input)`; rooms checked against `room.manage` on the room's owner org (create: input owner org); addons require `room.manage` in any scope; audit `room.created|room.updated|room_addon.created|room_addon.updated`
 - `RoomBookingQueries(database)`: `listRooms({ bookableOnly })`, `listAddons({ activeOnly })`, `calendar(from: Date, to: Date, roomId?)` → `{ bookingId, reference, roomId, roomName, date, startsAt, endsAt, status, title, bookerPersonId, bookerOrganizationName | null }[]` only `ACTIVE` days of `PENDING|APPROVED`; `myBookings(personId)`; `pendingForApprover(actor)`; `detail(bookingId, actor)` → full booking incl. addons and history, or `null` when actor is neither booker nor scoped approver
 
-- [ ] **Step 1: Failing tests** — catalog unit: manager scoped to unit-a cannot create a room owned by unit-b (`FORBIDDEN`); audit metadata excludes names. Integration (skips without `DATABASE_URL`): two concurrent `submit`s for overlapping ranges → exactly one fulfilled, one `BOOKING_CONFLICT`; 5 concurrent submits for different rooms get distinct references; `calendar` omits released days and rejected bookings; `detail` returns null for an unrelated person
-- [ ] **Step 2:** `pnpm --filter @backoffice/core test && DATABASE_URL=… pnpm --filter @backoffice/core test:integration` → FAIL
-- [ ] **Step 3:** Implement repositories (`FOR UPDATE` on room, `INSERT … ON DUPLICATE KEY UPDATE` + `SELECT … FOR UPDATE` on sequence) and queries.
-- [ ] **Step 4:** → PASS
-- [ ] **Step 5:** `git commit -m "feat(rooms): persist bookings in MariaDB and query the calendar"`
+- [x] **Step 1: Failing tests** — catalog unit: manager scoped to unit-a cannot create a room owned by unit-b (`FORBIDDEN`); audit metadata excludes names. Integration (skips without `DATABASE_URL`): two concurrent `submit`s for overlapping ranges → exactly one fulfilled, one `BOOKING_CONFLICT`; 5 concurrent submits for different rooms get distinct references; `calendar` omits released days and rejected bookings; `detail` returns null for an unrelated person
+- [x] **Step 2:** `pnpm --filter @backoffice/core test && DATABASE_URL=… pnpm --filter @backoffice/core test:integration` → FAIL
+- [x] **Step 3:** Implement repositories (`FOR UPDATE` on room, `INSERT … ON DUPLICATE KEY UPDATE` + `SELECT … FOR UPDATE` on sequence) and queries.
+- [x] **Step 4:** → PASS
+- [x] **Step 5:** `git commit -m "feat(rooms): persist bookings in MariaDB and query the calendar"`
 
 ### Task 9: Web API and actor seam
 
@@ -194,11 +194,11 @@ Rules per spec "การยกเลิก". Actor is booker if `personId === b
 
 **Interfaces — Produces:** `requireActor(request: Request): Promise<RoomActor>` (throws `AuthorizationError(401)`); `roomErrorResponse(error: unknown): Response` mapping: ZodError/`INVALID_*`/`OVER_CAPACITY`/`OUTSIDE_BOOKING_WINDOW`/`REASON_REQUIRED` → 400 `{error: code}`, `FORBIDDEN`/`CONFLICT_OF_INTEREST` → 403, `ROOM_NOT_FOUND`/`BOOKING_NOT_FOUND` → 404, `BOOKING_CONFLICT` → 409 with `conflicts: [{startsAt, endsAt}]`, `BOOKING_NOT_PENDING`/`CANCEL_NOT_ALLOWED`/`NOTHING_TO_RELEASE`/`ROOM_NOT_BOOKABLE` → 409, 401 → `unauthenticated`, else 500 `room_booking_failed` (log code only)
 
-- [ ] **Step 1: Failing tests** — POST bookings without session → 401; conflict → 409 with conflicts; decision by non-approver → 403; cancellation without reason → 400; response bodies never echo the reason
-- [ ] **Step 2:** `pnpm --filter @backoffice/web test -- rooms` → FAIL
-- [ ] **Step 3:** Implement routes using `getSharedDatabase()`.
-- [ ] **Step 4:** → PASS
-- [ ] **Step 5:** `git commit -m "feat(web): expose room booking API behind the actor seam"`
+- [x] **Step 1: Failing tests** — POST bookings without session → 401; conflict → 409 with conflicts; decision by non-approver → 403; cancellation without reason → 400; response bodies never echo the reason
+- [x] **Step 2:** `pnpm --filter @backoffice/web test -- rooms` → FAIL
+- [x] **Step 3:** Implement routes using `getSharedDatabase()`.
+- [x] **Step 4:** → PASS
+- [x] **Step 5:** `git commit -m "feat(web): expose room booking API behind the actor seam"`
 
 ### Task 10: Screens, navigation, Thai copy
 
@@ -208,16 +208,23 @@ Rules per spec "การยกเลิก". Actor is booker if `personId === b
 - Nav: `ห้องประชุม` (all), `รออนุมัติจองห้อง` (room-booking-approver), `จัดการห้องประชุม` (room-manager)
 - Status labels: PENDING `รออนุมัติ`, APPROVED `อนุมัติแล้ว`, REJECTED `ไม่อนุมัติ`, CANCELLED `ยกเลิกแล้ว`; error codes → Thai messages in `th.ts`
 
-- [ ] **Step 1: Failing tests** — calendar renders text status label and title per booking for a week; form builds `dates` from range minus unchecked days and shows conflict dates from a 409; actions show cancel for booker, approve/reject for approver, require reason before submit; time helpers
-- [ ] **Step 2:** `pnpm --filter @backoffice/web test -- rooms bangkok` → FAIL
-- [ ] **Step 3:** Implement pages as server components reading via `RoomBookingQueries`, client components posting to the API.
-- [ ] **Step 4:** → PASS
-- [ ] **Step 5:** `git commit -m "feat(web): add meeting room calendar, booking, approval, and management screens"`
+- [x] **Step 1: Failing tests** — calendar renders text status label and title per booking for a week; form builds `dates` from range minus unchecked days and shows conflict dates from a 409; actions show cancel for booker, approve/reject for approver, require reason before submit; time helpers
+- [x] **Step 2:** `pnpm --filter @backoffice/web test -- rooms bangkok` → FAIL
+- [x] **Step 3:** Implement pages as server components reading via `RoomBookingQueries`, client components posting to the API.
+- [x] **Step 4:** → PASS
+- [x] **Step 5:** `git commit -m "feat(web): add meeting room calendar, booking, approval, and management screens"`
 
 ### Task 11: Verify and document
 
-- [ ] `pnpm lint && pnpm typecheck && pnpm test` → all pass
-- [ ] `DATABASE_URL=mysql://… pnpm test:integration` → pass (report skip honestly if MariaDB unavailable)
-- [ ] `bash infra/backup/restore-verify.test.sh` and `git diff --check`
-- [ ] README/runbook line: how to grant `room-manager` / `room-booking-approver` roles
-- [ ] `git commit -m "docs(rooms): record verification and role setup"`
+- [x] `pnpm lint && pnpm typecheck && pnpm test` → all pass
+- [x] `DATABASE_URL=mysql://… pnpm test:integration` → pass (report skip honestly if MariaDB unavailable)
+- [x] `bash infra/backup/restore-verify.test.sh` and `git diff --check`
+- [x] Runbook `docs/runbooks/room-booking-roles.md`: how to grant `room-manager` / `room-booking-approver` roles
+- [x] `git commit -m "docs(rooms): record verification and role setup"`
+
+## Execution notes (2026-10-21)
+
+- PR #10 (HR master data) merged into `main` mid-way and claimed migration `0004`; this branch merged `main` and renumbered the room migration to `0005_room_booking.sql`.
+- `room_booking_history.created_at` is `DATETIME(6)` so entries made in the same second keep their order.
+- Domain outbox events (`room_booking.*`) are not emitted: the worker only consumes notification events and nothing else subscribes yet; audit + history carry the record.
+- Verified end to end against a local MariaDB and `next start`: manager adds room and add-ons, booker books 5, 6, 9 Nov, a clashing booking shows the clash, approver approves, worker delivers in-app notifications that open the booking page.
