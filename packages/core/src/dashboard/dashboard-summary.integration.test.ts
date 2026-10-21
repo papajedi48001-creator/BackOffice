@@ -10,6 +10,8 @@ describeWithDatabase('loadDashboardSummary against MariaDB', () => {
   const database = databaseUrl ? createDatabase(databaseUrl) : undefined as never;
   const me = randomUUID();
   const other = randomUUID();
+  const laterStep = randomUUID();
+  const earlierStep = randomUUID();
   const organizationId = randomUUID();
   const organizationName = `กลุ่มงานทดสอบ ${organizationId.slice(0, 6)}`;
 
@@ -36,6 +38,9 @@ describeWithDatabase('loadDashboardSummary against MariaDB', () => {
     await insertRequest('IN_REVIEW', [['1', other, 'PENDING'], ['2', me, 'PENDING']]);
     await insertRequest('APPROVED', [['1', me, 'PENDING']]);
     await insertRequest('IN_REVIEW', [['2', other, 'APPROVED'], ['10', me, 'PENDING']]);
+    await insertPerson(laterStep, null);
+    await insertPerson(earlierStep, null);
+    await insertRequest('IN_REVIEW', [['2', earlierStep, 'PENDING'], ['10', laterStep, 'PENDING']]);
     await insertNotification('in_app', false);
     await insertNotification('in_app', false);
     await insertNotification('in_app', true);
@@ -46,6 +51,11 @@ describeWithDatabase('loadDashboardSummary against MariaDB', () => {
 
   it('counts only requests waiting on this person and their unread in-app notifications', async () => {
     await expect(loadDashboardSummary(database, me)).resolves.toEqual({ displayName: 'คุณทดสอบ', organizationName, pendingApprovals: 2, unreadNotifications: 2 });
+  });
+
+  it('orders steps by number, so step 2 waits before step 10', async () => {
+    expect((await loadDashboardSummary(database, earlierStep)).pendingApprovals).toBe(1);
+    expect((await loadDashboardSummary(database, laterStep)).pendingApprovals).toBe(0);
   });
 
   it('returns empty values for an unknown person', async () => {

@@ -16,12 +16,13 @@ export default async function DashboardPage() {
   let badges: Record<string, number | undefined> = {};
   const databaseUrl = readRuntimeValue('DATABASE_URL');
   if (databaseUrl && session.personId) {
-    const database = createDatabase(databaseUrl);
+    let database: ReturnType<typeof createDatabase> | undefined;
     try {
+      database = createDatabase(databaseUrl);
       [summary, badges] = await Promise.all([loadDashboardSummary(database, session.personId), collectBadges(modules, database, session)]);
-    } catch {
-      console.error('dashboard_summary_failed');
-    } finally { await database.close(); }
+    } catch (error) {
+      console.error('dashboard_summary_failed', (error as { code?: unknown }).code ?? 'UNKNOWN');
+    } finally { await database?.close().catch(() => undefined); }
   }
   return <ModuleLauncher modules={modules} badges={badges} summary={summary} today={new Date()} />;
 }
