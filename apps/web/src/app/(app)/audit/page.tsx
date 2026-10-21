@@ -8,7 +8,7 @@ import { AuditEventTable, type AuditEventRow } from './audit-event-table';
 
 type StoredAuditEventRow = { createdAt: string | Date; action: string; result: string; metadata: string };
 
-const auditActions = new Set<AuditEventRow['action']>(['workflow.request.submitted', 'workflow.request.decided']);
+const auditActions = new Set<AuditEventRow['action']>(['workflow.request.submitted', 'workflow.request.decided', 'workflow.request.cancelled', 'workflow.request.resubmitted']);
 const auditResults = new Set<AuditEventRow['result']>(['SUCCESS', 'APPROVE', 'REJECT', 'RETURN']);
 
 export default async function AuditPage() {

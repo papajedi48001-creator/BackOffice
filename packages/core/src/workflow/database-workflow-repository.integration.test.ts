@@ -78,4 +78,48 @@ describeWithDatabase('DatabaseWorkflowRepository', () => {
     expect(await database.query('SELECT id FROM approval_decision WHERE approval_step_id = ?', [request.approvalSteps[0].id])).toHaveLength(1);
     expect(await database.query('SELECT id FROM audit_event WHERE target_id = ? AND action = ?', [request.id, 'workflow.request.decided'])).toHaveLength(1);
   });
+  it('lets only one of a concurrent cancellation and approval win', async () => {
+    await runMigrations(database);
+    const organizationId = randomUUID();
+    const requestorId = randomUUID();
+    const approverId = randomUUID();
+    await database.execute('INSERT INTO organization (id, name, created_at) VALUES (?, ?, UTC_TIMESTAMP())', [organizationId, 'Cancellation race unit']);
+    await database.execute('INSERT INTO person (id, national_id_ciphertext, national_id_lookup, created_at) VALUES (?, ?, ?, UTC_TIMESTAMP()), (?, ?, ?, UTC_TIMESTAMP())', [requestorId, 'ciphertext-race-a', randomUUID(), approverId, 'ciphertext-race-b', randomUUID()]);
+    const requests = new RequestService(new DatabaseWorkflowRepository(database), { resolve: async () => [{ personId: approverId, organizationId }] });
+    const request = await requests.submitRequest({ moduleCode: 'maintenance', requestorPersonId: requestorId, organizationSnapshot: { organizationId } });
+
+    const outcomes = await Promise.allSettled([
+      requests.cancelRequest({ requestId: request.id, actorPersonId: requestorId, reason: 'ไม่ต้องการแล้ว' }),
+      new ApprovalService(new DatabaseWorkflowRepository(database), { findActiveFor: async () => null }).decideRequest({ requestId: request.id, actorPersonId: approverId, decision: 'APPROVE' })
+    ]);
+
+    expect(outcomes.filter((outcome) => outcome.status === 'fulfilled')).toHaveLength(1);
+    // The loser must fail on the status check, not on a lock or snapshot error (MariaDB 11.8 raises ER_CHECKREAD
+    // when a consistent read runs before the row lock).
+    const loser = outcomes.find((outcome): outcome is PromiseRejectedResult => outcome.status === 'rejected');
+    expect(['REQUEST_NOT_CANCELLABLE', 'REQUEST_NOT_PENDING']).toContain((loser?.reason as Error).message);
+    const [row] = await database.query<{ status: string }>('SELECT status FROM request WHERE id = ?', [request.id]);
+    const cancellations = await database.query('SELECT id FROM request_cancellation WHERE request_id = ?', [request.id]);
+    const decisions = await database.query('SELECT decision.id FROM approval_decision decision JOIN approval_step step ON step.id = decision.approval_step_id WHERE step.request_id = ?', [request.id]);
+    expect(['CANCELLED', 'APPROVED']).toContain(row?.status);
+    expect(cancellations.length + decisions.length).toBe(1);
+    await database.execute('UPDATE outbox_event SET processed_at = UTC_TIMESTAMP() WHERE processed_at IS NULL AND JSON_VALUE(payload, \'$.requestId\') = ?', [request.id]);
+  });
+
+  it('orders steps by number and stores cancellation reasons', async () => {
+    await runMigrations(database);
+    const organizationId = randomUUID();
+    const requestorId = randomUUID();
+    await database.execute('INSERT INTO organization (id, name, created_at) VALUES (?, ?, UTC_TIMESTAMP())', [organizationId, 'Ordering unit']);
+    await database.execute('INSERT INTO person (id, national_id_ciphertext, national_id_lookup, created_at) VALUES (?, ?, ?, UTC_TIMESTAMP())', [requestorId, 'ciphertext', randomUUID()]);
+    const repository = new DatabaseWorkflowRepository(database);
+    const requestId = randomUUID();
+    await repository.saveRequest({ id: requestId, reference: `REQ-${requestId}`, moduleCode: 'workflow', requestorPersonId: requestorId, organizationSnapshot: { organizationId }, status: 'IN_REVIEW' });
+    for (const sequence of [7, 10, 1, 3, 2, 9, 4, 8, 6, 5]) await repository.saveStep({ id: randomUUID(), requestId, sequence, assigneeSnapshot: { personId: requestorId, organizationId }, status: 'PENDING' });
+
+    expect((await repository.getSteps(requestId)).map((step) => step.sequence)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+
+    await repository.saveCancellation({ id: randomUUID(), requestId, actorPersonId: requestorId, reason: 'ไม่ต้องใช้แล้ว' });
+    expect(await database.query<{ reason: string }>('SELECT reason FROM request_cancellation WHERE request_id = ?', [requestId])).toEqual([{ reason: 'ไม่ต้องใช้แล้ว' }]);
+  });
 });

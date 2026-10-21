@@ -26,7 +26,7 @@ describe('ApprovalService', () => {
       getRequest: async () => ({ id: 'request-1', reference: 'REQ-1', moduleCode: 'maintenance', requestorPersonId: 'person-a', organizationSnapshot: { organizationId: 'unit-a' }, status: 'IN_REVIEW' }),
       getRequestForUpdate: async () => ({ id: 'request-1', reference: 'REQ-1', moduleCode: 'maintenance', requestorPersonId: 'person-a', organizationSnapshot: { organizationId: 'unit-a' }, status: 'IN_REVIEW' }),
       getSteps: async () => [{ id: 'step-1', requestId: 'request-1', sequence: 1, assigneeSnapshot: { personId: 'manager-a', organizationId: 'unit-a' }, status: 'PENDING' }],
-      saveRequest: async () => undefined, saveDecision: async () => undefined, saveOutbox: async () => undefined,
+      saveRequest: async () => undefined, saveDecision: async () => undefined, saveCancellation: async () => undefined, saveOutbox: async () => undefined,
       saveStep: async (step) => { savedSteps.push(step); },
       appendAudit: async () => undefined
     };
@@ -48,6 +48,7 @@ describe('ApprovalService', () => {
       saveRequest: async () => undefined,
       saveStep: async () => undefined,
       saveDecision: async () => undefined,
+      saveCancellation: async () => undefined,
       saveOutbox: async () => undefined,
       appendAudit: async () => undefined
     };
@@ -74,6 +75,7 @@ describe('ApprovalService', () => {
       getSteps: async () => [{ id: 'step-1', requestId: 'request-1', sequence: 1, assigneeSnapshot: { personId: 'manager-a', organizationId: 'unit-a' }, status: 'PENDING' }],
       saveRequest: async () => undefined,
       saveDecision: async () => undefined,
+      saveCancellation: async () => undefined,
       saveOutbox: async () => undefined,
       saveStep: async () => undefined,
       appendAudit: async (event) => { auditEvents.push(event); }
@@ -142,6 +144,14 @@ describe('ApprovalService', () => {
     expect(repository.outbox).toEqual([]);
     expect(repository.decisions).toEqual([]);
   });
+  it.each(['REJECT', 'RETURN'] as const)('cancels the later pending steps when a request is %s-ed', async (decision) => {
+    const step = (id: string, sequence: number) => ({ id, requestId: 'request-1', sequence, assigneeSnapshot: { personId: `manager-${sequence}`, organizationId: 'unit-a' }, status: 'PENDING' as const });
+    const repository = new DecisionWorkflowRepository({ request: { id: 'request-1', reference: 'REQ-1', moduleCode: 'maintenance', requestorPersonId: 'person-a', organizationSnapshot: { organizationId: 'unit-a' }, status: 'IN_REVIEW' }, steps: [step('step-1', 1), step('step-2', 2), step('step-3', 3)] });
+
+    await new ApprovalService(repository, { findActiveFor: async () => null }).decideRequest({ requestId: 'request-1', actorPersonId: 'manager-1', decision, reason: 'ข้อมูลไม่ครบ' });
+
+    expect(repository.steps.map((candidate) => candidate.status)).toEqual([decision === 'REJECT' ? 'REJECTED' : 'RETURNED', 'CANCELLED', 'CANCELLED']);
+  });
 });
 
 class DecisionWorkflowRepository implements WorkflowRepository {
@@ -163,5 +173,6 @@ class DecisionWorkflowRepository implements WorkflowRepository {
   async saveStep(step: ApprovalStep): Promise<void> { this.steps = this.steps.map((candidate) => candidate.id === step.id ? step : candidate); }
   async saveDecision(decision: import('@backoffice/contracts').ApprovalDecision): Promise<void> { this.decisions.push(decision); }
   async saveOutbox(event: import('@backoffice/contracts').OutboxEvent): Promise<void> { this.outbox.push(event); }
+  async saveCancellation(): Promise<void> {}
   async appendAudit(): Promise<void> {}
 }

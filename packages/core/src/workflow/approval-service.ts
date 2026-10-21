@@ -30,6 +30,11 @@ export class ApprovalService {
       const recipientPersonId = nextStep?.assigneeSnapshot.personId ?? request.requestorPersonId;
       const subject = nextStep ? 'มีคำขอรอพิจารณา' : decisionInput.decision === 'APPROVE' ? 'คำขอของคุณได้รับอนุมัติ' : decisionInput.decision === 'REJECT' ? 'คำขอของคุณไม่ผ่านการอนุมัติ' : 'คำขอของคุณถูกส่งกลับ';
       await repository.saveStep({ ...step, status: stepStatus });
+      if (decisionInput.decision !== 'APPROVE') {
+        for (const leftover of steps.slice(stepIndex + 1)) {
+          if (leftover.status === 'PENDING') await repository.saveStep({ ...leftover, status: 'CANCELLED' });
+        }
+      }
       await repository.saveDecision(decision);
       await repository.saveRequest({ ...request, status });
       await repository.saveOutbox(outbox);

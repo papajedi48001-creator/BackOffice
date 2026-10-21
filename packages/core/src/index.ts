@@ -12,6 +12,7 @@ export * from './access/delegation-service';
 export * from './workflow/request-service';
 export * from './workflow/approval-service';
 export * from './workflow/database-workflow-repository';
+export * from './workflow/request-history';
 export * from './audit/audit-service';
 export * from './audit/database-audit-repository';
 export * from './files/attachment-service';

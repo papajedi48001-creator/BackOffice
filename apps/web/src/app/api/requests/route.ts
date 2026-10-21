@@ -1,17 +1,10 @@
 import { NextResponse } from 'next/server';
 import { createDatabase } from '@backoffice/db';
-import { DatabaseWorkflowRepository, RequestService, type ApproverResolver } from '@backoffice/core';
+import { DatabaseWorkflowRepository, RequestService } from '@backoffice/core';
+import { DatabaseApproverResolver } from '../../../lib/database-approver-resolver';
 import { requireAuthorized } from '../../../lib/require-authorized';
 import { readRuntimeValue } from '../../../lib/runtime-env';
 import { requestErrorCode } from './request-error-code';
-
-class DatabaseApproverResolver implements ApproverResolver {
-  constructor(private readonly database: ReturnType<typeof createDatabase>) {}
-  async resolve(input: { moduleCode: string; requestorPersonId: string; organizationId: string }) {
-    const rows = await this.database.query<{ personId: string; organizationId: string }>('SELECT manager_person_id AS personId, organization_id AS organizationId FROM employment_assignment WHERE person_id = ? AND organization_id = ? AND effective_until IS NULL AND manager_person_id IS NOT NULL LIMIT 1', [input.requestorPersonId, input.organizationId]);
-    return rows;
-  }
-}
 
 export async function POST(request: Request): Promise<Response> {
   const databaseUrl = readRuntimeValue('DATABASE_URL');
