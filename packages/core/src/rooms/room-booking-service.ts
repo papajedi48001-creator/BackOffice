@@ -123,7 +123,8 @@ export class RoomBookingService {
   }
 
   private async notify(repository: RoomBookingRepository, booking: RoomBookingRecord, historyId: string, recipientPersonId: string, subject: string): Promise<void> {
-    const payload = notificationEventPayloadSchema.parse({ recipientPersonId, subject, targetPath: `/rooms/bookings/${booking.id}` });
+    // moduleCode lets the central inbox label the notice; the shared schema does not know it yet, so it is added after validation.
+    const payload = { ...notificationEventPayloadSchema.parse({ recipientPersonId, subject, targetPath: `/rooms/bookings/${booking.id}` }), moduleCode: ROOM_BOOKING_MODULE };
     await repository.saveOutbox({ id: this.createId(), type: 'notification.in_app', idempotencyKey: `notification.in_app:room-booking:${historyId}:${recipientPersonId}`, payload, occurredAt: this.now().toISOString(), processedAt: null });
   }
 }

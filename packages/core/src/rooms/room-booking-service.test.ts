@@ -46,9 +46,9 @@ describe('RoomBookingService.submit', () => {
     const booking = await service.submit(booker, submission);
 
     expect(notifications(repository)).toEqual([
-      { recipientPersonId: 'booker', subject: 'ยื่นจองห้องแล้ว รออนุมัติ (RB-2569-0001)', targetPath: `/rooms/bookings/${booking.id}` },
-      { recipientPersonId: 'approver', subject: 'มีการจองห้องรออนุมัติ (RB-2569-0001)', targetPath: `/rooms/bookings/${booking.id}` },
-      { recipientPersonId: 'approver-2', subject: 'มีการจองห้องรออนุมัติ (RB-2569-0001)', targetPath: `/rooms/bookings/${booking.id}` }
+      { recipientPersonId: 'booker', subject: 'ยื่นจองห้องแล้ว รออนุมัติ (RB-2569-0001)', targetPath: `/rooms/bookings/${booking.id}`, moduleCode: 'room-booking' },
+      { recipientPersonId: 'approver', subject: 'มีการจองห้องรออนุมัติ (RB-2569-0001)', targetPath: `/rooms/bookings/${booking.id}`, moduleCode: 'room-booking' },
+      { recipientPersonId: 'approver-2', subject: 'มีการจองห้องรออนุมัติ (RB-2569-0001)', targetPath: `/rooms/bookings/${booking.id}`, moduleCode: 'room-booking' }
     ]);
     expect(JSON.stringify(repository.outbox)).not.toContain('อบรมพยาบาลใหม่');
     expect(JSON.stringify(repository.outbox)).not.toContain('HDMI');
@@ -118,7 +118,7 @@ describe('RoomBookingService.decide', () => {
     expect(repository.bookings.get(booking.id)).toMatchObject({ status: 'APPROVED', decidedByPersonId: 'approver' });
     expect(repository.history.at(-1)).toMatchObject({ action: 'APPROVED', actorPersonId: 'approver', reason: null });
     expect(repository.audit.at(-1)).toMatchObject({ action: 'room_booking.approved', actorPersonId: 'approver' });
-    expect(notifications(repository)).toEqual([{ recipientPersonId: 'booker', subject: 'การจองห้องได้รับอนุมัติ (RB-2569-0001)', targetPath: `/rooms/bookings/${booking.id}` }]);
+    expect(notifications(repository)).toEqual([{ recipientPersonId: 'booker', subject: 'การจองห้องได้รับอนุมัติ (RB-2569-0001)', targetPath: `/rooms/bookings/${booking.id}`, moduleCode: 'room-booking' }]);
   });
 
   it('keeps the rejection reason in the booking history only', async () => {
@@ -210,7 +210,7 @@ describe('RoomBookingService.cancel', () => {
 
     await context.service.cancel(booker, { bookingId: booking.id, reason: 'เลื่อนการอบรม' });
 
-    expect(notifications(context.repository)).toEqual([{ recipientPersonId: 'approver', subject: 'ผู้จองยกเลิกการจองห้อง (RB-2569-0001)', targetPath: `/rooms/bookings/${booking.id}` }]);
+    expect(notifications(context.repository)).toEqual([{ recipientPersonId: 'approver', subject: 'ผู้จองยกเลิกการจองห้อง (RB-2569-0001)', targetPath: `/rooms/bookings/${booking.id}`, moduleCode: 'room-booking' }]);
     expect(JSON.stringify([context.repository.audit, context.repository.outbox])).not.toContain('เลื่อนการอบรม');
   });
 
@@ -250,7 +250,7 @@ describe('RoomBookingService.cancel', () => {
     const result = await context.service.cancel(approver, { bookingId: booking.id, reason: 'ผู้บริหารใช้ห้องด่วน' });
 
     expect(result.releasedDayCount).toBe(2);
-    expect(notifications(context.repository)).toEqual([{ recipientPersonId: 'booker', subject: 'การจองห้องถูกยกเลิกโดยผู้ดูแล (RB-2569-0001)', targetPath: `/rooms/bookings/${booking.id}` }]);
+    expect(notifications(context.repository)).toEqual([{ recipientPersonId: 'booker', subject: 'การจองห้องถูกยกเลิกโดยผู้ดูแล (RB-2569-0001)', targetPath: `/rooms/bookings/${booking.id}`, moduleCode: 'room-booking' }]);
   });
 
   it('lets an approver cancel an approved booking before it starts', async () => {

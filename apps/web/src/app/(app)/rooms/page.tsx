@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { bangkokDayStart, RoomBookingQueries } from '@backoffice/core';
+import { AuthorizationService, bangkokDayStart, RoomBookingQueries } from '@backoffice/core';
 import { t } from '@backoffice/i18n';
 import { pageActor } from '../../../lib/actor';
 import { addDays, bangkokToday, datesBetween, formatBangkokDate, mondayOf } from '../../../lib/bangkok-time';
@@ -19,9 +19,11 @@ export default async function RoomCalendarPage({ searchParams }: { searchParams:
   const rooms = await queries.listRooms({ bookableOnly: false });
   const selectedRoom = rooms.some((room) => room.id === roomId) ? roomId : undefined;
   const entries = await queries.calendar(bangkokDayStart(monday), bangkokDayStart(addDays(monday, 7)), selectedRoom);
+  const authorization = new AuthorizationService();
+  const covers = (permission: 'room.booking.decide' | 'room.manage') => { const scope = authorization.organizationScope({ authenticated: true, personId: actor.personId, roles: actor.roles, dataOwnerModules: [] }, permission); return scope === 'all' || scope.length > 0; };
   const weekLink = (date: string) => `/rooms?week=${date}${selectedRoom ? `&roomId=${selectedRoom}` : ''}`;
   return <section>
-    <div className="page-heading"><h2>{t('roomCalendarTitle')}</h2><nav className="page-actions"><Link href="/rooms/bookings">{t('myRoomBookings')}</Link><Link className="button-link" href="/rooms/bookings/new">{t('bookRoom')}</Link></nav></div>
+    <div className="page-heading"><h2>{t('roomCalendarTitle')}</h2><nav className="page-actions">{covers('room.booking.decide') && <Link href="/rooms/approvals">{t('roomApprovals')}</Link>}{covers('room.manage') && <Link href="/rooms/manage">{t('roomManage')}</Link>}<Link href="/rooms/bookings">{t('myRoomBookings')}</Link><Link className="button-link" href="/rooms/bookings/new">{t('bookRoom')}</Link></nav></div>
     <form className="calendar-toolbar" method="get">
       <input type="hidden" name="week" value={monday} />
       <label htmlFor="calendar-room">{t('roomField')}</label>
