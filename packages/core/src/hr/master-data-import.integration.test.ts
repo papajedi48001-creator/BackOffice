@@ -4,6 +4,7 @@ import { createDatabase, runMigrations } from '@backoffice/db';
 import { NationalIdProtector } from '../crypto/national-id';
 import { HrDirectory } from './hr-directory';
 import { MasterDataImportService } from './master-data-import';
+import { OrganizationHeadService } from './organization-head-service';
 import { nationalId } from './national-id-fixture';
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -102,5 +103,32 @@ describeWithDatabase('MasterDataImportService against MariaDB', () => {
     await expect(service.apply({ organizations: headed }, actorPersonId)).resolves.toMatchObject({ ok: true, summary: { headsChanged: 0 } });
     await expect(service.apply({ organizations }, actorPersonId)).resolves.toMatchObject({ ok: true, summary: { headsChanged: 0 } });
     expect(await stored()).toEqual([{ unitType: 'HOSPITAL', headCode: `D${run}` }]);
+  });
+  it('runs alongside head assignments on other units without deadlocking', async () => {
+    const heads = new OrganizationHeadService(database);
+    const units = await Promise.all(Array.from({ length: 4 }, async () => {
+      const id = randomUUID();
+      await database.execute('INSERT INTO organization (id, name, created_at) VALUES (?, ?, UTC_TIMESTAMP())', [id, 'งานคู่ขนาน']);
+      return id;
+    }));
+
+    const results = await Promise.allSettled([
+      service.apply({ organizations }, actorPersonId),
+      ...units.map((organizationId, index) => heads.assign({ organizationId, personId: actorPersonId, effectiveFrom: new Date(Date.UTC(2026, 0, index + 1)) }, actorPersonId))
+    ]);
+
+    expect(results.filter((result) => result.status === 'rejected').map((result) => String((result as PromiseRejectedResult).reason))).toEqual([]);
+  });
+  it('waits for a person row another transaction is changing, then imports', async () => {
+    let applied: Promise<unknown> = Promise.resolve();
+    await database.transaction(async (transaction) => {
+      await transaction.execute('UPDATE person SET display_name = display_name WHERE id = ?', [actorPersonId]);
+      await transaction.execute('UPDATE person SET position_title = ? WHERE id = ?', ['ระหว่างนำเข้า', actorPersonId]);
+      applied = service.apply({ organizations }, actorPersonId);
+      // The import's locking read now waits on this row until the transaction commits.
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    });
+
+    await expect(applied).resolves.toMatchObject({ ok: true });
   });
 });

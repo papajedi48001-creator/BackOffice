@@ -124,13 +124,22 @@ export class MasterDataImportService {
 
 export async function loadExistingMasterData(database: Pick<Database, 'query'>, options: { forUpdate?: boolean } = {}): Promise<ExistingMasterData> {
   const lock = options.forUpdate ? ' FOR UPDATE' : '';
-  const organizations = await database.query<StoredOrganization>(`SELECT o.id, o.code, o.name, o.parent_id AS parentId, o.unit_type AS unitType, h.person_id AS headPersonId FROM organization o LEFT JOIN hr_organization_head h ON h.organization_id = o.id AND h.effective_until IS NULL${lock}`);
+  const stored = await database.query<Omit<StoredOrganization, 'headPersonId'>>(`SELECT id, code, name, parent_id AS parentId, unit_type AS unitType FROM organization${lock}`);
+  // People are locked by a plain locking read first: a locking read that also runs the assignment subquery
+  // takes a read view, and MariaDB then fails it with ER_CHECKREAD when a waited-for row was changed meanwhile.
+  if (options.forUpdate) await database.query('SELECT id FROM person FOR UPDATE');
   // Timestamps are formatted in SQL so the driver's local time zone never shifts them.
   const people = await database.query<StoredPerson>(
     `SELECT p.id, p.employee_code AS employeeCode, p.national_id_lookup AS nationalIdLookup, p.display_name AS displayName, p.position_title AS positionTitle, p.employment_status AS employmentStatus,
        a.organization_id AS organizationId, a.manager_person_id AS managerPersonId, DATE_FORMAT(a.effective_from, '%Y-%m-%dT%H:%i:%sZ') AS effectiveFrom
-     FROM person p LEFT JOIN employment_assignment a ON a.id = (SELECT latest.id FROM employment_assignment latest WHERE latest.person_id = p.id AND latest.effective_until IS NULL ORDER BY latest.effective_from DESC LIMIT 1)${lock}`
+     FROM person p LEFT JOIN employment_assignment a ON a.id = (SELECT latest.id FROM employment_assignment latest WHERE latest.person_id = p.id AND latest.effective_until IS NULL ORDER BY latest.effective_from DESC LIMIT 1)`
   );
+  // Heads are read without a lock: locking head rows would block head assignments that already hold their unit's row,
+  // and holding every organization row is enough because a head change locks its unit's row first.
+  // It runs after the locking reads, since a plain read fixes the snapshot and a later locking read of a row changed since then fails.
+  const heads = await database.query<{ organizationId: string; personId: string }>('SELECT organization_id AS organizationId, person_id AS personId FROM hr_organization_head WHERE effective_until IS NULL');
+  const headByOrganization = new Map(heads.map((head) => [head.organizationId, head.personId]));
+  const organizations: StoredOrganization[] = stored.map((organization) => ({ ...organization, headPersonId: headByOrganization.get(organization.id) ?? null }));
   return {
     organizations,
     people: people.map(({ organizationId, managerPersonId, effectiveFrom, ...person }) => ({
