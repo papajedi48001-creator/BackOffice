@@ -7,6 +7,7 @@ export * from './hr/master-data-import';
 export * from './hr/hr-directory';
 export * from './hr/command-chain';
 export * from './hr/command-chain-service';
+export * from './hr/organization-head-service';
 export * from './identity/auth-service';
 export * from './identity/session-service';
 export * from './identity/database-identity-repository';
