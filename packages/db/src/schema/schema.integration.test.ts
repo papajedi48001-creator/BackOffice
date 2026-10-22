@@ -47,4 +47,14 @@ describeWithDatabase('R0 foundation schema', () => {
     await expect(db.execute('INSERT INTO notification (id, outbox_event_id, channel, recipient_person_id, request_id, subject, delivered_at, read_at, created_at) VALUES (UUID(), ?, ?, ?, ?, ?, UTC_TIMESTAMP(), NULL, UTC_TIMESTAMP())', [eventId, 'in_app', requestorId, requestId, 'มีคำขอรอพิจารณา']))
       .rejects.toThrow();
   });
+
+  it('creates the inventory tables', async () => {
+    const tables = (await db.query<Record<string, string>>("SHOW TABLES LIKE 'inventory\\_%'")).map((row) => Object.values(row)[0]).sort();
+    expect(tables).toEqual(['inventory_category', 'inventory_item', 'inventory_item_barcode', 'inventory_lot', 'inventory_movement', 'inventory_receipt', 'inventory_receipt_history', 'inventory_receipt_line', 'inventory_sequence', 'inventory_vendor']);
+  });
+
+  it('refuses a lot with negative stock on hand', async () => {
+    const rows = await db.query<{ clause: string }>("SELECT CHECK_CLAUSE AS clause FROM information_schema.CHECK_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND CONSTRAINT_NAME = 'inventory_lot_on_hand_nonnegative'");
+    expect(rows[0]?.clause).toMatch(/`on_hand_quantity` >= 0/);
+  });
 });
