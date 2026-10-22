@@ -125,6 +125,6 @@ export async function loadExistingMasterData(database: Pick<Database, 'query'>, 
   };
 }
 
-export function toMariaDbDatetime(date: Date): string {
+function toMariaDbDatetime(date: Date): string {
   return date.toISOString().slice(0, 19).replace('T', ' ');
 }

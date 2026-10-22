@@ -1,7 +1,7 @@
 import type { CommandChainTarget, OrganizationUnitType } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { resolveCommandChain, type ChainUnit, type CommandChain } from './command-chain';
-import { toMariaDbDatetime } from './master-data-import';
+import { toMariaDbDatetime } from '../rooms/database-room-booking-repository';
 
 interface UnitRow { id: string; parentId: string | null; unitType: OrganizationUnitType | null; headPersonId: string | null; headStatus: string | null; }
 

@@ -3,7 +3,7 @@ import { assignOrganizationHeadInputSchema, setOrganizationUnitTypeInputSchema, 
 import type { Database } from '@backoffice/db';
 import { AuditService } from '../audit/audit-service';
 import { DatabaseAuditRepository } from '../audit/database-audit-repository';
-import { toMariaDbDatetime } from './master-data-import';
+import { toMariaDbDatetime } from '../rooms/database-room-booking-repository';
 
 type QueryDatabase = Pick<Database, 'execute' | 'query'>;
 
