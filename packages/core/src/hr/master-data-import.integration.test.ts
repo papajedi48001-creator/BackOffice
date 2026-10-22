@@ -4,6 +4,7 @@ import { createDatabase, runMigrations } from '@backoffice/db';
 import { NationalIdProtector } from '../crypto/national-id';
 import { HrDirectory } from './hr-directory';
 import { MasterDataImportService } from './master-data-import';
+import { OrganizationHeadService } from './organization-head-service';
 import { nationalId } from './national-id-fixture';
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -32,7 +33,7 @@ describeWithDatabase('MasterDataImportService against MariaDB', () => {
 
   it('validates without writing, then applies everything with one audit event, and re-applying changes nothing', async () => {
     const files = { organizations, people: people(nursing, '2026-10-01') };
-    const expected = { organizationsCreated: 2, organizationsUpdated: 0, peopleCreated: 2, peopleUpdated: 0, assignmentsChanged: 2 };
+    const expected = { organizationsCreated: 2, organizationsUpdated: 0, peopleCreated: 2, peopleUpdated: 0, assignmentsChanged: 2, headsChanged: 0 };
 
     await expect(service.validate(files)).resolves.toEqual({ ok: true, summary: expected });
     await expect(database.query('SELECT id FROM organization WHERE code = ?', [hospital])).resolves.toEqual([]);
@@ -47,7 +48,7 @@ describeWithDatabase('MasterDataImportService against MariaDB', () => {
     expect(audits.map((audit) => JSON.parse(audit.metadata))).toEqual([{ counts: expected }]);
     expect(audits[0]!.metadata).not.toContain(nurseId);
 
-    await expect(service.apply(files, actorPersonId)).resolves.toEqual({ ok: true, summary: { organizationsCreated: 0, organizationsUpdated: 0, peopleCreated: 0, peopleUpdated: 0, assignmentsChanged: 0 } });
+    await expect(service.apply(files, actorPersonId)).resolves.toEqual({ ok: true, summary: { organizationsCreated: 0, organizationsUpdated: 0, peopleCreated: 0, peopleUpdated: 0, assignmentsChanged: 0, headsChanged: 0 } });
   });
 
   it('closes the current assignment when a person moves and keeps the history', async () => {
@@ -89,5 +90,54 @@ describeWithDatabase('MasterDataImportService against MariaDB', () => {
     const units = await directory.listOrganizations();
     expect(units.find((unit) => unit.code === nursing)).toMatchObject({ name: 'กลุ่มการพยาบาล', parentId: hospitalOrganization!.id, activePeople: 0 });
     expect(units.find((unit) => unit.code === hospital)).toMatchObject({ activePeople: 2 });
+  });
+  it('sets unit types and heads, re-applies without change, and keeps them for an old-format file', async () => {
+    const headed = `code,name,parent_code,unit_type,head_employee_code\n${hospital},โรงพยาบาลวาริชภูมิ,,โรงพยาบาล,D${run}\n${nursing},กลุ่มการพยาบาล,${hospital},กลุ่มงาน,`;
+    const stored = async () => database.query<{ unitType: string | null; headCode: string | null }>(
+      'SELECT o.unit_type AS unitType, p.employee_code AS headCode FROM organization o LEFT JOIN hr_organization_head h ON h.organization_id = o.id AND h.effective_until IS NULL LEFT JOIN person p ON p.id = h.person_id WHERE o.code = ?', [hospital]);
+
+    await expect(service.apply({ organizations: headed }, actorPersonId)).resolves.toMatchObject({ ok: true, summary: { headsChanged: 1 } });
+    expect(await stored()).toEqual([{ unitType: 'HOSPITAL', headCode: `D${run}` }]);
+    await expect(database.query('SELECT unit_type AS unitType FROM organization WHERE code = ?', [nursing])).resolves.toEqual([{ unitType: 'DIVISION' }]);
+
+    await expect(service.apply({ organizations: headed }, actorPersonId)).resolves.toMatchObject({ ok: true, summary: { headsChanged: 0 } });
+    await expect(service.apply({ organizations }, actorPersonId)).resolves.toMatchObject({ ok: true, summary: { headsChanged: 0 } });
+    expect(await stored()).toEqual([{ unitType: 'HOSPITAL', headCode: `D${run}` }]);
+  });
+  it('runs alongside head assignments on other units without deadlocking', async () => {
+    const heads = new OrganizationHeadService(database);
+    const units = await Promise.all(Array.from({ length: 4 }, async () => {
+      const id = randomUUID();
+      await database.execute('INSERT INTO organization (id, name, created_at) VALUES (?, ?, UTC_TIMESTAMP())', [id, 'งานคู่ขนาน']);
+      return id;
+    }));
+
+    const results = await Promise.allSettled([
+      service.apply({ organizations }, actorPersonId),
+      ...units.map((organizationId, index) => heads.assign({ organizationId, personId: actorPersonId, effectiveFrom: new Date(Date.UTC(2026, 0, index + 1)) }, actorPersonId))
+    ]);
+
+    expect(results.filter((result) => result.status === 'rejected').map((result) => String((result as PromiseRejectedResult).reason))).toEqual([]);
+  });
+  it('waits for a person row another transaction is changing, then imports', async () => {
+    let applied: Promise<unknown> = Promise.resolve();
+    await database.transaction(async (transaction) => {
+      await transaction.execute('UPDATE person SET display_name = display_name WHERE id = ?', [actorPersonId]);
+      await transaction.execute('UPDATE person SET position_title = ? WHERE id = ?', ['ระหว่างนำเข้า', actorPersonId]);
+      applied = service.apply({ organizations }, actorPersonId);
+      // The import's locking read now waits on this row until the transaction commits.
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    });
+
+    await expect(applied).resolves.toMatchObject({ ok: true });
+  });
+  it('reports a head change against a scheduled head as a row error instead of failing the import', async () => {
+    const [unit] = await database.query<{ id: string }>('SELECT id FROM organization WHERE code = ?', [nursing]);
+    const [scheduled] = await database.query<{ id: string }>('SELECT id FROM person WHERE employee_code = ?', [`R${run}`]);
+    await new OrganizationHeadService(database).assign({ organizationId: unit!.id, personId: scheduled!.id, effectiveFrom: new Date('2099-01-01T00:00:00Z') }, actorPersonId);
+    const file = `code,name,parent_code,unit_type,head_employee_code\n${nursing},กลุ่มการพยาบาล,${hospital},,D${run}`;
+
+    await expect(service.validate({ organizations: file })).resolves.toEqual({ ok: false, errors: [{ file: 'organizations', row: 2, column: 'head_employee_code', code: 'HEAD_ALREADY_SCHEDULED' }] });
+    await expect(service.apply({ organizations: file }, actorPersonId)).resolves.toEqual({ ok: false, errors: [{ file: 'organizations', row: 2, column: 'head_employee_code', code: 'HEAD_ALREADY_SCHEDULED' }] });
   });
 });

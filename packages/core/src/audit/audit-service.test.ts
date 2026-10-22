@@ -2,6 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { AuditService } from './audit-service';
 
 describe('AuditService', () => {
+  it('keeps organization head identifiers and the unit type but drops a national ID', async () => {
+    const recorded: string[] = [];
+    const service = new AuditService({ append: async (event) => { recorded.push(event.metadata); } }, () => 'audit-1');
+
+    await service.recordAudit({ actorPersonId: 'person-a', action: 'hr.organization.head.assign', targetType: 'organization', targetId: 'org-1', result: 'SUCCESS', metadata: { organizationId: 'org-1', personId: 'person-b', unitType: 'DIVISION', nationalId: '1234567890123' } });
+
+    expect(recorded).toEqual(['{"organizationId":"org-1","personId":"person-b","unitType":"DIVISION"}']);
+  });
+
   it('redacts protected identifiers before append-only persistence', async () => {
     const recorded: string[] = [];
     const service = new AuditService({ append: async (event) => { recorded.push(event.metadata); } }, () => 'audit-1');

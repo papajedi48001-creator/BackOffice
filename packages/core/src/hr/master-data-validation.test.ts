@@ -21,8 +21,8 @@ describe('validateMasterData', () => {
 
     expect(result.errors).toEqual([]);
     expect(result.organizations).toEqual([
-      { row: 2, code: 'HOSP', name: 'โรงพยาบาลวาริชภูมิ', parentCode: null, existingOrganizationId: null },
-      { row: 3, code: 'NUR', name: 'กลุ่มการพยาบาล', parentCode: 'HOSP', existingOrganizationId: null }
+      { row: 2, code: 'HOSP', name: 'โรงพยาบาลวาริชภูมิ', parentCode: null, existingOrganizationId: null, headEmployeeCode: null },
+      { row: 3, code: 'NUR', name: 'กลุ่มการพยาบาล', parentCode: 'HOSP', existingOrganizationId: null, headEmployeeCode: null }
     ]);
     expect(result.people[1]).toMatchObject({ row: 3, employeeCode: 'E002', nationalId: nurse, organizationCode: 'NUR', managerEmployeeCode: 'E001', status: 'ACTIVE' });
     // Dates are Bangkok calendar days; 1/10/2569 (Buddhist era, day first) is the same day as 2026-10-01.
@@ -112,5 +112,62 @@ describe('validateMasterData', () => {
   it('limits a file to 5,000 rows', () => {
     const rows = Array.from({ length: 5_001 }, (_, index) => `C${index},หน่วย ${index},`);
     expect(codes(validateMasterData({ organizations: organizations(...rows) }, emptyExistingMasterData, lookup))).toEqual(['organizations:-:-:TOO_MANY_ROWS']);
+  });
+  describe('unit type and head columns', () => {
+    const header = 'code,name,parent_code,unit_type,head_employee_code';
+    const withHeads = (...rows: string[]) => [header, ...rows].join('\n');
+
+    it('reads Thai and English unit types and a head from the people file', () => {
+      const result = validateMasterData({
+        organizations: withHeads('HOSP,โรงพยาบาล,,HOSPITAL,E001', 'NUR,กลุ่มการพยาบาล,HOSP,กลุ่มงาน,', 'IPD,งานผู้ป่วยใน,NUR,,'),
+        people: people(`E001,${director},นพ.สมชาย ใจดี,ผู้อำนวยการ,HOSP,,2026-10-01,ACTIVE`)
+      }, emptyExistingMasterData, lookup);
+
+      expect(result.errors).toEqual([]);
+      expect(result.organizations.map(({ code, unitType, headEmployeeCode }) => ({ code, unitType, headEmployeeCode }))).toEqual([
+        { code: 'HOSP', unitType: 'HOSPITAL', headEmployeeCode: 'E001' },
+        { code: 'NUR', unitType: 'DIVISION', headEmployeeCode: null },
+        { code: 'IPD', unitType: undefined, headEmployeeCode: null }
+      ]);
+    });
+
+    it('accepts a head who is already stored', () => {
+      const existing: ExistingMasterData = { organizations: [], people: [{ id: 'p1', employeeCode: 'E001', nationalIdLookup: lookup(director), displayName: 'ผอ.', positionTitle: null, employmentStatus: 'ACTIVE', assignment: null }] };
+
+      expect(validateMasterData({ organizations: withHeads('HOSP,โรงพยาบาล,,โรงพยาบาล,E001') }, existing, lookup).errors).toEqual([]);
+    });
+
+    it('reports an unknown unit type, an unknown head and an inactive head', () => {
+      const result = validateMasterData({
+        organizations: withHeads('HOSP,โรงพยาบาล,,ฝ่าย,', 'NUR,กลุ่มการพยาบาล,HOSP,DIVISION,E404', 'IPD,งานผู้ป่วยใน,NUR,SECTION,E002'),
+        people: people(`E002,${nurse},มาลี,พยาบาล,IPD,,2026-10-01,INACTIVE`)
+      }, emptyExistingMasterData, lookup);
+
+      expect(codes(result)).toEqual([
+        'organizations:2:unit_type:UNKNOWN_UNIT_TYPE',
+        'organizations:3:head_employee_code:UNKNOWN_HEAD',
+        'organizations:4:head_employee_code:INACTIVE_HEAD'
+      ]);
+    });
+
+    it('reports a new head for a unit whose next head is already scheduled', () => {
+      const existing: ExistingMasterData = {
+        organizations: [{ id: 'org-hosp', code: 'HOSP', name: 'โรงพยาบาล', parentId: null, headPersonId: 'p2', headEffectiveFrom: new Date('2027-01-01T00:00:00Z') }],
+        people: [
+          { id: 'p1', employeeCode: 'E001', nationalIdLookup: lookup(director), displayName: 'ผอ.', positionTitle: null, employmentStatus: 'ACTIVE', assignment: null },
+          { id: 'p2', employeeCode: 'E002', nationalIdLookup: lookup(nurse), displayName: 'คนถัดไป', positionTitle: null, employmentStatus: 'ACTIVE', assignment: null }
+        ]
+      };
+      const now = new Date('2026-10-22T00:00:00Z');
+
+      expect(codes(validateMasterData({ organizations: withHeads('HOSP,โรงพยาบาล,,,E001') }, existing, lookup, now))).toEqual(['organizations:2:head_employee_code:HEAD_ALREADY_SCHEDULED']);
+      expect(validateMasterData({ organizations: withHeads('HOSP,โรงพยาบาล,,,E002') }, existing, lookup, now).errors).toEqual([]);
+    });
+
+    it('leaves unit type and head untouched for the original three-column file', () => {
+      const result = validateMasterData({ organizations: organizations('HOSP,โรงพยาบาล,') }, emptyExistingMasterData, lookup);
+
+      expect(result.organizations[0]).toMatchObject({ unitType: undefined, headEmployeeCode: null });
+    });
   });
 });

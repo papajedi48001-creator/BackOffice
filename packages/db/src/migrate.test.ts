@@ -27,7 +27,7 @@ describe('runMigrations', () => {
     await runMigrations(database);
 
     expect(queried.some((sql) => sql.includes('CREATE TABLE IF NOT EXISTS schema_migration'))).toBe(false);
-    expect(queried.filter((sql) => sql.includes('SELECT version FROM schema_migration'))).toHaveLength(8);
+    expect(queried.filter((sql) => sql.includes('SELECT version FROM schema_migration'))).toHaveLength(9);
     expect(executed.some((sql) => sql.startsWith('ALTER TABLE notification'))).toBe(true);
     expect(executed.some((sql) => sql.includes('IF NOT EXISTS'))).toBe(true);
     expect(executed.some((sql) => sql.startsWith('INSERT IGNORE INTO schema_migration') && sql.endsWith('|["0001_in_app_notifications.sql"]'))).toBe(true);
@@ -48,6 +48,9 @@ describe('runMigrations', () => {
     expect(executed.some((sql) => sql.startsWith('INSERT IGNORE INTO schema_migration') && sql.endsWith('|["0006_notification_module.sql"]'))).toBe(true);
     expect(executed.some((sql) => sql.startsWith('CREATE TABLE IF NOT EXISTS request_cancellation'))).toBe(true);
     expect(executed.some((sql) => sql.startsWith('INSERT IGNORE INTO schema_migration') && sql.endsWith('|["0007_request_cancellation.sql"]'))).toBe(true);
+    expect(executed.some((sql) => sql.startsWith('ALTER TABLE organization') && sql.includes('unit_type'))).toBe(true);
+    expect(executed.some((sql) => sql.startsWith('CREATE TABLE IF NOT EXISTS hr_organization_head ('))).toBe(true);
+    expect(executed.some((sql) => sql.startsWith('INSERT IGNORE INTO schema_migration') && sql.endsWith('|["0009_hr_command_chain.sql"]'))).toBe(true);
     expect(executed.some((sql) => sql.includes('CREATE TABLE IF NOT EXISTS organization'))).toBe(false);
   });
 
@@ -69,5 +72,6 @@ describe('runMigrations', () => {
     await Promise.all([runMigrations(database), runMigrations(database)]);
 
     expect(recorded.has('0007_request_cancellation.sql')).toBe(true);
+    expect(recorded.has('0009_hr_command_chain.sql')).toBe(true);
   });
 });

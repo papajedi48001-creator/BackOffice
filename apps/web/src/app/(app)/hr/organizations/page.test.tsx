@@ -29,6 +29,38 @@ describe('OrganizationsPage', () => {
     expect(within(hospital).getByText('บุคลากรปฏิบัติงาน 12 คน')).toBeInTheDocument();
   });
 
+  it('shows each unit type and head, flags a unit without a head, and links to the unit', async () => {
+    mocks.headers.mockResolvedValue(new Headers());
+    mocks.readSession.mockResolvedValue({ authenticated: true, personId: 'reader', roles: [{ name: 'hr-reader', organizationId: null }], dataOwnerModules: [] });
+    mocks.getSharedDatabase.mockReturnValue({ query: vi.fn() });
+    mocks.listOrganizations.mockResolvedValue([
+      { id: 'hosp', code: 'HOSP', name: 'โรงพยาบาลวาริชภูมิ', parentId: null, activePeople: 1, unitType: 'HOSPITAL', headPersonId: 'p1', headDisplayName: 'นพ.สมชาย ใจดี', headActive: true },
+      { id: 'nur', code: 'NUR', name: 'กลุ่มการพยาบาล', parentId: 'hosp', activePeople: 12, unitType: 'DIVISION', headPersonId: null, headDisplayName: null }
+    ]);
+
+    render(await OrganizationsPage());
+
+    const hospital = screen.getByRole('link', { name: 'โรงพยาบาลวาริชภูมิ' });
+    expect(hospital).toHaveAttribute('href', '/hr/organizations/hosp');
+    const hospitalItem = hospital.closest('li')!;
+    expect(within(hospitalItem).getAllByText('โรงพยาบาล')[0]).toBeInTheDocument();
+    expect(within(hospitalItem).getByText('หัวหน้า นพ.สมชาย ใจดี')).toBeInTheDocument();
+    const nursingItem = screen.getByRole('link', { name: 'กลุ่มการพยาบาล' }).closest('li')!;
+    expect(within(nursingItem).getByText('กลุ่มงาน')).toBeInTheDocument();
+    expect(within(nursingItem).getByText('ยังไม่มีหัวหน้า')).toBeInTheDocument();
+  });
+
+  it('warns when the current head is no longer active', async () => {
+    mocks.headers.mockResolvedValue(new Headers());
+    mocks.readSession.mockResolvedValue({ authenticated: true, personId: 'reader', roles: [{ name: 'hr-reader', organizationId: null }], dataOwnerModules: [] });
+    mocks.getSharedDatabase.mockReturnValue({ query: vi.fn() });
+    mocks.listOrganizations.mockResolvedValue([{ id: 'hosp', code: 'HOSP', name: 'โรงพยาบาลวาริชภูมิ', parentId: null, activePeople: 1, unitType: 'HOSPITAL', headPersonId: 'p1', headDisplayName: 'นพ.สมชาย ใจดี', headActive: false }]);
+
+    render(await OrganizationsPage());
+
+    expect(screen.getByText('หัวหน้าพ้นสภาพ')).toBeInTheDocument();
+  });
+
   it('shows no data to a person without HR read permission', async () => {
     mocks.headers.mockResolvedValue(new Headers());
     mocks.readSession.mockResolvedValue({ authenticated: true, personId: 'staff', roles: [], dataOwnerModules: [] });
