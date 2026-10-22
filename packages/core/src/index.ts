@@ -30,3 +30,6 @@ export * from './rooms/room-catalog-service';
 export * from './rooms/database-room-booking-repository';
 export * from './rooms/room-booking-queries';
 export * from './dashboard/dashboard-summary';
+export * from './inventory/quantities';
+export * from './inventory/inventory-access';
+export * from './inventory/catalog-service';
