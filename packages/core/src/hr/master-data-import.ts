@@ -11,7 +11,7 @@ export interface MasterDataImportSummary { organizationsCreated: number; organiz
 export type MasterDataImportResult = { ok: true; summary: MasterDataImportSummary } | { ok: false; errors: MasterDataError[] };
 
 type QueryDatabase = Pick<Database, 'execute' | 'query'>;
-type StoredOrganization = { id: string; code: string | null; name: string; parentId: string | null; unitType: OrganizationUnitType | null; headPersonId: string | null };
+type StoredOrganization = { id: string; code: string | null; name: string; parentId: string | null; unitType: OrganizationUnitType | null; headPersonId: string | null; headEffectiveFrom: Date | null };
 type StoredPerson = { id: string; employeeCode: string | null; nationalIdLookup: string; displayName: string | null; positionTitle: string | null; employmentStatus: string; organizationId: string | null; managerPersonId: string | null; effectiveFrom: string | null };
 
 interface Plan {
@@ -124,7 +124,7 @@ export class MasterDataImportService {
 
 export async function loadExistingMasterData(database: Pick<Database, 'query'>, options: { forUpdate?: boolean } = {}): Promise<ExistingMasterData> {
   const lock = options.forUpdate ? ' FOR UPDATE' : '';
-  const stored = await database.query<Omit<StoredOrganization, 'headPersonId'>>(`SELECT id, code, name, parent_id AS parentId, unit_type AS unitType FROM organization${lock}`);
+  const stored = await database.query<Omit<StoredOrganization, 'headPersonId' | 'headEffectiveFrom'>>(`SELECT id, code, name, parent_id AS parentId, unit_type AS unitType FROM organization${lock}`);
   // People are locked by a plain locking read first: a locking read that also runs the assignment subquery
   // takes a read view, and MariaDB then fails it with ER_CHECKREAD when a waited-for row was changed meanwhile.
   if (options.forUpdate) await database.query('SELECT id FROM person FOR UPDATE');
@@ -137,9 +137,12 @@ export async function loadExistingMasterData(database: Pick<Database, 'query'>, 
   // Heads are read without a lock: locking head rows would block head assignments that already hold their unit's row,
   // and holding every organization row is enough because a head change locks its unit's row first.
   // It runs after the locking reads, since a plain read fixes the snapshot and a later locking read of a row changed since then fails.
-  const heads = await database.query<{ organizationId: string; personId: string }>('SELECT organization_id AS organizationId, person_id AS personId FROM hr_organization_head WHERE effective_until IS NULL');
-  const headByOrganization = new Map(heads.map((head) => [head.organizationId, head.personId]));
-  const organizations: StoredOrganization[] = stored.map((organization) => ({ ...organization, headPersonId: headByOrganization.get(organization.id) ?? null }));
+  const heads = await database.query<{ organizationId: string; personId: string; effectiveFrom: string }>("SELECT organization_id AS organizationId, person_id AS personId, DATE_FORMAT(effective_from, '%Y-%m-%dT%H:%i:%sZ') AS effectiveFrom FROM hr_organization_head WHERE effective_until IS NULL");
+  const headByOrganization = new Map(heads.map((head) => [head.organizationId, head]));
+  const organizations: StoredOrganization[] = stored.map((organization) => {
+    const head = headByOrganization.get(organization.id);
+    return { ...organization, headPersonId: head?.personId ?? null, headEffectiveFrom: head ? new Date(head.effectiveFrom) : null };
+  });
   return {
     organizations,
     people: people.map(({ organizationId, managerPersonId, effectiveFrom, ...person }) => ({

@@ -13,7 +13,8 @@ const errorMessages: Record<string, string> = {
   DUPLICATE_CODE: 'รหัสซ้ำในไฟล์', DUPLICATE_NATIONAL_ID: 'เลขประจำตัวประชาชนซ้ำในไฟล์', NATIONAL_ID_CONFLICT: 'รหัสบุคลากรกับเลขประจำตัวประชาชนไม่ตรงกับข้อมูลเดิม',
   UNKNOWN_ORGANIZATION: 'ไม่พบรหัสหน่วยงาน', UNKNOWN_MANAGER: 'ไม่พบรหัสผู้บังคับบัญชา', SELF_MANAGER: 'ผู้บังคับบัญชาเป็นคนเดียวกับบุคลากร', PARENT_CYCLE: 'หน่วยงานแม่วนกลับมาที่ตัวเอง',
   EFFECTIVE_DATE_NOT_AFTER_CURRENT: 'วันที่มีผลต้องหลังวันที่ของการสังกัดปัจจุบัน',
-  UNKNOWN_UNIT_TYPE: 'ชนิดหน่วยงานต้องเป็น งาน, กลุ่มงาน หรือ โรงพยาบาล', UNKNOWN_HEAD: 'ไม่พบรหัสหัวหน้าหน่วยงาน', INACTIVE_HEAD: 'หัวหน้าหน่วยงานต้องมีสถานะ ACTIVE'
+  UNKNOWN_UNIT_TYPE: 'ชนิดหน่วยงานต้องเป็น งาน, กลุ่มงาน หรือ โรงพยาบาล', UNKNOWN_HEAD: 'ไม่พบรหัสหัวหน้าหน่วยงาน', INACTIVE_HEAD: 'หัวหน้าหน่วยงานต้องมีสถานะ ACTIVE',
+  HEAD_ALREADY_SCHEDULED: 'หน่วยงานนี้มีหัวหน้าที่ตั้งล่วงหน้าไว้แล้ว จึงนำเข้าหัวหน้าคนอื่นก่อนวันเริ่มนั้นไม่ได้'
 };
 
 export function MasterDataImportForm() {

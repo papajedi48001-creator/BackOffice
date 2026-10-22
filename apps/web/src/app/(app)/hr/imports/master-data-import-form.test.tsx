@@ -41,7 +41,8 @@ describe('MasterDataImportForm', () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ mode: 'validate', errors: [
       { file: 'organizations', row: 2, column: 'unit_type', code: 'UNKNOWN_UNIT_TYPE' },
       { file: 'organizations', row: 3, column: 'head_employee_code', code: 'UNKNOWN_HEAD' },
-      { file: 'organizations', row: 4, column: 'head_employee_code', code: 'INACTIVE_HEAD' }
+      { file: 'organizations', row: 4, column: 'head_employee_code', code: 'INACTIVE_HEAD' },
+      { file: 'organizations', row: 5, column: 'head_employee_code', code: 'HEAD_ALREADY_SCHEDULED' }
     ] }), { status: 422 })));
     render(<MasterDataImportForm />);
 
@@ -51,5 +52,6 @@ describe('MasterDataImportForm', () => {
     expect(await screen.findByRole('cell', { name: 'ชนิดหน่วยงานต้องเป็น งาน, กลุ่มงาน หรือ โรงพยาบาล' })).toBeInTheDocument();
     expect(screen.getByRole('cell', { name: 'ไม่พบรหัสหัวหน้าหน่วยงาน' })).toBeInTheDocument();
     expect(screen.getByRole('cell', { name: 'หัวหน้าหน่วยงานต้องมีสถานะ ACTIVE' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'หน่วยงานนี้มีหัวหน้าที่ตั้งล่วงหน้าไว้แล้ว จึงนำเข้าหัวหน้าคนอื่นก่อนวันเริ่มนั้นไม่ได้' })).toBeInTheDocument();
   });
 });

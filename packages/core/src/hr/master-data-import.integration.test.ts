@@ -131,4 +131,13 @@ describeWithDatabase('MasterDataImportService against MariaDB', () => {
 
     await expect(applied).resolves.toMatchObject({ ok: true });
   });
+  it('reports a head change against a scheduled head as a row error instead of failing the import', async () => {
+    const [unit] = await database.query<{ id: string }>('SELECT id FROM organization WHERE code = ?', [nursing]);
+    const [scheduled] = await database.query<{ id: string }>('SELECT id FROM person WHERE employee_code = ?', [`R${run}`]);
+    await new OrganizationHeadService(database).assign({ organizationId: unit!.id, personId: scheduled!.id, effectiveFrom: new Date('2099-01-01T00:00:00Z') }, actorPersonId);
+    const file = `code,name,parent_code,unit_type,head_employee_code\n${nursing},กลุ่มการพยาบาล,${hospital},,D${run}`;
+
+    await expect(service.validate({ organizations: file })).resolves.toEqual({ ok: false, errors: [{ file: 'organizations', row: 2, column: 'head_employee_code', code: 'HEAD_ALREADY_SCHEDULED' }] });
+    await expect(service.apply({ organizations: file }, actorPersonId)).resolves.toEqual({ ok: false, errors: [{ file: 'organizations', row: 2, column: 'head_employee_code', code: 'HEAD_ALREADY_SCHEDULED' }] });
+  });
 });

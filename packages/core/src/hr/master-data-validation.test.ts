@@ -150,6 +150,20 @@ describe('validateMasterData', () => {
       ]);
     });
 
+    it('reports a new head for a unit whose next head is already scheduled', () => {
+      const existing: ExistingMasterData = {
+        organizations: [{ id: 'org-hosp', code: 'HOSP', name: 'โรงพยาบาล', parentId: null, headPersonId: 'p2', headEffectiveFrom: new Date('2027-01-01T00:00:00Z') }],
+        people: [
+          { id: 'p1', employeeCode: 'E001', nationalIdLookup: lookup(director), displayName: 'ผอ.', positionTitle: null, employmentStatus: 'ACTIVE', assignment: null },
+          { id: 'p2', employeeCode: 'E002', nationalIdLookup: lookup(nurse), displayName: 'คนถัดไป', positionTitle: null, employmentStatus: 'ACTIVE', assignment: null }
+        ]
+      };
+      const now = new Date('2026-10-22T00:00:00Z');
+
+      expect(codes(validateMasterData({ organizations: withHeads('HOSP,โรงพยาบาล,,,E001') }, existing, lookup, now))).toEqual(['organizations:2:head_employee_code:HEAD_ALREADY_SCHEDULED']);
+      expect(validateMasterData({ organizations: withHeads('HOSP,โรงพยาบาล,,,E002') }, existing, lookup, now).errors).toEqual([]);
+    });
+
     it('leaves unit type and head untouched for the original three-column file', () => {
       const result = validateMasterData({ organizations: organizations('HOSP,โรงพยาบาล,') }, emptyExistingMasterData, lookup);
 
