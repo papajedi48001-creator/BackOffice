@@ -44,6 +44,15 @@ describeWithDatabase('OrganizationHeadService against MariaDB', () => {
     expect(await audits(organizationId, 'hr.organization.head.assign')).toHaveLength(2);
   });
 
+  it('rejects a start a few hours before the current term on a server running Bangkok time', async () => {
+    const organizationId = await organization();
+    const [first, second] = [await person(), await person()];
+
+    await service.assign({ organizationId, personId: first, effectiveFrom: new Date('2026-06-01T00:00:00Z') }, actor);
+
+    await expect(service.assign({ organizationId, personId: second, effectiveFrom: new Date('2026-05-31T20:00:00Z') }, actor)).resolves.toEqual({ kind: 'error', code: 'EFFECTIVE_FROM_BEFORE_CURRENT' });
+  });
+
   it('keeps one open term when two heads are assigned at the same time', async () => {
     const organizationId = await organization();
     const [first, second] = [await person(), await person()];

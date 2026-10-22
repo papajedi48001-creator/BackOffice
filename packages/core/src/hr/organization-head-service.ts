@@ -42,7 +42,8 @@ export class OrganizationHeadService {
     // Locking the unit serialises head changes, so two assignments cannot both leave a term open.
     const organization = await database.query('SELECT id FROM organization WHERE id = ? FOR UPDATE', [input.organizationId]);
     const [person] = await database.query<{ status: 'ACTIVE' | 'INACTIVE' }>('SELECT employment_status AS status FROM person WHERE id = ?', [input.personId]);
-    const [current] = await database.query<{ id: string; personId: string; effectiveFrom: Date }>('SELECT id, person_id AS personId, effective_from AS effectiveFrom FROM hr_organization_head WHERE organization_id = ? AND effective_until IS NULL ORDER BY effective_from DESC LIMIT 1', [input.organizationId]);
+    // The timestamp is formatted in SQL so the driver's local time zone never shifts it.
+    const [current] = await database.query<{ id: string; personId: string; effectiveFrom: string }>("SELECT id, person_id AS personId, DATE_FORMAT(effective_from, '%Y-%m-%dT%H:%i:%sZ') AS effectiveFrom FROM hr_organization_head WHERE organization_id = ? AND effective_until IS NULL ORDER BY effective_from DESC LIMIT 1", [input.organizationId]);
     const decision = decideHeadAssignment({ organizationExists: organization.length > 0, personStatus: person?.status ?? null, current: current ? { ...current, effectiveFrom: new Date(current.effectiveFrom) } : null, personId: input.personId, effectiveFrom: input.effectiveFrom });
     if (decision.kind !== 'assign') return decision;
     const effectiveFrom = toMariaDbDatetime(input.effectiveFrom);
