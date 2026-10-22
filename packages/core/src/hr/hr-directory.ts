@@ -3,6 +3,8 @@ import type { Database } from '@backoffice/db';
 
 export interface DirectoryPerson { id: string; employeeCode: string | null; displayName: string | null; positionTitle: string | null; employmentStatus: string; nationalIdMasked: string | null; organizationName: string | null; organizationCode: string | null; }
 export interface DirectoryOrganization { id: string; code: string | null; name: string; parentId: string | null; activePeople: number; unitType: OrganizationUnitType | null; headPersonId: string | null; headDisplayName: string | null; }
+export interface OrganizationHeadTerm { personId: string; displayName: string | null; employeeCode: string | null; effectiveFrom: string; effectiveUntil: string | null; }
+export interface OrganizationDetail { id: string; code: string | null; name: string; unitType: OrganizationUnitType | null; headPersonId: string | null; headHistory: OrganizationHeadTerm[]; }
 /** `all` for a hospital-wide reader; otherwise the organizations a scoped role covers. */
 export interface DirectoryScope { organizationIds: 'all' | string[]; }
 
@@ -35,5 +37,18 @@ export class HrDirectory {
        ORDER BY o.name`
     );
     return rows.map((row) => ({ ...row, activePeople: Number(row.activePeople) }));
+  }
+  async getOrganization(id: string): Promise<OrganizationDetail | null> {
+    const [organization] = await this.database.query<Omit<OrganizationDetail, 'headPersonId' | 'headHistory'>>('SELECT id, code, name, unit_type AS unitType FROM organization WHERE id = ?', [id]);
+    if (!organization) return null;
+    // Timestamps are formatted in SQL so the driver's local time zone never shifts them.
+    const headHistory = await this.database.query<OrganizationHeadTerm>(
+      `SELECT h.person_id AS personId, p.display_name AS displayName, p.employee_code AS employeeCode,
+         DATE_FORMAT(h.effective_from, '%Y-%m-%dT%H:%i:%sZ') AS effectiveFrom, DATE_FORMAT(h.effective_until, '%Y-%m-%dT%H:%i:%sZ') AS effectiveUntil
+       FROM hr_organization_head h LEFT JOIN person p ON p.id = h.person_id
+       WHERE h.organization_id = ? ORDER BY h.effective_from DESC, h.created_at DESC`, [id]);
+    const now = new Date();
+    const current = headHistory.find((term) => new Date(term.effectiveFrom) <= now && (term.effectiveUntil === null || new Date(term.effectiveUntil) > now));
+    return { ...organization, headPersonId: current?.personId ?? null, headHistory };
   }
 }

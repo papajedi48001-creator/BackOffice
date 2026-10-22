@@ -66,6 +66,24 @@ describeWithDatabase('OrganizationHeadService against MariaDB', () => {
     expect(units.find((unit) => unit.id === organizationId)).toMatchObject({ unitType: 'SECTION', headPersonId: head, headDisplayName: 'นางสาวมาลี ดีงาม', activePeople: 0 });
   });
 
+  it('loads one organization with its head history, newest first', async () => {
+    const organizationId = await organization();
+    const [first, second] = [await person(), await person()];
+    await database.execute('UPDATE person SET display_name = ?, employee_code = ? WHERE id = ?', ['คนแรก', `F${organizationId.slice(0, 8)}`, first]);
+    await service.setUnitType({ organizationId, unitType: 'DIVISION' }, actor);
+    await service.assign({ organizationId, personId: first, effectiveFrom: new Date('2026-01-01T00:00:00Z') }, actor);
+    await service.assign({ organizationId, personId: second, effectiveFrom: new Date('2026-06-01T00:00:00Z') }, actor);
+
+    const unit = await new HrDirectory(database).getOrganization(organizationId);
+
+    expect(unit).toMatchObject({ id: organizationId, name: 'งานทดสอบ', unitType: 'DIVISION', headPersonId: second });
+    expect(unit!.headHistory).toEqual([
+      { personId: second, displayName: null, employeeCode: null, effectiveFrom: '2026-06-01T00:00:00Z', effectiveUntil: null },
+      { personId: first, displayName: 'คนแรก', employeeCode: `F${organizationId.slice(0, 8)}`, effectiveFrom: '2026-01-01T00:00:00Z', effectiveUntil: '2026-06-01T00:00:00Z' }
+    ]);
+    await expect(new HrDirectory(database).getOrganization(randomUUID())).resolves.toBeNull();
+  });
+
   it('keeps one open term when two heads are assigned at the same time', async () => {
     const organizationId = await organization();
     const [first, second] = [await person(), await person()];
