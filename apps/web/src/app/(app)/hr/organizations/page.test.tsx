@@ -34,7 +34,7 @@ describe('OrganizationsPage', () => {
     mocks.readSession.mockResolvedValue({ authenticated: true, personId: 'reader', roles: [{ name: 'hr-reader', organizationId: null }], dataOwnerModules: [] });
     mocks.getSharedDatabase.mockReturnValue({ query: vi.fn() });
     mocks.listOrganizations.mockResolvedValue([
-      { id: 'hosp', code: 'HOSP', name: 'โรงพยาบาลวาริชภูมิ', parentId: null, activePeople: 1, unitType: 'HOSPITAL', headPersonId: 'p1', headDisplayName: 'นพ.สมชาย ใจดี' },
+      { id: 'hosp', code: 'HOSP', name: 'โรงพยาบาลวาริชภูมิ', parentId: null, activePeople: 1, unitType: 'HOSPITAL', headPersonId: 'p1', headDisplayName: 'นพ.สมชาย ใจดี', headActive: true },
       { id: 'nur', code: 'NUR', name: 'กลุ่มการพยาบาล', parentId: 'hosp', activePeople: 12, unitType: 'DIVISION', headPersonId: null, headDisplayName: null }
     ]);
 
@@ -48,6 +48,17 @@ describe('OrganizationsPage', () => {
     const nursingItem = screen.getByRole('link', { name: 'กลุ่มการพยาบาล' }).closest('li')!;
     expect(within(nursingItem).getByText('กลุ่มงาน')).toBeInTheDocument();
     expect(within(nursingItem).getByText('ยังไม่มีหัวหน้า')).toBeInTheDocument();
+  });
+
+  it('warns when the current head is no longer active', async () => {
+    mocks.headers.mockResolvedValue(new Headers());
+    mocks.readSession.mockResolvedValue({ authenticated: true, personId: 'reader', roles: [{ name: 'hr-reader', organizationId: null }], dataOwnerModules: [] });
+    mocks.getSharedDatabase.mockReturnValue({ query: vi.fn() });
+    mocks.listOrganizations.mockResolvedValue([{ id: 'hosp', code: 'HOSP', name: 'โรงพยาบาลวาริชภูมิ', parentId: null, activePeople: 1, unitType: 'HOSPITAL', headPersonId: 'p1', headDisplayName: 'นพ.สมชาย ใจดี', headActive: false }]);
+
+    render(await OrganizationsPage());
+
+    expect(screen.getByText('หัวหน้าพ้นสภาพ')).toBeInTheDocument();
   });
 
   it('shows no data to a person without HR read permission', async () => {

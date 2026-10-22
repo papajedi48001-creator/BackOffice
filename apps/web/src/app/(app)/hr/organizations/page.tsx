@@ -38,6 +38,7 @@ function OrganizationTree({ parentId, childrenOf }: { parentId: string | null; c
           <Link href={`/hr/organizations/${organization.id}`}>{organization.name}</Link>{organization.code ? <span className="organization-code"> ({organization.code})</span> : null}
           {organization.unitType ? <><span aria-hidden="true"> · </span><span className="organization-type">{t(unitTypeLabelKeys[organization.unitType])}</span></> : null}
           <span aria-hidden="true"> · </span>{organization.headDisplayName ? <span className="organization-head">{`${t('hrOrganizationHead')} ${organization.headDisplayName}`}</span> : <span className="organization-no-head">{t('hrNoHead')}</span>}
+          {organization.headPersonId && !organization.headActive ? <><span aria-hidden="true"> · </span><span className="organization-no-head">{t('hrHeadInactive')}</span></> : null}
           <span aria-hidden="true"> · </span><span className="organization-count">{`${t('activePeople')} ${organization.activePeople} คน`}</span>
           <OrganizationTree parentId={organization.id} childrenOf={childrenOf} />
         </li>

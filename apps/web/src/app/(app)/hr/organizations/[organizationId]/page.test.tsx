@@ -13,7 +13,7 @@ import OrganizationPage from './page';
 const hrManager = { authenticated: true, personId: 'manager', roles: [{ name: 'hr-manager', organizationId: null }], dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: ['hr'] };
 const hrReader = { authenticated: true, personId: 'reader', roles: [{ name: 'hr-reader', organizationId: null }], dataOwnerModules: [] };
 const unit = {
-  id: 'nur', code: 'NUR', name: 'กลุ่มการพยาบาล', unitType: 'DIVISION', headPersonId: 'p2',
+  id: 'nur', code: 'NUR', name: 'กลุ่มการพยาบาล', unitType: 'DIVISION', headPersonId: 'p2', headActive: true,
   headHistory: [
     { personId: 'p2', displayName: 'นางสาวมาลี ดีงาม', employeeCode: 'E002', effectiveFrom: '2026-05-31T17:00:00Z', effectiveUntil: null },
     { personId: 'p1', displayName: 'นายสมศักดิ์ รักงาน', employeeCode: 'E001', effectiveFrom: '2025-12-31T17:00:00Z', effectiveUntil: '2026-05-31T17:00:00Z' }
@@ -61,6 +61,15 @@ describe('OrganizationPage', () => {
     expect(screen.getByRole('button', { name: 'ตั้งเป็นหัวหน้า' })).toBeInTheDocument();
     expect(document.querySelector('option[value="E001 นายสมศักดิ์ รักงาน"]')).not.toBeNull();
     expect(document.querySelector('option[value="E009 ลาออกแล้ว"]')).toBeNull();
+  });
+
+  it('warns when the current head is no longer active', async () => {
+    ready(hrReader);
+    mocks.getOrganization.mockResolvedValue({ ...unit, headActive: false });
+
+    render(await page());
+
+    expect(screen.getByText('หัวหน้าพ้นสภาพ')).toBeInTheDocument();
   });
 
   it('shows not found for an unknown organization', async () => {

@@ -84,6 +84,17 @@ describeWithDatabase('OrganizationHeadService against MariaDB', () => {
     await expect(new HrDirectory(database).getOrganization(randomUUID())).resolves.toBeNull();
   });
 
+  it('marks a current head who is no longer active', async () => {
+    const organizationId = await organization();
+    const head = await person();
+    await service.assign({ organizationId, personId: head, effectiveFrom: new Date('2026-01-01T00:00:00Z') }, actor);
+    await database.execute("UPDATE person SET employment_status = 'INACTIVE' WHERE id = ?", [head]);
+    const directory = new HrDirectory(database);
+
+    expect((await directory.listOrganizations()).find((unit) => unit.id === organizationId)).toMatchObject({ headPersonId: head, headActive: false });
+    await expect(directory.getOrganization(organizationId)).resolves.toMatchObject({ headPersonId: head, headActive: false });
+  });
+
   it('keeps one open term when two heads are assigned at the same time', async () => {
     const organizationId = await organization();
     const [first, second] = [await person(), await person()];

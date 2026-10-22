@@ -38,7 +38,7 @@ export default async function OrganizationPage({ params }: { params: Promise<{ o
     <h2>{organization.name}</h2>
     <dl className="organization-summary">
       <dt>{t('hrUnitType')}</dt><dd>{organization.unitType ? t(unitTypeLabelKeys[organization.unitType]) : t('hrUnitTypeNone')}</dd>
-      <dt>{t('hrOrganizationHead')}</dt><dd>{current ? personLabel(current) : <span className="organization-no-head">{t('hrNoHead')}</span>}</dd>
+      <dt>{t('hrOrganizationHead')}</dt><dd>{current ? personLabel(current) : <span className="organization-no-head">{t('hrNoHead')}</span>}{current && !organization.headActive ? <> <span className="organization-no-head">{t('hrHeadInactive')}</span></> : null}</dd>
     </dl>
     {canManage ? <OrganizationForms organizationId={organization.id} unitType={organization.unitType} people={people} today={bangkokToday()} /> : null}
     <h3>{t('hrHeadHistory')}</h3>
