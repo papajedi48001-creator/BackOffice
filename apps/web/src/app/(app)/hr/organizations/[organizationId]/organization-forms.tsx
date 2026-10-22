@@ -39,7 +39,7 @@ export function OrganizationForms({ organizationId, unitType, people, today }: {
 
   return <div className="organization-forms">
     {error && <p role="alert" className="form-error">{error}</p>}
-    <form onSubmit={submitType}>
+    <form className="organization-form" onSubmit={submitType}>
       <label>{t('hrUnitType')}
         <select value={selectedType} onChange={(event) => setSelectedType(event.target.value)}>
           <option value="">{t('hrUnitTypeNone')}</option>
@@ -48,7 +48,7 @@ export function OrganizationForms({ organizationId, unitType, people, today }: {
       </label>
       <button type="submit">{t('hrSaveUnitType')}</button>
     </form>
-    <form onSubmit={submitHead}>
+    <form className="organization-form" onSubmit={submitHead}>
       <label>{t('hrNewHead')}
         <input list="organization-head-people" value={headLabel} onChange={(event) => setHeadLabel(event.target.value)} />
       </label>
