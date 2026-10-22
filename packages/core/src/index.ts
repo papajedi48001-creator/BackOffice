@@ -33,3 +33,5 @@ export * from './dashboard/dashboard-summary';
 export * from './inventory/quantities';
 export * from './inventory/inventory-access';
 export * from './inventory/catalog-service';
+export * from './inventory/inventory-repository';
+export * from './inventory/receipt-service';
