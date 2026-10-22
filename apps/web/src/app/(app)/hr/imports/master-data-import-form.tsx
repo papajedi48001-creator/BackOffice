@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 type ImportError = { file: 'organizations' | 'people'; row: number | null; column: string | null; code: string };
-type ImportSummary = { organizationsCreated: number; organizationsUpdated: number; peopleCreated: number; peopleUpdated: number; assignmentsChanged: number };
+type ImportSummary = { organizationsCreated: number; organizationsUpdated: number; peopleCreated: number; peopleUpdated: number; assignmentsChanged: number; headsChanged: number };
 type Outcome = { kind: 'checked' | 'imported'; summary: ImportSummary } | { kind: 'invalid'; errors: ImportError[] } | { kind: 'failed' };
 
 const fileLabels = { organizations: 'หน่วยงาน', people: 'บุคลากร' } as const;
@@ -12,7 +12,8 @@ const errorMessages: Record<string, string> = {
   INVALID_NATIONAL_ID: 'เลขประจำตัวประชาชนไม่ถูกต้อง', INVALID_DATE: 'วันที่ไม่ถูกต้อง (ใช้ 2026-10-01 หรือ 1/10/2569)', INVALID_STATUS: 'สถานะต้องเป็น ACTIVE หรือ INACTIVE',
   DUPLICATE_CODE: 'รหัสซ้ำในไฟล์', DUPLICATE_NATIONAL_ID: 'เลขประจำตัวประชาชนซ้ำในไฟล์', NATIONAL_ID_CONFLICT: 'รหัสบุคลากรกับเลขประจำตัวประชาชนไม่ตรงกับข้อมูลเดิม',
   UNKNOWN_ORGANIZATION: 'ไม่พบรหัสหน่วยงาน', UNKNOWN_MANAGER: 'ไม่พบรหัสผู้บังคับบัญชา', SELF_MANAGER: 'ผู้บังคับบัญชาเป็นคนเดียวกับบุคลากร', PARENT_CYCLE: 'หน่วยงานแม่วนกลับมาที่ตัวเอง',
-  EFFECTIVE_DATE_NOT_AFTER_CURRENT: 'วันที่มีผลต้องหลังวันที่ของการสังกัดปัจจุบัน'
+  EFFECTIVE_DATE_NOT_AFTER_CURRENT: 'วันที่มีผลต้องหลังวันที่ของการสังกัดปัจจุบัน',
+  UNKNOWN_UNIT_TYPE: 'ชนิดหน่วยงานต้องเป็น งาน, กลุ่มงาน หรือ โรงพยาบาล', UNKNOWN_HEAD: 'ไม่พบรหัสหัวหน้าหน่วยงาน', INACTIVE_HEAD: 'หัวหน้าหน่วยงานต้องมีสถานะ ACTIVE'
 };
 
 export function MasterDataImportForm() {
@@ -56,7 +57,7 @@ export function MasterDataImportForm() {
     <div className="master-data-import">
       <p>อัปโหลดไฟล์ CSV แบบ UTF-8 ตรวจสอบก่อน แล้วจึงนำเข้า ถ้ามีแถวผิดแม้แถวเดียว ระบบจะไม่บันทึกข้อมูลใดเลย</p>
       <label>ไฟล์หน่วยงาน (CSV)<input type="file" accept=".csv,text/csv" onChange={(event) => choose('organizations', event.target.files?.[0])} /></label>
-      <p className="field-hint">คอลัมน์: code, name, parent_code</p>
+      <p className="field-hint">คอลัมน์: code, name, parent_code และไม่บังคับ unit_type (งาน, กลุ่มงาน, โรงพยาบาล), head_employee_code</p>
       <label>ไฟล์บุคลากร (CSV)<input type="file" accept=".csv,text/csv" onChange={(event) => choose('people', event.target.files?.[0])} /></label>
       <p className="field-hint">คอลัมน์: employee_code, national_id, display_name, position_title, organization_code, manager_employee_code, effective_from, status</p>
       <div className="form-actions">
@@ -82,5 +83,5 @@ export function MasterDataImportForm() {
 }
 
 function describe(summary: ImportSummary): string {
-  return `หน่วยงานใหม่ ${summary.organizationsCreated} แก้ไข ${summary.organizationsUpdated}, บุคลากรใหม่ ${summary.peopleCreated} แก้ไข ${summary.peopleUpdated}, การสังกัดที่เปลี่ยน ${summary.assignmentsChanged}`;
+  return `หน่วยงานใหม่ ${summary.organizationsCreated} แก้ไข ${summary.organizationsUpdated}, บุคลากรใหม่ ${summary.peopleCreated} แก้ไข ${summary.peopleUpdated}, การสังกัดที่เปลี่ยน ${summary.assignmentsChanged}, หัวหน้าหน่วยงานที่เปลี่ยน ${summary.headsChanged}`;
 }

@@ -22,7 +22,7 @@ describe('MasterDataImportForm', () => {
   });
 
   it('enables import after a clean check and reports what was saved', async () => {
-    const summary = { organizationsCreated: 1, organizationsUpdated: 0, peopleCreated: 2, peopleUpdated: 0, assignmentsChanged: 2 };
+    const summary = { organizationsCreated: 1, organizationsUpdated: 0, peopleCreated: 2, peopleUpdated: 0, assignmentsChanged: 2, headsChanged: 1 };
     const fetchMock = vi.fn(async (_url: string, init: RequestInit) => new Response(JSON.stringify({ mode: (init.body as FormData).get('mode'), summary }), { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
     render(<MasterDataImportForm />);
@@ -33,7 +33,23 @@ describe('MasterDataImportForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'นำเข้าข้อมูล' }));
 
     expect(await screen.findByText(/^นำเข้าเรียบร้อย/)).toHaveAttribute('role', 'status');
+    expect(screen.getByText(/หัวหน้าหน่วยงานที่เปลี่ยน 1/)).toBeInTheDocument();
     expect(fetchMock).toHaveBeenLastCalledWith('/api/hr/imports', expect.objectContaining({ method: 'POST' }));
     expect((fetchMock.mock.calls[1]![1].body as FormData).get('mode')).toBe('apply');
+  });
+  it('explains unit type and head problems in Thai', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ mode: 'validate', errors: [
+      { file: 'organizations', row: 2, column: 'unit_type', code: 'UNKNOWN_UNIT_TYPE' },
+      { file: 'organizations', row: 3, column: 'head_employee_code', code: 'UNKNOWN_HEAD' },
+      { file: 'organizations', row: 4, column: 'head_employee_code', code: 'INACTIVE_HEAD' }
+    ] }), { status: 422 })));
+    render(<MasterDataImportForm />);
+
+    choosePeopleFile();
+    fireEvent.click(screen.getByRole('button', { name: 'ตรวจสอบไฟล์' }));
+
+    expect(await screen.findByRole('cell', { name: 'ชนิดหน่วยงานต้องเป็น งาน, กลุ่มงาน หรือ โรงพยาบาล' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'ไม่พบรหัสหัวหน้าหน่วยงาน' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'หัวหน้าหน่วยงานต้องมีสถานะ ACTIVE' })).toBeInTheDocument();
   });
 });

@@ -1,22 +1,27 @@
+import type { OrganizationUnitType } from '@backoffice/contracts';
 import { parseCsvRecords, type CsvRecord } from './csv';
 
 export type MasterDataFile = 'organizations' | 'people';
 export type MasterDataErrorCode =
   | 'INVALID_CSV' | 'MISSING_COLUMN' | 'TOO_MANY_ROWS' | 'REQUIRED' | 'TOO_LONG' | 'INVALID_NATIONAL_ID' | 'INVALID_DATE' | 'INVALID_STATUS'
   | 'DUPLICATE_CODE' | 'DUPLICATE_NATIONAL_ID' | 'NATIONAL_ID_CONFLICT' | 'UNKNOWN_ORGANIZATION' | 'UNKNOWN_MANAGER' | 'SELF_MANAGER'
-  | 'PARENT_CYCLE' | 'EFFECTIVE_DATE_NOT_AFTER_CURRENT';
+  | 'PARENT_CYCLE' | 'EFFECTIVE_DATE_NOT_AFTER_CURRENT' | 'UNKNOWN_UNIT_TYPE' | 'UNKNOWN_HEAD' | 'INACTIVE_HEAD';
 
 /** A validation problem. It names the cell, never its value, so national IDs cannot leak through the report. */
 export interface MasterDataError { file: MasterDataFile; row: number | null; column: string | null; code: MasterDataErrorCode; }
 export interface MasterDataFiles { organizations?: string; people?: string; }
 export type EmploymentStatus = 'ACTIVE' | 'INACTIVE';
 
-export interface ExistingOrganization { id: string; code: string | null; name: string; parentId: string | null; }
+export interface ExistingOrganization { id: string; code: string | null; name: string; parentId: string | null; unitType?: OrganizationUnitType | null; headPersonId?: string | null; }
 export interface ExistingAssignment { organizationId: string; managerPersonId: string | null; effectiveFrom: Date; }
 export interface ExistingPerson { id: string; employeeCode: string | null; nationalIdLookup: string; displayName: string | null; positionTitle: string | null; employmentStatus: string; assignment: ExistingAssignment | null; }
 export interface ExistingMasterData { organizations: ExistingOrganization[]; people: ExistingPerson[]; }
 
-export interface OrganizationImportRow { row: number; code: string; name: string; parentCode: string | null; existingOrganizationId: string | null; }
+export interface OrganizationImportRow {
+  row: number; code: string; name: string; parentCode: string | null; existingOrganizationId: string | null;
+  /** Undefined when the cell is empty or the column is absent, so the stored unit type is kept. */
+  unitType?: OrganizationUnitType; headEmployeeCode: string | null;
+}
 export interface PersonImportRow {
   row: number; employeeCode: string; nationalId: string; displayName: string; positionTitle: string | null; organizationCode: string;
   managerEmployeeCode: string | null; effectiveFrom: Date; status: EmploymentStatus; existingPersonId: string | null;
@@ -28,7 +33,8 @@ export interface MasterDataValidation { organizations: OrganizationImportRow[]; 
 export const emptyExistingMasterData: ExistingMasterData = { organizations: [], people: [] };
 export const maxImportRows = 5_000;
 
-const organizationColumns = { required: ['code', 'name'], optional: ['parent_code'] };
+const organizationColumns = { required: ['code', 'name'], optional: ['parent_code', 'unit_type', 'head_employee_code'] };
+const unitTypeByCell: Record<string, OrganizationUnitType> = { 'งาน': 'SECTION', 'กลุ่มงาน': 'DIVISION', 'โรงพยาบาล': 'HOSPITAL', section: 'SECTION', division: 'DIVISION', hospital: 'HOSPITAL' };
 const peopleColumns = { required: ['employee_code', 'national_id', 'display_name', 'organization_code', 'effective_from'], optional: ['position_title', 'manager_employee_code', 'status'] };
 const codeLength = 32;
 const textLength = 255;
@@ -41,7 +47,10 @@ export function validateMasterData(files: MasterDataFiles, existing: ExistingMas
   const errors: MasterDataError[] = [];
   const organizationTable = files.organizations === undefined ? null : readTable('organizations', files.organizations, organizationColumns.required, errors);
   const peopleTable = files.people === undefined ? null : readTable('people', files.people, peopleColumns.required, errors);
-  const organizations = organizationTable ? validateOrganizations(organizationTable, existing, errors) : [];
+  // A head may be listed in the people file of the same import, and the file's status wins over the stored one.
+  const headStatusByCode = new Map(existing.people.flatMap((person) => person.employeeCode ? [[person.employeeCode, person.employmentStatus] as const] : []));
+  for (const { cells } of peopleTable?.rows ?? []) if (cells.employee_code) headStatusByCode.set(cells.employee_code, (cells.status || 'ACTIVE').toUpperCase());
+  const organizations = organizationTable ? validateOrganizations(organizationTable, existing, headStatusByCode, errors) : [];
   const knownOrganizationCodes = new Set([...existing.organizations.flatMap((organization) => organization.code ? [organization.code] : []), ...organizationTable?.rows.map(({ cells }) => cells.code).filter(Boolean) ?? []]);
   const people = peopleTable ? validatePeople(peopleTable, existing, knownOrganizationCodes, organizations, lookup, errors) : [];
   return { organizations, people, errors };
@@ -59,7 +68,7 @@ function readTable(file: MasterDataFile, text: string, requiredColumns: string[]
   return { rows: records.slice(1).map((record) => ({ row: record.line, cells: Object.fromEntries(header.map((name, column) => [name, (record.cells[column] ?? '').trim()])) })) };
 }
 
-function validateOrganizations(table: Table, existing: ExistingMasterData, errors: MasterDataError[]): OrganizationImportRow[] {
+function validateOrganizations(table: Table, existing: ExistingMasterData, headStatusByCode: Map<string, string>, errors: MasterDataError[]): OrganizationImportRow[] {
   const existingByCode = new Map(existing.organizations.flatMap((organization) => organization.code ? [[organization.code, organization] as const] : []));
   const codeById = new Map(existing.organizations.map((organization) => [organization.id, organization.code]));
   const fileCodes = new Set(table.rows.map(({ cells }) => cells.code).filter(Boolean));
@@ -80,8 +89,14 @@ function validateOrganizations(table: Table, existing: ExistingMasterData, error
     else if (name.length > textLength) fail('name', 'TOO_LONG');
     if (parentCode && !fileCodes.has(parentCode) && !existingByCode.has(parentCode)) fail('parent_code', 'UNKNOWN_ORGANIZATION');
     else if (parentCode && code && reachesAncestor(parentCode, code, parentByCode)) fail('parent_code', 'PARENT_CYCLE');
+    const unitType = cells.unit_type ? unitTypeByCell[cells.unit_type.toLowerCase()] : undefined;
+    if (cells.unit_type && !unitType) fail('unit_type', 'UNKNOWN_UNIT_TYPE');
+    const headEmployeeCode = cells.head_employee_code || null;
+    const headStatus = headEmployeeCode ? headStatusByCode.get(headEmployeeCode) : undefined;
+    if (headEmployeeCode && !headStatus) fail('head_employee_code', 'UNKNOWN_HEAD');
+    else if (headEmployeeCode && headStatus !== 'ACTIVE') fail('head_employee_code', 'INACTIVE_HEAD');
     errors.push(...rowErrors);
-    if (rowErrors.length === 0) result.push({ row, code: code!, name: name!, parentCode, existingOrganizationId: existingByCode.get(code!)?.id ?? null });
+    if (rowErrors.length === 0) result.push({ row, code: code!, name: name!, parentCode, existingOrganizationId: existingByCode.get(code!)?.id ?? null, unitType, headEmployeeCode });
   }
   return result;
 }

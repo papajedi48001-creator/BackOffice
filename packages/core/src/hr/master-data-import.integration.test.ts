@@ -32,7 +32,7 @@ describeWithDatabase('MasterDataImportService against MariaDB', () => {
 
   it('validates without writing, then applies everything with one audit event, and re-applying changes nothing', async () => {
     const files = { organizations, people: people(nursing, '2026-10-01') };
-    const expected = { organizationsCreated: 2, organizationsUpdated: 0, peopleCreated: 2, peopleUpdated: 0, assignmentsChanged: 2 };
+    const expected = { organizationsCreated: 2, organizationsUpdated: 0, peopleCreated: 2, peopleUpdated: 0, assignmentsChanged: 2, headsChanged: 0 };
 
     await expect(service.validate(files)).resolves.toEqual({ ok: true, summary: expected });
     await expect(database.query('SELECT id FROM organization WHERE code = ?', [hospital])).resolves.toEqual([]);
@@ -47,7 +47,7 @@ describeWithDatabase('MasterDataImportService against MariaDB', () => {
     expect(audits.map((audit) => JSON.parse(audit.metadata))).toEqual([{ counts: expected }]);
     expect(audits[0]!.metadata).not.toContain(nurseId);
 
-    await expect(service.apply(files, actorPersonId)).resolves.toEqual({ ok: true, summary: { organizationsCreated: 0, organizationsUpdated: 0, peopleCreated: 0, peopleUpdated: 0, assignmentsChanged: 0 } });
+    await expect(service.apply(files, actorPersonId)).resolves.toEqual({ ok: true, summary: { organizationsCreated: 0, organizationsUpdated: 0, peopleCreated: 0, peopleUpdated: 0, assignmentsChanged: 0, headsChanged: 0 } });
   });
 
   it('closes the current assignment when a person moves and keeps the history', async () => {
@@ -89,5 +89,18 @@ describeWithDatabase('MasterDataImportService against MariaDB', () => {
     const units = await directory.listOrganizations();
     expect(units.find((unit) => unit.code === nursing)).toMatchObject({ name: 'กลุ่มการพยาบาล', parentId: hospitalOrganization!.id, activePeople: 0 });
     expect(units.find((unit) => unit.code === hospital)).toMatchObject({ activePeople: 2 });
+  });
+  it('sets unit types and heads, re-applies without change, and keeps them for an old-format file', async () => {
+    const headed = `code,name,parent_code,unit_type,head_employee_code\n${hospital},โรงพยาบาลวาริชภูมิ,,โรงพยาบาล,D${run}\n${nursing},กลุ่มการพยาบาล,${hospital},กลุ่มงาน,`;
+    const stored = async () => database.query<{ unitType: string | null; headCode: string | null }>(
+      'SELECT o.unit_type AS unitType, p.employee_code AS headCode FROM organization o LEFT JOIN hr_organization_head h ON h.organization_id = o.id AND h.effective_until IS NULL LEFT JOIN person p ON p.id = h.person_id WHERE o.code = ?', [hospital]);
+
+    await expect(service.apply({ organizations: headed }, actorPersonId)).resolves.toMatchObject({ ok: true, summary: { headsChanged: 1 } });
+    expect(await stored()).toEqual([{ unitType: 'HOSPITAL', headCode: `D${run}` }]);
+    await expect(database.query('SELECT unit_type AS unitType FROM organization WHERE code = ?', [nursing])).resolves.toEqual([{ unitType: 'DIVISION' }]);
+
+    await expect(service.apply({ organizations: headed }, actorPersonId)).resolves.toMatchObject({ ok: true, summary: { headsChanged: 0 } });
+    await expect(service.apply({ organizations }, actorPersonId)).resolves.toMatchObject({ ok: true, summary: { headsChanged: 0 } });
+    expect(await stored()).toEqual([{ unitType: 'HOSPITAL', headCode: `D${run}` }]);
   });
 });
