@@ -5,6 +5,7 @@ export * from './hr/person-service';
 export * from './hr/master-data-validation';
 export * from './hr/master-data-import';
 export * from './hr/hr-directory';
+export * from './hr/command-chain';
 export * from './identity/auth-service';
 export * from './identity/session-service';
 export * from './identity/database-identity-repository';
