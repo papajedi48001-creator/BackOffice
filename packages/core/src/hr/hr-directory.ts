@@ -1,7 +1,8 @@
+import type { OrganizationUnitType } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 
 export interface DirectoryPerson { id: string; employeeCode: string | null; displayName: string | null; positionTitle: string | null; employmentStatus: string; nationalIdMasked: string | null; organizationName: string | null; organizationCode: string | null; }
-export interface DirectoryOrganization { id: string; code: string | null; name: string; parentId: string | null; activePeople: number; }
+export interface DirectoryOrganization { id: string; code: string | null; name: string; parentId: string | null; activePeople: number; unitType: OrganizationUnitType | null; headPersonId: string | null; headDisplayName: string | null; }
 /** `all` for a hospital-wide reader; otherwise the organizations a scoped role covers. */
 export interface DirectoryScope { organizationIds: 'all' | string[]; }
 
@@ -24,11 +25,13 @@ export class HrDirectory {
 
   async listOrganizations(): Promise<DirectoryOrganization[]> {
     const rows = await this.database.query<DirectoryOrganization & { activePeople: number | string }>(
-      `SELECT o.id, o.code, o.name, o.parent_id AS parentId, COUNT(p.id) AS activePeople
+      `SELECT o.id, o.code, o.name, o.parent_id AS parentId, o.unit_type AS unitType, h.person_id AS headPersonId, hp.display_name AS headDisplayName, COUNT(p.id) AS activePeople
        FROM organization o
+       LEFT JOIN hr_organization_head h ON h.organization_id = o.id AND h.effective_from <= UTC_TIMESTAMP() AND (h.effective_until IS NULL OR h.effective_until > UTC_TIMESTAMP())
+       LEFT JOIN person hp ON hp.id = h.person_id
        LEFT JOIN employment_assignment a ON a.organization_id = o.id AND a.effective_until IS NULL
        LEFT JOIN person p ON p.id = a.person_id AND p.employment_status = 'ACTIVE'
-       GROUP BY o.id, o.code, o.name, o.parent_id
+       GROUP BY o.id, o.code, o.name, o.parent_id, o.unit_type, h.person_id, hp.display_name
        ORDER BY o.name`
     );
     return rows.map((row) => ({ ...row, activePeople: Number(row.activePeople) }));

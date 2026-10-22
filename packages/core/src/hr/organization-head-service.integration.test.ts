@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDatabase, runMigrations } from '@backoffice/db';
+import { HrDirectory } from './hr-directory';
 import { OrganizationHeadService } from './organization-head-service';
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -51,6 +52,18 @@ describeWithDatabase('OrganizationHeadService against MariaDB', () => {
     await service.assign({ organizationId, personId: first, effectiveFrom: new Date('2026-06-01T00:00:00Z') }, actor);
 
     await expect(service.assign({ organizationId, personId: second, effectiveFrom: new Date('2026-05-31T20:00:00Z') }, actor)).resolves.toEqual({ kind: 'error', code: 'EFFECTIVE_FROM_BEFORE_CURRENT' });
+  });
+
+  it('lists each organization with its unit type and current head', async () => {
+    const organizationId = await organization();
+    const head = await person();
+    await database.execute('UPDATE person SET display_name = ? WHERE id = ?', ['นางสาวมาลี ดีงาม', head]);
+    await service.setUnitType({ organizationId, unitType: 'SECTION' }, actor);
+    await service.assign({ organizationId, personId: head, effectiveFrom: new Date('2026-01-01T00:00:00Z') }, actor);
+
+    const units = await new HrDirectory(database).listOrganizations();
+
+    expect(units.find((unit) => unit.id === organizationId)).toMatchObject({ unitType: 'SECTION', headPersonId: head, headDisplayName: 'นางสาวมาลี ดีงาม', activePeople: 0 });
   });
 
   it('keeps one open term when two heads are assigned at the same time', async () => {
