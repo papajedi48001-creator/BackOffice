@@ -30,3 +30,22 @@ export interface EmploymentAssignment {
   effectiveFrom: string;
   effectiveUntil: string | null;
 }
+
+export const organizationUnitTypeSchema = z.enum(['SECTION', 'DIVISION', 'HOSPITAL']);
+export type OrganizationUnitType = z.infer<typeof organizationUnitTypeSchema>;
+
+export const commandChainTargetSchema = z.union([organizationUnitTypeSchema, z.literal('NEAREST_HEAD')]);
+export type CommandChainTarget = z.infer<typeof commandChainTargetSchema>;
+
+export const assignOrganizationHeadInputSchema = z.object({
+  organizationId: z.string().min(1),
+  personId: z.string().min(1),
+  effectiveFrom: z.coerce.date()
+});
+export type AssignOrganizationHeadInput = z.infer<typeof assignOrganizationHeadInputSchema>;
+
+export const setOrganizationUnitTypeInputSchema = z.object({
+  organizationId: z.string().min(1),
+  unitType: organizationUnitTypeSchema.nullable()
+});
+export type SetOrganizationUnitTypeInput = z.infer<typeof setOrganizationUnitTypeInputSchema>;

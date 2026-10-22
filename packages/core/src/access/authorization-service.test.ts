@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AuthorizationService } from './authorization-service';
+import { requiresDataOwner } from './policy';
 
 describe('AuthorizationService', () => {
   it('denies a role holder outside the assigned organization scope', async () => {
@@ -60,5 +61,11 @@ describe('organization scope for listings', () => {
     // Data owner for one unit only.
     expect(service.canActHospitalWide({ ...subject([{ name: 'hr-manager', organizationId: null }], ['hr']), hospitalWideDataOwnerModules: [] }, 'hr.person.manage', 'hr')).toBe(false);
     expect(service.canActHospitalWide({ ...subject([{ name: 'hr-manager', organizationId: null }], ['hr']), authenticated: false }, 'hr.person.manage', 'hr')).toBe(false);
+  });
+
+  it('lets an hr manager who owns hr data manage organizations hospital-wide', () => {
+    expect(service.canActHospitalWide(subject([{ name: 'hr-manager', organizationId: null }], ['hr']), 'hr.organization.manage', 'hr')).toBe(true);
+    expect(service.canActHospitalWide(subject([{ name: 'hr-reader', organizationId: null }], ['hr']), 'hr.organization.manage', 'hr')).toBe(false);
+    expect(requiresDataOwner('hr.organization.manage')).toBe(true);
   });
 });
