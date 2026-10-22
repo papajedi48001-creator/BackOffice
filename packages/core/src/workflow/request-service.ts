@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { cancelRequestInputSchema, notificationEventPayloadSchema, resubmitRequestInputSchema, submitRequestInputSchema, type ApprovalDecision, type ApprovalStep, type ApproverSnapshot, type AuditEvent, type OutboxEvent, type RequestCancellation, type SubmittedRequest } from '@backoffice/contracts';
+import { cancelRequestInputSchema, notificationEventPayloadSchema, resubmitRequestInputSchema, submitRequestInputSchema, type ApprovalDecision, type ApprovalStep, type ApproverSnapshot, type AuditEvent, type CommandChainTarget, type OutboxEvent, type RequestCancellation, type SubmittedRequest } from '@backoffice/contracts';
 import { AuditService } from '../audit/audit-service';
 import { REQUESTS_MODULE } from './requests-module';
 
@@ -16,7 +16,7 @@ export interface WorkflowRepository {
   appendAudit(event: AuditEvent): Promise<void>;
 }
 
-export interface ApproverResolver { resolve(input: { moduleCode: string; requestorPersonId: string; organizationId: string }): Promise<ApproverSnapshot[]>; }
+export interface ApproverResolver { resolve(input: { moduleCode: string; requestorPersonId: string; organizationId: string; target?: CommandChainTarget }): Promise<ApproverSnapshot[]>; }
 
 export class RequestService {
   constructor(private readonly repository: WorkflowRepository, private readonly approvers: ApproverResolver, private readonly createId: () => string = randomUUID) {}
