@@ -36,3 +36,4 @@ export * from './inventory/catalog-service';
 export * from './inventory/inventory-repository';
 export * from './inventory/receipt-service';
 export * from './inventory/database-inventory-repository';
+export * from './inventory/inventory-queries';
