@@ -22,7 +22,7 @@ export default async function InventoryStockPage({ searchParams }: { searchParam
       <input id="stock-search" name="search" defaultValue={search ?? ''} />
       <label htmlFor="stock-category">{t('inventoryCategory')}</label>
       <select id="stock-category" name="categoryId" defaultValue={params.categoryId ?? ''}><option value="">{t('inventoryAllCategories')}</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select>
-      <button type="submit">{t('inventorySearch')}</button>
+      <button type="submit">{t('inventorySearchButton')}</button>
     </form>
     <StockTable rows={rows} />
   </section>;

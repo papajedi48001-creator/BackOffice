@@ -206,3 +206,4 @@ a.module-tile:hover .module-go { color: #0b7285; transform: translateX(2px); }
 .inventory-table-scroll .inventory-table { min-width: 860px; }
 .inventory-item-cell { min-width: 12rem; }
 .app-main .inventory-form button[aria-pressed="false"] { background: #fff; color: #0b7285; box-shadow: inset 0 0 0 2px #0b7285; }
+.inventory-scan label { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; flex: 1 1 20rem; font-weight: 700; }
