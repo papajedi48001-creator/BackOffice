@@ -25,7 +25,9 @@ describeWithDatabase('seedLocalDemo', () => {
     const roles = await database.query<{ name: string }>("SELECT role.name FROM role_assignment assignment JOIN role ON role.id = assignment.role_id JOIN local_account account ON account.person_id = assignment.person_id WHERE account.username = 'hr001'");
     expect(roles.map((role) => role.name)).toContain('hr-manager');
     const roomRoles = await database.query<{ name: string }>("SELECT role.name FROM role_assignment assignment JOIN role ON role.id = assignment.role_id JOIN local_account account ON account.person_id = assignment.person_id WHERE account.username = 'adm003'");
-    expect(roomRoles.map((role) => role.name).sort()).toEqual(['room-booking-approver', 'room-manager']);
+    expect(roomRoles.map((role) => role.name).sort()).toEqual(['inventory-officer', 'room-booking-approver', 'room-manager']);
+    const supervisorRoles = await database.query<{ name: string; organizationId: string | null }>("SELECT role.name, assignment.organization_id AS organizationId FROM role_assignment assignment JOIN role ON role.id = assignment.role_id JOIN local_account account ON account.person_id = assignment.person_id WHERE account.username = 'dir001'");
+    expect(supervisorRoles).toEqual([{ name: 'inventory-supervisor', organizationId: null }]);
     const [manager] = await database.query<{ managerCode: string }>("SELECT manager.employee_code AS managerCode FROM person staff JOIN employment_assignment assignment ON assignment.person_id = staff.id AND assignment.effective_until IS NULL JOIN person manager ON manager.id = assignment.manager_person_id WHERE staff.employee_code = 'NUR014'");
     expect(manager?.managerCode).toBe('NUR001');
   });
