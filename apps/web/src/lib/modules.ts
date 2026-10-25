@@ -3,6 +3,7 @@ import { AuthorizationService, RoomBookingQueries } from '@backoffice/core';
 import type { Database } from '@backoffice/db';
 import { t, type MessageKey } from '@backoffice/i18n';
 import type { NavigationItem } from '../components/app-shell';
+import { canInventory } from './inventory-access';
 
 export type ModuleGroup = 'mine' | 'people' | 'services' | 'governance';
 export type ModuleIconName = 'requests' | 'bell' | 'people' | 'org' | 'upload' | 'shield' | 'delegate' | 'audit' | 'wrench' | 'package' | 'room' | 'car' | 'clock' | 'leave' | 'asset' | 'monitor' | 'target' | 'heart';
@@ -57,7 +58,13 @@ export const moduleRegistry: readonly ModuleEntry[] = [
     badge: async (db, subject) => subject.personId ? (await new RoomBookingQueries(db).pendingForApprover({ personId: subject.personId, roles: subject.roles })).length : 0
   },
   planned('maintenance', '/maintenance', 'moduleMaintenance', 'moduleMaintenanceDescription', 'wrench'),
-  planned('inventory', '/inventory', 'moduleInventory', 'moduleInventoryDescription', 'package'),
+  withSections({ code: 'inventory', href: '/inventory', labelKey: 'moduleInventory', descriptionKey: 'moduleInventoryDescription', icon: 'package', group: 'services', status: 'live' }, [
+    { href: '/inventory/stock', labelKey: 'inventoryStock', visible: (subject) => canInventory(subject, 'inventory.stock.read') },
+    { href: '/inventory/receipts', labelKey: 'inventoryReceipts', visible: (subject) => canInventory(subject, 'inventory.stock.receive') },
+    { href: '/inventory/opening', labelKey: 'inventoryOpening', visible: (subject) => canInventory(subject, 'inventory.stock.receive', 'inventory.opening.certify') },
+    { href: '/inventory/items', labelKey: 'inventoryItems', visible: (subject) => canInventory(subject, 'inventory.item.manage') },
+    { href: '/inventory/vendors', labelKey: 'inventoryVendors', visible: (subject) => canInventory(subject, 'inventory.item.manage') }
+  ]),
   planned('fleet', '/fleet', 'moduleFleet', 'moduleFleetDescription', 'car'),
   planned('attendance', '/attendance', 'moduleAttendance', 'moduleAttendanceDescription', 'clock'),
   planned('leave', '/leave', 'moduleLeave', 'moduleLeaveDescription', 'leave'),

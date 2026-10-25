@@ -31,4 +31,15 @@ describe('AuditEventTable', () => {
 
     expect(screen.getByText('ยังไม่มีรายการที่ตรงกับเงื่อนไข')).toBeInTheDocument();
   });
+
+  it('labels inventory events with their document reference', () => {
+    render(<AuditEventTable events={[
+      { createdAt: '2026-10-01T07:00:00.000Z', action: 'inventory.receipt.posted', result: 'SUCCESS', requestReference: 'RC-2569-0001' },
+      { createdAt: '2026-10-01T08:00:00.000Z', action: 'inventory.opening.certified', result: 'SUCCESS', requestReference: 'OB-2569-0001' }
+    ]} />);
+
+    expect(screen.getByText('บันทึกใบรับเข้า')).toBeInTheDocument();
+    expect(screen.getByText('RC-2569-0001')).toBeInTheDocument();
+    expect(screen.getByText('รับรองยอดยกมา')).toBeInTheDocument();
+  });
 });

@@ -62,4 +62,17 @@ describe('AuditPage', () => {
     expect(mocks.redirect).toHaveBeenCalledWith('/');
     expect(mocks.createDatabase).not.toHaveBeenCalled();
   });
+
+  it('shows inventory events with the reference from their metadata', async () => {
+    mocks.headers.mockResolvedValue(new Headers());
+    mocks.readSession.mockReturnValue({ authenticated: true, personId: 'person-a', roles: [] });
+    mocks.readRuntimeValue.mockReturnValue('mysql://backoffice:local-development-only@127.0.0.1:3307/backoffice');
+    mocks.query.mockResolvedValue([{ createdAt: '2026-10-01T07:00:00.000Z', action: 'inventory.receipt.voided', result: 'SUCCESS', metadata: '{"reference":"RC-2569-0004","status":"VOIDED","lineCount":1}' }]);
+    mocks.createDatabase.mockReturnValue({ query: mocks.query, close: mocks.close });
+
+    render(await AuditPage());
+
+    expect(screen.getByText('ยกเลิกใบรับเข้า')).toBeInTheDocument();
+    expect(screen.getByText('RC-2569-0004')).toBeInTheDocument();
+  });
 });
