@@ -269,11 +269,11 @@ Money rule: `priceSatang = Math.round(unitPrice * 100)`; reject when `Math.abs(u
 - Delivery form keeps an unsent draft in `sessionStorage` (wrapped in try/catch), disables the submit button while the request is in flight, and on 201 navigates to `/inventory/receipts/<id>` with a link to print labels
 - Opening page: officer edits lines when `DRAFT` (save + "ส่งรับรอง"), supervisor sees "รับรองยอดยกมา" / "ส่งกลับแก้ไข" with a required reason field and "ยืนยัน" (no browser dialogs), history list shows reasons; after `CERTIFIED` read-only with a labels link
 
-- [ ] **Step 1: Write failing tests**: scanning the same barcode twice yields one line with quantity 2; a PURCHASE barcode line shows `กล่อง`; scanning an inactive item adds no line and shows `วัสดุนี้ปิดใช้แล้ว`; double-clicking "บันทึกรับเข้า" sends one request; opening actions show certify/return only for the supervisor and return requires a reason before "ยืนยัน" is enabled
-- [ ] **Step 2: Run** `pnpm --filter @backoffice/web test -- inventory/receipts inventory/opening receipt-lines-editor` — Expected: FAIL
-- [ ] **Step 3: Implement** the components and pages
-- [ ] **Step 4: Run** same — Expected: PASS
-- [ ] **Step 5: Commit** `feat(web): add delivery receipt and opening balance pages`
+- [x] **Step 1: Write failing tests**: scanning the same barcode twice yields one line with quantity 2; a PURCHASE barcode line shows `กล่อง`; scanning an inactive item adds no line and shows `วัสดุนี้ปิดใช้แล้ว`; double-clicking "บันทึกรับเข้า" sends one request; opening actions show certify/return only for the supervisor and return requires a reason before "ยืนยัน" is enabled
+- [x] **Step 2: Run** `pnpm --filter @backoffice/web test -- inventory/receipts inventory/opening receipt-lines-editor` — Expected: FAIL
+- [x] **Step 3: Implement** the components and pages
+- [x] **Step 4: Run** same — Expected: PASS
+- [x] **Step 5: Commit** `feat(web): add delivery receipt and opening balance pages`
 
 ### Task 13: QR label printing
 
