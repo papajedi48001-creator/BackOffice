@@ -4,6 +4,8 @@ import { fromMariaDbDate, fromMariaDbDatetime, toMariaDbDatetime } from '../room
 import { DuplicateBarcodeError, type InventoryBarcodeRecord, type InventoryCatalogRepository, type InventoryCategoryRecord, type InventoryItemRecord, type InventoryVendorRecord } from './catalog-service';
 import type { InventoryLotRecord, InventoryMovementRecord, InventoryReceiptHistoryEntry, InventoryReceiptLineRecord, InventoryReceiptRecord, InventoryRepository } from './inventory-repository';
 
+type SqlValue = string | number | null;
+
 const itemColumns = 'id, code, name, category_id AS categoryId, issue_unit AS issueUnit, purchase_unit AS purchaseUnit, purchase_unit_factor AS purchaseUnitFactor, reorder_point AS reorderPoint, tracks_expiry AS tracksExpiry, is_active AS isActive';
 const vendorColumns = 'id, name, phone, address, is_active AS isActive';
 const receiptColumns = 'id, reference, kind, vendor_id AS vendorId, document_no AS documentNo, received_on AS receivedOn, status, created_by_person_id AS createdByPersonId, posted_at AS postedAt';
@@ -157,6 +159,16 @@ function isDuplicate(error: unknown, key: string): boolean {
 export class DatabaseInventoryCatalogRepository implements InventoryCatalogRepository {
   constructor(private readonly database: Database) {}
 
+  /**
+   * A plain INSERT for a new id and an UPDATE by id otherwise. Never ON DUPLICATE KEY UPDATE:
+   * that fires on the code/name keys too and would quietly overwrite another record.
+   */
+  private async upsert(table: string, id: string, insert: [string, SqlValue[]], update: [string, SqlValue[]]): Promise<void> {
+    const exists = (await this.database.query<Row>(`SELECT 1 AS found FROM ${table} WHERE id = ?`, [id])).length > 0;
+    if (exists) await this.database.execute(update[0], [...update[1], id]);
+    else await this.database.execute(insert[0], insert[1]);
+  }
+
   transaction<T>(work: (repository: InventoryCatalogRepository) => Promise<T>): Promise<T> {
     return this.database.transaction((database) => work(new DatabaseInventoryCatalogRepository(database)), { isolationLevel: 'READ COMMITTED' });
   }
@@ -173,7 +185,9 @@ export class DatabaseInventoryCatalogRepository implements InventoryCatalogRepos
 
   async saveCategory(category: InventoryCategoryRecord): Promise<void> {
     try {
-      await this.database.execute('INSERT INTO inventory_category (id, name, is_active, created_at, updated_at) VALUES (?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE name = VALUES(name), is_active = VALUES(is_active), updated_at = UTC_TIMESTAMP()', [category.id, category.name, category.isActive ? 1 : 0]);
+      await this.upsert('inventory_category', category.id,
+        ['INSERT INTO inventory_category (id, name, is_active, created_at, updated_at) VALUES (?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())', [category.id, category.name, category.isActive ? 1 : 0]],
+        ['UPDATE inventory_category SET name = ?, is_active = ?, updated_at = UTC_TIMESTAMP() WHERE id = ?', [category.name, category.isActive ? 1 : 0]]);
     } catch (error) {
       if (isDuplicate(error, 'inventory_category_name_unique')) throw new Error('DUPLICATE_NAME');
       throw error;
@@ -192,11 +206,10 @@ export class DatabaseInventoryCatalogRepository implements InventoryCatalogRepos
 
   async saveItem(item: InventoryItemRecord): Promise<void> {
     try {
-      await this.database.execute(
-        `INSERT INTO inventory_item (id, code, name, category_id, issue_unit, purchase_unit, purchase_unit_factor, reorder_point, tracks_expiry, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())
-         ON DUPLICATE KEY UPDATE code = VALUES(code), name = VALUES(name), category_id = VALUES(category_id), issue_unit = VALUES(issue_unit), purchase_unit = VALUES(purchase_unit), purchase_unit_factor = VALUES(purchase_unit_factor), reorder_point = VALUES(reorder_point), tracks_expiry = VALUES(tracks_expiry), is_active = VALUES(is_active), updated_at = UTC_TIMESTAMP()`,
-        [item.id, item.code, item.name, item.categoryId, item.issueUnit, item.purchaseUnit, item.purchaseUnitFactor, item.reorderPoint, item.tracksExpiry ? 1 : 0, item.isActive ? 1 : 0]
-      );
+      const values = [item.code, item.name, item.categoryId, item.issueUnit, item.purchaseUnit, item.purchaseUnitFactor, item.reorderPoint, item.tracksExpiry ? 1 : 0, item.isActive ? 1 : 0];
+      await this.upsert('inventory_item', item.id,
+        ['INSERT INTO inventory_item (id, code, name, category_id, issue_unit, purchase_unit, purchase_unit_factor, reorder_point, tracks_expiry, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())', [item.id, ...values]],
+        ['UPDATE inventory_item SET code = ?, name = ?, category_id = ?, issue_unit = ?, purchase_unit = ?, purchase_unit_factor = ?, reorder_point = ?, tracks_expiry = ?, is_active = ?, updated_at = UTC_TIMESTAMP() WHERE id = ?', values]);
     } catch (error) {
       if (isDuplicate(error, 'inventory_item_code_unique')) throw new Error('DUPLICATE_CODE');
       throw error;
@@ -243,7 +256,10 @@ export class DatabaseInventoryCatalogRepository implements InventoryCatalogRepos
 
   async saveVendor(vendor: InventoryVendorRecord): Promise<void> {
     try {
-      await this.database.execute('INSERT INTO inventory_vendor (id, name, phone, address, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE name = VALUES(name), phone = VALUES(phone), address = VALUES(address), is_active = VALUES(is_active), updated_at = UTC_TIMESTAMP()', [vendor.id, vendor.name, vendor.phone, vendor.address, vendor.isActive ? 1 : 0]);
+      const values = [vendor.name, vendor.phone, vendor.address, vendor.isActive ? 1 : 0];
+      await this.upsert('inventory_vendor', vendor.id,
+        ['INSERT INTO inventory_vendor (id, name, phone, address, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())', [vendor.id, ...values]],
+        ['UPDATE inventory_vendor SET name = ?, phone = ?, address = ?, is_active = ?, updated_at = UTC_TIMESTAMP() WHERE id = ?', values]);
     } catch (error) {
       if (isDuplicate(error, 'inventory_vendor_name_unique')) throw new Error('DUPLICATE_NAME');
       throw error;

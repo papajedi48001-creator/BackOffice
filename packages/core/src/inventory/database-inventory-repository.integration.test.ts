@@ -72,6 +72,21 @@ describeWithDatabase('inventory on MariaDB', () => {
     expect(failure.reason).toBeInstanceOf(DuplicateBarcodeError);
   });
 
+  it('refuses a second record with a taken code or name instead of overwriting the first', async () => {
+    const repository = new DatabaseInventoryCatalogRepository(database);
+    const first = await repository.findItem(itemId);
+    await expect(repository.saveItem({ ...first!, id: randomUUID(), name: 'ชื่อที่ไม่ควรทับ' })).rejects.toThrow('DUPLICATE_CODE');
+    expect((await repository.findItem(itemId))?.name).toBe(first!.name);
+
+    const vendor = await repository.findVendor(vendorId);
+    await expect(repository.saveVendor({ ...vendor!, id: randomUUID(), phone: '099' })).rejects.toThrow('DUPLICATE_NAME');
+    expect((await repository.findVendor(vendorId))?.phone).toBe(vendor!.phone);
+
+    const category = await repository.findCategory(first!.categoryId);
+    await expect(repository.saveCategory({ ...category!, id: randomUUID(), isActive: false })).rejects.toThrow('DUPLICATE_NAME');
+    expect((await repository.findCategory(first!.categoryId))?.isActive).toBe(true);
+  });
+
   it('reads the catalogue back with the same values', async () => {
     const repository = new DatabaseInventoryCatalogRepository(database);
     expect(await repository.findItem(itemId)).toMatchObject({ purchaseUnitFactor: 5, reorderPoint: 10, tracksExpiry: false, isActive: true });
