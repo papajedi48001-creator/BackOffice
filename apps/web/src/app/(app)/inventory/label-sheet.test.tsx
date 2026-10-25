@@ -29,8 +29,12 @@ describe('LabelSheet', () => {
     fireEvent.change(screen.getByLabelText('รูปแบบกระดาษ'), { target: { value: 'thermal-50x30' } });
     expect(container.querySelector('.inventory-label-sheet')).toHaveAttribute('data-layout', 'thermal-50x30');
     fireEvent.change(copies('LT-2569-000002'), { target: { value: '9999' } });
+    expect(container.querySelectorAll('.inventory-label')).toHaveLength(501);
+    fireEvent.blur(copies('LT-2569-000002'));
     expect(copies('LT-2569-000002')).toHaveValue(500);
-    fireEvent.change(copies('LT-2569-000002'), { target: { value: '0' } });
+    fireEvent.change(copies('LT-2569-000002'), { target: { value: '' } });
+    expect(copies('LT-2569-000002')).toHaveValue(null);
+    fireEvent.blur(copies('LT-2569-000002'));
     expect(copies('LT-2569-000002')).toHaveValue(1);
   });
 

@@ -23,5 +23,6 @@
   [data-layout='thermal-50x30'] .inventory-label { break-after: page; }
 }
 /* Named pages, so the label sizes never leak into printing other pages of the app. */
-@page inventory-a4 { size: A4; margin: 12mm 0 0 0; }
+/* Standard 3 × 8 sticker sheets are 70 × 37 mm cells edge to edge: 8 × 37 mm already fills 296 of A4's 297 mm. */
+@page inventory-a4 { size: A4; margin: 0; }
 @page inventory-thermal { size: 50mm 30mm; margin: 0; }

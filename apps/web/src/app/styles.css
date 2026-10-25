@@ -178,8 +178,7 @@ a.module-tile:hover .module-go { color: #0b7285; transform: translateX(2px); }
 .inventory-toolbar, .inventory-scan { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin: 16px 0; border: 1px solid #d9e2ec; border-radius: 12px; background: #fff; padding: 14px 16px; }
 .inventory-toolbar input, .inventory-toolbar select, .inventory-scan input, .inventory-form input, .inventory-form select, .inventory-form textarea, .inventory-inline-form input, .inventory-inline-form select { min-height: 44px; border: 1px solid #9fb3c8; border-radius: 8px; background: #fff; color: #102a43; padding: 9px 12px; }
 .inventory-scan input { flex: 1 1 16rem; font-family: ui-monospace, 'Cascadia Mono', monospace; }
-.inventory-camera { display: grid; gap: 10px; margin: 0 0 16px; }
-.inventory-camera video { width: 100%; max-width: 480px; border-radius: 10px; background: #102a43; }
+video.inventory-camera { display: block; flex-basis: 100%; width: 100%; max-width: 480px; border-radius: 10px; background: #102a43; }
 .inventory-form { display: grid; gap: 16px; max-width: 760px; margin: 20px 0 28px; border: 1px solid #d9e2ec; border-left: 5px solid #0b7285; border-radius: 12px; background: #fff; padding: 20px; }
 .inventory-form label { display: grid; gap: 6px; font-weight: 700; }
 .inventory-form .inventory-check, .inventory-check { display: flex; align-items: center; gap: 8px; }

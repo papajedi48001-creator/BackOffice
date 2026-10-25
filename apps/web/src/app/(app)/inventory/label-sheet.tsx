@@ -10,13 +10,14 @@ import './label-sheet.css';
 export type LabelLayout = 'a4-3x8' | 'thermal-50x30';
 export interface PrintableLabel { lot: LabelLot; svg: string; }
 
-const clampCopies = (value: number) => (Number.isFinite(value) ? Math.min(inventoryLimits.maxLabelsPerLot, Math.max(1, Math.trunc(value))) : 1);
+const clampCopies = (value: string) => { const number = Number(value); return Number.isFinite(number) ? Math.min(inventoryLimits.maxLabelsPerLot, Math.max(1, Math.trunc(number))) : 1; };
 
 /** The QR holds only the lot code; labels never show prices or vendors. `svg` is rendered on the server from the lot code. */
 export function LabelSheet({ labels }: { labels: PrintableLabel[] }) {
   const [layout, setLayout] = useState<LabelLayout>('a4-3x8');
-  const [copies, setCopies] = useState<Record<string, number>>({});
-  const countOf = (lotCode: string) => copies[lotCode] ?? 1;
+  // Kept as typed so the field can be cleared and retyped; the count printed is always clamped to 1–500.
+  const [copies, setCopies] = useState<Record<string, string>>({});
+  const countOf = (lotCode: string) => clampCopies(copies[lotCode] ?? '1');
   return (
     <div className="inventory-label-sheet" data-layout={layout}>
       <div className="inventory-label-controls">
@@ -24,7 +25,7 @@ export function LabelSheet({ labels }: { labels: PrintableLabel[] }) {
         <table className="inventory-table">
           <tbody>{labels.map(({ lot }) => <tr key={lot.lotCode}>
             <td className="code">{lot.lotCode}</td><td>{lot.itemName}</td>
-            <td className="numeric"><input aria-label={`${t('inventoryLabelCopies')} ${lot.lotCode}`} type="number" min={1} max={inventoryLimits.maxLabelsPerLot} step={1} value={countOf(lot.lotCode)} onChange={(event) => setCopies({ ...copies, [lot.lotCode]: clampCopies(Number(event.target.value)) })} /></td>
+            <td className="numeric"><input aria-label={`${t('inventoryLabelCopies')} ${lot.lotCode}`} type="number" min={1} max={inventoryLimits.maxLabelsPerLot} step={1} value={copies[lot.lotCode] ?? '1'} onChange={(event) => setCopies({ ...copies, [lot.lotCode]: event.target.value })} onBlur={() => setCopies({ ...copies, [lot.lotCode]: String(countOf(lot.lotCode)) })} /></td>
           </tr>)}</tbody>
         </table>
         <button type="button" onClick={() => window.print()}>{t('inventoryPrint')}</button>
