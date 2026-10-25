@@ -48,7 +48,7 @@ export function OpeningDecision() {
         <button type="button" aria-pressed={decision === 'RETURN'} onClick={() => setDecision('RETURN')}>{t('inventoryReturn')}</button>
       </div>
       {decision === 'RETURN' ? <label>{t('inventoryReturnReason')}<textarea required maxLength={1000} value={reason} onChange={(event) => setReason(event.target.value)} /></label> : null}
-      {decision ? <div className="form-actions"><button type="button" disabled={pending || !ready} onClick={() => void confirm()}>{t('inventoryConfirm')}</button><button type="button" onClick={() => { setDecision(null); setReason(''); }}>{t('inventoryCancel')}</button></div> : null}
+      {decision ? <div className="form-actions"><button type="button" disabled={pending || !ready} onClick={() => void confirm()}>{t('inventoryConfirm')}</button><button type="button" className="button-secondary" onClick={() => { setDecision(null); setReason(''); }}>{t('inventoryCancel')}</button></div> : null}
       {error ? <p role="alert">{error}</p> : null}
     </div>
   );

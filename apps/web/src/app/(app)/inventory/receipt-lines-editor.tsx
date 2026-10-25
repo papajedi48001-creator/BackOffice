@@ -94,7 +94,7 @@ export function ReceiptLinesEditor({ lines, onChange, items, canBindBarcode }: {
           <select aria-label={t('inventoryPickItem')} value={binding.itemId} onChange={(event) => setBinding({ ...binding, itemId: event.target.value })}>{[<option key="" value="" disabled>{t('inventoryPickItem')}</option>, ...activeItems.map((item) => <option key={item.id} value={item.id}>{item.code} {item.name}</option>)]}</select>
           <select aria-label={t('inventoryBarcodeUnit')} value={binding.unitKind} onChange={(event) => setBinding({ ...binding, unitKind: event.target.value === 'PURCHASE' ? 'PURCHASE' : 'ISSUE' })}><option value="ISSUE">{t('inventoryIssueUnit')}</option><option value="PURCHASE">{t('inventoryPurchaseUnit')}</option></select>
           <button type="button" disabled={!binding.itemId} onClick={() => void bind()}>{t('inventoryConfirm')}</button>
-          <button type="button" onClick={() => setUnknownCode(null)}>{t('inventoryCancel')}</button>
+          <button type="button" className="button-secondary" onClick={() => setUnknownCode(null)}>{t('inventoryCancel')}</button>
         </div>
       ) : null}
       <label className="inventory-pick">
@@ -102,21 +102,21 @@ export function ReceiptLinesEditor({ lines, onChange, items, canBindBarcode }: {
         <select value="" onChange={(event) => pick(event.target.value)}><option value="">–</option>{activeItems.map((item) => <option key={item.id} value={item.id}>{item.code} {item.name}</option>)}</select>
       </label>
       {lines.length ? (
-        <table className="inventory-table">
+        <div className="inventory-table-scroll"><table className="inventory-table">
           <thead><tr><th>{t('inventoryName')}</th><th className="numeric">{t('inventoryQuantity')}</th><th>{t('inventoryUnit')}</th><th className="numeric">{t('inventoryUnitPrice')}</th><th>{t('inventoryManufacturerLot')}</th><th>{t('inventoryExpiry')}</th><th className="numeric">{t('inventoryLineTotal')}</th><th /></tr></thead>
           <tbody>{lines.map((line) => (
             <tr key={line.key}>
-              <td><span className="code">{line.item.code}</span> {line.item.name}</td>
+              <td className="inventory-item-cell"><span className="code">{line.item.code}</span> {line.item.name}</td>
               <td className="numeric"><input aria-label={`${t('inventoryQuantity')} ${line.item.name}`} type="number" inputMode="numeric" min={1} step={1} value={line.quantity} onChange={(event) => update(line.key, { quantity: event.target.value })} /></td>
               <td><select aria-label={`${t('inventoryUnit')} ${line.item.name}`} value={line.unitKind} onChange={(event) => update(line.key, { unitKind: event.target.value === 'PURCHASE' ? 'PURCHASE' : 'ISSUE' })}><option value="ISSUE">{line.item.issueUnit}</option><option value="PURCHASE">{line.item.purchaseUnit}</option></select></td>
               <td className="numeric"><input aria-label={`${t('inventoryUnitPrice')} ${line.item.name}`} type="number" inputMode="decimal" min={0} step="0.01" value={line.unitPrice} onChange={(event) => update(line.key, { unitPrice: event.target.value })} /></td>
               <td><input aria-label={`${t('inventoryManufacturerLot')} ${line.item.name}`} value={line.manufacturerLotNo} maxLength={60} onChange={(event) => update(line.key, { manufacturerLotNo: event.target.value })} /></td>
               <td>{line.item.tracksExpiry ? <input aria-label={`${t('inventoryExpiry')} ${line.item.name}`} type="date" required value={line.expiryDate} onChange={(event) => update(line.key, { expiryDate: event.target.value })} /> : '–'}</td>
               <td className="numeric">{lineTotal(line)}</td>
-              <td><button type="button" onClick={() => onChange(lines.filter((other) => other.key !== line.key))}>{t('inventoryRemoveLine')}</button></td>
+              <td><button type="button" className="button-secondary" onClick={() => onChange(lines.filter((other) => other.key !== line.key))}>{t('inventoryRemoveLine')}</button></td>
             </tr>
           ))}</tbody>
-        </table>
+        </table></div>
       ) : null}
     </div>
   );

@@ -35,8 +35,8 @@ export default async function InventoryItemStockPage({ params }: { params: Promi
     {expiredLots.length ? <><h3>{t('inventoryExpiredLots')}</h3>{lotTable(expiredLots)}</> : null}
     <h3>{t('inventoryMovements')}</h3>
     {movements.length ? <table className="inventory-table">
-      <thead><tr><th>{t('inventoryReceivedAt')}</th><th>{t('inventoryReference')}</th><th>{t('inventoryLotCode')}</th><th className="numeric">{t('inventoryQuantity')}</th><th className="numeric">{t('inventoryUnitCost')}</th><th>{t('inventoryHistory')}</th></tr></thead>
-      <tbody>{movements.map((movement) => <tr key={movement.id}><td>{formatThaiDateTime(movement.occurredAt)}</td><td>{movement.reference ?? '–'}</td><td className="code">{movement.lotCode}</td><td className="numeric">{formatQuantity(movement.quantity, item.issueUnit)}</td><td className="numeric">{formatBaht(movement.unitCost)}</td><td>{t(`inventoryMovement${movement.kind}` as const)}{movement.actorName ? ` · ${movement.actorName}` : ''}</td></tr>)}</tbody>
+      <thead><tr><th>{t('inventoryOccurredAt')}</th><th>{t('inventoryReference')}</th><th>{t('inventoryLotCode')}</th><th className="numeric">{t('inventoryQuantity')}</th><th className="numeric">{t('inventoryUnitCost')}</th><th>{t('inventoryMovementKindLabel')}</th></tr></thead>
+      <tbody>{movements.map((movement) => <tr key={movement.id}><td>{formatThaiDateTime(movement.occurredAt)}</td><td className="code">{movement.reference ?? '–'}</td><td className="code">{movement.lotCode}</td><td className="numeric">{formatQuantity(movement.quantity, item.issueUnit)}</td><td className="numeric">{formatBaht(movement.unitCost)}</td><td>{t(`inventoryMovement${movement.kind}` as const)}{movement.actorName ? ` · ${movement.actorName}` : ''}</td></tr>)}</tbody>
     </table> : <p>{t('inventoryNoStock')}</p>}
   </section>;
 }

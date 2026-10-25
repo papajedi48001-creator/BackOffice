@@ -16,7 +16,7 @@ export function VoidForm({ receiptId }: { receiptId: string }) {
       {error ? <p role="alert">{error}</p> : null}
       <div className="form-actions">
         <button type="button" disabled={pending || !reason.trim()} onClick={() => void save(`/api/inventory/receipts/${receiptId}/void`, 'POST', { reason: reason.trim() })}>{t('inventoryConfirm')}</button>
-        <button type="button" onClick={() => { setOpen(false); setReason(''); }}>{t('inventoryCancel')}</button>
+        <button type="button" className="button-secondary" onClick={() => { setOpen(false); setReason(''); }}>{t('inventoryCancel')}</button>
       </div>
     </div>
   );

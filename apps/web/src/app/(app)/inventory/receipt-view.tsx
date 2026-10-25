@@ -5,8 +5,8 @@ import { formatBaht, formatQuantity, formatThaiDate, formatThaiDateTime } from '
 /** Read-only lines and history of a delivery or the opening balance. */
 export function ReceiptView({ receipt }: { receipt: ReceiptDetail }) {
   return <>
-    <table className="inventory-table">
-      <thead><tr><th>#</th><th>{t('inventoryName')}</th><th className="numeric">{t('inventoryQuantity')}</th><th className="numeric">{t('inventoryUnitPrice')}</th><th className="numeric">{t('inventoryOnHand')}</th><th>{t('inventoryManufacturerLot')}</th><th>{t('inventoryExpiry')}</th><th>{t('inventoryLotCode')}</th><th className="numeric">{t('inventoryLineTotal')}</th></tr></thead>
+    <div className="inventory-table-scroll"><table className="inventory-table">
+      <thead><tr><th>#</th><th>{t('inventoryName')}</th><th className="numeric">{t('inventoryQuantity')}</th><th className="numeric">{t('inventoryUnitPrice')}</th><th className="numeric">{t('inventoryIssueQuantity')}</th><th>{t('inventoryManufacturerLot')}</th><th>{t('inventoryExpiry')}</th><th>{t('inventoryLotCode')}</th><th className="numeric">{t('inventoryLineTotal')}</th></tr></thead>
       <tbody>{receipt.lines.map((line) => <tr key={line.id}>
         <td>{line.lineNo}</td>
         <td><span className="code">{line.itemCode}</span> {line.itemName}</td>
@@ -19,7 +19,7 @@ export function ReceiptView({ receipt }: { receipt: ReceiptDetail }) {
         <td className="numeric">{formatBaht(line.lineTotal)}</td>
       </tr>)}</tbody>
       <tfoot><tr><td colSpan={8}>{t('inventoryTotal')}</td><td className="numeric">{formatBaht(receipt.total)}</td></tr></tfoot>
-    </table>
+    </table></div>
     <ReceiptHistory history={receipt.history} />
   </>;
 }
