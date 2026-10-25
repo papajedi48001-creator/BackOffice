@@ -56,11 +56,11 @@
   - types `InventoryUnitKind`, `InventoryReceiptKind = 'OPENING' | 'DELIVERY'`, `InventoryReceiptStatus = 'DRAFT' | 'SUBMITTED' | 'CERTIFIED' | 'POSTED' | 'VOIDED'`, `InventoryMovementKind = 'OPENING' | 'RECEIPT' | 'RECEIPT_VOID'`, `InventoryReceiptHistoryAction = 'SUBMITTED' | 'RETURNED' | 'CERTIFIED' | 'POSTED' | 'VOIDED'`, `interface InventoryActor { personId: string; roles: AccessSubject['roles'] }`, and `z.input` types for every schema
 - Produces (core): `roleGrantsPermission('inventory-officer', …)` / `('inventory-supervisor', …)` per Global Constraints
 
-- [ ] **Step 1: Write failing tests** in `inventory.test.ts`: `it('upper-cases and trims an item code')` → parse `{ code: ' ab-01 ', … }` gives `code: 'AB-01'`; `it('rejects a barcode that looks like a lot code')` → `{ barcode: 'lt-2569-000001' }` fails at path `['barcode']`; `it('rejects a delivery with 201 lines')`; `it('rejects quantity 0 and 1000001')`. In `policy.test.ts`: `expect(roleGrantsPermission('inventory-officer', 'inventory.stock.receive')).toBe(true)`, `expect(roleGrantsPermission('inventory-supervisor', 'inventory.stock.receive')).toBe(false)`, `expect(roleGrantsPermission('inventory-supervisor', 'inventory.opening.certify')).toBe(true)`.
-- [ ] **Step 2: Run** `pnpm --filter @backoffice/contracts test -- inventory && pnpm --filter @backoffice/core test -- policy` — Expected: FAIL (module not found / permission not in enum)
-- [ ] **Step 3: Implement** the schemas, add the four permissions to `permissionSchema`, map both roles in `policy.ts`, export from `index.ts`
-- [ ] **Step 4: Run** the same commands plus `pnpm typecheck` — Expected: PASS
-- [ ] **Step 5: Commit** `feat(inventory): add contracts, permissions and roles`
+- [x] **Step 1: Write failing tests** in `inventory.test.ts`: `it('upper-cases and trims an item code')` → parse `{ code: ' ab-01 ', … }` gives `code: 'AB-01'`; `it('rejects a barcode that looks like a lot code')` → `{ barcode: 'lt-2569-000001' }` fails at path `['barcode']`; `it('rejects a delivery with 201 lines')`; `it('rejects quantity 0 and 1000001')`. In `policy.test.ts`: `expect(roleGrantsPermission('inventory-officer', 'inventory.stock.receive')).toBe(true)`, `expect(roleGrantsPermission('inventory-supervisor', 'inventory.stock.receive')).toBe(false)`, `expect(roleGrantsPermission('inventory-supervisor', 'inventory.opening.certify')).toBe(true)`.
+- [x] **Step 2: Run** `pnpm --filter @backoffice/contracts test -- inventory && pnpm --filter @backoffice/core test -- policy` — Expected: FAIL (module not found / permission not in enum)
+- [x] **Step 3: Implement** the schemas, add the four permissions to `permissionSchema`, map both roles in `policy.ts`, export from `index.ts`
+- [x] **Step 4: Run** the same commands plus `pnpm typecheck` — Expected: PASS
+- [x] **Step 5: Commit** `feat(inventory): add contracts, permissions and roles`
 
 ### Task 2: Quantity, money and lot-order rules
 
@@ -77,11 +77,11 @@
 
 Money rule: `priceSatang = Math.round(unitPrice * 100)`; reject when `Math.abs(unitPrice * 100 - priceSatang) > 1e-6`. `unitFactor = unitKind === 'PURCHASE' ? purchaseUnitFactor : 1`; `issueQuantity = quantity * unitFactor`; `lineTotalSatang = quantity * priceSatang`; `unitCost` in 1/10000 baht = round-half-up of `lineTotalSatang * 100 / issueQuantity` using `BigInt`; format both with fixed decimals.
 
-- [ ] **Step 1: Write failing tests**: `computeLine({ unitKind: 'PURCHASE', quantity: 3, unitPrice: 250, purchaseUnitFactor: 100 })` → `{ unitFactor: 100, issueQuantity: 300, lineTotal: '750.00', unitCost: '2.5000' }`; `unitPrice: 0.1 + 0.2, quantity: 3, ISSUE` → `lineTotal: '0.90', unitCost: '0.3000'`; `unitPrice: 100, quantity: 1, PURCHASE, factor 3` → `unitCost: '33.3333'`; `unitPrice: 33.333` throws `INVALID_LINE`; `unitPrice: 0` gives `'0.00'`/`'0.0000'`; `bangkokDate(new Date('2026-10-21T17:30:00Z'))` → `'2026-10-22'`; `formatReference('LT', 2569, 12)` → `'LT-2569-000012'`, `formatReference('RC', 2569, 7)` → `'RC-2569-0007'`; `issueOrder` with lots (exp 2027-01-01 rec day 2), (exp 2026-12-01 rec day 3), (null rec day 1), (exp 2026-10-01 expired), (on hand 0), today `'2026-10-21'` → order `[2026-12-01, 2027-01-01, null]`
-- [ ] **Step 2: Run** `pnpm --filter @backoffice/core test -- quantities` — Expected: FAIL
-- [ ] **Step 3: Implement** the four functions as specified
-- [ ] **Step 4: Run** same — Expected: PASS
-- [ ] **Step 5: Commit** `feat(inventory): add unit conversion, line cost and lot order rules`
+- [x] **Step 1: Write failing tests**: `computeLine({ unitKind: 'PURCHASE', quantity: 3, unitPrice: 250, purchaseUnitFactor: 100 })` → `{ unitFactor: 100, issueQuantity: 300, lineTotal: '750.00', unitCost: '2.5000' }`; `unitPrice: 0.1 + 0.2, quantity: 3, ISSUE` → `lineTotal: '0.90', unitCost: '0.3000'`; `unitPrice: 100, quantity: 1, PURCHASE, factor 3` → `unitCost: '33.3333'`; `unitPrice: 33.333` throws `INVALID_LINE`; `unitPrice: 0` gives `'0.00'`/`'0.0000'`; `bangkokDate(new Date('2026-10-21T17:30:00Z'))` → `'2026-10-22'`; `formatReference('LT', 2569, 12)` → `'LT-2569-000012'`, `formatReference('RC', 2569, 7)` → `'RC-2569-0007'`; `issueOrder` with lots (exp 2027-01-01 rec day 2), (exp 2026-12-01 rec day 3), (null rec day 1), (exp 2026-10-01 expired), (on hand 0), today `'2026-10-21'` → order `[2026-12-01, 2027-01-01, null]`
+- [x] **Step 2: Run** `pnpm --filter @backoffice/core test -- quantities` — Expected: FAIL
+- [x] **Step 3: Implement** the four functions as specified
+- [x] **Step 4: Run** same — Expected: PASS
+- [x] **Step 5: Commit** `feat(inventory): add unit conversion, line cost and lot order rules`
 
 ### Task 3: Migration 0008 and Drizzle schema
 
@@ -93,11 +93,11 @@ Money rule: `priceSatang = Math.round(unitPrice * 100)`; reject when `Math.abs(u
 - Produces: tables exactly as the spec's Data table, plus: every table `DEFAULT CHARSET=utf8mb4`, `CREATE TABLE IF NOT EXISTS`; `id CHAR(36)`; `created_at`/`updated_at DATETIME NOT NULL` on category/item/vendor/receipt; unique keys `inventory_category_name_unique`, `inventory_item_code_unique`, `inventory_item_barcode_unique (barcode)`, `inventory_vendor_name_unique`, `inventory_receipt_reference_unique`, `inventory_lot_code_unique`; indexes `inventory_lot_item (item_id, on_hand_quantity)`, `inventory_movement_item_time (item_id, occurred_at)`, `inventory_movement_lot (lot_id)`, `inventory_receipt_kind_time (kind, created_at)`; FKs to `person(id)` for person columns and between inventory tables; `inventory_movement.occurred_at` and `inventory_receipt_history.created_at` are `DATETIME(6)`; `inventory_sequence (kind VARCHAR(8), buddhist_year INT, last_value INT, PRIMARY KEY (kind, buddhist_year))`; `inventory_receipt.document_no VARCHAR(60) NULL`, `received_on DATE NOT NULL`, `posted_at DATETIME NULL`; `inventory_lot.expiry_date DATE NULL`, `received_at DATETIME NOT NULL`. CHECK `on_hand_quantity >= 0` on `inventory_lot`.
 - Drizzle exports: `inventoryCategories`, `inventoryItems`, `inventoryItemBarcodes`, `inventoryVendors`, `inventoryReceipts`, `inventoryReceiptLines`, `inventoryLots`, `inventoryMovements`, `inventoryReceiptHistory`, `inventorySequences`
 
-- [ ] **Step 1: Write failing test** in `schema.integration.test.ts`: after `runMigrations`, `SHOW TABLES LIKE 'inventory_%'` returns the 10 tables, and inserting a lot with `on_hand_quantity = -1` is rejected
-- [ ] **Step 2: Run** `DATABASE_URL=… pnpm --filter @backoffice/db test:integration` — Expected: FAIL (tables missing)
-- [ ] **Step 3: Write** the migration, Drizzle schema, register in `migrate.ts`, export, update `restore-verify.sh`
-- [ ] **Step 4: Run** the integration test, `bash infra/backup/restore-verify.test.sh`, `pnpm --filter @backoffice/db typecheck` — Expected: PASS
-- [ ] **Step 5: Commit** `feat(db): add inventory tables (migration 0008)`
+- [x] **Step 1: Write failing test** in `schema.integration.test.ts`: after `runMigrations`, `SHOW TABLES LIKE 'inventory_%'` returns the 10 tables, and inserting a lot with `on_hand_quantity = -1` is rejected
+- [x] **Step 2: Run** `DATABASE_URL=… pnpm --filter @backoffice/db test:integration` — Expected: FAIL (tables missing)
+- [x] **Step 3: Write** the migration, Drizzle schema, register in `migrate.ts`, export, update `restore-verify.sh`
+- [x] **Step 4: Run** the integration test, `bash infra/backup/restore-verify.test.sh`, `pnpm --filter @backoffice/db typecheck` — Expected: PASS
+- [x] **Step 5: Commit** `feat(db): add inventory tables (migration 0008)`
 
 ### Task 4: Catalog service (categories, items, barcodes, vendors)
 
@@ -115,11 +115,11 @@ Money rule: `priceSatang = Math.round(unitPrice * 100)`; reject when `Math.abs(u
   - errors: `FORBIDDEN`, `CATEGORY_NOT_FOUND`, `ITEM_NOT_FOUND`, `VENDOR_NOT_FOUND`, `BARCODE_NOT_FOUND`, `DUPLICATE_NAME`, `DUPLICATE_CODE`, `DuplicateBarcodeError extends Error('DUPLICATE_BARCODE') { itemCode: string }`, `ITEM_HAS_LOTS`, `CATEGORY_INACTIVE` (new/updated item in an inactive category)
   - audit: `inventory.category.created|updated`, `inventory.item.created|updated` (barcode add/remove = `inventory.item.updated` with `changedFields: ['barcodes']`), `inventory.vendor.created|updated`; metadata `{ itemId }` / `{ vendorId }` / `{ changedFields }`
 
-- [ ] **Step 1: Write failing tests**: officer creates an item and an audit `inventory.item.created` with `metadata: { itemId }` is appended; supervisor-only actor and an officer role scoped to an organization both get `FORBIDDEN`; duplicate code (case-insensitive via schema) → `DUPLICATE_CODE`; barcode already on item `AB-01` → `DuplicateBarcodeError` with `itemCode: 'AB-01'`; toggling `tracksExpiry` when `itemHasLots` → `ITEM_HAS_LOTS`, but other edits pass; duplicate vendor name → `DUPLICATE_NAME`; redact test: `redactAuditMetadata({ reference: 'RC-2569-0001', lineCount: 2, unitPrice: 5 })` keeps the first two only
-- [ ] **Step 2: Run** `pnpm --filter @backoffice/core test -- catalog-service audit-service` — Expected: FAIL
-- [ ] **Step 3: Implement** access helper, service, in-memory repository, allowlist change, exports
-- [ ] **Step 4: Run** same — Expected: PASS
-- [ ] **Step 5: Commit** `feat(inventory): add catalog service for items, barcodes, categories and vendors`
+- [x] **Step 1: Write failing tests**: officer creates an item and an audit `inventory.item.created` with `metadata: { itemId }` is appended; supervisor-only actor and an officer role scoped to an organization both get `FORBIDDEN`; duplicate code (case-insensitive via schema) → `DUPLICATE_CODE`; barcode already on item `AB-01` → `DuplicateBarcodeError` with `itemCode: 'AB-01'`; toggling `tracksExpiry` when `itemHasLots` → `ITEM_HAS_LOTS`, but other edits pass; duplicate vendor name → `DUPLICATE_NAME`; redact test: `redactAuditMetadata({ reference: 'RC-2569-0001', lineCount: 2, unitPrice: 5 })` keeps the first two only
+- [x] **Step 2: Run** `pnpm --filter @backoffice/core test -- catalog-service audit-service` — Expected: FAIL
+- [x] **Step 3: Implement** access helper, service, in-memory repository, allowlist change, exports
+- [x] **Step 4: Run** same — Expected: PASS
+- [x] **Step 5: Commit** `feat(inventory): add catalog service for items, barcodes, categories and vendors`
 
 ### Task 5: Receipt service (opening balance and deliveries)
 
@@ -145,11 +145,11 @@ Money rule: `priceSatang = Math.round(unitPrice * 100)`; reject when `Math.abs(u
   - line rules (shared by opening and delivery): `ITEM_NOT_FOUND`, `ITEM_INACTIVE`, `EXPIRY_REQUIRED`, `EXPIRY_NOT_ALLOWED`, `EXPIRY_IN_PAST` (delivery only: expiry ≤ receivedOn), `INVALID_LINE` from `computeLine`
   - audit `inventory.opening.submitted|returned|certified`, `inventory.receipt.posted|voided`, targetType `inventory_receipt`, metadata `{ reference, status, lineCount }`
 
-- [ ] **Step 1: Write failing tests** (one `it` each): opening DRAFT→SUBMITTED→RETURNED(reason)→DRAFT→SUBMITTED→CERTIFIED creates lots `LT-2569-000001…` with `onHandQuantity` = `issueQuantity` and movements summing to it; second `openOpening` returns the same receipt; `saveOpeningLines` after submit → `OPENING_NOT_EDITABLE`; RETURN without reason → `REASON_REQUIRED`; officer without supervisor role deciding → `FORBIDDEN`; submit notifies every hospital-wide supervisor except the submitter with `{ moduleCode: 'inventory', targetPath: '/inventory/opening', subject: 'มียอดยกมารอรับรอง (OB-2569-0001)' }` and the return reason appears in no outbox payload or audit metadata; `postDelivery` before certification → `OPENING_NOT_CERTIFIED`; delivery of 2 boxes × 100 at 250 baht gives lot on hand 200, `unitCost '2.5000'`, reference `RC-2569-0001`; **Bangkok date edge** with `now = 2026-10-21T17:30:00Z`: `receivedOn '2026-10-22'` accepted and `'2026-10-23'` → `INVALID_RECEIVED_DATE`; expiry rules (`EXPIRY_REQUIRED`, `EXPIRY_NOT_ALLOWED`, `EXPIRY_IN_PAST` when expiry equals receivedOn); inactive item → `ITEM_INACTIVE`; void restores on hand to 0 with a `RECEIPT_VOID` movement and `VOIDED`; void when a lot's on hand was changed (set directly in the in-memory repo) → `RECEIPT_NOT_VOIDABLE`; void without reason fails schema
-- [ ] **Step 2: Run** `pnpm --filter @backoffice/core test -- receipt-service` — Expected: FAIL
-- [ ] **Step 3: Implement** repository interface, in-memory repository (same observable behaviour as MariaDB), service
-- [ ] **Step 4: Run** same — Expected: PASS
-- [ ] **Step 5: Commit** `feat(inventory): add opening balance and delivery receipt service`
+- [x] **Step 1: Write failing tests** (one `it` each): opening DRAFT→SUBMITTED→RETURNED(reason)→DRAFT→SUBMITTED→CERTIFIED creates lots `LT-2569-000001…` with `onHandQuantity` = `issueQuantity` and movements summing to it; second `openOpening` returns the same receipt; `saveOpeningLines` after submit → `OPENING_NOT_EDITABLE`; RETURN without reason → `REASON_REQUIRED`; officer without supervisor role deciding → `FORBIDDEN`; submit notifies every hospital-wide supervisor except the submitter with `{ moduleCode: 'inventory', targetPath: '/inventory/opening', subject: 'มียอดยกมารอรับรอง (OB-2569-0001)' }` and the return reason appears in no outbox payload or audit metadata; `postDelivery` before certification → `OPENING_NOT_CERTIFIED`; delivery of 2 boxes × 100 at 250 baht gives lot on hand 200, `unitCost '2.5000'`, reference `RC-2569-0001`; **Bangkok date edge** with `now = 2026-10-21T17:30:00Z`: `receivedOn '2026-10-22'` accepted and `'2026-10-23'` → `INVALID_RECEIVED_DATE`; expiry rules (`EXPIRY_REQUIRED`, `EXPIRY_NOT_ALLOWED`, `EXPIRY_IN_PAST` when expiry equals receivedOn); inactive item → `ITEM_INACTIVE`; void restores on hand to 0 with a `RECEIPT_VOID` movement and `VOIDED`; void when a lot's on hand was changed (set directly in the in-memory repo) → `RECEIPT_NOT_VOIDABLE`; void without reason fails schema
+- [x] **Step 2: Run** `pnpm --filter @backoffice/core test -- receipt-service` — Expected: FAIL
+- [x] **Step 3: Implement** repository interface, in-memory repository (same observable behaviour as MariaDB), service
+- [x] **Step 4: Run** same — Expected: PASS
+- [x] **Step 5: Commit** `feat(inventory): add opening balance and delivery receipt service`
 
 ### Task 6: MariaDB repositories
 
@@ -161,11 +161,11 @@ Money rule: `priceSatang = Math.round(unitPrice * 100)`; reject when `Math.abs(u
 - Consumes: Task 4 and 5 interfaces; `toMariaDbDatetime`, `fromMariaDbDatetime`, `fromMariaDbDate` from `../rooms/database-room-booking-repository`; `roleGrantsPermission` is not used — `findHospitalWideRoleHolders(roleName)` selects `role_assignment` rows with `organization_id IS NULL` joined to `role.name = ?`
 - Produces: `new DatabaseInventoryRepository(database: Database)`, `new DatabaseInventoryCatalogRepository(database: Database)`; transactions use `{ isolationLevel: 'READ COMMITTED' }`; `findOpeningForUpdate`, `lockReceipt`, `lockLotsOfReceipt` and `nextSequence` use `FOR UPDATE`; duplicate-key errors (`ER_DUP_ENTRY`) on item code/vendor name/category name/barcode are rethrown as the Task 4 errors
 
-- [ ] **Step 1: Write failing integration tests**: run Task 5's happy path (certify opening, post delivery, void) through the real repository and assert `SELECT SUM(quantity) FROM inventory_movement WHERE lot_id = ?` equals `on_hand_quantity` for every lot after each step; 5 concurrent `postDelivery` calls produce 5 distinct `RC-…` references and distinct lot codes; 2 concurrent `voidDelivery` calls → one resolves, one rejects `RECEIPT_NOT_VOIDABLE`; concurrent `addBarcode` with the same barcode → one `DuplicateBarcodeError`
-- [ ] **Step 2: Run** `DATABASE_URL=… pnpm --filter @backoffice/core test:integration -- inventory` — Expected: FAIL
-- [ ] **Step 3: Implement** both repositories
-- [ ] **Step 4: Run** same — Expected: PASS
-- [ ] **Step 5: Commit** `feat(inventory): store catalog, receipts and lots in MariaDB`
+- [x] **Step 1: Write failing integration tests**: run Task 5's happy path (certify opening, post delivery, void) through the real repository and assert `SELECT SUM(quantity) FROM inventory_movement WHERE lot_id = ?` equals `on_hand_quantity` for every lot after each step; 5 concurrent `postDelivery` calls produce 5 distinct `RC-…` references and distinct lot codes; 2 concurrent `voidDelivery` calls → one resolves, one rejects `RECEIPT_NOT_VOIDABLE`; concurrent `addBarcode` with the same barcode → one `DuplicateBarcodeError`
+- [x] **Step 2: Run** `DATABASE_URL=… pnpm --filter @backoffice/core test:integration -- inventory` — Expected: FAIL
+- [x] **Step 3: Implement** both repositories
+- [x] **Step 4: Run** same — Expected: PASS
+- [x] **Step 5: Commit** `feat(inventory): store catalog, receipts and lots in MariaDB`
 
 ### Task 7: Read-side queries
 
@@ -185,11 +185,11 @@ Money rule: `priceSatang = Math.round(unitPrice * 100)`; reject when `Math.abs(u
   - `listCategories()`, `listItems()` (with barcodes), `listVendors()`
   - `labelLots(receiptId): Promise<LabelLot[]>` — `LabelLot { lotCode; itemCode; itemName; expiryDate; receivedOn }` (no price, no vendor)
 
-- [ ] **Step 1: Write failing integration tests**: `resolveScan(' lt-2569-000001\r')` → `kind: 'lot'`; a box barcode → `kind: 'barcode', unitKind: 'PURCHASE'`; `'ab-01'` → `kind: 'item'`; unknown → `null`; `listStock` excludes an expired lot from `onHand` and flags `belowReorder`; `itemDetail` lists lots in issue order; `labelLots` result objects have exactly the five keys
-- [ ] **Step 2: Run** `DATABASE_URL=… pnpm --filter @backoffice/core test:integration -- inventory-queries` — Expected: FAIL
-- [ ] **Step 3: Implement** the queries
-- [ ] **Step 4: Run** same — Expected: PASS
-- [ ] **Step 5: Commit** `feat(inventory): add stock, item, receipt and scan queries`
+- [x] **Step 1: Write failing integration tests**: `resolveScan(' lt-2569-000001\r')` → `kind: 'lot'`; a box barcode → `kind: 'barcode', unitKind: 'PURCHASE'`; `'ab-01'` → `kind: 'item'`; unknown → `null`; `listStock` excludes an expired lot from `onHand` and flags `belowReorder`; `itemDetail` lists lots in issue order; `labelLots` result objects have exactly the five keys
+- [x] **Step 2: Run** `DATABASE_URL=… pnpm --filter @backoffice/core test:integration -- inventory-queries` — Expected: FAIL
+- [x] **Step 3: Implement** the queries
+- [x] **Step 4: Run** same — Expected: PASS
+- [x] **Step 5: Commit** `feat(inventory): add stock, item, receipt and scan queries`
 
 ### Task 8: API routes
 
@@ -203,11 +203,11 @@ Money rule: `priceSatang = Math.round(unitPrice * 100)`; reject when `Math.abs(u
 - `GET /api/inventory/scan?code=` checks `inventory.stock.read` or `inventory.stock.receive` (403 otherwise), returns `ScanResult` or 404 `CODE_NOT_FOUND`
 - `POST /api/inventory/receipts` returns 201 `{ id, reference }`
 
-- [ ] **Step 1: Write failing route tests** (mock `requireActor` and services as `apps/web/src/app/api/rooms/bookings/route.test.ts` does): 401 before touching the service; receipts POST passes the signed-in actor and body, returns 201 `{ id, reference }`; scan 403 for an actor with no inventory role, 404 `CODE_NOT_FOUND`; decision route maps `OPENING_NOT_SUBMITTED` to 409; error response maps `DuplicateBarcodeError` to 409 with `itemCode` and never echoes an unknown error message
-- [ ] **Step 2: Run** `pnpm --filter @backoffice/web test -- api/inventory` — Expected: FAIL
-- [ ] **Step 3: Implement** the routes
-- [ ] **Step 4: Run** same — Expected: PASS
-- [ ] **Step 5: Commit** `feat(web): add inventory API routes`
+- [x] **Step 1: Write failing route tests** (mock `requireActor` and services as `apps/web/src/app/api/rooms/bookings/route.test.ts` does): 401 before touching the service; receipts POST passes the signed-in actor and body, returns 201 `{ id, reference }`; scan 403 for an actor with no inventory role, 404 `CODE_NOT_FOUND`; decision route maps `OPENING_NOT_SUBMITTED` to 409; error response maps `DuplicateBarcodeError` to 409 with `itemCode` and never echoes an unknown error message
+- [x] **Step 2: Run** `pnpm --filter @backoffice/web test -- api/inventory` — Expected: FAIL
+- [x] **Step 3: Implement** the routes
+- [x] **Step 4: Run** same — Expected: PASS
+- [x] **Step 5: Commit** `feat(web): add inventory API routes`
 
 ### Task 9: Module registry, layout, i18n and audit labels
 
@@ -221,11 +221,11 @@ Money rule: `priceSatang = Math.round(unitPrice * 100)`; reject when `Math.abs(u
   - i18n keys (prefix `inventory`): section labels `inventoryStock: 'ยอดคงเหลือ'`, `inventoryReceipts: 'รับเข้า'`, `inventoryOpening: 'ยอดยกมา'`, `inventoryItems: 'ทะเบียนวัสดุ'`, `inventoryVendors: 'ผู้ขาย'`; `moduleInventory: 'คลังพัสดุ'`, `moduleInventoryDescription: 'ทะเบียนวัสดุ รับเข้า และยอดคงเหลือ'`; status labels for `DRAFT`/`SUBMITTED`/`CERTIFIED`/`POSTED`/`VOIDED` (`ร่าง`, `รอรับรอง`, `รับรองแล้ว`, `บันทึกแล้ว`, `ยกเลิกแล้ว`); `inventoryBelowReorder: 'ต่ำกว่าจุดสั่งซื้อ'`; one `inventoryError<CODE>` per error code in Task 8
   - audit page: accepts the 11 inventory actions with result `SUCCESS`, shows `metadata.reference` in the reference column (falls back to `requestReference`); Thai labels e.g. `inventory.receipt.posted: 'บันทึกใบรับเข้า'`, `inventory.opening.certified: 'รับรองยอดยกมา'`
 
-- [ ] **Step 1: Write failing tests**: registry — an `inventory-officer` sees sections stock, receipts, opening, items, vendors; an `inventory-supervisor` sees stock and opening only; a person with no inventory role does not see the tile; an officer role scoped to an organization does not see it; audit table renders `บันทึกใบรับเข้า` and `RC-2569-0001` for an `inventory.receipt.posted` row
-- [ ] **Step 2: Run** `pnpm --filter @backoffice/web test -- modules audit` — Expected: FAIL
-- [ ] **Step 3: Implement** registry entry, layout (`<ModuleLayout code="inventory">`), index (`<ModuleIndex code="inventory" />`), i18n, audit labels
-- [ ] **Step 4: Run** same plus `pnpm typecheck` — Expected: PASS
-- [ ] **Step 5: Commit** `feat(web): open the inventory module with its section bar`
+- [x] **Step 1: Write failing tests**: registry — an `inventory-officer` sees sections stock, receipts, opening, items, vendors; an `inventory-supervisor` sees stock and opening only; a person with no inventory role does not see the tile; an officer role scoped to an organization does not see it; audit table renders `บันทึกใบรับเข้า` and `RC-2569-0001` for an `inventory.receipt.posted` row
+- [x] **Step 2: Run** `pnpm --filter @backoffice/web test -- modules audit` — Expected: FAIL
+- [x] **Step 3: Implement** registry entry, layout (`<ModuleLayout code="inventory">`), index (`<ModuleIndex code="inventory" />`), i18n, audit labels
+- [x] **Step 4: Run** same plus `pnpm typecheck` — Expected: PASS
+- [x] **Step 5: Commit** `feat(web): open the inventory module with its section bar`
 
 ### Task 10: Scan field (scanner + camera)
 
@@ -236,11 +236,11 @@ Money rule: `priceSatang = Math.round(unitPrice * 100)`; reject when `Math.abs(u
 **Interfaces:**
 - Produces: `<ScanField onResult={(result: ScanResult) => void} onNotFound?={(code: string) => void} label?: string />` — client component; text input with `autoFocus`, `enterKeyHint="done"`; on Enter trims the value, ignores empty, calls `GET /api/inventory/scan?code=<encoded>`, clears and refocuses the input; shows Thai errors for 404 (`inventoryErrorCODE_NOT_FOUND`) and 403; button "สแกนด้วยกล้อง" lazy-loads `camera-scanner.tsx` (dynamic import, `ssr: false`), which uses `BrowserMultiFormatReader.decodeFromVideoDevice` with the back camera (`facingMode: 'environment'`), formats EAN_13, EAN_8, UPC_A, CODE_128, CODE_39, QR_CODE, stops the stream after the first read or on close, and shows `inventoryCameraUnavailable` when `getUserMedia` is missing or denied
 
-- [ ] **Step 1: Write failing tests** (mock `fetch`): typing `"  8851234567890 "` then Enter calls fetch with `code=8851234567890` and `onResult` with the JSON; the input is empty afterwards; Enter on whitespace makes no request; 404 shows `ไม่พบรหัสนี้ในระบบ` and calls `onNotFound('X1')`; clicking the camera button when `navigator.mediaDevices` is undefined shows the camera-unavailable message
-- [ ] **Step 2: Run** `pnpm --filter @backoffice/web test -- scan-field` — Expected: FAIL
-- [ ] **Step 3: Implement** both components and add the dependencies
-- [ ] **Step 4: Run** same — Expected: PASS
-- [ ] **Step 5: Commit** `feat(web): add inventory scan field with scanner and camera input`
+- [x] **Step 1: Write failing tests** (mock `fetch`): typing `"  8851234567890 "` then Enter calls fetch with `code=8851234567890` and `onResult` with the JSON; the input is empty afterwards; Enter on whitespace makes no request; 404 shows `ไม่พบรหัสนี้ในระบบ` and calls `onNotFound('X1')`; clicking the camera button when `navigator.mediaDevices` is undefined shows the camera-unavailable message
+- [x] **Step 2: Run** `pnpm --filter @backoffice/web test -- scan-field` — Expected: FAIL
+- [x] **Step 3: Implement** both components and add the dependencies
+- [x] **Step 4: Run** same — Expected: PASS
+- [x] **Step 5: Commit** `feat(web): add inventory scan field with scanner and camera input`
 
 ### Task 11: Catalog pages (items, categories, vendors) and stock pages
 
@@ -252,11 +252,11 @@ Money rule: `priceSatang = Math.round(unitPrice * 100)`; reject when `Math.abs(u
 - Produces: `inventory-format.ts` — `formatQuantity(n: number, unit: string): string` (`th-TH` grouping, e.g. `'1,200 ชิ้น'`), `formatBaht(decimal: string): string` (`'1,234.50'`), `formatThaiDate(isoDate: string): string` (พ.ศ., e.g. `'22 ต.ค. 2569'`)
 - Pages call `notFound()` when the actor lacks the section permission; items page lists items with category, units, factor, reorder point, barcodes; item form validates nothing the server does not and shows server error text; adding a barcode can use `ScanField` (`onNotFound` fills the barcode input); stock page has search, category filter, `ScanField` that navigates to `/inventory/stock/<itemId>`, badge text `ต่ำกว่าจุดสั่งซื้อ`
 
-- [ ] **Step 1: Write failing tests**: `formatQuantity(1200, 'ชิ้น')` → `'1,200 ชิ้น'`; `formatBaht('1234.5')` → `'1,234.50'`; `formatThaiDate('2026-10-22')` → `'22 ต.ค. 2569'`; stock table shows the below-reorder label as text and a value column; item form posts `purchaseUnitFactor` as a number and shows `รหัสวัสดุนี้มีอยู่แล้ว` on 409 `DUPLICATE_CODE`; barcode duplicate shows the owning item code
-- [ ] **Step 2: Run** `pnpm --filter @backoffice/web test -- inventory/items inventory/vendors inventory/stock inventory-format` — Expected: FAIL
-- [ ] **Step 3: Implement** the pages and forms
-- [ ] **Step 4: Run** same — Expected: PASS
-- [ ] **Step 5: Commit** `feat(web): add inventory catalog and stock pages`
+- [x] **Step 1: Write failing tests**: `formatQuantity(1200, 'ชิ้น')` → `'1,200 ชิ้น'`; `formatBaht('1234.5')` → `'1,234.50'`; `formatThaiDate('2026-10-22')` → `'22 ต.ค. 2569'`; stock table shows the below-reorder label as text and a value column; item form posts `purchaseUnitFactor` as a number and shows `รหัสวัสดุนี้มีอยู่แล้ว` on 409 `DUPLICATE_CODE`; barcode duplicate shows the owning item code
+- [x] **Step 2: Run** `pnpm --filter @backoffice/web test -- inventory/items inventory/vendors inventory/stock inventory-format` — Expected: FAIL
+- [x] **Step 3: Implement** the pages and forms
+- [x] **Step 4: Run** same — Expected: PASS
+- [x] **Step 5: Commit** `feat(web): add inventory catalog and stock pages`
 
 ### Task 12: Receipt and opening pages
 
