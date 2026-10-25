@@ -5,15 +5,29 @@ import { DatabaseInventoryRepository } from './database-inventory-repository';
 import { InventoryReceiptService } from './receipt-service';
 
 // Shared by the MariaDB suites only; not exported from the package.
-/** The opening balance is one per database, so every suite brings it to CERTIFIED the same way. */
+/**
+ * The opening balance is one per database, so every suite brings it to CERTIFIED the same way.
+ * Suites run in parallel on a fresh database, so another suite may move the opening on between
+ * two steps here; a step refused for that reason is retried from the opening's new state.
+ */
 export async function ensureCertifiedOpening(database: Database, officer: InventoryActor, supervisor: InventoryActor, line: { itemId: string; unitKind: 'ISSUE'; quantity: number; unitPrice: number }): Promise<void> {
   const service = new InventoryReceiptService(new DatabaseInventoryRepository(database));
-  let opening = await service.openOpening(officer);
-  if (opening.status === 'DRAFT') {
-    await service.saveOpeningLines(officer, { lines: [line] });
-    opening = await service.submitOpening(officer);
+  const raced = new Set(['OPENING_NOT_EDITABLE', 'OPENING_NOT_SUBMITTED']);
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const opening = await service.openOpening(officer);
+    if (opening.status === 'CERTIFIED') return;
+    try {
+      if (opening.status === 'DRAFT') {
+        await service.saveOpeningLines(officer, { lines: [line] });
+        await service.submitOpening(officer);
+      }
+      await service.decideOpening(supervisor, { decision: 'CERTIFY' });
+      return;
+    } catch (error) {
+      if (!(error instanceof Error && raced.has(error.message))) throw error;
+    }
   }
-  if (opening.status === 'SUBMITTED') await service.decideOpening(supervisor, { decision: 'CERTIFY' });
+  throw new Error('OPENING_NOT_CERTIFIED');
 }
 
 export async function seedInventoryPeople(database: Database): Promise<{ officer: InventoryActor; supervisor: InventoryActor }> {
