@@ -12,7 +12,8 @@ export type InventoryReceiptStatus = 'DRAFT' | 'SUBMITTED' | 'CERTIFIED' | 'POST
 export type InventoryMovementKind = 'OPENING' | 'RECEIPT' | 'RECEIPT_VOID';
 export type InventoryReceiptHistoryAction = 'SUBMITTED' | 'RETURNED' | 'CERTIFIED' | 'POSTED' | 'VOIDED';
 
-const isoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+// The round trip refuses dates like 2026-02-30 that the pattern alone lets through to MariaDB.
+const isoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => { const date = new Date(`${value}T00:00:00Z`); return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value; });
 const reasonSchema = z.string().trim().min(1).max(1000);
 
 export const inventoryCategoryInputSchema = z.object({ name: z.string().trim().min(1).max(120), isActive: z.boolean() });

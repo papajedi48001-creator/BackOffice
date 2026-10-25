@@ -23,7 +23,8 @@ export interface ItemListRow extends InventoryItemRecord { categoryName: string;
 
 type Row = Record<string, unknown>;
 const optionalDate = (value: unknown) => (value === null || value === undefined ? null : fromMariaDbDate(value as Date | string));
-const money = (value: unknown) => Number(value ?? 0).toFixed(2);
+// MariaDB returns DECIMAL as a string; keep it as one so large totals never pass through a float.
+const money = (value: unknown) => (typeof value === 'string' ? value : Number(value ?? 0).toFixed(2));
 const itemSelect = 'i.id, i.code, i.name, i.category_id AS categoryId, i.issue_unit AS issueUnit, i.purchase_unit AS purchaseUnit, i.purchase_unit_factor AS purchaseUnitFactor, i.reorder_point AS reorderPoint, i.tracks_expiry AS tracksExpiry, i.is_active AS isActive';
 const lotSelect = 'l.id, l.lot_code AS lotCode, l.item_id AS itemId, l.receipt_line_id AS receiptLineId, l.manufacturer_lot_no AS manufacturerLotNo, l.expiry_date AS expiryDate, l.unit_cost AS unitCost, l.received_quantity AS receivedQuantity, l.on_hand_quantity AS onHandQuantity, l.received_at AS receivedAt';
 const summarySelect = `SELECT r.id, r.reference, r.kind, r.vendor_id AS vendorId, v.name AS vendorName, r.document_no AS documentNo, r.received_on AS receivedOn, r.status, r.posted_at AS postedAt, p.display_name AS createdByName,
@@ -53,7 +54,7 @@ export class InventoryQueries {
     const rows = await this.database.query<Row>(
       `SELECT i.id AS itemId, i.code, i.name, c.name AS categoryName, i.issue_unit AS issueUnit, i.reorder_point AS reorderPoint, i.is_active AS isActive,
          COALESCE(SUM(CASE WHEN l.expiry_date IS NULL OR l.expiry_date >= ? THEN l.on_hand_quantity END), 0) AS onHand,
-         COALESCE(SUM(CASE WHEN l.expiry_date IS NULL OR l.expiry_date >= ? THEN l.on_hand_quantity * l.unit_cost END), 0) AS value,
+         ROUND(COALESCE(SUM(CASE WHEN l.expiry_date IS NULL OR l.expiry_date >= ? THEN l.on_hand_quantity * l.unit_cost END), 0), 2) AS value,
          MIN(CASE WHEN l.expiry_date >= ? THEN l.expiry_date END) AS nearestExpiry
        FROM inventory_item i JOIN inventory_category c ON c.id = i.category_id LEFT JOIN inventory_lot l ON l.item_id = i.id AND l.on_hand_quantity > 0
        ${conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''}

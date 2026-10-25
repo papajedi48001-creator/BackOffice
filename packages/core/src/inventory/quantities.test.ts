@@ -25,6 +25,8 @@ describe('computeLine', () => {
 
   it('rejects a price with more than two decimals', () => {
     expect(() => computeLine({ unitKind: 'ISSUE', quantity: 1, unitPrice: 33.333, purchaseUnitFactor: 1 })).toThrow('INVALID_LINE');
+    // Stock columns are INT: a line above 2,147,483,647 issue units must be refused, not fail in MariaDB.
+    expect(() => computeLine({ unitKind: 'PURCHASE', quantity: 1_000_000, unitPrice: 1, purchaseUnitFactor: 100_000 })).toThrow('INVALID_LINE');
   });
 
   it('handles the largest allowed line exactly', () => {

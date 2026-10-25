@@ -6,12 +6,15 @@ export { bangkokDate, buddhistYear } from '../rooms/booking-days';
 export interface ComputedLine { unitFactor: number; issueQuantity: number; lineTotal: string; unitCost: string; }
 
 /** Money is worked in whole satang and unit cost in 1/10000 baht, so no float error reaches the ledger. */
+const maxStoredQuantity = 2_147_483_647;
+
 export function computeLine(input: { unitKind: InventoryUnitKind; quantity: number; unitPrice: number; purchaseUnitFactor: number }): ComputedLine {
   const priceSatang = Math.round(input.unitPrice * 100);
   if (Math.abs(input.unitPrice * 100 - priceSatang) > 1e-6) throw new Error('INVALID_LINE');
   const unitFactor = input.unitKind === 'PURCHASE' ? input.purchaseUnitFactor : 1;
   const issueQuantity = input.quantity * unitFactor;
-  if (!Number.isSafeInteger(issueQuantity)) throw new Error('INVALID_LINE');
+  // Stock quantities are stored in INT columns.
+  if (!Number.isSafeInteger(issueQuantity) || issueQuantity > maxStoredQuantity) throw new Error('INVALID_LINE');
   const lineTotalSatang = BigInt(input.quantity) * BigInt(priceSatang);
   const quantity = BigInt(issueQuantity);
   // Half-up rounding of lineTotalSatang * 100 / issueQuantity.

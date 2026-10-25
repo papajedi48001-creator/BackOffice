@@ -35,4 +35,9 @@ describe('inventory contracts', () => {
   it('rejects a negative unit price', () => {
     expect(receiptLineInputSchema.safeParse({ ...line, unitPrice: -1 }).success).toBe(false);
   });
+
+  it('rejects a calendar date that does not exist', () => {
+    expect(postDeliveryInputSchema.safeParse({ vendorId: 'vendor-1', receivedOn: '2026-02-30', lines: [line] }).success).toBe(false);
+    expect(receiptLineInputSchema.safeParse({ ...line, expiryDate: '2028-02-29' }).success).toBe(true);
+  });
 });
