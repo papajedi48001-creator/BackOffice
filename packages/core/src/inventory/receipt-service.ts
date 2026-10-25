@@ -75,6 +75,7 @@ export class InventoryReceiptService {
         if (submitter) await this.notify(repository, historyId, submitter, `ยอดยกมาถูกส่งกลับแก้ไข (${opening.reference})`);
         return returned;
       }
+      await this.recheckLines(repository, lines);
       const now = this.now();
       const certified: InventoryReceiptRecord = { ...opening, status: 'CERTIFIED', postedAt: now, receivedOn: bangkokDate(now) };
       await repository.updateReceipt(opening.id, { status: 'CERTIFIED', postedAt: now, receivedOn: certified.receivedOn });
@@ -139,11 +140,7 @@ export class InventoryReceiptService {
   private async buildLines(repository: InventoryRepository, receiptId: string, inputs: ReceiptLineInput[], receivedOn: string | null): Promise<InventoryReceiptLineRecord[]> {
     const items = new Map((await repository.findItems([...new Set(inputs.map((line) => line.itemId))])).map((item) => [item.id, item]));
     return inputs.map((line, index) => {
-      const item = items.get(line.itemId);
-      if (!item) throw new Error('ITEM_NOT_FOUND');
-      if (!item.isActive) throw new Error('ITEM_INACTIVE');
-      if (item.tracksExpiry && !line.expiryDate) throw new Error('EXPIRY_REQUIRED');
-      if (!item.tracksExpiry && line.expiryDate) throw new Error('EXPIRY_NOT_ALLOWED');
+      const item = checkedItem(items.get(line.itemId), line.expiryDate ?? null);
       if (receivedOn && line.expiryDate && line.expiryDate <= receivedOn) throw new Error('EXPIRY_IN_PAST');
       const computed = computeLine({ unitKind: line.unitKind, quantity: line.quantity, unitPrice: line.unitPrice, purchaseUnitFactor: item.purchaseUnitFactor });
       return {
@@ -152,6 +149,12 @@ export class InventoryReceiptService {
         manufacturerLotNo: line.manufacturerLotNo || null, expiryDate: line.expiryDate ?? null
       };
     });
+  }
+
+  /** Draft lines were checked when saved; an item may have been closed or changed since. */
+  private async recheckLines(repository: InventoryRepository, lines: InventoryReceiptLineRecord[]): Promise<void> {
+    const items = new Map((await repository.findItems([...new Set(lines.map((line) => line.itemId))])).map((item) => [item.id, item]));
+    for (const line of lines) checkedItem(items.get(line.itemId), line.expiryDate);
   }
 
   private async createLots(repository: InventoryRepository, receipt: InventoryReceiptRecord, lines: InventoryReceiptLineRecord[], actor: InventoryActor, kind: InventoryMovementKind, now: Date): Promise<void> {
@@ -185,4 +188,12 @@ export class InventoryReceiptService {
     const payload = notificationEventPayloadSchema.parse({ recipientPersonId, moduleCode: INVENTORY_MODULE, targetPath: openingPath, subject });
     await repository.saveOutbox({ id: this.createId(), type: 'notification.in_app', idempotencyKey: `notification.in_app:inventory:${historyId}:${recipientPersonId}`, payload, occurredAt: this.now().toISOString(), processedAt: null });
   }
+}
+
+function checkedItem<T extends { isActive: boolean; tracksExpiry: boolean }>(item: T | undefined, expiryDate: string | null): T {
+  if (!item) throw new Error('ITEM_NOT_FOUND');
+  if (!item.isActive) throw new Error('ITEM_INACTIVE');
+  if (item.tracksExpiry && !expiryDate) throw new Error('EXPIRY_REQUIRED');
+  if (!item.tracksExpiry && expiryDate) throw new Error('EXPIRY_NOT_ALLOWED');
+  return item;
 }

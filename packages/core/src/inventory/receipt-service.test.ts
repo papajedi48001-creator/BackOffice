@@ -96,6 +96,18 @@ describe('opening balance', () => {
     await expect(service.decideOpening(officer, { decision: 'CERTIFY' })).rejects.toThrow('FORBIDDEN');
   });
 
+  it('checks the saved lines again at certification, after the catalogue may have changed', async () => {
+    const { repository, service } = setup();
+    await service.openOpening(officer);
+    await service.saveOpeningLines(officer, { lines: [glovesLine, paperLine] });
+    await service.submitOpening(officer);
+    repository.items.set('paper', { ...paper, tracksExpiry: true });
+    await expect(service.decideOpening(supervisor, { decision: 'CERTIFY' })).rejects.toThrow('EXPIRY_REQUIRED');
+    repository.items.set('paper', { ...paper, isActive: false });
+    await expect(service.decideOpening(supervisor, { decision: 'CERTIFY' })).rejects.toThrow('ITEM_INACTIVE');
+    expect(repository.lots).toHaveLength(0);
+  });
+
   it('refuses a decision when nothing is waiting', async () => {
     const { service } = setup();
     await service.openOpening(officer);
