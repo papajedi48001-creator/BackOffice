@@ -285,11 +285,11 @@ Money rule: `priceSatang = Math.round(unitPrice * 100)`; reject when `Math.abs(u
 - Consumes: Task 7 `labelLots`
 - Produces: pages render `QRCode.toString(lotCode, { type: 'svg', margin: 0, errorCorrectionLevel: 'M' })` per lot on the server and pass `{ lot: LabelLot; svg: string }[]` to `<LabelSheet>`; `LabelSheet` lets the user pick layout `a4-3x8` (default) or `thermal-50x30`, copies per lot (1–500, default 1), and a "พิมพ์ฉลาก" button calling `window.print()`; CSS `@media print` hides the app shell; A4 grid 3 × 8 cells of 70 × 37 mm, thermal `@page { size: 50mm 30mm }` one per page
 
-- [ ] **Step 1: Write failing tests**: rendering two lots with copies 3 and 1 yields 4 labels; each label shows lot code, item code and name, Thai expiry date; the rendered HTML contains no `฿`, `ราคา` or vendor name; switching layout sets `data-layout="thermal-50x30"`; copies above 500 are clamped to 500
-- [ ] **Step 2: Run** `pnpm --filter @backoffice/web test -- label-sheet` — Expected: FAIL
-- [ ] **Step 3: Implement** pages, sheet and CSS; add the dependencies
-- [ ] **Step 4: Run** same — Expected: PASS
-- [ ] **Step 5: Commit** `feat(web): print QR labels for received lots`
+- [x] **Step 1: Write failing tests**: rendering two lots with copies 3 and 1 yields 4 labels; each label shows lot code, item code and name, Thai expiry date; the rendered HTML contains no `฿`, `ราคา` or vendor name; switching layout sets `data-layout="thermal-50x30"`; copies above 500 are clamped to 500
+- [x] **Step 2: Run** `pnpm --filter @backoffice/web test -- label-sheet` — Expected: FAIL
+- [x] **Step 3: Implement** pages, sheet and CSS; add the dependencies
+- [x] **Step 4: Run** same — Expected: PASS
+- [x] **Step 5: Commit** `feat(web): print QR labels for received lots`
 
 ### Task 14: Docs, runbook and full verification
 
@@ -297,8 +297,8 @@ Money rule: `priceSatang = Math.round(unitPrice * 100)`; reject when `Math.abs(u
 - Create: `docs/runbooks/inventory-roles.md` (how to assign `inventory-officer` / `inventory-supervisor` hospital-wide, same mechanism as `room-booking-roles.md`, and the first-day order: items → vendors → opening → certify → receive)
 - Modify: `docs/integration/modules.md` (0008 row status), `README` module list if one exists
 
-- [ ] **Step 1: Run** `pnpm lint && pnpm typecheck && pnpm test` — Expected: all pass
-- [ ] **Step 2: Run** `DATABASE_URL=mysql://backoffice:<password>@127.0.0.1:3306/backoffice pnpm test:integration` — Expected: all pass (report as skipped if no MariaDB is available)
-- [ ] **Step 3: Run** `bash infra/backup/restore-verify.test.sh && git diff --check` — Expected: pass, no output from diff check
-- [ ] **Step 4: Run the app** with demo data and capture desktop and mobile screenshots of stock, receipt form, opening and labels into `/mnt/project-files/screenshots/<date>/inventory-*.png`
-- [ ] **Step 5: Commit** `docs: add inventory role runbook`
+- [x] **Step 1: Run** `pnpm lint && pnpm typecheck && pnpm test` — Expected: all pass
+- [x] **Step 2: Run** `DATABASE_URL=mysql://backoffice:<password>@127.0.0.1:3306/backoffice pnpm test:integration` — Expected: all pass (report as skipped if no MariaDB is available)
+- [x] **Step 3: Run** `bash infra/backup/restore-verify.test.sh && git diff --check` — Expected: pass, no output from diff check
+- [x] **Step 4: Run the app** with demo data and capture desktop and mobile screenshots of stock, receipt form, opening and labels into `/mnt/project-files/screenshots/<date>/inventory-*.png`
+- [x] **Step 5: Commit** `docs: add inventory role runbook`
