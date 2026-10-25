@@ -28,4 +28,11 @@ describe('POST /api/inventory/receipts/:receiptId/void', () => {
     mocks.voidDelivery.mockRejectedValue(new Error('RECEIPT_NOT_VOIDABLE'));
     expect((await voidReceipt({ reason: 'ซ้ำ' })).status).toBe(409);
   });
+
+  it('passes a null body on to validation instead of crashing', async () => {
+    mocks.requireActor.mockResolvedValue(officer);
+    mocks.voidDelivery.mockRejectedValue(new Error('INVALID_INPUT'));
+    await voidReceipt(null);
+    expect(mocks.voidDelivery).toHaveBeenCalledWith(officer, { receiptId: 'receipt-1', reason: undefined });
+  });
 });

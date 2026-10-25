@@ -7,8 +7,8 @@ export async function POST(request: Request, context: { params: Promise<{ receip
   try {
     const actor = await requireActor(request);
     const { receiptId } = await context.params;
-    const body = await request.json() as { reason?: unknown };
-    const receipt = await receiptService().voidDelivery(actor, { receiptId, reason: body.reason as string });
+    const body = await request.json() as { reason?: unknown } | null;
+    const receipt = await receiptService().voidDelivery(actor, { receiptId, reason: body?.reason as string });
     return NextResponse.json({ id: receipt.id, reference: receipt.reference, status: receipt.status });
   } catch (error) { return inventoryErrorResponse(error); }
 }
