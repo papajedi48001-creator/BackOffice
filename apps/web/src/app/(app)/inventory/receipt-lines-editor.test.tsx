@@ -49,6 +49,20 @@ describe('ReceiptLinesEditor', () => {
     expect(sent()).toHaveLength(1);
   });
 
+  it('counts every scan when the next one is sent before the last answer arrives', async () => {
+    const answers: Array<(response: Response) => void> = [];
+    fetchMock.mockImplementation(() => new Promise<Response>((resolve) => { answers.push(resolve); }));
+    render(<Harness />);
+    scan('8850001');
+    scan('8850001');
+    await waitFor(() => expect(answers).toHaveLength(2));
+    for (const answer of answers) {
+      answer(new Response(JSON.stringify({ kind: 'barcode', unitKind: 'ISSUE', item: gloves }), { status: 200 }));
+      await waitFor(() => expect(sent()).toHaveLength(1));
+    }
+    await waitFor(() => expect(sent()[0].quantity).toBe(2));
+  });
+
   it('shows the purchase unit for a box barcode and sends the price as a number', async () => {
     respond(200, { kind: 'barcode', unitKind: 'PURCHASE', item: gloves });
     render(<Harness />);

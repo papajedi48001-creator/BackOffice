@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { InventoryUnitKind, ReceiptLineInput } from '@backoffice/contracts';
 import type { ScanItem, ScanResult } from '@backoffice/core';
 import { t } from '@backoffice/i18n';
@@ -50,6 +50,9 @@ const nextKey = () => `line-${Date.now()}-${keys++}`;
 
 export function ReceiptLinesEditor({ lines, onChange, items, canBindBarcode }: { lines: EditorLine[]; onChange(lines: EditorLine[]): void; items: ScanItem[]; canBindBarcode: boolean }) {
   const [message, setMessage] = useState<string | null>(null);
+  // Scan answers can arrive after the next scan was sent; each one builds on the newest lines, not those of its render.
+  const latest = useRef(lines);
+  latest.current = lines;
   const [unknownCode, setUnknownCode] = useState<string | null>(null);
   const [binding, setBinding] = useState<{ itemId: string; unitKind: InventoryUnitKind }>({ itemId: '', unitKind: 'ISSUE' });
   const activeItems = items.filter((item) => item.isActive);
@@ -57,9 +60,10 @@ export function ReceiptLinesEditor({ lines, onChange, items, canBindBarcode }: {
 
   function onScan(result: ScanResult) {
     setUnknownCode(null);
-    const applied = applyScan(lines, result, nextKey());
+    const applied = applyScan(latest.current, result, nextKey());
     if ('error' in applied) { setMessage(applied.error); return; }
     setMessage(null);
+    latest.current = applied.lines;
     onChange(applied.lines);
   }
 

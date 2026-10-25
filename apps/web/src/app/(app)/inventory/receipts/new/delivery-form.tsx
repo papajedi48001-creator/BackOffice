@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import type { InventoryVendorRecord, ScanItem } from '@backoffice/core';
 import { t } from '@backoffice/i18n';
@@ -39,6 +39,11 @@ export function DeliveryForm({ vendors, items, today, canBindBarcode }: { vendor
   }, []);
   useEffect(() => { if (loaded) writeDraft(draft); }, [draft, loaded]);
 
+  // A keyboard-wedge scanner ends every code with Enter wherever the cursor is; only the button posts the receipt.
+  function blockImplicitSubmit(event: KeyboardEvent<HTMLFormElement>) {
+    if (event.key === 'Enter' && event.target instanceof HTMLInputElement) event.preventDefault();
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (sending.current) return;
@@ -64,7 +69,7 @@ export function DeliveryForm({ vendors, items, today, canBindBarcode }: { vendor
   }
 
   return (
-    <form className="inventory-form inventory-form-wide" aria-label={t('inventoryReceiptNewTitle')} onSubmit={submit}>
+    <form className="inventory-form inventory-form-wide" aria-label={t('inventoryReceiptNewTitle')} onSubmit={submit} onKeyDown={blockImplicitSubmit}>
       <div className="form-row">
         <label>{t('inventoryVendors')}<select required value={draft.vendorId} onChange={(event) => setDraft({ ...draft, vendorId: event.target.value })}><option value="">–</option>{activeVendors.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.name}</option>)}</select></label>
         <label>{t('inventoryDocumentNo')}<input value={draft.documentNo} maxLength={60} onChange={(event) => setDraft({ ...draft, documentNo: event.target.value })} /></label>

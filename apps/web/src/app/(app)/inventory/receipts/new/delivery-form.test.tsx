@@ -48,4 +48,13 @@ describe('DeliveryForm', () => {
     expect(screen.getByText('ถุงมือยาง')).toBeInTheDocument();
     expect(screen.getByLabelText('ผู้ขาย')).toHaveValue('vendor-1');
   });
+
+  it('ignores the Enter a scanner sends into an ordinary field instead of posting', () => {
+    render(<DeliveryForm vendors={vendors} items={[gloves]} today="2026-10-25" canBindBarcode={false} />);
+    fill();
+    const lotField = screen.getByLabelText('เลขล็อตผู้ผลิต ถุงมือยาง');
+    expect(fireEvent.keyDown(lotField, { key: 'Enter' })).toBe(false);
+    expect(fireEvent.keyDown(screen.getByLabelText('เลขที่ใบส่งของ'), { key: 'Enter' })).toBe(false);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });
