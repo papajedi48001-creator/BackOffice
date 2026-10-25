@@ -28,4 +28,3 @@ export async function seedInventoryPeople(database: Database): Promise<{ officer
   }
   return { officer: { personId: officerId, roles: [{ name: 'inventory-officer', organizationId: null }] }, supervisor: { personId: supervisorId, roles: [{ name: 'inventory-supervisor', organizationId: null }] } };
 }
-
