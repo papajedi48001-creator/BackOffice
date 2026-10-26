@@ -24,6 +24,7 @@ export * from './workflow/module-notification';
 export * from './leave/leave-module';
 export * from './leave/leave-days';
 export * from './leave/leave-balance';
+export * from './leave/leave-settings-service';
 export * from './audit/audit-service';
 export * from './audit/database-audit-repository';
 export * from './files/attachment-service';
