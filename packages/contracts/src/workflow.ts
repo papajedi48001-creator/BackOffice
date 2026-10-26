@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { commandChainTargetSchema } from './hr.ts';
 
 export const requestStatusSchema = z.enum(['DRAFT', 'SUBMITTED', 'IN_REVIEW', 'RETURNED', 'REJECTED', 'CANCELLED', 'APPROVED', 'FULFILLED']);
 export type RequestStatus = z.infer<typeof requestStatusSchema>;
@@ -9,7 +10,8 @@ export type ApproverSnapshot = z.infer<typeof approverSnapshotSchema>;
 export const submitRequestInputSchema = z.object({
   moduleCode: z.string().min(1),
   requestorPersonId: z.string().min(1),
-  organizationSnapshot: z.object({ organizationId: z.string().min(1) })
+  organizationSnapshot: z.object({ organizationId: z.string().min(1) }),
+  target: commandChainTargetSchema.optional()
 });
 export type SubmitRequestInput = z.infer<typeof submitRequestInputSchema>;
 
@@ -24,7 +26,7 @@ export const decideRequestInputSchema = z.object({ requestId: z.string().min(1),
 export type DecideRequestInput = z.infer<typeof decideRequestInputSchema>;
 export const cancelRequestInputSchema = z.object({ requestId: z.string().min(1), actorPersonId: z.string().min(1), reason: lifecycleReasonSchema });
 export type CancelRequestInput = z.infer<typeof cancelRequestInputSchema>;
-export const resubmitRequestInputSchema = z.object({ requestId: z.string().min(1), actorPersonId: z.string().min(1) });
+export const resubmitRequestInputSchema = z.object({ requestId: z.string().min(1), actorPersonId: z.string().min(1), target: commandChainTargetSchema.optional() });
 export type ResubmitRequestInput = z.infer<typeof resubmitRequestInputSchema>;
 export interface RequestCancellation { id: string; requestId: string; actorPersonId: string; reason: string; }
 export interface ApprovalDecision { id: string; requestId: string; approvalStepId: string; actorPersonId: string; decision: ApprovalAction; reason: string | null; }

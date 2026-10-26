@@ -223,3 +223,49 @@ video.inventory-camera { display: block; flex-basis: 100%; width: 100%; max-widt
 @media (max-width: 640px) { .profile-box, .profile-form { padding: 14px; } }
 .profile-form .profile-check { display: flex; align-items: center; gap: 8px; min-height: 44px; }
 .profile-form .profile-check input { min-height: 0; width: 20px; height: 20px; }
+.leave-table-scroll { overflow-x: auto; margin: 12px 0 24px; }
+.leave-table-scroll table { min-width: 760px; }
+.leave-kind { display: inline-block; margin-top: 4px; border-radius: 999px; background: #eef2f6; color: #486581; padding: 2px 8px; font-size: .875rem; font-weight: 700; }
+.leave-balances { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 16px 0 24px; padding: 0; list-style: none; }
+.leave-balance { display: grid; gap: 4px; border: 1px solid #d9e2ec; border-left: 5px solid #0b7285; border-radius: 12px; background: #fff; padding: 14px 16px; }
+.leave-balance-remaining { color: #0b7285; font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.leave-form { display: grid; gap: 16px; max-width: 760px; margin: 0 0 24px; border: 1px solid #d9e2ec; border-left: 5px solid #0b7285; border-radius: 12px; background: #fff; padding: 20px; }
+.leave-form select, .leave-form textarea, .leave-filter select, .leave-filter input { width: 100%; min-height: 44px; border: 1px solid #9fb3c8; border-radius: 8px; background: #fff; color: #102a43; padding: 9px 12px; }
+.leave-form textarea { resize: vertical; }
+.leave-preview { display: grid; gap: 8px; border-radius: 10px; background: #f0f7fa; padding: 12px 14px; }
+.leave-preview p { margin: 0; }
+.leave-warning, .leave-warning-inline { border-left: 4px solid #c2410c; border-radius: 8px; background: #fdebd8; color: #9a3412; font-weight: 700; }
+.leave-warning { display: grid; gap: 4px; padding: 10px 12px; }
+.leave-warning p { margin: 0; }
+.leave-warning-inline { display: inline-block; margin-top: 4px; padding: 2px 8px; font-size: .875rem; }
+.leave-notice, .leave-notice-inline { border-left: 4px solid #0b7285; border-radius: 8px; background: #e6f4f7; color: #0b4f5c; font-weight: 700; }
+.leave-notice { margin: 0; padding: 10px 12px; }
+.leave-notice-inline { display: inline-block; margin-top: 4px; padding: 2px 8px; font-size: .875rem; }
+.leave-actions { display: grid; gap: 16px; max-width: 760px; margin: 20px 0; }
+.leave-bulk { display: grid; gap: 12px; }
+.leave-bulk input[type="checkbox"] { width: 22px; height: 22px; }
+.leave-calendar { overflow-x: auto; margin: 12px 0 24px; border: 1px solid #d9e2ec; border-radius: 12px; background: #fff; }
+.leave-calendar table { min-width: 960px; }
+.leave-calendar th, .leave-calendar td { padding: 8px 4px; text-align: center; font-size: .875rem; font-variant-numeric: tabular-nums; }
+.leave-calendar th:first-child, .leave-calendar td:first-child { position: sticky; left: 0; min-width: 11rem; background: #fff; text-align: left; padding-left: 12px; }
+.leave-calendar thead th:first-child { background: #f0f7fa; }
+.leave-day-off { background: #eef2f6; color: #829ab1; }
+.leave-cell { font-weight: 700; }
+.leave-cell-full { background: #0b7285; color: #fff; }
+.leave-cell-morning, .leave-cell-afternoon { background: #c7e6ec; color: #0b4f5c; }
+.leave-filter { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); align-items: end; gap: 12px; margin: 0 0 20px; border: 1px solid #d9e2ec; border-radius: 12px; background: #fff; padding: 16px; }
+.leave-filter label { display: grid; gap: 6px; font-weight: 700; }
+.leave-settings { display: grid; gap: 24px; }
+.leave-entitlements { display: grid; gap: 12px; }
+.leave-entitlements h4, .leave-entitlements h5 { margin: 0; }
+.leave-entitlement-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.leave-detail { display: grid; gap: 20px; max-width: 960px; }
+@media (max-width: 720px) { .leave-form, .leave-filter { padding: 14px; } .leave-entitlement-grid { grid-template-columns: 1fr; } .leave-calendar th:first-child, .leave-calendar td:first-child { min-width: 8rem; } }
+.reason-form > input:not([type="hidden"]) { width: 100%; min-height: 44px; border: 1px solid #9fb3c8; border-radius: 8px; background: #fff; color: #102a43; padding: 9px 12px; }
+.leave-balance h4 { margin: 0; }
+.leave-balance-remaining { display: flex; align-items: baseline; gap: 8px; margin: 4px 0; }
+.leave-balance-remaining span { color: #486581; font-size: .95rem; font-weight: 700; }
+.leave-balance dl { display: grid; gap: 4px; margin: 0; }
+.leave-balance dl div { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid #e6edf3; padding-top: 4px; }
+.leave-balance dt { color: #486581; }
+.leave-balance dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }

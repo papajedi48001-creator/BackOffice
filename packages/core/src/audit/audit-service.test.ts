@@ -41,4 +41,11 @@ describe('AuditService', () => {
 
     expect(recorded).toEqual(['{"changedFields":["phone","positionLevel"],"workChanges":{"positionLevel":{"from":null,"to":"ชำนาญการ"}}}']);
   });
+
+  it('keeps leave ids, codes, dates and day counts in metadata', async () => {
+    const recorded: string[] = [];
+    const service = new AuditService({ append: async (event) => { recorded.push(event.metadata); } }, () => 'audit-leave');
+    await service.recordAudit({ actorPersonId: 'person-a', action: 'leave.request.submitted', targetType: 'request', targetId: 'request-1', result: 'SUCCESS', metadata: { leaveTypeCode: 'VACATION', days: 2.5, fiscalYear: 2570, startDate: '2026-11-02', endDate: '2026-11-04', rowsChanged: 3, contactDuringLeave: '0812345678' } });
+    expect(recorded).toEqual(['{"leaveTypeCode":"VACATION","days":2.5,"fiscalYear":2570,"startDate":"2026-11-02","endDate":"2026-11-04","rowsChanged":3}']);
+  });
 });

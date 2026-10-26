@@ -173,6 +173,46 @@ describe('RequestService', () => {
       await expect(service.resubmitRequest({ requestId: 'missing', actorPersonId: 'person-a' })).rejects.toThrow('REQUEST_NOT_FOUND');
     });
   });
+  describe('module routing', () => {
+    it('passes the target to the approver resolver', async () => {
+      const seen: unknown[] = [];
+      const service = new RequestService(new MemoryWorkflowRepository(), { resolve: async (input) => { seen.push(input); return [{ personId: 'manager-a', organizationId: 'unit-a' }]; } });
+
+      await service.submitRequest({ moduleCode: 'leave', requestorPersonId: 'person-a', organizationSnapshot: { organizationId: 'unit-a' }, target: 'DIVISION' });
+
+      expect(seen).toEqual([{ moduleCode: 'leave', requestorPersonId: 'person-a', organizationId: 'unit-a', target: 'DIVISION' }]);
+    });
+
+    it('uses fixed approvers when given', async () => {
+      let resolverCalls = 0;
+      const service = new RequestService(new MemoryWorkflowRepository(), { resolve: async () => { resolverCalls += 1; return [{ personId: 'manager-a', organizationId: 'unit-a' }]; } });
+
+      const request = await service.submitRequest({ moduleCode: 'leave', requestorPersonId: 'person-a', organizationSnapshot: { organizationId: 'unit-a' } }, { approvers: [{ personId: 'director-a', organizationId: 'hospital' }] });
+
+      expect(resolverCalls).toBe(0);
+      expect(request.approvalSteps.map((step) => step.assigneeSnapshot)).toEqual([{ personId: 'director-a', organizationId: 'hospital' }]);
+    });
+
+    it('labels leave notifications with the leave module', async () => {
+      const repository = new MemoryWorkflowRepository();
+      const service = new RequestService(repository, { resolve: async () => [{ personId: 'manager-a', organizationId: 'unit-a' }] }, (() => { let next = 0; return () => `id-${++next}`; })());
+
+      const request = await service.submitRequest({ moduleCode: 'leave', requestorPersonId: 'person-a', organizationSnapshot: { organizationId: 'unit-a' } });
+
+      expect(repository.outbox.find((event) => event.type === 'notification.in_app')?.payload).toMatchObject({ moduleCode: 'leave', targetPath: `/leave/requests/${request.id}` });
+    });
+
+    it('keeps other requests on the requests module', async () => {
+      const repository = new MemoryWorkflowRepository();
+      const service = new RequestService(repository, { resolve: async () => [{ personId: 'manager-a', organizationId: 'unit-a' }] }, (() => { let next = 0; return () => `id-${++next}`; })());
+
+      await service.submitRequest({ moduleCode: 'maintenance', requestorPersonId: 'person-a', organizationSnapshot: { organizationId: 'unit-a' } });
+
+      const payload = repository.outbox.find((event) => event.type === 'notification.in_app')?.payload;
+      expect(payload).toMatchObject({ moduleCode: 'requests' });
+      expect(payload).not.toHaveProperty('targetPath');
+    });
+  });
 });
 
 class MemoryWorkflowRepository implements WorkflowRepository {
