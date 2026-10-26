@@ -122,4 +122,14 @@ describeWithDatabase('DatabaseWorkflowRepository', () => {
     await repository.saveCancellation({ id: randomUUID(), requestId, actorPersonId: requestorId, reason: 'ไม่ต้องใช้แล้ว' });
     expect(await database.query<{ reason: string }>('SELECT reason FROM request_cancellation WHERE request_id = ?', [requestId])).toEqual([{ reason: 'ไม่ต้องใช้แล้ว' }]);
   });
+
+  it('reads the ตำแหน่ง a decision notice names, or null when none is recorded', async () => {
+    await runMigrations(database);
+    const titled = randomUUID(); const untitled = randomUUID();
+    await database.execute('INSERT INTO person (id, national_id_ciphertext, national_id_lookup, position_title, created_at) VALUES (?, ?, ?, ?, UTC_TIMESTAMP()), (?, ?, ?, NULL, UTC_TIMESTAMP())', [titled, 'ciphertext-title-a', randomUUID(), 'หัวหน้ากลุ่มการพยาบาล', untitled, 'ciphertext-title-b', randomUUID()]);
+    const repository = new DatabaseWorkflowRepository(database);
+
+    expect(await repository.getPositionTitle(titled)).toBe('หัวหน้ากลุ่มการพยาบาล');
+    expect(await repository.getPositionTitle(untitled)).toBeNull();
+  });
 });

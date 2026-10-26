@@ -109,12 +109,27 @@ describe('ApprovalService', () => {
       type: 'notification.in_app',
       payload: { recipientPersonId: 'manager-b', requestId: 'request-1', moduleCode: 'requests', subject: 'มีคำขอรอพิจารณา' }
     })]));
+    expect(repository.outbox).toEqual(expect.arrayContaining([expect.objectContaining({
+      type: 'notification.in_app',
+      payload: { recipientPersonId: 'person-a', requestId: 'request-1', moduleCode: 'requests', subject: 'อนุมัติ > หัวหน้ากลุ่มการพยาบาล' }
+    })]));
+  });
+
+  it('names a ผู้อนุมัติ when the person who decided has no position on record', async () => {
+    const repository = new DecisionWorkflowRepository({
+      request: { id: 'request-1', reference: 'REQ-request-1', moduleCode: 'maintenance', requestorPersonId: 'person-a', organizationSnapshot: { organizationId: 'unit-a' }, status: 'IN_REVIEW' },
+      steps: [{ id: 'step-1', requestId: 'request-1', sequence: 1, assigneeSnapshot: { personId: 'manager-c', organizationId: 'unit-a' }, status: 'PENDING' }]
+    });
+
+    await new ApprovalService(repository, { findActiveFor: async () => null }).decideRequest({ requestId: 'request-1', actorPersonId: 'manager-c', decision: 'APPROVE' });
+
+    expect(repository.outbox.find((event) => event.type === 'notification.in_app')?.payload).toMatchObject({ subject: 'อนุมัติ > ผู้อนุมัติ' });
   });
 
   it.each([
-    ['APPROVE', undefined, 'APPROVED', 'คำขอของคุณได้รับอนุมัติ'],
-    ['REJECT', 'ไม่ตรงตามเงื่อนไข', 'REJECTED', 'คำขอของคุณไม่ผ่านการอนุมัติ'],
-    ['RETURN', 'กรุณาแก้ไข', 'RETURNED', 'คำขอของคุณถูกส่งกลับ']
+    ['APPROVE', undefined, 'APPROVED', 'อนุมัติ > หัวหน้ากลุ่มการพยาบาล'],
+    ['REJECT', 'ไม่ตรงตามเงื่อนไข', 'REJECTED', 'ไม่อนุมัติ > หัวหน้ากลุ่มการพยาบาล'],
+    ['RETURN', 'กรุณาแก้ไข', 'RETURNED', 'ส่งกลับแก้ไข > หัวหน้ากลุ่มการพยาบาล']
   ] as const)('notifies the requestor when %s reaches a final state', async (decision, reason, status, subject) => {
     const repository = new DecisionWorkflowRepository({
       request: { id: 'request-1', reference: 'REQ-request-1', moduleCode: 'maintenance', requestorPersonId: 'person-a', organizationSnapshot: { organizationId: 'unit-a' }, status: 'IN_REVIEW' },
@@ -191,4 +206,5 @@ class DecisionWorkflowRepository implements WorkflowRepository {
   async saveOutbox(event: import('@backoffice/contracts').OutboxEvent): Promise<void> { this.outbox.push(event); }
   async saveCancellation(): Promise<void> {}
   async appendAudit(): Promise<void> {}
+  async getPositionTitle(personId: string): Promise<string | null> { return personId === 'manager-a' ? 'หัวหน้ากลุ่มการพยาบาล' : null; }
 }

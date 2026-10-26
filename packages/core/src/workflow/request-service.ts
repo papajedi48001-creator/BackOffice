@@ -14,6 +14,8 @@ export interface WorkflowRepository {
   saveCancellation(cancellation: RequestCancellation): Promise<void>;
   saveOutbox(event: OutboxEvent): Promise<void>;
   appendAudit(event: AuditEvent): Promise<void>;
+  /** ตำแหน่ง named in a decision notice; optional so a store without people still works. */
+  getPositionTitle?(personId: string): Promise<string | null>;
 }
 
 export interface ApproverResolver { resolve(input: { moduleCode: string; requestorPersonId: string; organizationId: string; target?: CommandChainTarget }): Promise<ApproverSnapshot[]>; }

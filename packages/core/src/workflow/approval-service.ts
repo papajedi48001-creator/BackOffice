@@ -7,7 +7,7 @@ import type { WorkflowRepository } from './request-service';
 export interface ActiveDelegationFinder { findActiveFor(delegatorPersonId: string, delegatePersonId: string, moduleCode: string): Promise<Pick<Delegation, 'delegatorPersonId' | 'delegatePersonId' | 'moduleCode'> | null>; }
 
 export class ApprovalService {
-  constructor(private readonly repository: Pick<WorkflowRepository, 'transaction' | 'getRequestForUpdate' | 'getSteps' | 'saveRequest' | 'saveStep' | 'saveDecision' | 'saveOutbox' | 'appendAudit'>, private readonly delegations: ActiveDelegationFinder, private readonly createId: () => string = randomUUID) {}
+  constructor(private readonly repository: Pick<WorkflowRepository, 'transaction' | 'getRequestForUpdate' | 'getSteps' | 'saveRequest' | 'saveStep' | 'saveDecision' | 'saveOutbox' | 'appendAudit' | 'getPositionTitle'>, private readonly delegations: ActiveDelegationFinder, private readonly createId: () => string = randomUUID) {}
 
   async decideRequest(input: Parameters<typeof decideRequestInputSchema.parse>[0]): Promise<ApprovalDecision> {
     const decisionInput = decideRequestInputSchema.parse(input);
@@ -28,8 +28,10 @@ export class ApprovalService {
       const nextStep = decisionInput.decision === 'APPROVE' ? steps.slice(stepIndex + 1).find((candidate) => candidate.status === 'PENDING') : undefined;
       const status = decisionInput.decision === 'APPROVE' ? (nextStep ? 'IN_REVIEW' : 'APPROVED') : decisionInput.decision === 'REJECT' ? 'REJECTED' : 'RETURNED';
       const stepStatus = decisionInput.decision === 'APPROVE' ? 'APPROVED' : decisionInput.decision === 'REJECT' ? 'REJECTED' : 'RETURNED';
-      const recipientPersonId = nextStep?.assigneeSnapshot.personId ?? request.requestorPersonId;
-      const subject = nextStep ? 'มีคำขอรอพิจารณา' : decisionInput.decision === 'APPROVE' ? 'คำขอของคุณได้รับอนุมัติ' : decisionInput.decision === 'REJECT' ? 'คำขอของคุณไม่ผ่านการอนุมัติ' : 'คำขอของคุณถูกส่งกลับ';
+      // The requestor hears about every step as "<action> > <ตำแหน่ง of who decided>"; the reason never goes in a notice.
+      const action = decisionInput.decision === 'APPROVE' ? 'อนุมัติ' : decisionInput.decision === 'REJECT' ? 'ไม่อนุมัติ' : 'ส่งกลับแก้ไข';
+      const actorTitle = (await repository.getPositionTitle?.(decisionInput.actorPersonId))?.trim() || 'ผู้อนุมัติ';
+      const notices = [{ recipientPersonId: request.requestorPersonId, subject: `${action} > ${actorTitle}` }, ...(nextStep ? [{ recipientPersonId: nextStep.assigneeSnapshot.personId, subject: 'มีคำขอรอพิจารณา' }] : [])];
       await repository.saveStep({ ...step, status: stepStatus });
       if (decisionInput.decision !== 'APPROVE') {
         for (const leftover of steps.slice(stepIndex + 1)) {
@@ -39,7 +41,9 @@ export class ApprovalService {
       await repository.saveDecision(decision);
       await repository.saveRequest({ ...request, status });
       await repository.saveOutbox(outbox);
-      await repository.saveOutbox({ id: this.createId(), type: 'notification.in_app', idempotencyKey: `notification.in_app:request-decided:${decision.id}:recipient:${recipientPersonId}`, payload: notificationEventPayloadSchema.parse({ ...notificationTarget(request.moduleCode, request.id), recipientPersonId, requestId: request.id, subject }), occurredAt: new Date().toISOString(), processedAt: null });
+      for (const { recipientPersonId, subject } of notices) {
+        await repository.saveOutbox({ id: this.createId(), type: 'notification.in_app', idempotencyKey: `notification.in_app:request-decided:${decision.id}:recipient:${recipientPersonId}`, payload: notificationEventPayloadSchema.parse({ ...notificationTarget(request.moduleCode, request.id), recipientPersonId, requestId: request.id, subject }), occurredAt: new Date().toISOString(), processedAt: null });
+      }
       await new AuditService({ append: (event) => repository.appendAudit(event) }, this.createId).recordAudit({ actorPersonId: decision.actorPersonId, action: 'workflow.request.decided', targetType: 'request', targetId: request.id, result: decision.decision, metadata: { moduleCode: request.moduleCode, requestReference: request.reference, status, organizationId: request.organizationSnapshot.organizationId } });
       return decision;
     });
