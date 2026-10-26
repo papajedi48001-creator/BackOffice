@@ -83,7 +83,7 @@ describeWithDatabase('MasterDataImportService against MariaDB', () => {
 
     const scoped = await directory.listPeople({ organizationIds: [hospitalOrganization!.id] });
     expect(scoped.map((person) => person.employeeCode).sort()).toEqual([`D${run}`, `R${run}`]);
-    expect(scoped.find((person) => person.employeeCode === `R${run}`)).toEqual({ id: expect.any(String), employeeCode: `R${run}`, displayName: 'นางสาวมาลี ดีงาม', positionTitle: 'พยาบาลวิชาชีพ', employmentStatus: 'ACTIVE', nationalIdMasked: expect.stringMatching(/^X-XXXX-XXXXX-\d{2}-\d$/), organizationName: 'โรงพยาบาลวาริชภูมิ', organizationCode: hospital });
+    expect(scoped.find((person) => person.employeeCode === `R${run}`)).toEqual({ id: expect.any(String), employeeCode: `R${run}`, displayName: 'นางสาวมาลี ดีงาม', positionTitle: 'พยาบาลวิชาชีพ', employmentStatus: 'ACTIVE', nationalIdMasked: expect.stringMatching(/^X-XXXX-XXXXX-\d{2}-\d$/), employmentTypeName: null, organizationName: 'โรงพยาบาลวาริชภูมิ', organizationCode: hospital });
     await expect(directory.listPeople({ organizationIds: [nursingOrganization!.id] })).resolves.toEqual([]);
     expect((await directory.listPeople({ organizationIds: 'all' })).length).toBeGreaterThanOrEqual(2);
 
