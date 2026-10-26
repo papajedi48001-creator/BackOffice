@@ -67,14 +67,15 @@ export class RequestService {
     });
   }
 
-  async resubmitRequest(input: Parameters<typeof resubmitRequestInputSchema.parse>[0], options: { actorAuthorized?: boolean } = {}): Promise<SubmittedRequest> {
+  /** `options.approvers` fixes the new steps instead of resolving them, as a returned ขอยกเลิกวันลา goes back to the same approver. */
+  async resubmitRequest(input: Parameters<typeof resubmitRequestInputSchema.parse>[0], options: { actorAuthorized?: boolean; approvers?: ApproverSnapshot[] } = {}): Promise<SubmittedRequest> {
     const validInput = resubmitRequestInputSchema.parse(input);
     return this.repository.transaction(async (repository) => {
       const request = await repository.getRequestForUpdate(validInput.requestId);
       if (!request) throw new Error('REQUEST_NOT_FOUND');
       if (!options.actorAuthorized && request.requestorPersonId !== validInput.actorPersonId) throw new Error('NOT_REQUESTOR');
       if (request.status !== 'RETURNED') throw new Error('REQUEST_NOT_RETURNED');
-      const snapshots = await this.approvers.resolve({ moduleCode: request.moduleCode, requestorPersonId: request.requestorPersonId, organizationId: request.organizationSnapshot.organizationId, ...(validInput.target ? { target: validInput.target } : {}) });
+      const snapshots = options.approvers ?? await this.approvers.resolve({ moduleCode: request.moduleCode, requestorPersonId: request.requestorPersonId, organizationId: request.organizationSnapshot.organizationId, ...(validInput.target ? { target: validInput.target } : {}) });
       if (snapshots.length === 0) throw new Error('NO_APPROVER');
       const existingSteps = (await repository.getSteps(request.id)).sort((left, right) => left.sequence - right.sequence);
       const lastSequence = existingSteps.reduce((highest, step) => Math.max(highest, step.sequence), 0);

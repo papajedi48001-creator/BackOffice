@@ -36,12 +36,18 @@ export default async function LeaveCalendarPage({ searchParams }: { searchParams
     {rows.length === 0 ? <p>{t('leaveCalendarEmpty')}</p> : <div className="leave-calendar"><table>
       <thead><tr><th scope="col">{t('leavePerson')}</th>{days.map((date) => <th key={date} scope="col" className={weekend(date) || closed.has(date) ? 'leave-day-off' : undefined}>{Number(date.slice(8))}</th>)}</tr></thead>
       <tbody>{rows.map((row) => {
-        const byDate = new Map(row.days.map((day) => [day.date, day]));
+        const byDate = new Map<string, typeof row.days>();
+        for (const day of row.days) byDate.set(day.date, [...(byDate.get(day.date) ?? []), day]);
         return <tr key={row.personId}>
           <th scope="row">{row.displayName ?? '—'}<span>{row.organizationName ?? ''}</span></th>
           {days.map((date) => {
-            const day = byDate.get(date);
+            const entries = byDate.get(date) ?? [];
+            const day = entries[0];
             if (!day) return <td key={date} className={weekend(date) || closed.has(date) ? 'leave-day-off' : undefined}></td>;
+            const trip = entries.find((entry) => entry.kind === 'TRAVEL');
+            const leave = entries.find((entry) => entry.kind === 'LEAVE');
+            // Half a day on leave and half on a trip: both, in one cell.
+            if (trip && leave) { const label = `${t('leaveCalendarFull')} ${t(partKeys[leave.part])} · ${t('travelCalendarLabel')} ${t(partKeys[trip.part])} · ${trip.place ?? ''}`; return <td key={date} className="leave-cell travel-cell leave-cell-full" title={label} aria-label={label}>{t(partKeys[leave.part])}/{t('travelCalendarShort')}</td>; }
             // A trip shows only that it is official travel and where; never what it is about.
             if (day.kind === 'TRAVEL') { const label = `${t('travelCalendarLabel')} · ${day.place ?? ''}`; return <td key={date} className={`leave-cell travel-cell leave-cell-${day.part.toLowerCase()}`} title={label} aria-label={label}>{t('travelCalendarShort')}</td>; }
             return <td key={date} className={`leave-cell leave-cell-${day.part.toLowerCase()}`}>{t(partKeys[day.part])}</td>;

@@ -23,6 +23,9 @@ const TRIPS = `SELECT t.id AS travelId, t.subject, t.place, t.province, t.travel
   t.leader_person_id AS leaderPersonId, lp.display_name AS leaderDisplayName, t.organiser, t.vehicle, t.funding_source AS fundingSource,
   CAST(t.cost_allowance AS CHAR) AS costAllowance, CAST(t.cost_lodging AS CHAR) AS costLodging, CAST(t.cost_transport AS CHAR) AS costTransport, CAST(t.cost_registration AS CHAR) AS costRegistration
   FROM official_travel t JOIN person lp ON lp.id = t.leader_person_id`;
+// tripStatus in SQL, so HR's status filter runs before the list cap.
+const TRIP_STATUS = `SELECT CASE WHEN SUM(sr.status = 'RETURNED') > 0 THEN 'RETURNED' WHEN SUM(sr.status = 'IN_REVIEW') > 0 THEN 'IN_REVIEW' WHEN SUM(sr.status <> 'CANCELLED') = 0 OR COUNT(*) = 0 THEN 'CANCELLED'
+  WHEN SUM(sr.status NOT IN ('REJECTED', 'CANCELLED')) = 0 THEN 'REJECTED' ELSE 'APPROVED' END FROM official_travel_member sm JOIN request sr ON sr.id = sm.request_id WHERE sm.travel_id = t.id`;
 const ACTIVE_DELEGATORS = `SELECT delegator_person_id FROM delegation WHERE delegate_person_id = ? AND module_code = '${OFFICIAL_TRAVEL_MODULE}' AND effective_from <= UTC_TIMESTAMP() AND effective_until > UTC_TIMESTAMP()`;
 
 /** Reads for the ไปราชการ screens. Who may see a trip is decided here, on the server, for every read. */
@@ -111,8 +114,8 @@ export class OfficialTravelQueries {
     if (filter.from) { clauses.push('t.end_date >= ?'); parameters.push(filter.from); }
     if (filter.to) { clauses.push('t.start_date <= ?'); parameters.push(filter.to); }
     if (filter.travelType) { clauses.push('t.travel_type = ?'); parameters.push(filter.travelType); }
-    const items = await this.list(clauses.join(' AND '), parameters);
-    return filter.status ? items.filter((item) => item.status === filter.status) : items;
+    if (filter.status) { clauses.push(`(${TRIP_STATUS}) = ?`); parameters.push(filter.status); }
+    return this.list(clauses.join(' AND '), parameters);
   }
 
   private async list(where: string, parameters: unknown[]): Promise<TravelListItem[]> {

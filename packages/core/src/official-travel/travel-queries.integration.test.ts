@@ -2,7 +2,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { AccessSubject } from '@backoffice/contracts';
 import { createDatabase, runMigrations } from '@backoffice/db';
 import { LeaveQueries } from '../leave/leave-queries';
-import { commandChainResolver, createLeaveOrganization, createLeavePerson } from '../leave/leave-fixtures';
+import { commandChainResolver, createLeaveOrganization, createLeavePerson, LEAVE_TYPE_IDS } from '../leave/leave-fixtures';
+import { LeaveService } from '../leave/leave-service';
 import { ApprovalService } from '../workflow/approval-service';
 import { DatabaseWorkflowRepository } from '../workflow/database-workflow-repository';
 import { OfficialTravelQueries } from './travel-queries';
@@ -73,6 +74,29 @@ describeWithDatabase('OfficialTravelQueries against MariaDB', () => {
     expect((await queries.all({ from: '2027-08-02', to: '2027-08-02', travelType: 'OUT_OF_PROVINCE', status: 'IN_REVIEW' })).map((item) => item.travelId)).toContain(travelId);
     expect((await queries.all({ from: '2027-08-02', to: '2027-08-02', travelType: 'ABROAD' })).map((item) => item.travelId)).not.toContain(travelId);
     expect((await queries.all({ from: '2027-08-02', to: '2027-08-02', status: 'APPROVED' })).map((item) => item.travelId)).not.toContain(travelId);
+  });
+
+  it('applies the HR status filter before the list cap', async () => {
+    const leader = await createLeavePerson(database, org.section);
+    const travelId = await filed(leader, '2090-01-01', '2090-01-01');
+    // A thousand later trips with no people sort ahead of it and are not IN_REVIEW.
+    await database.execute(`INSERT INTO official_travel (id, leader_person_id, subject, organiser, place, province, travel_type, vehicle, start_date, end_date, start_half, end_half, days, funding_source, created_at, updated_at)
+      SELECT UUID(), ?, 'ว่าง', 'ว่าง', 'ว่าง', 'ว่าง', 'IN_PROVINCE', 'PRIVATE_CAR', '2090-01-05', '2090-01-05', 'FULL', 'FULL', 1, 'NONE', UTC_TIMESTAMP(), UTC_TIMESTAMP() FROM seq_1_to_1000`, [leader]);
+    try {
+      expect((await queries.all({ from: '2090-01-01', to: '2090-12-31', status: 'IN_REVIEW' })).map((item) => item.travelId)).toContain(travelId);
+    } finally {
+      await database.execute("DELETE FROM official_travel WHERE leader_person_id = ? AND subject = 'ว่าง'", [leader]);
+    }
+  });
+
+  it('shows a leave half and a trip half on the same date as two entries', async () => {
+    const person = await createLeavePerson(database, org.section);
+    await filed(person, '2027-09-13', '2027-09-13');
+    await database.execute("UPDATE official_travel SET start_half = 'AFTERNOON', days = 0.5 WHERE leader_person_id = ?", [person]);
+    const leave = await new LeaveService(database, commandChainResolver(database), noDelegations).submit(person, { leaveTypeId: LEAVE_TYPE_IDS.VACATION, startDate: '2027-09-13', endDate: '2027-09-13', endHalf: 'MORNING', reason: 'ธุระ' });
+    expect(leave.ok).toBe(true);
+    const row = (await new LeaveQueries(database).teamCalendar(org.divisionHead, '2027-09')).find((entry) => entry.personId === person);
+    expect(row?.days).toEqual([{ date: '2027-09-13', part: 'MORNING', kind: 'LEAVE' }, { date: '2027-09-13', part: 'AFTERNOON', kind: 'TRAVEL', place: 'สถาบันบำราศนราดูร' }]);
   });
 
   it('shows heads a trip on the team calendar with only its place', async () => {
