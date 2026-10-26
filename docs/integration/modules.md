@@ -75,6 +75,9 @@ notificationEventPayloadSchema.parse({ recipientPersonId, moduleCode: 'room-book
 
 ## 5. ภาษาและหน้าจอ
 
+- เพิ่มสีประจำโมดูลหนึ่งบรรทัด `[data-module="<code>"] { --accent: #...; }` ใน `apps/web/src/app/styles.css` และในตารางสีของ `DESIGN.md` สไตล์ของโมดูลใช้ `var(--accent)` และ token อื่น ห้ามฝัง hex
+- การยืนยันหรือกรอกเหตุผลใช้ `ActionDialog` ห้ามทำฟอร์มยืนยันในหน้าเอง
+
 - ศัพท์ใหม่เพิ่มใน `CONTEXT.md` ก่อนใช้ในโค้ดหรือหน้าจอ
 - ข้อความไทยอยู่ใน `packages/i18n/src/th.ts` ใช้ prefix ของโมดูลกับคีย์ใหม่
 - หน้าอยู่ใต้ `apps/web/src/app/(app)/<route>` ใช้ AppShell เดิม และทำตาม `DESIGN.md`
