@@ -32,4 +32,13 @@ describe('AuditService', () => {
     expect(JSON.stringify(recorded)).not.toContain('not-a-token-to-store');
     expect(JSON.stringify(recorded)).not.toContain('1234567890123');
   });
+
+  it('keeps profile work changes but drops personal values', async () => {
+    const recorded: string[] = [];
+    const service = new AuditService({ append: async (event) => { recorded.push(event.metadata); } }, () => 'audit-1');
+
+    await service.recordAudit({ actorPersonId: 'person-a', action: 'hr.person.profile.update', targetType: 'person', targetId: 'person-b', result: 'SUCCESS', metadata: { changedFields: ['phone', 'positionLevel'], workChanges: { positionLevel: { from: null, to: 'ชำนาญการ' } }, phone: '0812345678' } });
+
+    expect(recorded).toEqual(['{"changedFields":["phone","positionLevel"],"workChanges":{"positionLevel":{"from":null,"to":"ชำนาญการ"}}}']);
+  });
 });

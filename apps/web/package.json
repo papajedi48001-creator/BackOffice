@@ -16,7 +16,7 @@
     "@backoffice/core": "workspace:*",
     "@backoffice/db": "workspace:*",
     "@backoffice/i18n": "workspace:*",
-    "next": "^16.4.0",
+    "next": "^16.4.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

@@ -1,11 +1,13 @@
-import type { OrganizationUnitType } from '@backoffice/contracts';
+import type { EmploymentType, Gender, OrganizationUnitType } from '@backoffice/contracts';
+import { resolveGender } from './profile-changes';
 import { parseCsvRecords, type CsvRecord } from './csv';
 
 export type MasterDataFile = 'organizations' | 'people';
 export type MasterDataErrorCode =
   | 'INVALID_CSV' | 'MISSING_COLUMN' | 'TOO_MANY_ROWS' | 'REQUIRED' | 'TOO_LONG' | 'INVALID_NATIONAL_ID' | 'INVALID_DATE' | 'INVALID_STATUS'
   | 'DUPLICATE_CODE' | 'DUPLICATE_NATIONAL_ID' | 'NATIONAL_ID_CONFLICT' | 'UNKNOWN_ORGANIZATION' | 'UNKNOWN_MANAGER' | 'SELF_MANAGER'
-  | 'PARENT_CYCLE' | 'EFFECTIVE_DATE_NOT_AFTER_CURRENT' | 'UNKNOWN_UNIT_TYPE' | 'UNKNOWN_HEAD' | 'INACTIVE_HEAD' | 'HEAD_ALREADY_SCHEDULED';
+  | 'PARENT_CYCLE' | 'EFFECTIVE_DATE_NOT_AFTER_CURRENT' | 'UNKNOWN_UNIT_TYPE' | 'UNKNOWN_HEAD' | 'INACTIVE_HEAD' | 'HEAD_ALREADY_SCHEDULED'
+  | 'UNKNOWN_EMPLOYMENT_TYPE' | 'INACTIVE_EMPLOYMENT_TYPE' | 'INVALID_GENDER' | 'GENDER_REQUIRED' | 'BIRTH_DATE_IN_FUTURE';
 
 /** A validation problem. It names the cell, never its value, so national IDs cannot leak through the report. */
 export interface MasterDataError { file: MasterDataFile; row: number | null; column: string | null; code: MasterDataErrorCode; }
@@ -14,7 +16,9 @@ export type EmploymentStatus = 'ACTIVE' | 'INACTIVE';
 
 export interface ExistingOrganization { id: string; code: string | null; name: string; parentId: string | null; unitType?: OrganizationUnitType | null; headPersonId?: string | null; headEffectiveFrom?: Date | null; }
 export interface ExistingAssignment { organizationId: string; managerPersonId: string | null; effectiveFrom: Date; }
-export interface ExistingPerson { id: string; employeeCode: string | null; nationalIdLookup: string; displayName: string | null; positionTitle: string | null; employmentStatus: string; assignment: ExistingAssignment | null; }
+/** Profile fields the import can set. Dates are Bangkok calendar days as YYYY-MM-DD. */
+export interface ImportProfile { namePrefix: string | null; firstName: string | null; lastName: string | null; gender: Gender | null; birthDate: string | null; employmentTypeId: string | null; appointedOn: string | null; positionLevel: string | null; }
+export interface ExistingPerson { id: string; employeeCode: string | null; nationalIdLookup: string; displayName: string | null; positionTitle: string | null; employmentStatus: string; assignment: ExistingAssignment | null; profile?: ImportProfile | null; }
 export interface ExistingMasterData { organizations: ExistingOrganization[]; people: ExistingPerson[]; }
 
 export interface OrganizationImportRow {
@@ -27,6 +31,9 @@ export interface PersonImportRow {
   managerEmployeeCode: string | null; effectiveFrom: Date; status: EmploymentStatus; existingPersonId: string | null;
   /** True when the import must start a new assignment: a new person, or a different unit or manager. */
   assignmentChanged: boolean;
+  /** Only the profile fields the file fills; an empty cell keeps the stored value. */
+  profile: Partial<ImportProfile>;
+  profileChanged: boolean;
 }
 export interface MasterDataValidation { organizations: OrganizationImportRow[]; people: PersonImportRow[]; errors: MasterDataError[]; }
 
@@ -35,7 +42,9 @@ export const maxImportRows = 5_000;
 
 const organizationColumns = { required: ['code', 'name'], optional: ['parent_code', 'unit_type', 'head_employee_code'] };
 const unitTypeByCell: Record<string, OrganizationUnitType> = { 'งาน': 'SECTION', 'กลุ่มงาน': 'DIVISION', 'โรงพยาบาล': 'HOSPITAL', section: 'SECTION', division: 'DIVISION', hospital: 'HOSPITAL' };
-const peopleColumns = { required: ['employee_code', 'national_id', 'display_name', 'organization_code', 'effective_from'], optional: ['position_title', 'manager_employee_code', 'status'] };
+const peopleColumns = { required: ['employee_code', 'national_id', 'display_name', 'organization_code', 'effective_from'], optional: ['position_title', 'manager_employee_code', 'status', 'name_prefix', 'first_name', 'last_name', 'gender', 'birth_date', 'employment_type', 'appointed_on', 'position_level'] };
+const genderByCell: Record<string, Gender> = { 'ชาย': 'MALE', 'หญิง': 'FEMALE', male: 'MALE', female: 'FEMALE' };
+const emptyProfile: ImportProfile = { namePrefix: null, firstName: null, lastName: null, gender: null, birthDate: null, employmentTypeId: null, appointedOn: null, positionLevel: null };
 const codeLength = 32;
 const textLength = 255;
 const bangkokOffsetMs = 7 * 60 * 60 * 1000;
@@ -43,7 +52,7 @@ const bangkokOffsetMs = 7 * 60 * 60 * 1000;
 type Cells = Record<string, string>;
 interface Table { rows: { row: number; cells: Cells }[]; }
 
-export function validateMasterData(files: MasterDataFiles, existing: ExistingMasterData, lookup: (nationalId: string) => string, now = new Date()): MasterDataValidation {
+export function validateMasterData(files: MasterDataFiles, existing: ExistingMasterData, lookup: (nationalId: string) => string, now = new Date(), employmentTypes: readonly EmploymentType[] = []): MasterDataValidation {
   const errors: MasterDataError[] = [];
   const organizationTable = files.organizations === undefined ? null : readTable('organizations', files.organizations, organizationColumns.required, errors);
   const peopleTable = files.people === undefined ? null : readTable('people', files.people, peopleColumns.required, errors);
@@ -52,7 +61,7 @@ export function validateMasterData(files: MasterDataFiles, existing: ExistingMas
   for (const { cells } of peopleTable?.rows ?? []) if (cells.employee_code) headStatusByCode.set(cells.employee_code, (cells.status || 'ACTIVE').toUpperCase());
   const organizations = organizationTable ? validateOrganizations(organizationTable, existing, headStatusByCode, now, errors) : [];
   const knownOrganizationCodes = new Set([...existing.organizations.flatMap((organization) => organization.code ? [organization.code] : []), ...organizationTable?.rows.map(({ cells }) => cells.code).filter(Boolean) ?? []]);
-  const people = peopleTable ? validatePeople(peopleTable, existing, knownOrganizationCodes, organizations, lookup, errors) : [];
+  const people = peopleTable ? validatePeople(peopleTable, existing, knownOrganizationCodes, organizations, lookup, employmentTypes, now, errors) : [];
   return { organizations, people, errors };
 }
 
@@ -116,7 +125,7 @@ function reachesAncestor(start: string, target: string, parentByCode: Map<string
   return false;
 }
 
-function validatePeople(table: Table, existing: ExistingMasterData, knownOrganizationCodes: Set<string>, organizations: OrganizationImportRow[], lookup: (nationalId: string) => string, errors: MasterDataError[]): PersonImportRow[] {
+function validatePeople(table: Table, existing: ExistingMasterData, knownOrganizationCodes: Set<string>, organizations: OrganizationImportRow[], lookup: (nationalId: string) => string, employmentTypes: readonly EmploymentType[], now: Date, errors: MasterDataError[]): PersonImportRow[] {
   const existingByCode = new Map(existing.people.flatMap((person) => person.employeeCode ? [[person.employeeCode, person] as const] : []));
   const existingByLookup = new Map(existing.people.map((person) => [person.nationalIdLookup, person]));
   // Units and people created by this import get placeholder ids, which never equal a stored id, so moving to them always counts as a change.
@@ -174,10 +183,52 @@ function validatePeople(table: Table, existing: ExistingMasterData, knownOrganiz
     const current = existingPerson?.assignment;
     const assignmentChanged = !current || organizationIdByCode.get(organizationCode ?? '') !== current.organizationId || (managerEmployeeCode ? personIdByCode.get(managerEmployeeCode) ?? null : null) !== current.managerPersonId;
     if (current && assignmentChanged && effectiveFrom && effectiveFrom.getTime() <= current.effectiveFrom.getTime()) fail('effective_from', 'EFFECTIVE_DATE_NOT_AFTER_CURRENT');
+    const profile = readProfile(cells, existingPerson?.profile ?? null, employmentTypes, now, fail);
+    const storedProfile = existingPerson?.profile ?? emptyProfile;
+    const profileChanged = (Object.keys(profile) as (keyof ImportProfile)[]).some((field) => profile[field] !== storedProfile[field]);
     errors.push(...rowErrors);
-    if (rowErrors.length === 0) result.push({ row, employeeCode: employeeCode!, nationalId, displayName: displayName!, positionTitle, organizationCode: organizationCode!, managerEmployeeCode, effectiveFrom: effectiveFrom!, status: status!, existingPersonId: existingPerson?.id ?? null, assignmentChanged });
+    if (rowErrors.length === 0) result.push({ row, employeeCode: employeeCode!, nationalId, displayName: displayName!, positionTitle, organizationCode: organizationCode!, managerEmployeeCode, effectiveFrom: effectiveFrom!, status: status!, existingPersonId: existingPerson?.id ?? null, assignmentChanged , profile, profileChanged });
   }
   return result;
+}
+
+function readProfile(cells: Cells, stored: ImportProfile | null, employmentTypes: readonly EmploymentType[], now: Date, fail: (column: string, code: MasterDataErrorCode) => void): Partial<ImportProfile> {
+  const profile: Partial<ImportProfile> = {};
+  const text = (column: string, field: 'namePrefix' | 'firstName' | 'lastName' | 'positionLevel', max: number) => {
+    const value = cells[column];
+    if (!value) return;
+    if (value.length > max) fail(column, 'TOO_LONG');
+    else profile[field] = value;
+  };
+  text('name_prefix', 'namePrefix', 32);
+  text('first_name', 'firstName', 120);
+  text('last_name', 'lastName', 120);
+  text('position_level', 'positionLevel', 120);
+  for (const [column, field] of [['birth_date', 'birthDate'], ['appointed_on', 'appointedOn']] as const) {
+    if (!cells[column]) continue;
+    const day = parseBangkokDate(cells[column]);
+    const value = day ? new Date(day.getTime() + bangkokOffsetMs).toISOString().slice(0, 10) : null;
+    if (!value) fail(column, 'INVALID_DATE');
+    else if (field === 'birthDate' && value > new Date(now.getTime() + bangkokOffsetMs).toISOString().slice(0, 10)) fail(column, 'BIRTH_DATE_IN_FUTURE');
+    else profile[field] = value;
+  }
+  if (cells.employment_type) {
+    const type = employmentTypes.find((candidate) => candidate.code === cells.employment_type || candidate.name === cells.employment_type);
+    if (!type) fail('employment_type', 'UNKNOWN_EMPLOYMENT_TYPE');
+    // A retired type stays valid for people who already have it, so re-importing an old file still passes.
+    else if (!type.isActive && stored?.employmentTypeId !== type.id) fail('employment_type', 'INACTIVE_EMPLOYMENT_TYPE');
+    else profile.employmentTypeId = type.id;
+  }
+  let given: Gender | undefined;
+  if (cells.gender) {
+    given = genderByCell[cells.gender.toLowerCase()];
+    if (!given) { fail('gender', 'INVALID_GENDER'); return profile; }
+  }
+  if (given === undefined && profile.namePrefix === undefined) return profile;
+  const gender = resolveGender(profile.namePrefix, given, { namePrefix: stored?.namePrefix ?? null, gender: stored?.gender ?? null });
+  if (gender === 'GENDER_REQUIRED') fail('gender', 'GENDER_REQUIRED');
+  else profile.gender = gender;
+  return profile;
 }
 
 function safeLookup(value: string | undefined, lookup: (nationalId: string) => string): string | null {

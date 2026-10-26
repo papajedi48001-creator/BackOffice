@@ -68,4 +68,12 @@ describe('organization scope for listings', () => {
     expect(service.canActHospitalWide(subject([{ name: 'hr-reader', organizationId: null }], ['hr']), 'hr.organization.manage', 'hr')).toBe(false);
     expect(requiresDataOwner('hr.organization.manage')).toBe(true);
   });
+
+  it('lets only an hr manager who owns hr data read private profile details', async () => {
+    const authorization = new AuthorizationService();
+    const manager = { authenticated: true, personId: 'person-a', roles: [{ name: 'hr-manager', organizationId: null }], dataOwnerModules: ['hr'] };
+    await expect(authorization.canAccess(manager, 'hr.person.private.read', { moduleCode: 'hr', organizationId: 'unit-a' })).resolves.toEqual({ allowed: true, reason: 'allowed' });
+    await expect(authorization.canAccess({ ...manager, roles: [{ name: 'hr-reader', organizationId: null }] }, 'hr.person.private.read', { moduleCode: 'hr', organizationId: 'unit-a' })).resolves.toEqual({ allowed: false, reason: 'permission_denied' });
+    expect(requiresDataOwner('hr.person.private.read')).toBe(true);
+  });
 });

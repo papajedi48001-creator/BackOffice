@@ -27,7 +27,7 @@ describe('runMigrations', () => {
     await runMigrations(database);
 
     expect(queried.some((sql) => sql.includes('CREATE TABLE IF NOT EXISTS schema_migration'))).toBe(false);
-    expect(queried.filter((sql) => sql.includes('SELECT version FROM schema_migration'))).toHaveLength(9);
+    expect(queried.filter((sql) => sql.includes('SELECT version FROM schema_migration'))).toHaveLength(10);
     expect(executed.some((sql) => sql.startsWith('ALTER TABLE notification'))).toBe(true);
     expect(executed.some((sql) => sql.includes('IF NOT EXISTS'))).toBe(true);
     expect(executed.some((sql) => sql.startsWith('INSERT IGNORE INTO schema_migration') && sql.endsWith('|["0001_in_app_notifications.sql"]'))).toBe(true);
@@ -51,6 +51,10 @@ describe('runMigrations', () => {
     expect(executed.some((sql) => sql.startsWith('ALTER TABLE organization') && sql.includes('unit_type'))).toBe(true);
     expect(executed.some((sql) => sql.startsWith('CREATE TABLE IF NOT EXISTS hr_organization_head ('))).toBe(true);
     expect(executed.some((sql) => sql.startsWith('INSERT IGNORE INTO schema_migration') && sql.endsWith('|["0009_hr_command_chain.sql"]'))).toBe(true);
+    expect(executed.some((sql) => sql.startsWith('CREATE TABLE IF NOT EXISTS hr_employment_type ('))).toBe(true);
+    expect(executed.some((sql) => sql.startsWith('INSERT IGNORE INTO hr_employment_type') && sql.includes('DAILY_EMPLOYEE') && sql.includes('ลูกจ้างรายวัน'))).toBe(true);
+    expect(executed.some((sql) => sql.startsWith('CREATE TABLE IF NOT EXISTS hr_person_profile ('))).toBe(true);
+    expect(executed.some((sql) => sql.startsWith('INSERT IGNORE INTO schema_migration') && sql.endsWith('|["0010_hr_staff_profile.sql"]'))).toBe(true);
     expect(executed.some((sql) => sql.includes('CREATE TABLE IF NOT EXISTS organization'))).toBe(false);
   });
 
@@ -73,5 +77,6 @@ describe('runMigrations', () => {
 
     expect(recorded.has('0007_request_cancellation.sql')).toBe(true);
     expect(recorded.has('0009_hr_command_chain.sql')).toBe(true);
+    expect(recorded.has('0010_hr_staff_profile.sql')).toBe(true);
   });
 });

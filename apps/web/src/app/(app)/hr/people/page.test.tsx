@@ -10,7 +10,7 @@ vi.mock('@backoffice/core', async (importOriginal) => ({ ...await importOriginal
 
 import PeoplePage from './page';
 
-const person = { id: 'p1', employeeCode: 'E001', displayName: 'นางสาวมาลี ดีงาม', positionTitle: 'พยาบาลวิชาชีพ', employmentStatus: 'ACTIVE', nationalIdMasked: 'X-XXXX-XXXXX-12-3', organizationName: 'กลุ่มการพยาบาล', organizationCode: 'NUR' };
+const person = { id: 'p1', employmentTypeName: 'ข้าราชการ', employeeCode: 'E001', displayName: 'นางสาวมาลี ดีงาม', positionTitle: 'พยาบาลวิชาชีพ', employmentStatus: 'ACTIVE', nationalIdMasked: 'X-XXXX-XXXXX-12-3', organizationName: 'กลุ่มการพยาบาล', organizationCode: 'NUR' };
 
 afterEach(() => vi.clearAllMocks());
 
@@ -27,6 +27,8 @@ describe('PeoplePage', () => {
     expect(screen.getByRole('cell', { name: 'นางสาวมาลี ดีงาม' })).toBeInTheDocument();
     expect(screen.getByRole('cell', { name: 'X-XXXX-XXXXX-12-3' })).toBeInTheDocument();
     expect(screen.getByRole('cell', { name: 'ปฏิบัติงาน' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'ข้าราชการ' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'นางสาวมาลี ดีงาม' })).toHaveAttribute('href', '/hr/people/p1');
   });
 
   it('shows no data to a person without HR read permission', async () => {

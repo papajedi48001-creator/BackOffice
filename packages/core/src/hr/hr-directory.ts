@@ -1,7 +1,7 @@
 import type { OrganizationUnitType } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 
-export interface DirectoryPerson { id: string; employeeCode: string | null; displayName: string | null; positionTitle: string | null; employmentStatus: string; nationalIdMasked: string | null; organizationName: string | null; organizationCode: string | null; }
+export interface DirectoryPerson { id: string; employeeCode: string | null; displayName: string | null; positionTitle: string | null; employmentStatus: string; nationalIdMasked: string | null; employmentTypeName: string | null; organizationName: string | null; organizationCode: string | null; }
 export interface DirectoryOrganization { id: string; code: string | null; name: string; parentId: string | null; activePeople: number; unitType: OrganizationUnitType | null; headPersonId: string | null; headDisplayName: string | null; headActive: boolean; }
 export interface OrganizationHeadTerm { personId: string; displayName: string | null; employeeCode: string | null; effectiveFrom: string; effectiveUntil: string | null; }
 export interface OrganizationDetail { id: string; code: string | null; name: string; unitType: OrganizationUnitType | null; headPersonId: string | null; headActive: boolean; headHistory: OrganizationHeadTerm[]; }
@@ -15,10 +15,12 @@ export class HrDirectory {
     if (scope.organizationIds !== 'all' && scope.organizationIds.length === 0) return [];
     const scoped = scope.organizationIds === 'all' ? '' : `WHERE a.organization_id IN (${scope.organizationIds.map(() => '?').join(', ')})`;
     return this.database.query<DirectoryPerson>(
-      `SELECT p.id, p.employee_code AS employeeCode, p.display_name AS displayName, p.position_title AS positionTitle, p.employment_status AS employmentStatus, p.national_id_masked AS nationalIdMasked, o.name AS organizationName, o.code AS organizationCode
+      `SELECT p.id, p.employee_code AS employeeCode, p.display_name AS displayName, p.position_title AS positionTitle, p.employment_status AS employmentStatus, p.national_id_masked AS nationalIdMasked, t.name AS employmentTypeName, o.name AS organizationName, o.code AS organizationCode
        FROM person p
        ${scope.organizationIds === 'all' ? 'LEFT' : ''} JOIN employment_assignment a ON a.person_id = p.id AND a.effective_until IS NULL
        LEFT JOIN organization o ON o.id = a.organization_id
+       LEFT JOIN hr_person_profile pr ON pr.person_id = p.id
+       LEFT JOIN hr_employment_type t ON t.id = pr.employment_type_id
        ${scoped}
        ORDER BY o.name, p.display_name, p.employee_code`,
       scope.organizationIds === 'all' ? [] : scope.organizationIds
