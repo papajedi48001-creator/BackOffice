@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { calendarDateSchema, commandChainTargetSchema } from './hr.ts';
+import { calendarDateSchema, commandChainTargetSchema, genderSchema } from './hr.ts';
 
 export const leaveCountingSchema = z.enum(['WORKING_DAYS', 'CALENDAR_DAYS']);
 export type LeaveCounting = z.infer<typeof leaveCountingSchema>;
@@ -28,7 +28,9 @@ export const leaveBulkApproveInputSchema = z.object({ requestIds: z.array(z.stri
 const halfDays = (max: number) => z.number().min(0).max(max).multipleOf(0.5);
 export const leaveTypeInputSchema = z.object({
   name: z.string().trim().min(1).max(120), counting: leaveCountingSchema, approvalTarget: commandChainTargetSchema,
-  attachmentRequiredFromDays: z.number().positive().multipleOf(0.5).nullable(), isActive: z.boolean(), sortOrder: z.number().int()
+  attachmentRequiredFromDays: z.number().positive().multipleOf(0.5).nullable(), isActive: z.boolean(), sortOrder: z.number().int(),
+  /** Only this gender may take the type (ลาคลอดบุตร, ลาไปช่วยภริยาคลอดบุตร); null for everyone. Left out on an update, it stays as stored. */
+  eligibleGender: genderSchema.nullable().optional()
 }).strict();
 export type LeaveTypeInput = z.infer<typeof leaveTypeInputSchema>;
 export const leaveTypeCreateInputSchema = leaveTypeInputSchema.extend({ code: z.string().regex(/^[A-Z][A-Z0-9_]{1,31}$/) }).strict();
@@ -45,4 +47,4 @@ export type LeaveSettingInput = z.infer<typeof leaveSettingInputSchema>;
 
 export interface LeaveBalance { entitled: number; carried: number; used: number; pending: number; remaining: number }
 export interface LeaveWarning { month: string; workingDays: number; minimum: number }
-export type LeaveErrorCode = 'NO_LEAVE_DAYS' | 'CROSSES_FISCAL_YEAR' | 'INACTIVE_LEAVE_TYPE' | 'NO_ENTITLEMENT' | 'SERVICE_TOO_SHORT' | 'APPOINTMENT_DATE_MISSING' | 'INSUFFICIENT_BALANCE' | 'OVERLAPS_EXISTING_LEAVE' | 'NO_ORGANIZATION' | 'NO_APPROVER' | 'NOT_FOUND' | 'NOT_APPROVED' | 'NOT_RETURNED' | 'OUTSIDE_LEAVE' | 'OVERLAPS_CANCELLATION';
+export type LeaveErrorCode = 'NO_LEAVE_DAYS' | 'CROSSES_FISCAL_YEAR' | 'INACTIVE_LEAVE_TYPE' | 'NO_ENTITLEMENT' | 'NOT_ELIGIBLE' | 'SERVICE_TOO_SHORT' | 'APPOINTMENT_DATE_MISSING' | 'INSUFFICIENT_BALANCE' | 'OVERLAPS_EXISTING_LEAVE' | 'NO_ORGANIZATION' | 'NO_APPROVER' | 'NOT_FOUND' | 'NOT_APPROVED' | 'NOT_RETURNED' | 'OUTSIDE_LEAVE' | 'OVERLAPS_CANCELLATION';

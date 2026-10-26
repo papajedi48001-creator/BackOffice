@@ -40,7 +40,7 @@ export default async function LeaveSettingsPage({ searchParams }: { searchParams
         <ul>{typeTabs.map((item) => <li key={item.id}><Link href={`/leave/settings?tab=${TYPES_TAB}&type=${encodeURIComponent(item.id)}`} aria-current={item.id === currentType ? 'page' : undefined}>{item.label}</Link></li>)}</ul>
       </nav>
       <div className="profile">
-        {editedType ? <LeaveTypeForm key={editedType.id} type={editedType} /> : <LeaveTypeForm type={{ code: '', name: '', counting: 'WORKING_DAYS', approvalTarget: 'HOSPITAL', attachmentRequiredFromDays: null, isActive: true, sortOrder: nextOrder }} />}
+        {editedType ? <LeaveTypeForm key={editedType.id} type={editedType} /> : <LeaveTypeForm type={{ code: '', name: '', counting: 'WORKING_DAYS', approvalTarget: 'HOSPITAL', attachmentRequiredFromDays: null, eligibleGender: null, isActive: true, sortOrder: nextOrder }} />}
       </div>
     </>}
   </section>;

@@ -23,11 +23,11 @@ export async function insertPerson(database: Pick<Database, 'execute'>, personId
   await database.execute('INSERT INTO person (id, national_id_ciphertext, national_id_lookup, display_name, created_at) VALUES (?, ?, ?, ?, UTC_TIMESTAMP())', [personId, 'ciphertext', randomUUID(), displayName]);
 }
 
-export async function createLeavePerson(database: Database, organizationId: string | null, profile: { employmentTypeId?: string | null; appointedOn?: string | null } = {}): Promise<string> {
+export async function createLeavePerson(database: Database, organizationId: string | null, profile: { employmentTypeId?: string | null; appointedOn?: string | null; gender?: 'MALE' | 'FEMALE' | null } = {}): Promise<string> {
   const personId = randomUUID();
   await insertPerson(database, personId);
   if (organizationId) await database.execute('INSERT INTO employment_assignment (id, person_id, organization_id, manager_person_id, effective_from, effective_until, created_at) VALUES (?, ?, ?, NULL, ?, NULL, UTC_TIMESTAMP())', [randomUUID(), personId, organizationId, '2020-01-01 00:00:00']);
-  await database.execute('INSERT INTO hr_person_profile (person_id, employment_type_id, appointed_on, updated_at) VALUES (?, ?, ?, UTC_TIMESTAMP())', [personId, profile.employmentTypeId === undefined ? EMPLOYMENT_TYPE_IDS.CIVIL_SERVANT : profile.employmentTypeId, profile.appointedOn === undefined ? '2020-01-01' : profile.appointedOn]);
+  await database.execute('INSERT INTO hr_person_profile (person_id, employment_type_id, appointed_on, gender, updated_at) VALUES (?, ?, ?, ?, UTC_TIMESTAMP())', [personId, profile.employmentTypeId === undefined ? EMPLOYMENT_TYPE_IDS.CIVIL_SERVANT : profile.employmentTypeId, profile.appointedOn === undefined ? '2020-01-01' : profile.appointedOn, profile.gender ?? null]);
   return personId;
 }
 

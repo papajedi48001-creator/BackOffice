@@ -1,18 +1,18 @@
 import { randomUUID } from 'node:crypto';
-import { leaveEntitlementInputSchema, leaveHolidayInputSchema, leaveSettingInputSchema, leaveTypeCreateInputSchema, leaveTypeInputSchema, type CommandChainTarget, type LeaveCounting, type LeaveEntitlementInput, type LeaveHolidayInput, type LeaveSettingInput, type LeaveTypeCreateInput, type LeaveTypeInput } from '@backoffice/contracts';
+import { leaveEntitlementInputSchema, leaveHolidayInputSchema, leaveSettingInputSchema, leaveTypeCreateInputSchema, leaveTypeInputSchema, type CommandChainTarget, type Gender, type LeaveCounting, type LeaveEntitlementInput, type LeaveHolidayInput, type LeaveSettingInput, type LeaveTypeCreateInput, type LeaveTypeInput } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { AuditService } from '../audit/audit-service';
 import { DatabaseAuditRepository } from '../audit/database-audit-repository';
 import type { Entitlement } from './leave-balance';
 
-export interface LeaveType { id: string; code: string; name: string; counting: LeaveCounting; approvalTarget: CommandChainTarget; attachmentRequiredFromDays: number | null; isActive: boolean; sortOrder: number }
+export interface LeaveType { id: string; code: string; name: string; counting: LeaveCounting; approvalTarget: CommandChainTarget; attachmentRequiredFromDays: number | null; eligibleGender: Gender | null; isActive: boolean; sortOrder: number }
 export type LeaveEntitlementRow = { employmentTypeId: string; leaveTypeId: string } & Entitlement;
 type Failure<Code extends string> = { ok: false; code: Code };
 type DuplicateCode = 'DUPLICATE_CODE' | 'DUPLICATE_NAME';
 
-const typeFields = ['name', 'counting', 'approvalTarget', 'attachmentRequiredFromDays', 'isActive', 'sortOrder'] as const;
+const typeFields = ['name', 'counting', 'approvalTarget', 'attachmentRequiredFromDays', 'eligibleGender', 'isActive', 'sortOrder'] as const;
 const entitlementFields = ['daysPerYear', 'firstYearDays', 'maxAccumulatedDays', 'maxAccumulatedDaysAfter10Years', 'minServiceMonths'] as const;
-const typeColumns = "id, code, name, counting, approval_target AS approvalTarget, CAST(attachment_required_from_days AS CHAR) AS attachmentRequiredFromDays, is_active AS isActive, sort_order AS sortOrder";
+const typeColumns = "id, code, name, counting, approval_target AS approvalTarget, CAST(attachment_required_from_days AS CHAR) AS attachmentRequiredFromDays, eligible_gender AS eligibleGender, is_active AS isActive, sort_order AS sortOrder";
 const entitlementColumns = 'employment_type_id AS employmentTypeId, leave_type_id AS leaveTypeId, CAST(days_per_year AS CHAR) AS daysPerYear, CAST(first_year_days AS CHAR) AS firstYearDays, CAST(max_accumulated_days AS CHAR) AS maxAccumulatedDays, CAST(max_accumulated_days_after_10_years AS CHAR) AS maxAccumulatedDaysAfter10Years, min_service_months AS minServiceMonths';
 const decimalOrNull = (value: string | null) => (value === null ? null : Number(value));
 
@@ -34,7 +34,7 @@ export class LeaveSettingsService {
     const valid = leaveTypeCreateInputSchema.parse(input);
     const id = this.createId();
     return withDuplicateCheck(() => this.database.transaction(async (database) => {
-      await database.execute('INSERT INTO leave_type (id, code, name, counting, approval_target, attachment_required_from_days, is_active, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())', [id, valid.code, valid.name, valid.counting, valid.approvalTarget, valid.attachmentRequiredFromDays, valid.isActive ? 1 : 0, valid.sortOrder]);
+      await database.execute('INSERT INTO leave_type (id, code, name, counting, approval_target, attachment_required_from_days, eligible_gender, is_active, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())', [id, valid.code, valid.name, valid.counting, valid.approvalTarget, valid.attachmentRequiredFromDays, valid.eligibleGender ?? null, valid.isActive ? 1 : 0, valid.sortOrder]);
       await this.audit(database, 'leave.type.create', 'leave_type', id, actorPersonId, { leaveTypeCode: valid.code, changedFields: ['code', ...typeFields] });
       return { ok: true as const, id };
     }), (message) => (message.includes('leave_type_name_unique') ? 'DUPLICATE_NAME' : 'DUPLICATE_CODE'));
@@ -42,14 +42,15 @@ export class LeaveSettingsService {
 
   /** The code is fixed once created; it names the type in CSV files and audit events. */
   async updateType(id: string, input: LeaveTypeInput, actorPersonId: string): Promise<{ ok: true } | Failure<'NOT_FOUND' | DuplicateCode>> {
-    const valid = leaveTypeInputSchema.parse(input);
+    const parsed = leaveTypeInputSchema.parse(input);
     return withDuplicateCheck(() => this.database.transaction(async (database) => {
       const [stored] = await database.query<TypeRow>(`SELECT ${typeColumns} FROM leave_type WHERE id = ? FOR UPDATE`, [id]);
       if (!stored) return { ok: false as const, code: 'NOT_FOUND' as const };
       const before = toType(stored);
+      const valid = { ...parsed, eligibleGender: parsed.eligibleGender === undefined ? before.eligibleGender : parsed.eligibleGender };
       const changedFields = typeFields.filter((field) => before[field] !== valid[field]);
       if (changedFields.length === 0) return { ok: true as const };
-      await database.execute('UPDATE leave_type SET name = ?, counting = ?, approval_target = ?, attachment_required_from_days = ?, is_active = ?, sort_order = ?, updated_at = UTC_TIMESTAMP() WHERE id = ?', [valid.name, valid.counting, valid.approvalTarget, valid.attachmentRequiredFromDays, valid.isActive ? 1 : 0, valid.sortOrder, id]);
+      await database.execute('UPDATE leave_type SET name = ?, counting = ?, approval_target = ?, attachment_required_from_days = ?, eligible_gender = ?, is_active = ?, sort_order = ?, updated_at = UTC_TIMESTAMP() WHERE id = ?', [valid.name, valid.counting, valid.approvalTarget, valid.attachmentRequiredFromDays, valid.eligibleGender, valid.isActive ? 1 : 0, valid.sortOrder, id]);
       await this.audit(database, 'leave.type.update', 'leave_type', id, actorPersonId, { leaveTypeCode: before.code, changedFields });
       return { ok: true as const };
     }), (message) => (message.includes('leave_type_name_unique') ? 'DUPLICATE_NAME' : 'DUPLICATE_CODE'));

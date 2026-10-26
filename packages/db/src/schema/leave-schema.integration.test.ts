@@ -24,6 +24,11 @@ describeWithDatabase('leave schema (migration 0011)', () => {
     expect(rows.find((row) => row.code === 'SICK')?.attachment).toBe('30.0');
   });
 
+  it('limits ลาคลอดบุตร to women and ลาไปช่วยภริยาคลอดบุตร to men', async () => {
+    const rows = await db.query<{ code: string; gender: string | null }>('SELECT code, eligible_gender AS gender FROM leave_type WHERE id LIKE ? ORDER BY sort_order', ['00000000-0000-4000-9000-%']);
+    expect(rows).toEqual([{ code: 'SICK', gender: null }, { code: 'PERSONAL', gender: null }, { code: 'VACATION', gender: null }, { code: 'MATERNITY', gender: 'FEMALE' }, { code: 'PATERNITY', gender: 'MALE' }]);
+  });
+
   it('seeds the civil servant entitlements', async () => {
     const rows = await db.query<{ code: string; perYear: string; firstYear: string | null; cap: string | null; cap10: string | null; minMonths: number }>('SELECT t.code, CAST(e.days_per_year AS CHAR) AS perYear, CAST(e.first_year_days AS CHAR) AS firstYear, CAST(e.max_accumulated_days AS CHAR) AS cap, CAST(e.max_accumulated_days_after_10_years AS CHAR) AS cap10, e.min_service_months AS minMonths FROM leave_entitlement e JOIN leave_type t ON t.id = e.leave_type_id WHERE e.employment_type_id = ? ORDER BY t.sort_order', [civilServant]);
     expect(rows.map((row) => [row.code, row.perYear])).toEqual([['SICK', '60.0'], ['PERSONAL', '45.0'], ['VACATION', '10.0'], ['MATERNITY', '90.0'], ['PATERNITY', '15.0']]);

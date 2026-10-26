@@ -20,8 +20,8 @@ import LeaveBalancesPage from './balances/page';
 
 const manager = { authenticated: true, personId: 'hr-a', roles: [{ name: 'hr-manager', organizationId: null }], dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: ['hr'] };
 const staff = { authenticated: true, personId: 'person-a', roles: [], dataOwnerModules: [] };
-const sick = { id: 'lt-1', code: 'SICK', name: 'ลาป่วย', counting: 'WORKING_DAYS', approvalTarget: 'HOSPITAL', attachmentRequiredFromDays: 30, isActive: true, sortOrder: 1 };
-const vacation = { id: 'lt-3', code: 'VACATION', name: 'ลาพักผ่อน', counting: 'WORKING_DAYS', approvalTarget: 'HOSPITAL', attachmentRequiredFromDays: null, isActive: true, sortOrder: 3 };
+const sick = { id: 'lt-1', code: 'SICK', name: 'ลาป่วย', counting: 'WORKING_DAYS', approvalTarget: 'HOSPITAL', attachmentRequiredFromDays: 30, eligibleGender: null, isActive: true, sortOrder: 1 };
+const vacation = { id: 'lt-3', code: 'VACATION', name: 'ลาพักผ่อน', counting: 'WORKING_DAYS', approvalTarget: 'HOSPITAL', attachmentRequiredFromDays: null, eligibleGender: null, isActive: true, sortOrder: 3 };
 const civil = { id: 'et-1', code: 'CIVIL_SERVANT', name: 'ข้าราชการ', isActive: true, sortOrder: 1 };
 const government = { id: 'et-2', code: 'GOVERNMENT_EMPLOYEE', name: 'พนักงานราชการ', isActive: true, sortOrder: 2 };
 const query = (value: Record<string, string> = {}) => ({ searchParams: Promise.resolve(value) });
@@ -103,6 +103,23 @@ describe('HR leave pages', () => {
     render(await LeaveSettingsPage(query({ tab: 'types', type: 'new' })));
     expect(screen.getByRole('form', { name: 'เพิ่มประเภทการลา' })).toBeInTheDocument();
     expect(screen.queryByRole('form', { name: 'แก้ไขประเภทการลา ลาป่วย' })).toBeNull();
+  });
+
+  it('sets which gender a leave type is for', async () => {
+    as(manager);
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    mocks.listTypes.mockResolvedValue([{ ...vacation, id: 'lt-4', code: 'MATERNITY', name: 'ลาคลอดบุตร', eligibleGender: 'FEMALE' }]);
+    render(await LeaveSettingsPage(query({ tab: 'types' })));
+    const form = screen.getByRole('form', { name: 'แก้ไขประเภทการลา ลาคลอดบุตร' });
+    const gender = within(form).getByLabelText('เฉพาะเพศ');
+    expect(gender).toHaveValue('FEMALE');
+    expect(within(gender).getAllByRole('option').map((option) => option.textContent)).toEqual(['ทุกเพศ', 'ชาย', 'หญิง']);
+    fireEvent.change(gender, { target: { value: '' } });
+    fireEvent.click(within(form).getByRole('button', { name: 'บันทึก' }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const [, init] = fetchMock.mock.calls[0]! as unknown as [string, RequestInit];
+    expect(JSON.parse(init.body as string).eligibleGender).toBeNull();
   });
 
   it('falls back to the first ประเภทการจ้าง for an unknown tab', async () => {

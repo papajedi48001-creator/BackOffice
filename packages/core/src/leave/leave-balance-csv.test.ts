@@ -3,8 +3,8 @@ import { validateLeaveBalances } from './leave-balance-csv';
 import type { LeaveType } from './leave-settings-service';
 
 const leaveTypes: LeaveType[] = [
-  { id: 'type-vacation', code: 'VACATION', name: 'ลาพักผ่อน', counting: 'WORKING_DAYS', approvalTarget: 'HOSPITAL', attachmentRequiredFromDays: null, isActive: true, sortOrder: 3 },
-  { id: 'type-sick', code: 'SICK', name: 'ลาป่วย', counting: 'WORKING_DAYS', approvalTarget: 'HOSPITAL', attachmentRequiredFromDays: 30, isActive: true, sortOrder: 1 }
+  { id: 'type-vacation', code: 'VACATION', name: 'ลาพักผ่อน', counting: 'WORKING_DAYS', approvalTarget: 'HOSPITAL', attachmentRequiredFromDays: null, eligibleGender: null, isActive: true, sortOrder: 3 },
+  { id: 'type-sick', code: 'SICK', name: 'ลาป่วย', counting: 'WORKING_DAYS', approvalTarget: 'HOSPITAL', attachmentRequiredFromDays: 30, eligibleGender: null, isActive: true, sortOrder: 1 }
 ];
 const context = { people: new Map([['E001', 'person-1'], ['E002', 'person-2']]), leaveTypes };
 const header = 'employee_code,display_name,leave_type,carried_days,used_days';

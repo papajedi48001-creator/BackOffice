@@ -2,11 +2,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { CommandChainTarget, LeaveCounting } from '@backoffice/contracts';
+import type { CommandChainTarget, Gender, LeaveCounting } from '@backoffice/contracts';
 import { t } from '@backoffice/i18n';
 import { leaveCountingLabel, leaveErrorMessage, leaveTargetLabel } from '../../../../lib/leave-labels';
 
-interface TypeValue { id?: string; code: string; name: string; counting: LeaveCounting; approvalTarget: CommandChainTarget; attachmentRequiredFromDays: number | null; isActive: boolean; sortOrder: number }
+interface TypeValue { id?: string; code: string; name: string; counting: LeaveCounting; approvalTarget: CommandChainTarget; attachmentRequiredFromDays: number | null; eligibleGender: Gender | null; isActive: boolean; sortOrder: number }
 interface EntitlementValue { daysPerYear: number; firstYearDays: number | null; maxAccumulatedDays: number | null; maxAccumulatedDaysAfter10Years: number | null; minServiceMonths: number }
 
 /** Sends one JSON change and refreshes the page; a failure shows its Thai message. */
@@ -36,7 +36,7 @@ export function LeaveTypeForm({ type }: { type: TypeValue }) {
   const title = adding ? t('leaveAddType') : `${t('leaveEditType')} ${type.name}`;
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    const body = { name: form.name.trim(), counting: form.counting, approvalTarget: form.approvalTarget, attachmentRequiredFromDays: optionalNumber(form.attachment), isActive: form.isActive, sortOrder: Number(form.order) };
+    const body = { name: form.name.trim(), counting: form.counting, approvalTarget: form.approvalTarget, attachmentRequiredFromDays: optionalNumber(form.attachment), eligibleGender: form.eligibleGender, isActive: form.isActive, sortOrder: Number(form.order) };
     const saved = await save(adding ? '/api/leave/types' : `/api/leave/types/${type.id}`, adding ? 'POST' : 'PUT', adding ? { code: form.code.trim(), ...body } : body);
     if (saved && adding) setForm({ ...form, code: '', name: '', order: String(Number(form.order) + 1) });
   }
@@ -48,6 +48,7 @@ export function LeaveTypeForm({ type }: { type: TypeValue }) {
     <label>{t('leaveCounting')}<select value={form.counting} onChange={(event) => setForm({ ...form, counting: event.target.value as LeaveCounting })}>{(['WORKING_DAYS', 'CALENDAR_DAYS'] as const).map((value) => <option key={value} value={value}>{leaveCountingLabel(value)}</option>)}</select></label>
     <label>{t('leaveApprovalTarget')}<select value={form.approvalTarget} onChange={(event) => setForm({ ...form, approvalTarget: event.target.value as CommandChainTarget })}>{(['SECTION', 'DIVISION', 'HOSPITAL', 'NEAREST_HEAD'] as const).map((value) => <option key={value} value={value}>{leaveTargetLabel(value)}</option>)}</select></label>
     <label>{t('leaveAttachmentFrom')}<input type="number" min={0.5} step={0.5} value={form.attachment} onChange={(event) => setForm({ ...form, attachment: event.target.value })} /></label>
+    <label>{t('leaveEligibleGender')}<select value={form.eligibleGender ?? ''} onChange={(event) => setForm({ ...form, eligibleGender: (event.target.value || null) as Gender | null })}><option value="">{t('leaveGenderAny')}</option><option value="MALE">{t('leaveGenderMale')}</option><option value="FEMALE">{t('leaveGenderFemale')}</option></select></label>
     <label>{t('leaveTypeOrder')}<input type="number" min={0} max={9999} value={form.order} onChange={(event) => setForm({ ...form, order: event.target.value })} /></label>
     <label className="profile-check"><input type="checkbox" checked={form.isActive} onChange={(event) => setForm({ ...form, isActive: event.target.checked })} />{t('leaveTypeActive')}</label>
     <button type="submit" disabled={busy}>{adding ? t('leaveAddType') : t('leaveSave')}</button>

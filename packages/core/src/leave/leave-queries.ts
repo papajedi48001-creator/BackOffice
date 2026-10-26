@@ -4,7 +4,7 @@ import { canManageLeave } from './leave-access';
 import { leaveUnits, monthWarnings } from './leave-days';
 import { LEAVE_MODULE } from './leave-module';
 import { LeaveSettingsService, type LeaveType } from './leave-settings-service';
-import { activeUnitsOfPerson, loadBalance, loadHolidaySet } from './leave-store';
+import { activeUnitsOfPerson, genderAllows, loadBalance, loadHolidaySet, loadPersonContext } from './leave-store';
 
 const LIST_LIMIT = 1000;
 
@@ -38,9 +38,15 @@ export class LeaveQueries {
   constructor(private readonly database: Reader) {}
 
   async balances(personId: string, fiscalYear: number): Promise<Array<{ leaveType: LeaveType; balance: LeaveBalance }>> {
-    const types = await new LeaveSettingsService(this.database as Database).listTypes({ activeOnly: true });
+    const types = await this.typesFor(personId);
     const rows = await Promise.all(types.map(async (leaveType) => ({ leaveType, balance: await loadBalance(this.database, personId, leaveType, fiscalYear) })));
     return rows.filter((row): row is { leaveType: LeaveType; balance: LeaveBalance } => row.balance !== null);
+  }
+
+  /** The active types this person may file; a type limited to the other gender is left out. */
+  async typesFor(personId: string): Promise<LeaveType[]> {
+    const [types, person] = await Promise.all([new LeaveSettingsService(this.database as Database).listTypes({ activeOnly: true }), loadPersonContext(this.database, personId)]);
+    return types.filter((type) => genderAllows(type, person?.gender ?? null));
   }
 
   async myLeave(personId: string, fiscalYear: number): Promise<LeaveListItem[]> {

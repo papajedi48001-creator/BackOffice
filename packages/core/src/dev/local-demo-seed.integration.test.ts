@@ -39,6 +39,12 @@ describeWithDatabase('seedLocalDemo', () => {
     for (const profile of profiles) expect(profile).toMatchObject({ employmentTypeCode: 'CIVIL_SERVANT', appointedOn: '2015-06-01' });
   });
 
+  it('records each sample person\'s gender, so leave types for one gender show correctly', async () => {
+    await seedLocalDemo(database, protector, { password: 'demo-password-2569' });
+    const rows = await database.query<{ code: string; gender: string | null }>("SELECT person.employee_code AS code, profile.gender FROM person JOIN hr_person_profile profile ON profile.person_id = person.id WHERE person.employee_code IN ('NUR014', 'NUR022') ORDER BY person.employee_code");
+    expect(rows).toEqual([{ code: 'NUR014', gender: 'FEMALE' }, { code: 'NUR022', gender: 'MALE' }]);
+  });
+
   it('makes NUR001 head of the nursing group and DIR001 head of the hospital, once', async () => {
     await seedLocalDemo(database, protector, { password: 'demo-password-2569' });
     await seedLocalDemo(database, protector, { password: 'demo-password-2569' });
