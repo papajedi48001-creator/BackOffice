@@ -47,7 +47,7 @@ export default async function LeaveCalendarPage({ searchParams }: { searchParams
             const trip = entries.find((entry) => entry.kind === 'TRAVEL');
             const leave = entries.find((entry) => entry.kind === 'LEAVE');
             // Half a day on leave and half on a trip: both, in one cell.
-            if (trip && leave) { const label = `${t(partKeys[leave.part])} · ${t('travelCalendarLabel')} · ${trip.place ?? ''}`; return <td key={date} className="leave-cell travel-cell leave-cell-full" title={label} aria-label={label}>{t(partKeys[leave.part])}/{t('travelCalendarShort')}</td>; }
+            if (trip && leave) { const label = `${t('leaveCalendarFull')} ${t(partKeys[leave.part])} · ${t('travelCalendarLabel')} ${t(partKeys[trip.part])} · ${trip.place ?? ''}`; return <td key={date} className="leave-cell travel-cell leave-cell-full" title={label} aria-label={label}>{t(partKeys[leave.part])}/{t('travelCalendarShort')}</td>; }
             // A trip shows only that it is official travel and where; never what it is about.
             if (day.kind === 'TRAVEL') { const label = `${t('travelCalendarLabel')} · ${day.place ?? ''}`; return <td key={date} className={`leave-cell travel-cell leave-cell-${day.part.toLowerCase()}`} title={label} aria-label={label}>{t('travelCalendarShort')}</td>; }
             return <td key={date} className={`leave-cell leave-cell-${day.part.toLowerCase()}`}>{t(partKeys[day.part])}</td>;

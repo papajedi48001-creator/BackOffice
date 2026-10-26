@@ -22,7 +22,7 @@ The ยอดยกมา export lists only leave types the person may take. A t
 
 ## 3. ไปราชการ review leftovers
 
-- **Calendar half days.** A date with a leave half and a trip half shows both: one entry per kind, each with its own part. The calendar cell shows both labels.
+- **Calendar half days.** A date with a leave half and a trip half shows both: one entry per kind, each with its own part. The calendar cell shows both, and its label names each half (for example "ลา เช้า · ไปราชการ บ่าย · <place>").
 - **HR status filter.** `/travel/all` filters by trip status in SQL before the 1000-row cap, so a filter never hides matching trips beyond the cap.
-- **Overlap before balance.** Filing leave over a trip answers OVERLAPS_OFFICIAL_TRAVEL even when the balance is also short, because the overlap is the real reason.
+- **Overlap before balance.** Filing leave over a trip answers OVERLAPS_OFFICIAL_TRAVEL even when the balance is also short, because the overlap is the real reason. It is also named before an overlap with another ใบลา.
 - **Unchanged:** resubmit keeps the คำขอ's organisation snapshot, as leave does. A person who moved unit cancels and files again.

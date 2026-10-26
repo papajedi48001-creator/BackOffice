@@ -41,9 +41,8 @@ describe('LeaveCalendarPage', () => {
     mocks.teamCalendar.mockResolvedValue([{ personId: 'p1', displayName: 'สมชาย ใจดี', organizationName: 'งานผู้ป่วยใน', days: [{ date: '2026-12-01', part: 'MORNING', kind: 'LEAVE' }, { date: '2026-12-01', part: 'AFTERNOON', kind: 'TRAVEL', place: 'ศาลากลาง' }] }]);
     render(await LeaveCalendarPage({ searchParams: Promise.resolve({ month: '2026-12' }) }));
     const person = screen.getByRole('row', { name: /สมชาย ใจดี/ });
-    const cell = within(person).getByLabelText('เช้า · ไปราชการ · ศาลากลาง');
-    expect(cell).toHaveTextContent('เช้า');
-    expect(cell).toHaveTextContent('ราชการ');
+    const cell = within(person).getByLabelText('ลา เช้า · ไปราชการ บ่าย · ศาลากลาง');
+    expect(cell).toHaveTextContent('เช้า/ราชการ');
   });
 
   it('tells someone who heads no unit what the calendar is for', async () => {
