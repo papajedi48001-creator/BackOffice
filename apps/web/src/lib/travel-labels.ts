@@ -27,4 +27,4 @@ export function travelErrorMessage(code: string | null | undefined, personName?:
 }
 
 const reportStatusKeys = { SUBMITTED: 'travelReportSubmitted', MISSING: 'travelReportMissing', NOT_DUE: 'travelReportNotDue' } as const;
-export const travelReportStatusLabel = (status: TravelReportStatus) => t(reportStatusKeys[status]);
+export const travelReportStatusLabel = (status: TravelReportStatus) => (status === 'NONE' ? '—' : t(reportStatusKeys[status]));

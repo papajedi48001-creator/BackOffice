@@ -396,7 +396,7 @@ video.inventory-camera { display: block; flex-basis: 100%; width: 100%; max-widt
 .travel-print-signature { margin-top: 28px; text-align: right; }
 .travel-detail-links { display: flex; gap: 8px; }
 @media print {
-  .sidebar, .app-header, .module-nav, .travel-print-actions { display: none !important; }
+  .sidebar, .app-topbar, .module-subnav, .travel-print-actions { display: none !important; }
   .app-shell, .app-main { display: block; padding: 0; margin: 0; background: #fff; }
   @page { size: A4 portrait; margin: 18mm 16mm; }
   .travel-print { max-width: none; font-family: 'TH Sarabun New', var(--font-body, sans-serif); color: #000; }

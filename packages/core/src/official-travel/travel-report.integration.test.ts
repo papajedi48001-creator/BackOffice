@@ -47,10 +47,18 @@ describeWithDatabase('TravelReportService against MariaDB', () => {
     expect(await reports.save(leader, travelId, { ...report, application: 'ปรับแนวทางของหอผู้ป่วย' }, '2027-10-07')).toEqual({ ok: true });
     const seen = await queries.detail(travelId, staff(member));
     expect(seen?.report).toMatchObject({ summary: report.summary, application: 'ปรับแนวทางของหอผู้ป่วย' });
-    expect(seen?.canReport).toBe(false);
+    expect((await queries.detail(travelId, staff(member), '2027-10-08'))?.canReport).toBe(false);
+    expect((await queries.detail(travelId, staff(leader), '2027-10-08'))?.canReport).toBe(true);
+    expect(seen?.filedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     const audits = await database.query<{ metadata: string }>("SELECT metadata FROM audit_event WHERE action = 'official_travel.report.saved' AND target_id = ?", [travelId]);
     expect(audits.map((audit) => JSON.parse(audit.metadata)).sort((left, right) => Number(right.firstSave) - Number(left.firstSave))).toEqual([{ travelId, firstSave: true }, { travelId, firstSave: false }]);
     expect(audits.map((audit) => audit.metadata).join()).not.toMatch(/เรียนรู้|หอผู้ป่วย/);
+  });
+
+  it('tells only the หัวหน้าคณะ that a report is missing', async () => {
+    const member = await createLeavePerson(database, org.section);
+    const { travelId } = await trip('2027-10-25', '2027-10-25', [member]);
+    expect((await queries.mine(member, '2027-10-26')).find((item) => item.travelId === travelId)?.reportStatus).toBe('NONE');
   });
 
   it('refuses a report for a trip that is not approved', async () => {
@@ -65,6 +73,7 @@ describeWithDatabase('TravelReportService against MariaDB', () => {
     expect(leaderView?.canReport).toBe(true);
     expect((await queries.mine(leader, '2027-10-20'))[0]?.reportStatus).toBe('MISSING');
     expect((await queries.mine(leader, '2027-10-18'))[0]?.reportStatus).toBe('NOT_DUE');
+    expect((await queries.mine(pending.leader, '2027-10-20'))[0]?.reportStatus).toBe('NONE');
     const missing = (await queries.all({ from: '2027-10-18', to: '2027-10-19', reportMissing: true }, '2027-10-20')).map((item) => item.travelId);
     expect(missing).toContain(travelId);
     expect(missing).not.toContain(pending.travelId);

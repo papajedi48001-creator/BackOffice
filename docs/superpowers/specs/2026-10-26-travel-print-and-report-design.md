@@ -10,7 +10,7 @@ Status: approved by wasan ("ทำที่เหลือที่ทำได�
 ## 1. Print form
 
 - Page `/travel/<id>/print`, visible to the same people as the trip page (the query decides on the server).
-- A บันทึกข้อความ layout: ส่วนราชการ โรงพยาบาลวาริชภูมิ and the หัวหน้าคณะ's unit, วันที่ (the filing date in Bangkok time, Thai Buddhist year), เรื่อง ขออนุมัติเดินทางไปราชการ, เรียน ผู้อำนวยการโรงพยาบาลวาริชภูมิ.
+- A บันทึกข้อความ layout: ส่วนราชการ โรงพยาบาลวาริชภูมิ and the หัวหน้าคณะ's unit, วันที่ (the date the trip was filed, in Bangkok time, Thai Buddhist year), เรื่อง ขออนุมัติเดินทางไปราชการ, เรียน ผู้อำนวยการโรงพยาบาลวาริชภูมิ.
 - Body: the หัวหน้าคณะ with the other people (people REJECTED or CANCELLED are left out), เรื่อง, ผู้จัด, สถานที่ and จังหวัด, the dates and number of days, พาหนะ, แหล่งงบประมาณ and the cost estimate per person and in total (per person × people going).
 - Each person's approval steps with name, decision and date. Decision reasons are not printed.
 - A signature line for the หัวหน้าคณะ.
@@ -23,7 +23,7 @@ Status: approved by wasan ("ทำที่เหลือที่ทำได�
 - Who and when: the หัวหน้าคณะ, once the trip status is APPROVED and its end date is before today in Bangkok. They can edit it later; each save is audited (`official_travel.report.saved`, metadata `{ travelId, firstSave }`, never the text).
 - Who reads it: the same people as the trip page.
 - No approval: it is a record. Round 1 sends no notification.
-- HR's list (`/travel/all`) gains a รายงาน column (ส่งแล้ว / ยังไม่ส่ง / —) and a filter for approved trips that ended with no report.
+- HR's list (`/travel/all`) gains a รายงาน column (ส่งแล้ว / ยังไม่ส่ง / ยังไม่ถึงกำหนด for an approved trip not yet ended / — when no report is expected) and a filter for approved trips that ended with no report.
 - "ไปราชการของฉัน" shows ยังไม่ส่งรายงาน next to the leader's ended trips without one.
 - API: `PUT /api/travel/<id>/report` with `{ summary, application }`. NOT_FOUND for someone who is not the หัวหน้าคณะ, REPORT_NOT_DUE before the trip has ended or when it is not APPROVED.
 

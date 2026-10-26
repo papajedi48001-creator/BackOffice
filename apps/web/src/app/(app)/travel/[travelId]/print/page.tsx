@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { OfficialTravelQueries } from '@backoffice/core';
 import { t } from '@backoffice/i18n';
-import { formatBangkokDate } from '../../../../../lib/bangkok-time';
+import { bangkokToday, formatBangkokDate } from '../../../../../lib/bangkok-time';
 import { getSharedDatabase } from '../../../../../lib/database';
 import { formatLeaveRange, leaveStepLabel } from '../../../../../lib/leave-labels';
 import { formatBaht, travelFundingLabel, travelTypeLabel, travelVehicleLabel } from '../../../../../lib/travel-labels';
@@ -20,11 +20,12 @@ export default async function TravelPrintPage({ params }: { params: Promise<{ tr
   const view = await new OfficialTravelQueries(database).detail(travelId, session);
   if (!view) { notFound(); return null; }
   const travellers = view.members.filter((member) => going(member.status));
+  const leader = view.members.find((member) => member.personId === view.leaderPersonId);
   return <article className="travel-print">
     <header className="travel-print-head">
       <h2>{t('travelPrintMemo')}</h2>
-      <p>{t('travelPrintDepartment')} {t('travelPrintHospital')} · {travellers[0]?.organizationName ?? ''}</p>
-      <p>{t('travelPrintDate')} {formatBangkokDate(view.startDate)}</p>
+      <p>{t('travelPrintDepartment')} {t('travelPrintHospital')} · {leader?.organizationName ?? ''}</p>
+      <p>{t('travelPrintDate')} {formatBangkokDate(bangkokToday(new Date(view.filedAt)))}</p>
       <p>{t('travelPrintSubjectLabel')} {t('travelPrintSubjectValue')}</p>
       <p>{t('travelPrintTo')}</p>
     </header>

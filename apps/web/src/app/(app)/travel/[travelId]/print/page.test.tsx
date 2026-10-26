@@ -15,7 +15,7 @@ const detail = {
   travelId: 'travel-1', subject: 'ประชุมวิชาการการพยาบาล', place: 'โรงแรมตักสิลา', province: 'มหาสารคาม', travelType: 'IN_PROVINCE', startDate: '2026-11-10', endDate: '2026-11-11', startHalf: 'FULL', endHalf: 'FULL', days: 2, status: 'APPROVED', leaderDisplayName: 'นางพรทิพย์ ใจดี', memberCount: 3, reportStatus: 'NOT_DUE',
   organiser: 'สสจ.มหาสารคาม', vehicle: 'GOVERNMENT_CAR', fundingSource: 'HOSPITAL_FUND', costs: { allowance: 240, lodging: 0, transport: 0, registration: 1000, total: 1240 }, leaderPersonId: 'person-a',
   members: [member('r-a', 'person-a', 'นางพรทิพย์ ใจดี', 'APPROVED', 'APPROVED'), member('r-b', 'person-b', 'นายสมชาย ดีมาก', 'APPROVED', 'APPROVED'), member('r-c', 'person-c', 'นางสาวมาลี สุขใจ', 'REJECTED', 'REJECTED')],
-  canEdit: false, canCancel: false, report: null, canReport: false
+  canEdit: false, canCancel: false, report: null, canReport: false, filedAt: '2026-11-01T02:00:00Z'
 };
 const params = (travelId = 'travel-1') => ({ params: Promise.resolve({ travelId }) });
 function ready(view: unknown) {
@@ -42,7 +42,14 @@ describe('TravelPrintPage', () => {
     expect(screen.getByText('2,480.00 บาท')).toBeInTheDocument();
     expect(screen.getByText(/^ลงชื่อ/)).toHaveTextContent('นางพรทิพย์ ใจดี');
     expect(screen.queryByText(/ลายมือชื่อไม่ครบ/)).toBeNull();
+    expect(screen.getByText('วันที่ 1 พ.ย. 2569')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'พิมพ์' })).toBeInTheDocument();
+  });
+
+  it("names the หัวหน้าคณะ's unit even when the หัวหน้าคณะ is not going", async () => {
+    ready({ ...detail, members: [{ ...detail.members[0], status: 'REJECTED', organizationName: 'งานบริหาร' }, { ...detail.members[1], organizationName: 'งานเภสัชกรรม' }] });
+    render(await TravelPrintPage(params()));
+    expect(screen.getByText(/ส่วนราชการ/)).toHaveTextContent('งานบริหาร');
   });
 
   it('is not found for someone who may not see the trip', async () => {

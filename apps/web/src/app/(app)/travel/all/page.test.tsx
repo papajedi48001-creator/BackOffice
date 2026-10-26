@@ -43,4 +43,11 @@ describe('travel lists and the report column', () => {
     render(await MyTravelPage());
     expect(within(screen.getByRole('row', { name: /ประชุมวิชาการ/ })).getByText('ยังไม่ส่ง')).toBeInTheDocument();
   });
+
+  it('shows a dash where no report is expected', async () => {
+    ready();
+    mocks.mine.mockResolvedValue([{ ...item, status: 'REJECTED', reportStatus: 'NONE' }]);
+    render(await MyTravelPage());
+    expect(within(screen.getByRole('row', { name: /ประชุมวิชาการ/ })).getByText('—')).toBeInTheDocument();
+  });
 });

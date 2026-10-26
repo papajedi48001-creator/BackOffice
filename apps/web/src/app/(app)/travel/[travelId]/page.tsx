@@ -51,6 +51,7 @@ export default async function TravelPage({ params }: { params: Promise<{ travelI
       <div><strong>{t('travelReportSummary')}</strong><span>{view.report.summary}</span></div>
       <div><strong>{t('travelReportApplication')}</strong><span>{view.report.application}</span></div>
       <div><strong>{t('travelReportSubmittedAt')}</strong><span>{instant(view.report.submittedAt)}</span></div>
+      {view.report.updatedAt !== view.report.submittedAt && <div><strong>{t('travelReportUpdatedAt')}</strong><span>{instant(view.report.updatedAt)}</span></div>}
     </div></>}
     {view.canReport && <TravelReportForm travelId={view.travelId} initial={{ summary: view.report?.summary ?? '', application: view.report?.application ?? '' }} />}
     {view.canCancel && <TravelCancel travelId={view.travelId} />}
