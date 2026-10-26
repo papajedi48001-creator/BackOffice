@@ -24,6 +24,8 @@ export default async function AllTravelPage({ searchParams }: { searchParams: Pr
   if (status) filter.status = status;
   const type = travelTypeCodeSchema.safeParse(one(params.travelType));
   if (type.success) filter.travelType = type.data;
+  const reportMissing = one(params.reportMissing) !== '';
+  if (reportMissing) filter.reportMissing = true;
   const items = await new OfficialTravelQueries(context.database).all(filter);
   return <section>
     <h2>{t('travelAll')}</h2>
@@ -32,6 +34,7 @@ export default async function AllTravelPage({ searchParams }: { searchParams: Pr
       <div className="form-field"><label htmlFor="all-to">{t('leaveEndDate')}</label><input id="all-to" name="to" type="date" defaultValue={to} /></div>
       <div className="form-field"><label htmlFor="all-status">{t('status')}</label><select id="all-status" name="status" defaultValue={filter.status ?? ''}><option value="">{t('leaveAllStatuses')}</option>{statuses.map((value) => <option key={value} value={value}>{leaveStatusLabel(value)}</option>)}</select></div>
       <div className="form-field"><label htmlFor="all-type">{t('travelType')}</label><select id="all-type" name="travelType" defaultValue={filter.travelType ?? ''}><option value="">{t('leaveAllTypes')}</option>{TRAVEL_TYPES.map((code) => <option key={code} value={code}>{travelTypeLabel(code)}</option>)}</select></div>
+      <div className="form-field form-check"><input id="all-report" name="reportMissing" type="checkbox" defaultChecked={reportMissing} /><label htmlFor="all-report">{t('travelReportMissingOnly')}</label></div>
       <div className="form-actions"><button type="submit">{t('leaveFilter')}</button></div>
     </form>
     {items.length === 0 ? <p>{t('travelNoneFound')}</p> : <TravelTable items={items} showLeader />}

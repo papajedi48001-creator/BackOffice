@@ -8,7 +8,7 @@ import { formatBaht, travelFundingLabel, travelTypeLabel, travelVehicleLabel } f
 import { LeaveStatus } from '../../leave/leave-list';
 import { TravelForm } from '../new/travel-form';
 import { travelSession } from '../travel-page';
-import { MemberDecision, TravelCancel } from './travel-actions';
+import { MemberDecision, TravelCancel, TravelReportForm } from './travel-actions';
 
 const instant = (value: string | null) => (value ? `${formatBangkokDate(value.slice(0, 10))} ${formatBangkokTime(value)}` : '');
 const costRows: Array<[keyof Omit<NonNullable<Awaited<ReturnType<OfficialTravelQueries['detail']>>>['costs'], 'total'>, MessageKey]> = [['allowance', 'travelCostAllowance'], ['lodging', 'travelCostLodging'], ['transport', 'travelCostTransport'], ['registration', 'travelCostRegistration']];
@@ -47,6 +47,13 @@ export default async function TravelPage({ params }: { params: Promise<{ travelI
         <td>{member.canDecide && <MemberDecision requestId={member.requestId} name={member.displayName ?? '—'} />}</td>
       </tr>)}</tbody>
     </table></div>
+    {view.report && <><h3>{t('travelReport')}</h3><div className="detail-list">
+      <div><strong>{t('travelReportSummary')}</strong><span>{view.report.summary}</span></div>
+      <div><strong>{t('travelReportApplication')}</strong><span>{view.report.application}</span></div>
+      <div><strong>{t('travelReportSubmittedAt')}</strong><span>{instant(view.report.submittedAt)}</span></div>
+      {view.report.updatedAt !== view.report.submittedAt && <div><strong>{t('travelReportUpdatedAt')}</strong><span>{instant(view.report.updatedAt)}</span></div>}
+    </div></>}
+    {view.canReport && <TravelReportForm travelId={view.travelId} initial={{ summary: view.report?.summary ?? '', application: view.report?.application ?? '' }} />}
     {view.canCancel && <TravelCancel travelId={view.travelId} />}
     {view.canEdit && <><h3>{t('travelEditReturned')}</h3><TravelForm
       leader={leader ?? { personId: view.leaderPersonId, displayName: view.leaderDisplayName, organizationName: null }}
@@ -54,6 +61,6 @@ export default async function TravelPage({ params }: { params: Promise<{ travelI
       fixedMembers={view.members}
       initial={{ subject: view.subject, organiser: view.organiser, place: view.place, province: view.province, travelType: view.travelType, vehicle: view.vehicle, fundingSource: view.fundingSource, startDate: view.startDate, endDate: view.endDate, startHalf: view.startHalf, endHalf: view.endHalf, costAllowance: String(view.costs.allowance || ''), costLodging: String(view.costs.lodging || ''), costTransport: String(view.costs.transport || ''), costRegistration: String(view.costs.registration || '') }}
     /></>}
-    <p><a href="/travel/mine">{t('travelBack')}</a></p>
+    <p className="travel-detail-links"><a href={`/travel/${view.travelId}/print`}>{t('travelPrint')}</a> · <a href="/travel/mine">{t('travelBack')}</a></p>
   </section>;
 }
