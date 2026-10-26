@@ -15,8 +15,8 @@ export async function withSessionAndDatabase(request: Request, action: (session:
 }
 
 /** Parses the JSON body with a schema. A failure names the fields only, never their values. */
-type Issue = { path: (string | number)[]; code: string; keys?: string[] };
-type Schema<T> = { safeParse(value: unknown): { success: true; data: T } | { success: false; error: { issues: Issue[] } } };
+type Issue = { readonly path: readonly PropertyKey[]; readonly code: string; readonly keys?: readonly string[] };
+type Schema<T> = { safeParse(value: unknown): { success: true; data: T } | { success: false; error: { issues: readonly Issue[] } } };
 
 export async function readInput<T>(request: Request, schema: Schema<T>, prepare: (body: Record<string, unknown>) => Record<string, unknown> = (body) => body): Promise<{ ok: true; value: T } | { ok: false; response: Response }> {
   let body: unknown;
