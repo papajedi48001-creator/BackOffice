@@ -33,6 +33,7 @@
 [data-module="requests"] { --accent: #1e3a5f; }
 [data-module="notifications"] { --accent: #b45309; }
 [data-module="leave"] { --accent: #1d7a46; }
+[data-module="official-travel"] { --accent: #5b3e96; }
 [data-module="hr"] { --accent: #0f766e; }
 [data-module="room-booking"] { --accent: #1d4e89; }
 [data-module="inventory"] { --accent: #8a4f12; }
@@ -313,6 +314,20 @@ video.inventory-camera { display: block; flex-basis: 100%; width: 100%; max-widt
 .leave-cell { font-weight: 700; }
 .leave-cell-full { background: var(--accent); color: #fff; }
 .leave-cell-morning, .leave-cell-afternoon { background: var(--accent-tint); color: var(--accent-strong); }
+/* Trips on the leave calendar keep the ไปราชการ colour so heads tell them from leave at a glance. */
+.leave-calendar .travel-cell { --travel: #5b3e96; background: var(--travel); color: #fff; font-size: .75rem; }
+.leave-calendar .travel-cell.leave-cell-morning, .leave-calendar .travel-cell.leave-cell-afternoon { background: color-mix(in srgb, var(--travel) 20%, white); color: color-mix(in srgb, var(--travel) 78%, black); }
+.travel-leader-tag { display: inline-block; margin-left: 8px; padding: 0 8px; border-radius: 999px; background: var(--accent-tint); color: var(--accent-strong); font-size: .8125rem; font-weight: 700; }
+.travel-member-list, .travel-search-results { display: grid; gap: 8px; margin: 0 0 12px; padding: 0; list-style: none; }
+.travel-member-list li, .travel-search-results li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.travel-member-list small, .travel-search-results small { color: var(--muted); }
+.travel-costs, .travel-people { display: grid; gap: 12px; margin: 0; padding: 16px; border: 1px solid var(--line); border-radius: 12px; }
+.travel-costs legend, .travel-people legend { padding: 0 6px; font-weight: 700; }
+.travel-cost-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.travel-cost-total { margin: 0; text-align: right; }
+.travel-steps { margin: 0; padding-left: 1.25rem; font-size: .875rem; }
+.travel-member-off td:first-child { text-decoration: line-through; color: var(--muted); }
+.travel-member-actions { margin: 0; }
 .leave-filter { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); align-items: end; gap: 12px; margin: 0 0 20px; border: 1px solid var(--line); border-radius: 12px; background: #fff; padding: 16px; }
 .leave-filter label { display: grid; gap: 6px; font-weight: 700; }
 .leave-settings { display: grid; gap: 24px; }

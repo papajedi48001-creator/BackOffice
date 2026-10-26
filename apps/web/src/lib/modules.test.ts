@@ -14,7 +14,7 @@ describe('module registry', () => {
   });
 
   it('shows one entry per module and only their own profile under HR to a user without roles', () => {
-    expect(hrefs(subject())).toEqual(['/dashboard', '/requests', '/notifications', '/hr', '/access', '/rooms', '/leave']);
+    expect(hrefs(subject())).toEqual(['/dashboard', '/requests', '/notifications', '/hr', '/access', '/rooms', '/leave', '/travel']);
     expect(sectionHrefs('access', subject())).toEqual(['/access/audit']);
     expect(sectionHrefs('hr', subject())).toEqual(['/hr/me']);
   });
@@ -86,6 +86,16 @@ describe('requests and notifications', () => {
     expect(items.find((item) => item.href === '/leave')?.badge).toBe(2);
     expect(items.find((item) => item.href === '/requests')?.badge).toBe(0);
     expect(items[0]).toEqual({ href: '/dashboard', label: 'dashboard', module: 'home' });
+  });
+});
+
+describe('official travel module', () => {
+  const manager = subject({ roles: [{ name: 'hr-manager', organizationId: null }], dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: ['hr'] });
+
+  it('is live in the mine group with HR sections only for travel.manage', () => {
+    expect(moduleRegistry.find((entry) => entry.code === 'official-travel')).toMatchObject({ status: 'live', group: 'mine', href: '/travel', labelKey: 'moduleTravel' });
+    expect(sectionHrefs('official-travel', subject())).toEqual(['/travel/mine', '/travel/new', '/travel/approvals']);
+    expect(sectionHrefs('official-travel', manager)).toEqual(['/travel/mine', '/travel/new', '/travel/approvals', '/travel/all', '/travel/settings']);
   });
 });
 

@@ -7,7 +7,7 @@ vi.mock('next/navigation', () => ({ redirect: mocks.redirect, notFound: mocks.no
 vi.mock('@backoffice/db', () => ({ createDatabase: mocks.createDatabase }));
 vi.mock('../../../../lib/runtime-env', () => ({ readRuntimeValue: mocks.readRuntimeValue }));
 vi.mock('../../../../lib/session', () => ({ readSession: mocks.readSession }));
-vi.mock('@backoffice/core', () => ({ LEAVE_MODULE: 'leave', RequestHistory: class { load = mocks.load; } }));
+vi.mock('@backoffice/core', () => ({ LEAVE_MODULE: 'leave', OFFICIAL_TRAVEL_MODULE: 'official-travel', RequestHistory: class { load = mocks.load; } }));
 vi.mock('./request-detail-panel', () => ({ RequestDetailPanel: () => null }));
 
 import RequestDetailPage from './page';
