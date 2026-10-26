@@ -9,6 +9,7 @@ export * from './hr/command-chain';
 export * from './hr/command-chain-service';
 export * from './hr/organization-head-service';
 export * from './hr/profile-access';
+export * from './hr/employment-type-service';
 export * from './identity/auth-service';
 export * from './identity/session-service';
 export * from './identity/database-identity-repository';
