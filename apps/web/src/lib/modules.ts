@@ -1,5 +1,5 @@
 import type { AccessSubject } from '@backoffice/contracts';
-import { AuthorizationService, RoomBookingQueries } from '@backoffice/core';
+import { AuthorizationService, LeaveQueries, RoomBookingQueries, canManageLeave } from '@backoffice/core';
 import type { Database } from '@backoffice/db';
 import { t, type MessageKey } from '@backoffice/i18n';
 import type { NavigationItem } from '../components/app-shell';
@@ -60,6 +60,20 @@ export const moduleRegistry: readonly ModuleEntry[] = [
     // Bookings waiting for this approver; anyone without the approver role gets 0 without a query.
     badge: async (db, subject) => subject.personId ? (await new RoomBookingQueries(db).pendingForApprover({ personId: subject.personId, roles: subject.roles })).length : 0
   },
+  {
+    ...withSections({ code: 'leave', href: '/leave', labelKey: 'moduleLeave', descriptionKey: 'moduleLeaveDescription', icon: 'leave', group: 'mine', status: 'live' }, [
+      { href: '/leave/mine', labelKey: 'leaveMine', visible: everyone },
+      { href: '/leave/new', labelKey: 'leaveNew', visible: everyone },
+      // Approvers are unit heads and ผู้แทน, not a role, so the link stays cheap and the page shows its own empty state.
+      { href: '/leave/approvals', labelKey: 'leaveApprovals', visible: everyone },
+      { href: '/leave/calendar', labelKey: 'leaveCalendar', visible: everyone },
+      { href: '/leave/all', labelKey: 'leaveAll', visible: canManageLeave },
+      { href: '/leave/settings', labelKey: 'leaveSettings', visible: canManageLeave },
+      { href: '/leave/holidays', labelKey: 'leaveHolidays', visible: canManageLeave },
+      { href: '/leave/balances', labelKey: 'leaveBalances', visible: canManageLeave }
+    ]),
+    badge: async (db, subject) => subject.personId ? new LeaveQueries(db).pendingCount(subject.personId) : 0
+  },
   planned('maintenance', '/maintenance', 'moduleMaintenance', 'moduleMaintenanceDescription', 'wrench'),
   withSections({ code: 'inventory', href: '/inventory', labelKey: 'moduleInventory', descriptionKey: 'moduleInventoryDescription', icon: 'package', group: 'services', status: 'live' }, [
     { href: '/inventory/stock', labelKey: 'inventoryStock', visible: (subject) => canInventory(subject, 'inventory.stock.read') },
@@ -70,7 +84,6 @@ export const moduleRegistry: readonly ModuleEntry[] = [
   ]),
   planned('fleet', '/fleet', 'moduleFleet', 'moduleFleetDescription', 'car'),
   planned('attendance', '/attendance', 'moduleAttendance', 'moduleAttendanceDescription', 'clock'),
-  planned('leave', '/leave', 'moduleLeave', 'moduleLeaveDescription', 'leave'),
   planned('asset-register', '/assets', 'moduleAssetRegister', 'moduleAssetRegisterDescription', 'asset'),
   planned('computer-center', '/it', 'moduleComputerCenter', 'moduleComputerCenterDescription', 'monitor'),
   planned('planning', '/planning', 'modulePlanning', 'modulePlanningDescription', 'target'),

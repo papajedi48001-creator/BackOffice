@@ -14,7 +14,7 @@ describe('module registry', () => {
   });
 
   it('shows one entry per module and only their own profile under HR to a user without roles', () => {
-    expect(hrefs(subject())).toEqual(['/dashboard', '/requests', '/notifications', '/hr', '/access', '/rooms']);
+    expect(hrefs(subject())).toEqual(['/dashboard', '/requests', '/notifications', '/hr', '/access', '/rooms', '/leave']);
     expect(sectionHrefs('access', subject())).toEqual(['/access/audit']);
     expect(sectionHrefs('hr', subject())).toEqual(['/hr/me']);
   });
@@ -61,7 +61,28 @@ describe('module registry', () => {
   });
 });
 
+describe('leave module', () => {
+  const manager = subject({ roles: [{ name: 'hr-manager', organizationId: null }], dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: ['hr'] });
+
+  it('is live in the mine group with staff sections first and HR sections after', () => {
+    expect(moduleRegistry.find((entry) => entry.code === 'leave')).toMatchObject({ status: 'live', group: 'mine', href: '/leave' });
+    expect(sectionHrefs('leave', subject())).toEqual(['/leave/mine', '/leave/new', '/leave/approvals', '/leave/calendar']);
+    expect(sectionHrefs('leave', manager)).toEqual(['/leave/mine', '/leave/new', '/leave/approvals', '/leave/calendar', '/leave/all', '/leave/settings', '/leave/holidays', '/leave/balances']);
+  });
+
+  it('badges the ใบลา waiting on the person', async () => {
+    const leave = moduleRegistry.find((entry) => entry.code === 'leave')!;
+    const query = vi.fn().mockResolvedValue([{ requestId: 'r1' }, { requestId: 'r2' }]);
+    expect(await leave.badge!({ query } as unknown as Database, subject())).toBe(2);
+    expect(await leave.badge!({ query } as unknown as Database, subject({ personId: null }))).toBe(0);
+  });
+});
+
 describe('moduleLabel', () => {
+  it('labels leave notifications', () => {
+    expect(moduleLabel('leave')).toBe('การลา');
+  });
+
   it('names the module that sent a notification', () => {
     expect(moduleLabel('room-booking')).toBe('จองห้องประชุม');
     expect(moduleLabel('requests')).toBe('คำขอ');
