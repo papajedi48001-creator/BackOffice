@@ -1,5 +1,5 @@
 import type { AccessSubject } from '@backoffice/contracts';
-import { AuthorizationService, LeaveQueries, RoomBookingQueries, canManageLeave } from '@backoffice/core';
+import { AuthorizationService, LeaveQueries, RoomBookingQueries, canManageLeave, hasRequestActivity, listPendingApprovals } from '@backoffice/core';
 import type { Database } from '@backoffice/db';
 import { t, type MessageKey } from '@backoffice/i18n';
 import type { NavigationItem } from '../components/app-shell';
@@ -28,8 +28,10 @@ export interface ModuleEntry {
   status: 'live' | 'planned';
   /** Hides the tile and menu item only; pages and APIs still check access themselves. */
   visible(subject: AccessSubject): boolean;
-  /** Work waiting for this person, shown on the tile. */
+  /** Work waiting for this person, shown on the tile and the menu item. */
   badge?(db: Database, subject: AccessSubject): Promise<number>;
+  /** Hides the tile and menu item when there is nothing to show yet; like visible, never a security check. */
+  available?(db: Database, subject: AccessSubject): Promise<boolean>;
   /** Sub-pages under href, in section-bar order. A module with sections is visible when any section is. */
   sections?: readonly ModuleSection[];
 }
@@ -41,8 +43,16 @@ const withSections = (entry: Omit<ModuleEntry, 'visible'>, sections: readonly Mo
 const planned = (code: string, href: string, labelKey: MessageKey, descriptionKey: MessageKey, icon: ModuleIconName): ModuleEntry => ({ code, href, labelKey, descriptionKey, icon, group: 'services', status: 'planned', visible: everyone });
 
 export const moduleRegistry: readonly ModuleEntry[] = [
-  { code: 'requests', href: '/requests', labelKey: 'requests', descriptionKey: 'moduleRequestsDescription', icon: 'requests', group: 'mine', status: 'live', visible: everyone },
-  { code: 'notifications', href: '/notifications', labelKey: 'notifications', descriptionKey: 'moduleNotificationsDescription', icon: 'bell', group: 'mine', status: 'live', visible: everyone },
+  {
+    code: 'requests', href: '/requests', labelKey: 'requests', descriptionKey: 'moduleRequestsDescription', icon: 'requests', group: 'mine', status: 'live', visible: everyone,
+    // Every module's approvals wait here, so a ใบลา for the director counts on both คำขอ and การลา.
+    badge: async (db, subject) => subject.personId ? (await listPendingApprovals(db, subject.personId)).length : 0,
+    available: async (db, subject) => subject.personId ? hasRequestActivity(db, subject.personId) : false
+  },
+  {
+    code: 'notifications', href: '/notifications', labelKey: 'notifications', descriptionKey: 'moduleNotificationsDescription', icon: 'bell', group: 'mine', status: 'live', visible: everyone,
+    badge: async (db, subject) => subject.personId ? Number((await db.query<{ total: number }>('SELECT COUNT(*) AS total FROM notification WHERE recipient_person_id = ? AND channel = ? AND read_at IS NULL', [subject.personId, 'in_app']))[0]?.total ?? 0) : 0
+  },
   withSections({ code: 'hr', href: '/hr', labelKey: 'moduleHr', descriptionKey: 'moduleHrDescription', icon: 'people', group: 'people', status: 'live' }, [
     { href: '/hr/people', labelKey: 'people', visible: hasRole('hr-reader', 'hr-manager') },
     { href: '/hr/organizations', labelKey: 'organizations', visible: hasRole('hr-reader', 'hr-manager') },
@@ -99,8 +109,18 @@ export function moduleSections(code: string, subject: AccessSubject): ModuleSect
   return (moduleRegistry.find((entry) => entry.code === code)?.sections ?? []).filter((section) => section.visible(subject));
 }
 
+/** Drops modules whose availability check says there is nothing to show; a check that fails keeps the module. */
+export async function availableModules(modules: ModuleEntry[], db: Database, subject: AccessSubject): Promise<ModuleEntry[]> {
+  const shown = await Promise.all(modules.map((entry) => entry.available ? entry.available(db, subject).catch(() => true) : true));
+  return modules.filter((_, index) => shown[index]);
+}
+
+export function navigationFrom(modules: ModuleEntry[], badges: Record<string, number | undefined> = {}): NavigationItem[] {
+  return [{ href: '/dashboard', label: 'dashboard', module: 'home' }, ...modules.filter((entry) => entry.status === 'live').map((entry) => ({ href: entry.href, label: entry.labelKey, module: entry.code, ...(badges[entry.code] === undefined ? {} : { badge: badges[entry.code] }) }))];
+}
+
 export function navigationFor(subject: AccessSubject): NavigationItem[] {
-  return [{ href: '/dashboard', label: 'dashboard', module: 'home' }, ...visibleModules(subject).filter((entry) => entry.status === 'live').map((entry) => ({ href: entry.href, label: entry.labelKey, module: entry.code }))];
+  return navigationFrom(visibleModules(subject));
 }
 
 /** Module a page belongs to, used for its colour. */

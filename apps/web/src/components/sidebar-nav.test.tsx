@@ -11,3 +11,9 @@ it('marks the section the person is in as the current page', () => {
   expect(screen.getByRole('link', { name: /การแจ้งเตือน.*3 การแจ้งเตือนที่ยังไม่อ่าน/ })).toBeInTheDocument();
   expect(screen.getByLabelText('3 การแจ้งเตือนที่ยังไม่อ่าน')).toHaveClass('nav-badge');
 });
+
+it('puts a red count on any menu item with work waiting', () => {
+  render(<SidebarNav items={[{ href: '/leave', label: 'moduleLeave', badge: 2 }, { href: '/rooms', label: 'moduleRoomBooking', badge: 0 }]} />);
+  expect(screen.getByLabelText('2 รายการรอดำเนินการ')).toHaveClass('nav-badge');
+  expect(screen.queryByLabelText('0 รายการรอดำเนินการ')).not.toBeInTheDocument();
+});

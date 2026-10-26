@@ -11,6 +11,8 @@ const utcDate = (date: string) => new Date(`${date}T00:00:00Z`);
 export function formatBangkokDate(date: string): string { return dateFormatter.format(utcDate(date)); }
 export function formatWeekday(date: string): string { return weekdayFormatter.format(utcDate(date)); }
 export function formatBangkokTime(instant: Date | string): string { return timeFormatter.format(new Date(instant)); }
+/** An instant shown as `26 ต.ค. 2569 10:00` in Bangkok time. */
+export function formatBangkokDateTime(instant: Date | string): string { return `${formatBangkokDate(bangkokToday(new Date(instant)))} ${formatBangkokTime(instant)}`; }
 export function formatMinutes(minutes: number): string { return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`; }
 export function addDays(date: string, days: number): string { return new Date(utcDate(date).getTime() + days * dayMs).toISOString().slice(0, 10); }
 export function datesBetween(first: string, last: string): string[] {
