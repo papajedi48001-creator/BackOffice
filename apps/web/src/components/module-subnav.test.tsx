@@ -16,3 +16,9 @@ it('renders nothing for a single section', () => {
   const { container } = render(<ModuleSubnav sections={[{ href: '/hr/people', labelKey: 'people' }]} />);
   expect(container).toBeEmptyDOMElement();
 });
+
+it('puts a count on a section with work waiting', () => {
+  render(<ModuleSubnav sections={[{ href: '/hr/people', labelKey: 'people' }, { href: '/hr/organizations', labelKey: 'organizations', badge: 2 }]} />);
+  expect(screen.getByRole('link', { name: /หน่วยงาน/ })).toContainElement(screen.getByLabelText('2 รายการรอดำเนินการ'));
+  expect(screen.getByLabelText('2 รายการรอดำเนินการ')).toHaveClass('count-badge');
+});

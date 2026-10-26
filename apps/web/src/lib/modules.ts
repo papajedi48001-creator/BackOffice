@@ -15,6 +15,8 @@ export interface ModuleSection {
   labelKey: MessageKey;
   /** Hides the link only; the page checks access itself. */
   visible(subject: AccessSubject): boolean;
+  /** Work waiting for this person, shown on the section tab. */
+  badge?(db: Database, subject: AccessSubject): Promise<number>;
 }
 
 /** One tile on the main page and, when live, one sidebar item. Module threads add their entry here; see docs/integration/modules.md. */
@@ -76,7 +78,7 @@ export const moduleRegistry: readonly ModuleEntry[] = [
       { href: '/leave/mine', labelKey: 'leaveMine', visible: everyone },
       { href: '/leave/new', labelKey: 'leaveNew', visible: everyone },
       // Approvers are unit heads and ผู้แทน, not a role, so the link stays cheap and the page shows its own empty state.
-      { href: '/leave/approvals', labelKey: 'leaveApprovals', visible: everyone },
+      { href: '/leave/approvals', labelKey: 'leaveApprovals', visible: everyone, badge: async (db, subject) => subject.personId ? new LeaveQueries(db).pendingCount(subject.personId) : 0 },
       { href: '/leave/calendar', labelKey: 'leaveCalendar', visible: everyone },
       { href: '/leave/all', labelKey: 'leaveAll', visible: canManageLeave },
       { href: '/leave/settings', labelKey: 'leaveSettings', visible: canManageLeave },

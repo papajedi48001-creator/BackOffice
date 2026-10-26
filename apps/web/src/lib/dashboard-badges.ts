@@ -1,6 +1,6 @@
 import type { AccessSubject } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
-import type { ModuleEntry } from './modules';
+import type { ModuleEntry, ModuleSection } from './modules';
 
 const badgeTimeoutMs = 2000;
 
@@ -17,5 +17,15 @@ export async function collectBadges(modules: ModuleEntry[], db: Database, subjec
   return Object.fromEntries(withBadge.map((entry, index) => {
     const result = results[index]!;
     return [entry.code, result.status === 'fulfilled' ? result.value : undefined];
+  }));
+}
+
+/** Counts for a module's section tabs, keyed by href; same rules as the module badges. */
+export async function collectSectionBadges(sections: readonly ModuleSection[], db: Database, subject: AccessSubject, timeoutMs = badgeTimeoutMs): Promise<Record<string, number | undefined>> {
+  const withBadge = sections.filter((section) => section.badge);
+  const results = await Promise.allSettled(withBadge.map((section) => withinTime(Promise.resolve().then(() => section.badge!(db, subject)), timeoutMs)));
+  return Object.fromEntries(withBadge.map((section, index) => {
+    const result = results[index]!;
+    return [section.href, result.status === 'fulfilled' ? result.value : undefined];
   }));
 }
