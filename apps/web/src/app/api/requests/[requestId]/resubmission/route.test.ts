@@ -40,6 +40,15 @@ describe('POST /api/requests/[requestId]/resubmission', () => {
     expect(mocks.resubmitRequest).toHaveBeenCalledWith({ requestId: 'request-1', actorPersonId: 'person-a' });
   });
 
+  it('sends a returned official travel คำขอ to the travel routes, whoever asks', async () => {
+    ready();
+    mocks.getSharedDatabase.mockReturnValue({ query: vi.fn().mockResolvedValue([{ moduleCode: 'official-travel', requestorPersonId: 'person-b' }]), execute: vi.fn(), transaction: vi.fn() });
+    const response = await resubmit();
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'travel_request_route' });
+    expect(mocks.resubmitRequest).not.toHaveBeenCalled();
+  });
+
   it('sends a returned leave request to the leave routes', async () => {
     ready();
     mocks.getSharedDatabase.mockReturnValue({ query: vi.fn().mockResolvedValue([{ moduleCode: 'leave', requestorPersonId: 'person-a' }]), execute: vi.fn(), transaction: vi.fn() });

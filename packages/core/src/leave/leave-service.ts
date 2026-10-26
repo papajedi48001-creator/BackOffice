@@ -10,6 +10,7 @@ import { serviceMonths } from './leave-balance';
 import { fiscalYearOf, leaveUnits, monthWarnings, subtractUnits } from './leave-days';
 import { LEAVE_MODULE } from './leave-module';
 import { LeaveSettingsService, type LeaveType } from './leave-settings-service';
+import { activeTravelUnitsOfPerson } from '../official-travel/travel-store';
 import { activeUnitsOfPerson, genderAllows, loadBalance, loadHolidaySet, loadPersonContext, type PersonContext } from './leave-store';
 
 /** A ใบลา as filed; half days default to FULL. */
@@ -161,6 +162,8 @@ export class LeaveService {
     if (result.days > balance.remaining) return fail('INSUFFICIENT_BALANCE');
     const taken = new Set(otherUnits);
     if (units.some((unit) => taken.has(unit))) return fail('OVERLAPS_EXISTING_LEAVE');
+    const away = new Set(await activeTravelUnitsOfPerson(database, personId, input.startDate, input.endDate));
+    if (units.some((unit) => away.has(unit))) return fail('OVERLAPS_OFFICIAL_TRAVEL');
     if (!person?.organizationId) return fail('NO_ORGANIZATION');
     return result;
   }

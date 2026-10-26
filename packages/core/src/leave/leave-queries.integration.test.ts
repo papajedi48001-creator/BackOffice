@@ -95,7 +95,7 @@ describeWithDatabase('LeaveQueries against MariaDB', () => {
     await filed(outsider, '2026-12-01', '2026-12-01');
     const calendar = await queries.teamCalendar(org.divisionHead, '2026-12');
     const row = calendar.find((entry) => entry.personId === person);
-    expect(row?.days).toEqual([{ date: '2026-12-01', part: 'MORNING' }]);
+    expect(row?.days).toEqual([{ date: '2026-12-01', part: 'MORNING', kind: 'LEAVE' }]);
     expect(calendar.some((entry) => entry.personId === outsider)).toBe(false);
     expect(JSON.stringify(calendar)).not.toMatch(/reason|leaveType|contact|เหตุผล/);
     expect(await queries.headedOrganizationIds(org.divisionHead)).toEqual(expect.arrayContaining([org.division, org.section]));

@@ -1,5 +1,5 @@
 import type { AccessSubject } from '@backoffice/contracts';
-import { AuthorizationService, LeaveQueries, RoomBookingQueries, canManageLeave, hasRequestActivity, listPendingApprovals } from '@backoffice/core';
+import { AuthorizationService, LeaveQueries, OfficialTravelQueries, RoomBookingQueries, canManageLeave, canManageTravel, hasRequestActivity, listPendingApprovals } from '@backoffice/core';
 import type { Database } from '@backoffice/db';
 import { t, type MessageKey } from '@backoffice/i18n';
 import type { NavigationItem } from '../components/app-shell';
@@ -7,7 +7,7 @@ import { matchModule } from './module-theme';
 import { canInventory } from './inventory-access';
 
 export type ModuleGroup = 'mine' | 'people' | 'services' | 'governance';
-export type ModuleIconName = 'requests' | 'bell' | 'people' | 'org' | 'upload' | 'shield' | 'delegate' | 'audit' | 'wrench' | 'package' | 'room' | 'car' | 'clock' | 'leave' | 'asset' | 'monitor' | 'target' | 'heart';
+export type ModuleIconName = 'requests' | 'bell' | 'people' | 'org' | 'upload' | 'shield' | 'delegate' | 'audit' | 'wrench' | 'package' | 'room' | 'car' | 'clock' | 'leave' | 'travel' | 'asset' | 'monitor' | 'target' | 'heart';
 
 /** One page inside a module, shown in the module's section bar rather than on the main page. */
 export interface ModuleSection {
@@ -86,6 +86,17 @@ export const moduleRegistry: readonly ModuleEntry[] = [
       { href: '/leave/balances', labelKey: 'leaveBalances', visible: canManageLeave }
     ]),
     badge: async (db, subject) => subject.personId ? new LeaveQueries(db).pendingCount(subject.personId) : 0
+  },
+  {
+    ...withSections({ code: 'official-travel', href: '/travel', labelKey: 'moduleTravel', descriptionKey: 'moduleTravelDescription', icon: 'travel', group: 'mine', status: 'live' }, [
+      { href: '/travel/mine', labelKey: 'travelMine', visible: everyone },
+      { href: '/travel/new', labelKey: 'travelNew', visible: everyone },
+      // Approvers are unit heads and ผู้แทน, not a role, as in leave.
+      { href: '/travel/approvals', labelKey: 'travelApprovals', visible: everyone, badge: async (db, subject) => subject.personId ? new OfficialTravelQueries(db).pendingCount(subject.personId) : 0 },
+      { href: '/travel/all', labelKey: 'travelAll', visible: canManageTravel },
+      { href: '/travel/settings', labelKey: 'travelSettings', visible: canManageTravel }
+    ]),
+    badge: async (db, subject) => subject.personId ? new OfficialTravelQueries(db).pendingCount(subject.personId) : 0
   },
   planned('maintenance', '/maintenance', 'moduleMaintenance', 'moduleMaintenanceDescription', 'wrench'),
   withSections({ code: 'inventory', href: '/inventory', labelKey: 'moduleInventory', descriptionKey: 'moduleInventoryDescription', icon: 'package', group: 'services', status: 'live' }, [

@@ -11,7 +11,7 @@ const shiftMonth = (month: string, by: number) => { const date = new Date(Date.U
 const lastDay = (month: string) => new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0)).toISOString().slice(0, 10);
 const partKeys = { FULL: 'leaveCalendarFull', MORNING: 'leaveCalendarMorning', AFTERNOON: 'leaveCalendarAfternoon' } as const;
 
-/** Who in the viewer's units is away on which days. It never shows the type, the reason or the contact. */
+/** Who in the viewer's units is away on which days, on leave or official travel. It never shows the leave type, the reason, the contact or what a trip is about. */
 export default async function LeaveCalendarPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const session = await leaveSession();
   if (!session) return null;
@@ -36,10 +36,16 @@ export default async function LeaveCalendarPage({ searchParams }: { searchParams
     {rows.length === 0 ? <p>{t('leaveCalendarEmpty')}</p> : <div className="leave-calendar"><table>
       <thead><tr><th scope="col">{t('leavePerson')}</th>{days.map((date) => <th key={date} scope="col" className={weekend(date) || closed.has(date) ? 'leave-day-off' : undefined}>{Number(date.slice(8))}</th>)}</tr></thead>
       <tbody>{rows.map((row) => {
-        const parts = new Map(row.days.map((day) => [day.date, day.part]));
+        const byDate = new Map(row.days.map((day) => [day.date, day]));
         return <tr key={row.personId}>
           <th scope="row">{row.displayName ?? '—'}<span>{row.organizationName ?? ''}</span></th>
-          {days.map((date) => { const part = parts.get(date); return <td key={date} className={part ? `leave-cell leave-cell-${part.toLowerCase()}` : weekend(date) || closed.has(date) ? 'leave-day-off' : undefined}>{part ? t(partKeys[part]) : ''}</td>; })}
+          {days.map((date) => {
+            const day = byDate.get(date);
+            if (!day) return <td key={date} className={weekend(date) || closed.has(date) ? 'leave-day-off' : undefined}></td>;
+            // A trip shows only that it is official travel and where; never what it is about.
+            if (day.kind === 'TRAVEL') { const label = `${t('travelCalendarLabel')} · ${day.place ?? ''}`; return <td key={date} className={`leave-cell travel-cell leave-cell-${day.part.toLowerCase()}`} title={label} aria-label={label}>{t('travelCalendarShort')}</td>; }
+            return <td key={date} className={`leave-cell leave-cell-${day.part.toLowerCase()}`}>{t(partKeys[day.part])}</td>;
+          })}
         </tr>;
       })}</tbody>
     </table></div>}

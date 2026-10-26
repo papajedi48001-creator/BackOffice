@@ -13,7 +13,7 @@ const cancel = (body: unknown = { reason }) => POST(new Request('http://localhos
 
 function ready() {
   mocks.requireAuthorized.mockResolvedValue({ authenticated: true, personId: 'person-a' });
-  mocks.getSharedDatabase.mockReturnValue({ query: vi.fn(), execute: vi.fn(), transaction: vi.fn() });
+  mocks.getSharedDatabase.mockReturnValue({ query: vi.fn().mockResolvedValue([{ moduleCode: 'maintenance' }]), execute: vi.fn(), transaction: vi.fn() });
 }
 
 afterEach(() => vi.clearAllMocks());
@@ -23,6 +23,15 @@ describe('POST /api/requests/[requestId]/cancellation', () => {
     ready();
     mocks.getSharedDatabase.mockReturnValue(null);
     expect((await cancel()).status).toBe(503);
+  });
+
+  it('sends an official travel คำขอ to the travel routes', async () => {
+    ready();
+    mocks.getSharedDatabase.mockReturnValue({ query: vi.fn().mockResolvedValue([{ moduleCode: 'official-travel' }]), execute: vi.fn(), transaction: vi.fn() });
+    const response = await cancel();
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'travel_request_route' });
+    expect(mocks.cancelRequest).not.toHaveBeenCalled();
   });
 
   it('rejects a signed-out user', async () => {

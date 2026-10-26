@@ -9,10 +9,10 @@ export const leaveEndHalfSchema = z.enum(['FULL', 'MORNING']);
 export type LeaveEndHalf = z.infer<typeof leaveEndHalfSchema>;
 export interface DayRange { startDate: string; endDate: string; startHalf: LeaveStartHalf; endHalf: LeaveEndHalf }
 
-const rangeShape = { startDate: calendarDateSchema, endDate: calendarDateSchema, startHalf: leaveStartHalfSchema.default('FULL'), endHalf: leaveEndHalfSchema.default('FULL') };
+export const rangeShape = { startDate: calendarDateSchema, endDate: calendarDateSchema, startHalf: leaveStartHalfSchema.default('FULL'), endHalf: leaveEndHalfSchema.default('FULL') };
 type RangeLike = { startDate: string; endDate: string; startHalf: LeaveStartHalf; endHalf: LeaveEndHalf };
 /** A start after the end, or one day that is both afternoon-only and morning-only, holds no time at all. */
-const withRangeChecks = <T extends z.ZodType<RangeLike>>(schema: T) => schema
+export const withRangeChecks = <T extends z.ZodType<RangeLike>>(schema: T) => schema
   .refine((range) => range.endDate >= range.startDate, { message: 'END_BEFORE_START', path: ['endDate'] })
   .refine((range) => !(range.startDate === range.endDate && range.startHalf === 'AFTERNOON' && range.endHalf === 'MORNING'), { message: 'EMPTY_DAY', path: ['endHalf'] });
 
@@ -47,4 +47,4 @@ export type LeaveSettingInput = z.infer<typeof leaveSettingInputSchema>;
 
 export interface LeaveBalance { entitled: number; carried: number; used: number; pending: number; remaining: number }
 export interface LeaveWarning { month: string; workingDays: number; minimum: number }
-export type LeaveErrorCode = 'NO_LEAVE_DAYS' | 'CROSSES_FISCAL_YEAR' | 'INACTIVE_LEAVE_TYPE' | 'NO_ENTITLEMENT' | 'NOT_ELIGIBLE' | 'SERVICE_TOO_SHORT' | 'APPOINTMENT_DATE_MISSING' | 'INSUFFICIENT_BALANCE' | 'OVERLAPS_EXISTING_LEAVE' | 'NO_ORGANIZATION' | 'NO_APPROVER' | 'NOT_FOUND' | 'NOT_APPROVED' | 'NOT_RETURNED' | 'OUTSIDE_LEAVE' | 'OVERLAPS_CANCELLATION';
+export type LeaveErrorCode = 'NO_LEAVE_DAYS' | 'CROSSES_FISCAL_YEAR' | 'INACTIVE_LEAVE_TYPE' | 'NO_ENTITLEMENT' | 'NOT_ELIGIBLE' | 'SERVICE_TOO_SHORT' | 'APPOINTMENT_DATE_MISSING' | 'INSUFFICIENT_BALANCE' | 'OVERLAPS_EXISTING_LEAVE' | 'NO_ORGANIZATION' | 'NO_APPROVER' | 'NOT_FOUND' | 'NOT_APPROVED' | 'NOT_RETURNED' | 'OUTSIDE_LEAVE' | 'OVERLAPS_CANCELLATION' | 'OVERLAPS_OFFICIAL_TRAVEL';

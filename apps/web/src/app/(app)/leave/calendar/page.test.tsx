@@ -23,13 +23,14 @@ describe('LeaveCalendarPage', () => {
   it('shows names and half days of the headed units with no leave type', async () => {
     ready();
     mocks.headedOrganizationIds.mockResolvedValue(['unit-1']);
-    mocks.teamCalendar.mockResolvedValue([{ personId: 'p1', displayName: 'สมชาย ใจดี', organizationName: 'งานผู้ป่วยใน', days: [{ date: '2026-12-01', part: 'MORNING' }, { date: '2026-12-02', part: 'FULL' }] }]);
+    mocks.teamCalendar.mockResolvedValue([{ personId: 'p1', displayName: 'สมชาย ใจดี', organizationName: 'งานผู้ป่วยใน', days: [{ date: '2026-12-01', part: 'MORNING', kind: 'LEAVE' }, { date: '2026-12-02', part: 'FULL', kind: 'LEAVE' }, { date: '2026-12-03', part: 'FULL', kind: 'TRAVEL', place: 'ศาลากลาง' }] }]);
     render(await LeaveCalendarPage({ searchParams: Promise.resolve({ month: '2026-12' }) }));
     expect(mocks.teamCalendar).toHaveBeenCalledWith('head-1', '2026-12');
     expect(screen.getByRole('heading', { name: /ธันวาคม 2569/ })).toBeInTheDocument();
     const person = screen.getByRole('row', { name: /สมชาย ใจดี/ });
     expect(within(person).getByText('เช้า')).toBeInTheDocument();
     expect(within(person).getByText('ลา')).toBeInTheDocument();
+    expect(within(person).getByTitle('ไปราชการ · ศาลากลาง')).toHaveTextContent('ราชการ');
     expect(screen.queryByText(/ลาพักผ่อน|ลาป่วย/)).toBeNull();
     expect(screen.getByRole('link', { name: 'เดือนถัดไป' })).toHaveAttribute('href', '/leave/calendar?month=2027-01');
   });
