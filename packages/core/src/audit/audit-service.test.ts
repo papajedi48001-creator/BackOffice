@@ -48,4 +48,11 @@ describe('AuditService', () => {
     await service.recordAudit({ actorPersonId: 'person-a', action: 'leave.request.submitted', targetType: 'request', targetId: 'request-1', result: 'SUCCESS', metadata: { leaveTypeCode: 'VACATION', days: 2.5, fiscalYear: 2570, startDate: '2026-11-02', endDate: '2026-11-04', rowsChanged: 3, contactDuringLeave: '0812345678' } });
     expect(recorded).toEqual(['{"leaveTypeCode":"VACATION","days":2.5,"fiscalYear":2570,"startDate":"2026-11-02","endDate":"2026-11-04","rowsChanged":3}']);
   });
+
+  it('keeps the travel type and head count of a trip, never its subject or costs', async () => {
+    const recorded: string[] = [];
+    const service = new AuditService({ append: async (event) => { recorded.push(event.metadata); } }, () => 'audit-travel');
+    await service.recordAudit({ actorPersonId: 'person-a', action: 'official_travel.submitted', targetType: 'official_travel', targetId: 'travel-1', result: 'SUCCESS', metadata: { travelType: 'ABROAD', memberCount: 3, days: 2, subject: 'ประชุม', costLodging: 1200 } });
+    expect(recorded).toEqual(['{"travelType":"ABROAD","memberCount":3,"days":2}']);
+  });
 });

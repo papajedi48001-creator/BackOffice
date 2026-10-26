@@ -34,6 +34,8 @@ export * from './leave/leave-access';
 export * from './official-travel/travel-module';
 export * from './official-travel/travel-status';
 export * from './official-travel/travel-access';
+export * from './official-travel/travel-store';
+export * from './official-travel/travel-service';
 export * from './audit/audit-service';
 export * from './audit/database-audit-repository';
 export * from './files/attachment-service';
