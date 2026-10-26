@@ -39,8 +39,11 @@ describe('LeaveRequestPage', () => {
     expect(screen.getByRole('cell', { name: 'ผู้อำนวยการ' })).toBeInTheDocument();
     expect(screen.queryByRole('form', { name: 'ขอยกเลิกวันลา' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'ส่งกลับแก้ไข' }));
-    expect(await screen.findByText('กรุณาระบุเหตุผล')).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'ส่งกลับแก้ไข' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'ยืนยัน' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'ปิด' }));
     fireEvent.click(screen.getByRole('button', { name: 'อนุมัติ' }));
+    fireEvent.click(screen.getByRole('button', { name: 'ยืนยัน' }));
     await waitFor(() => expect(mocks.refresh).toHaveBeenCalled());
     const [url, init] = fetchMock.mock.calls[0]! as unknown as [string, RequestInit];
     expect(url).toBe('/api/requests/r1/decisions');

@@ -1,7 +1,7 @@
 import type { AccessSubject } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { describe, expect, it, vi } from 'vitest';
-import { moduleLabel, moduleRegistry, moduleSections, navigationFor, visibleModules } from './modules';
+import { moduleCodeForPath, moduleLabel, moduleRegistry, moduleSections, navigationFor, visibleModules } from './modules';
 
 const subject = (overrides: Partial<AccessSubject> = {}): AccessSubject => ({ authenticated: true, personId: 'p', roles: [], dataOwnerModules: [], ...overrides });
 const hrefs = (value: AccessSubject) => navigationFor(value).map((item) => item.href);
@@ -104,5 +104,25 @@ describe('moduleLabel', () => {
     expect(hrefs(officer)).toContain('/inventory');
     expect(hrefs(subject())).not.toContain('/inventory');
     expect(hrefs(subject({ roles: [{ name: 'inventory-officer', organizationId: 'ward-1' }] }))).not.toContain('/inventory');
+  });
+});
+
+describe('moduleCodeForPath', () => {
+  it('finds the module a page belongs to', () => {
+    expect(moduleCodeForPath('/hr/people/1')).toBe('hr');
+    expect(moduleCodeForPath('/rooms/bookings/new')).toBe('room-booking');
+    expect(moduleCodeForPath('/leave')).toBe('leave');
+  });
+
+  it('treats the main page and unknown paths as home', () => {
+    expect(moduleCodeForPath('/dashboard')).toBe('home');
+    expect(moduleCodeForPath('/')).toBe('home');
+    expect(moduleCodeForPath('/hrx')).toBe('home');
+  });
+
+  it('tags each navigation item with its module', () => {
+    const items = navigationFor(subject());
+    expect(items[0]).toMatchObject({ href: '/dashboard', module: 'home' });
+    expect(items.find((item) => item.href === '/rooms')).toMatchObject({ module: 'room-booking' });
   });
 });

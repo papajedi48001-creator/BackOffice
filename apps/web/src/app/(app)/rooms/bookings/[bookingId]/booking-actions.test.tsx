@@ -17,31 +17,34 @@ it('offers to release the remaining days once the booking is under way', () => {
   expect(screen.getByRole('button', { name: 'คืนวันที่เหลือ' })).toBeInTheDocument();
 });
 
-it('approves without a reason', async () => {
+it('approves after confirming in the popup', async () => {
   const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 200 }));
   render(<BookingActions bookingId="b1" canDecide cancelAction={null} />);
   fireEvent.click(screen.getByRole('button', { name: 'อนุมัติ' }));
+  expect(screen.getByRole('dialog', { name: 'อนุมัติ' })).toBeInTheDocument();
+  expect(fetchMock).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'ยืนยัน' }));
   await waitFor(() => expect(refresh).toHaveBeenCalled());
   expect(fetchMock).toHaveBeenCalledWith('/api/rooms/bookings/b1/decision', expect.objectContaining({ method: 'POST', body: JSON.stringify({ decision: 'APPROVE' }) }));
 });
 
-it('asks for a reason before rejecting or cancelling', async () => {
+it('asks for a reason in the popup before rejecting', async () => {
   const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 200 }));
   render(<BookingActions bookingId="b1" canDecide cancelAction="cancel" />);
 
   fireEvent.click(screen.getByRole('button', { name: 'ไม่อนุมัติ' }));
-  expect(screen.getByRole('alert')).toHaveTextContent('กรุณาระบุเหตุผล');
-  expect(fetchMock).not.toHaveBeenCalled();
-
-  fireEvent.change(screen.getByLabelText('ระบุเหตุผล'), { target: { value: 'ห้องปิดปรับปรุง' } });
-  fireEvent.click(screen.getByRole('button', { name: 'ไม่อนุมัติ' }));
+  expect(screen.getByRole('button', { name: 'ยืนยัน' })).toBeDisabled();
+  fireEvent.change(screen.getByLabelText('เหตุผล'), { target: { value: 'ห้องปิดปรับปรุง' } });
+  fireEvent.click(screen.getByRole('button', { name: 'ยืนยัน' }));
   await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/rooms/bookings/b1/decision', expect.objectContaining({ body: JSON.stringify({ decision: 'REJECT', reason: 'ห้องปิดปรับปรุง' }) })));
 });
 
-it('shows the Thai error when the server refuses', async () => {
+it('shows the Thai error in the popup when the server refuses', async () => {
   vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ error: 'CANCEL_NOT_ALLOWED' }), { status: 409 }));
   render(<BookingActions bookingId="b1" canDecide={false} cancelAction="cancel" />);
-  fireEvent.change(screen.getByLabelText('ระบุเหตุผล'), { target: { value: 'เลื่อน' } });
   fireEvent.click(screen.getByRole('button', { name: 'ยกเลิกการจอง' }));
+  fireEvent.change(screen.getByLabelText('เหตุผล'), { target: { value: 'เลื่อน' } });
+  fireEvent.click(screen.getByRole('button', { name: 'ยืนยัน' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('ไม่สามารถยกเลิกการจองนี้ได้แล้ว');
+  expect(screen.getByRole('dialog')).toBeInTheDocument();
 });
