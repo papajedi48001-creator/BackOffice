@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { calendarDateSchema, commandChainTargetSchema } from './hr';
+import { calendarDateSchema, commandChainTargetSchema } from './hr.ts';
 
 export const leaveCountingSchema = z.enum(['WORKING_DAYS', 'CALENDAR_DAYS']);
 export type LeaveCounting = z.infer<typeof leaveCountingSchema>;

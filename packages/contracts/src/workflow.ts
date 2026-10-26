@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { commandChainTargetSchema } from './hr';
+import { commandChainTargetSchema } from './hr.ts';
 
 export const requestStatusSchema = z.enum(['DRAFT', 'SUBMITTED', 'IN_REVIEW', 'RETURNED', 'REJECTED', 'CANCELLED', 'APPROVED', 'FULFILLED']);
 export type RequestStatus = z.infer<typeof requestStatusSchema>;
