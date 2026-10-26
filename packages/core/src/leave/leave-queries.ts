@@ -1,5 +1,6 @@
 import type { AccessSubject, LeaveBalance, LeaveEndHalf, LeaveStartHalf, LeaveWarning, RequestStatus } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
+import { travelUnits } from '../official-travel/travel-store';
 import { canManageLeave } from './leave-access';
 import { leaveUnits, monthWarnings } from './leave-days';
 import { LEAVE_MODULE } from './leave-module';
@@ -11,7 +12,9 @@ const LIST_LIMIT = 1000;
 export interface LeaveListItem { requestId: string; reference: string; kind: 'LEAVE' | 'CANCEL_DAYS'; leaveTypeName: string; startDate: string; endDate: string; startHalf: LeaveStartHalf; endHalf: LeaveEndHalf; days: number; status: RequestStatus; submittedAt: string | null; personDisplayName: string | null; organizationName: string | null }
 export interface LeaveStepView { sequence: number; assigneeDisplayName: string | null; status: string; decidedAt: string | null; decisionReason: string | null }
 export interface LeaveDetail extends LeaveListItem { leaveTypeId: string; reason: string; contactDuringLeave: string | null; medicalCertificateRequired: boolean; warnings: LeaveWarning[]; steps: LeaveStepView[]; cancellations: LeaveListItem[]; canDecide: boolean; canCancel: boolean; canRequestCancelDays: boolean }
-export interface TeamCalendarRow { personId: string; displayName: string | null; organizationName: string | null; days: Array<{ date: string; part: 'FULL' | 'MORNING' | 'AFTERNOON' }> }
+/** A day away: on leave (never which type) or on official travel (only the place). */
+export interface TeamCalendarDay { date: string; part: 'FULL' | 'MORNING' | 'AFTERNOON'; kind: 'LEAVE' | 'TRAVEL'; place?: string }
+export interface TeamCalendarRow { personId: string; displayName: string | null; organizationName: string | null; days: TeamCalendarDay[] }
 export interface LeaveFilter { organizationId?: string; from?: string; to?: string; leaveTypeId?: string; status?: RequestStatus }
 
 type Reader = Pick<Database, 'query'>;
@@ -108,20 +111,31 @@ export class LeaveQueries {
     return [...found];
   }
 
-  /** Who is away on which half days of a month, for the units the viewer heads. Never says why or which type. */
+  /** Who is away on which half days of a month, for the units the viewer heads. Never says why, which type, or what a trip is about. */
   async teamCalendar(viewerPersonId: string, month: string): Promise<TeamCalendarRow[]> {
     const organizationIds = await this.headedOrganizationIds(viewerPersonId);
     if (organizationIds.length === 0) return [];
     const from = monthStart(`${month}-01`);
     const to = monthEnd(`${month}-01`);
     const people = await this.database.query<{ personId: string; displayName: string | null; organizationName: string | null }>(
-      "SELECT DISTINCT l.person_id AS personId, p.display_name AS displayName, o.name AS organizationName FROM leave_request l JOIN request r ON r.id = l.request_id JOIN person p ON p.id = l.person_id JOIN employment_assignment ea ON ea.person_id = l.person_id AND ea.effective_until IS NULL JOIN organization o ON o.id = ea.organization_id WHERE ea.organization_id IN (?) AND r.status IN ('IN_REVIEW', 'RETURNED', 'APPROVED') AND l.start_date <= ? AND l.end_date >= ? ORDER BY p.display_name",
-      [organizationIds, to, from]
+      `SELECT DISTINCT away.personId, p.display_name AS displayName, o.name AS organizationName FROM (
+         SELECT l.person_id AS personId FROM leave_request l JOIN request r ON r.id = l.request_id WHERE r.status IN ('IN_REVIEW', 'RETURNED', 'APPROVED') AND l.start_date <= ? AND l.end_date >= ?
+         UNION SELECT m.person_id FROM official_travel_member m JOIN request r ON r.id = m.request_id JOIN official_travel t ON t.id = m.travel_id WHERE r.status IN ('IN_REVIEW', 'RETURNED', 'APPROVED') AND t.start_date <= ? AND t.end_date >= ?
+       ) away JOIN person p ON p.id = away.personId JOIN employment_assignment ea ON ea.person_id = away.personId AND ea.effective_until IS NULL JOIN organization o ON o.id = ea.organization_id
+       WHERE ea.organization_id IN (?) ORDER BY p.display_name`,
+      [to, from, to, from, organizationIds]
     );
     const rows = await Promise.all(people.map(async (person) => {
-      const units = new Set(await activeUnitsOfPerson(this.database, person.personId, from, to));
+      const [leaveUnitList, trips] = await Promise.all([activeUnitsOfPerson(this.database, person.personId, from, to), this.tripsOf(person.personId, from, to)]);
+      const units = new Set(leaveUnitList);
+      const places = new Map<string, string>();
+      for (const trip of trips) for (const unit of travelUnits(trip)) if (unit.slice(0, 10) >= from && unit.slice(0, 10) <= to) { units.add(unit); places.set(unit.slice(0, 10), trip.place); }
       const dates = [...new Set([...units].map((unit) => unit.slice(0, 10)))].sort();
-      const days = dates.map((day) => ({ date: day, part: units.has(`${day}:AM`) && units.has(`${day}:PM`) ? 'FULL' as const : units.has(`${day}:AM`) ? 'MORNING' as const : 'AFTERNOON' as const }));
+      const days = dates.map((day): TeamCalendarDay => {
+        const part = units.has(`${day}:AM`) && units.has(`${day}:PM`) ? 'FULL' as const : units.has(`${day}:AM`) ? 'MORNING' as const : 'AFTERNOON' as const;
+        const place = places.get(day);
+        return place === undefined ? { date: day, part, kind: 'LEAVE' } : { date: day, part, kind: 'TRAVEL', place };
+      });
       return { personId: person.personId, displayName: person.displayName, organizationName: person.organizationName, days };
     }));
     return rows.filter((row) => row.days.length > 0);
@@ -153,6 +167,13 @@ export class LeaveQueries {
       [personId, personId, personId]
     );
     return rows.map((row) => row.requestId);
+  }
+
+  private tripsOf(personId: string, from: string, to: string): Promise<Array<{ place: string; startDate: string; endDate: string; startHalf: LeaveStartHalf; endHalf: LeaveEndHalf }>> {
+    return this.database.query(
+      `SELECT t.place, ${date('t.start_date')} AS startDate, ${date('t.end_date')} AS endDate, t.start_half AS startHalf, t.end_half AS endHalf FROM official_travel_member m JOIN request r ON r.id = m.request_id JOIN official_travel t ON t.id = m.travel_id
+       WHERE m.person_id = ? AND r.status IN ('IN_REVIEW', 'RETURNED', 'APPROVED') AND t.start_date <= ? AND t.end_date >= ?`, [personId, to, from]
+    );
   }
 
   private async warningsOf(row: ItemRow): Promise<LeaveWarning[]> {
