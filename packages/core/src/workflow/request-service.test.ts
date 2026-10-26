@@ -101,6 +101,13 @@ describe('RequestService', () => {
       expect(repository.requests.get(request.id)?.status).toBe('IN_REVIEW');
     });
 
+    it('lets a module that checked the actor cancel for the requestor, and records that actor', async () => {
+      const { repository, service, request } = await submitted();
+      await service.cancelRequest({ requestId: request.id, actorPersonId: 'leader-a', reason }, { actorAuthorized: true });
+      expect(repository.requests.get(request.id)?.status).toBe('CANCELLED');
+      expect(repository.auditEvents.map((event) => event.actorPersonId)).toEqual(['leader-a']);
+    });
+
     it('refuses an unknown request', async () => {
       const { service } = await submitted();
       await expect(service.cancelRequest({ requestId: 'missing', actorPersonId: 'person-a', reason })).rejects.toThrow('REQUEST_NOT_FOUND');
@@ -168,6 +175,13 @@ describe('RequestService', () => {
       await expect(service.resubmitRequest({ requestId: 'request-1', actorPersonId: 'manager-a' })).rejects.toThrow('NOT_REQUESTOR');
     });
 
+    it('lets a module that checked the actor resubmit for the requestor, and records that actor', async () => {
+      const { repository, service } = await returned(async () => [{ personId: 'manager-c', organizationId: 'unit-a' }]);
+      await service.resubmitRequest({ requestId: 'request-1', actorPersonId: 'leader-a' }, { actorAuthorized: true });
+      expect(repository.requests.get('request-1')?.status).toBe('IN_REVIEW');
+      expect(repository.auditEvents.map((event) => event.actorPersonId)).toEqual(['leader-a']);
+    });
+
     it('refuses an unknown request', async () => {
       const { service } = await returned(async () => [{ personId: 'manager-c', organizationId: 'unit-a' }]);
       await expect(service.resubmitRequest({ requestId: 'missing', actorPersonId: 'person-a' })).rejects.toThrow('REQUEST_NOT_FOUND');
@@ -200,6 +214,15 @@ describe('RequestService', () => {
       const request = await service.submitRequest({ moduleCode: 'leave', requestorPersonId: 'person-a', organizationSnapshot: { organizationId: 'unit-a' } });
 
       expect(repository.outbox.find((event) => event.type === 'notification.in_app')?.payload).toMatchObject({ moduleCode: 'leave', targetPath: `/leave/requests/${request.id}` });
+    });
+
+    it('opens official travel notices on the travel request page', async () => {
+      const repository = new MemoryWorkflowRepository();
+      const service = new RequestService(repository, { resolve: async () => [{ personId: 'manager-a', organizationId: 'unit-a' }] }, (() => { let next = 0; return () => `id-${++next}`; })());
+
+      const request = await service.submitRequest({ moduleCode: 'official-travel', requestorPersonId: 'person-a', organizationSnapshot: { organizationId: 'unit-a' } });
+
+      expect(repository.outbox.find((event) => event.type === 'notification.in_app')?.payload).toMatchObject({ moduleCode: 'official-travel', targetPath: `/travel/requests/${request.id}` });
     });
 
     it('keeps other requests on the requests module', async () => {

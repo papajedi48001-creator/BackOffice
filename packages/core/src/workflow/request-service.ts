@@ -42,14 +42,15 @@ export class RequestService {
     });
   }
 
-  async cancelRequest(input: Parameters<typeof cancelRequestInputSchema.parse>[0]): Promise<Omit<SubmittedRequest, 'approvalSteps'>> {
+  /** `options.actorAuthorized` means the calling module already checked the actor may act for the requestor, as a หัวหน้าคณะ does for a trip. */
+  async cancelRequest(input: Parameters<typeof cancelRequestInputSchema.parse>[0], options: { actorAuthorized?: boolean } = {}): Promise<Omit<SubmittedRequest, 'approvalSteps'>> {
     const parsed = cancelRequestInputSchema.safeParse(input);
     if (!parsed.success) throw new Error(parsed.error.issues.some((issue) => issue.path[0] === 'reason') ? 'REASON_REQUIRED' : 'INVALID_INPUT');
     const validInput = parsed.data;
     return this.repository.transaction(async (repository) => {
       const request = await repository.getRequestForUpdate(validInput.requestId);
       if (!request) throw new Error('REQUEST_NOT_FOUND');
-      if (request.requestorPersonId !== validInput.actorPersonId) throw new Error('NOT_REQUESTOR');
+      if (!options.actorAuthorized && request.requestorPersonId !== validInput.actorPersonId) throw new Error('NOT_REQUESTOR');
       if (request.status !== 'IN_REVIEW' && request.status !== 'RETURNED') throw new Error('REQUEST_NOT_CANCELLABLE');
       const cancelled = { ...request, status: 'CANCELLED' as const };
       const pendingSteps = (await repository.getSteps(request.id)).sort((left, right) => left.sequence - right.sequence).filter((step) => step.status === 'PENDING');
@@ -64,12 +65,12 @@ export class RequestService {
     });
   }
 
-  async resubmitRequest(input: Parameters<typeof resubmitRequestInputSchema.parse>[0]): Promise<SubmittedRequest> {
+  async resubmitRequest(input: Parameters<typeof resubmitRequestInputSchema.parse>[0], options: { actorAuthorized?: boolean } = {}): Promise<SubmittedRequest> {
     const validInput = resubmitRequestInputSchema.parse(input);
     return this.repository.transaction(async (repository) => {
       const request = await repository.getRequestForUpdate(validInput.requestId);
       if (!request) throw new Error('REQUEST_NOT_FOUND');
-      if (request.requestorPersonId !== validInput.actorPersonId) throw new Error('NOT_REQUESTOR');
+      if (!options.actorAuthorized && request.requestorPersonId !== validInput.actorPersonId) throw new Error('NOT_REQUESTOR');
       if (request.status !== 'RETURNED') throw new Error('REQUEST_NOT_RETURNED');
       const snapshots = await this.approvers.resolve({ moduleCode: request.moduleCode, requestorPersonId: request.requestorPersonId, organizationId: request.organizationSnapshot.organizationId, ...(validInput.target ? { target: validInput.target } : {}) });
       if (snapshots.length === 0) throw new Error('NO_APPROVER');
