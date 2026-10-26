@@ -43,6 +43,7 @@ sections: [
 | 0006 | `0006_notification_module.sql` | หน้าหลักและการแจ้งเตือนกลาง (เธรดนี้) | กำลังพัฒนา |
 | 0007 | `0007_request_cancellation.sql` | วงจรคำขอ (เธรดนี้) | กำลังพัฒนา |
 | 0009 | `0009_hr_command_chain.sql` | ระบบ HR | กำลังพัฒนา |
+| 0010 | `0010_hr_staff_profile.sql` | ระบบ HR | กำลังพัฒนา |
 
 - ตารางของโมดูลใช้ prefix ของโมดูล (`room_*`) และอ้างอิงบุคลากรด้วย `person.id` เท่านั้น
 - เก็บเวลาเป็น UTC แสดงเป็น Asia/Bangkok
