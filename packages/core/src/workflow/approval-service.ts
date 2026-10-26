@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { decideRequestInputSchema, notificationEventPayloadSchema, type ApprovalDecision, type Delegation, type OutboxEvent } from '@backoffice/contracts';
 import { AuditService } from '../audit/audit-service';
-import { REQUESTS_MODULE } from './requests-module';
+import { notificationTarget } from './module-notification';
 import type { WorkflowRepository } from './request-service';
 
 export interface ActiveDelegationFinder { findActiveFor(delegatorPersonId: string, delegatePersonId: string, moduleCode: string): Promise<Pick<Delegation, 'delegatorPersonId' | 'delegatePersonId' | 'moduleCode'> | null>; }
@@ -39,7 +39,7 @@ export class ApprovalService {
       await repository.saveDecision(decision);
       await repository.saveRequest({ ...request, status });
       await repository.saveOutbox(outbox);
-      await repository.saveOutbox({ id: this.createId(), type: 'notification.in_app', idempotencyKey: `notification.in_app:request-decided:${decision.id}:recipient:${recipientPersonId}`, payload: notificationEventPayloadSchema.parse({ moduleCode: REQUESTS_MODULE, recipientPersonId, requestId: request.id, subject }), occurredAt: new Date().toISOString(), processedAt: null });
+      await repository.saveOutbox({ id: this.createId(), type: 'notification.in_app', idempotencyKey: `notification.in_app:request-decided:${decision.id}:recipient:${recipientPersonId}`, payload: notificationEventPayloadSchema.parse({ ...notificationTarget(request.moduleCode, request.id), recipientPersonId, requestId: request.id, subject }), occurredAt: new Date().toISOString(), processedAt: null });
       await new AuditService({ append: (event) => repository.appendAudit(event) }, this.createId).recordAudit({ actorPersonId: decision.actorPersonId, action: 'workflow.request.decided', targetType: 'request', targetId: request.id, result: decision.decision, metadata: { moduleCode: request.moduleCode, requestReference: request.reference, status, organizationId: request.organizationSnapshot.organizationId } });
       return decision;
     });

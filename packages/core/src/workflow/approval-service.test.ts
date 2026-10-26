@@ -152,6 +152,22 @@ describe('ApprovalService', () => {
 
     expect(repository.steps.map((candidate) => candidate.status)).toEqual([decision === 'REJECT' ? 'REJECTED' : 'RETURNED', 'CANCELLED', 'CANCELLED']);
   });
+  it('labels the decided notification of a leave request with the leave module', async () => {
+    const outbox: unknown[] = [];
+    const repository: WorkflowRepository = {
+      transaction: async (work) => work(repository),
+      getRequest: async () => null,
+      getRequestForUpdate: async () => ({ id: 'request-1', reference: 'REQ-1', moduleCode: 'leave', requestorPersonId: 'person-a', organizationSnapshot: { organizationId: 'unit-a' }, status: 'IN_REVIEW' }),
+      getSteps: async () => [{ id: 'step-1', requestId: 'request-1', sequence: 1, assigneeSnapshot: { personId: 'manager-a', organizationId: 'unit-a' }, status: 'PENDING' }],
+      saveRequest: async () => undefined, saveDecision: async () => undefined, saveCancellation: async () => undefined, saveStep: async () => undefined, appendAudit: async () => undefined,
+      saveOutbox: async (event) => { outbox.push(event); }
+    };
+    const service = new ApprovalService(repository, { findActiveFor: async () => null }, () => 'decision-1');
+
+    await service.decideRequest({ requestId: 'request-1', actorPersonId: 'manager-a', decision: 'APPROVE' });
+
+    expect(outbox).toEqual(expect.arrayContaining([expect.objectContaining({ type: 'notification.in_app', payload: expect.objectContaining({ moduleCode: 'leave', targetPath: '/leave/requests/request-1' }) })]));
+  });
 });
 
 class DecisionWorkflowRepository implements WorkflowRepository {

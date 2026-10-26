@@ -12,7 +12,7 @@ const resubmit = () => POST(new Request('http://localhost/api/requests/request-1
 
 function ready() {
   mocks.requireAuthorized.mockResolvedValue({ authenticated: true, personId: 'person-a' });
-  mocks.getSharedDatabase.mockReturnValue({ query: vi.fn(), execute: vi.fn(), transaction: vi.fn() });
+  mocks.getSharedDatabase.mockReturnValue({ query: vi.fn().mockResolvedValue([{ moduleCode: 'maintenance', requestorPersonId: 'person-a' }]), execute: vi.fn(), transaction: vi.fn() });
 }
 
 afterEach(() => vi.clearAllMocks());
@@ -38,6 +38,15 @@ describe('POST /api/requests/[requestId]/resubmission', () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ status: 'IN_REVIEW' });
     expect(mocks.resubmitRequest).toHaveBeenCalledWith({ requestId: 'request-1', actorPersonId: 'person-a' });
+  });
+
+  it('sends a returned leave request to the leave routes', async () => {
+    ready();
+    mocks.getSharedDatabase.mockReturnValue({ query: vi.fn().mockResolvedValue([{ moduleCode: 'leave', requestorPersonId: 'person-a' }]), execute: vi.fn(), transaction: vi.fn() });
+    const response = await resubmit();
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'leave_request_route' });
+    expect(mocks.resubmitRequest).not.toHaveBeenCalled();
   });
 
   it.each([

@@ -1,16 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createDatabase } from '@backoffice/db';
-import { ApprovalService, DatabaseWorkflowRepository, type ActiveDelegationFinder } from '@backoffice/core';
+import { ApprovalService, DatabaseWorkflowRepository } from '@backoffice/core';
+import { DatabaseActiveDelegationFinder } from '../../../../../lib/database-delegation-finder';
 import { requireAuthorized } from '../../../../../lib/require-authorized';
 import { readRuntimeValue } from '../../../../../lib/runtime-env';
-
-class DatabaseActiveDelegationFinder implements ActiveDelegationFinder {
-  constructor(private readonly database: ReturnType<typeof createDatabase>) {}
-  async findActiveFor(delegatorPersonId: string, delegatePersonId: string, moduleCode: string) {
-    const rows = await this.database.query<{ delegatorPersonId: string; delegatePersonId: string; moduleCode: string }>('SELECT delegator_person_id AS delegatorPersonId, delegate_person_id AS delegatePersonId, module_code AS moduleCode FROM delegation WHERE delegator_person_id = ? AND delegate_person_id = ? AND module_code = ? AND effective_from <= UTC_TIMESTAMP() AND effective_until > UTC_TIMESTAMP() LIMIT 1', [delegatorPersonId, delegatePersonId, moduleCode]);
-    return rows[0] ?? null;
-  }
-}
 
 export async function POST(request: Request, context: { params: Promise<{ requestId: string }> }): Promise<Response> {
   const databaseUrl = readRuntimeValue('DATABASE_URL');
