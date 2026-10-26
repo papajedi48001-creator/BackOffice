@@ -190,3 +190,5 @@ a.module-tile:hover .module-go { color: #0b7285; transform: translateX(2px); }
 .profile-form button:hover { background: #095c6b; }
 .profile-changes { margin: 0; padding-left: 18px; }
 @media (max-width: 640px) { .profile-box, .profile-form { padding: 14px; } }
+.profile-form .profile-check { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+.profile-form .profile-check input { min-height: 0; width: 20px; height: 20px; }
