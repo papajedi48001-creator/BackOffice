@@ -167,7 +167,12 @@ function recordProfileAudit(database: QueryDatabase, action: string, personId: s
 }
 
 /** Locks the person row, which serialises profile saves, and reads the open assignment. */
-export async function lockProfileSubject(database: QueryDatabase, personId: string): Promise<ProfileSubject | null> {
+export async function lockProfileSubject(database: QueryDatabase, personId: string, options: { organizationsLocked?: boolean } = {}): Promise<ProfileSubject | null> {
+  // A master data import locks every organization and then every person. Taking the organizations first here too
+  // (shared, so profile saves do not block each other) keeps the same order, so a save and an import cannot deadlock
+  // over the person row and the organization or actor rows that foreign keys check. The primary key is forced because a
+  // shared lock through a covering secondary index would not touch the primary rows the import locks.
+  if (!options.organizationsLocked) await database.query('SELECT id FROM organization FORCE INDEX (PRIMARY) LOCK IN SHARE MODE');
   const [person] = await database.query<{ positionTitle: string | null }>('SELECT position_title AS positionTitle FROM person WHERE id = ? FOR UPDATE', [personId]);
   if (!person) return null;
   const [assignment] = await database.query<{ id: string; organizationId: string; managerPersonId: string | null; organizationName: string | null }>(

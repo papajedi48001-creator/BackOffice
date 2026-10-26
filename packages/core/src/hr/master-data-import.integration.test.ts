@@ -5,6 +5,7 @@ import { NationalIdProtector } from '../crypto/national-id';
 import { HrDirectory } from './hr-directory';
 import { MasterDataImportService } from './master-data-import';
 import { OrganizationHeadService } from './organization-head-service';
+import { HrProfileService } from './profile-service';
 import { nationalId } from './national-id-fixture';
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -158,5 +159,19 @@ describeWithDatabase('MasterDataImportService against MariaDB', () => {
     expect(audits[0]!.metadata).not.toContain('1987-02-01');
     await expect(service.apply({ people: file }, actorPersonId)).resolves.toMatchObject({ ok: true, summary: { peopleUpdated: 0, profilesChanged: 0 } });
     await expect(service.validate({ people: file.replace('ข้าราชการ', 'ประเภทไม่มีจริง') })).resolves.toEqual({ ok: false, errors: [{ file: 'people', row: 2, column: 'employment_type', code: 'UNKNOWN_EMPLOYMENT_TYPE' }] });
+  });
+
+  it('lets a profile save that moves a person run alongside an import without deadlocking', async () => {
+    const profiles = new HrProfileService(database);
+    const manager = { authenticated: true, personId: actorPersonId, roles: [{ name: 'hr-manager', organizationId: null }], dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: ['hr'] };
+    const [nurse] = await database.query<{ id: string }>('SELECT id FROM person WHERE employee_code = ?', [`R${run}`]);
+    const [hospitalUnit] = await database.query<{ id: string }>('SELECT id FROM organization WHERE code = ?', [hospital]);
+    const [nursingUnit] = await database.query<{ id: string }>('SELECT id FROM organization WHERE code = ?', [nursing]);
+    for (let round = 0; round < 10; round += 1) {
+      const target = round % 2 === 0 ? hospitalUnit!.id : nursingUnit!.id;
+      const [imported, saved] = await Promise.all([service.apply({ organizations }, actorPersonId), profiles.updateProfile(nurse!.id, { organizationId: target, positionLevel: `รอบ ${round}` }, manager)]);
+      expect(imported.ok).toBe(true);
+      expect(saved).toEqual({ ok: true });
+    }
   });
 });

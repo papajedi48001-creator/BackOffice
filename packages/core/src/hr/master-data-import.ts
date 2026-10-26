@@ -115,7 +115,7 @@ export class MasterDataImportService {
     }
     for (const row of validation.people) {
       if (!row.profileChanged) continue;
-      const subject = await lockProfileSubject(database, personIdByCode.get(row.employeeCode)!);
+      const subject = await lockProfileSubject(database, personIdByCode.get(row.employeeCode)!, { organizationsLocked: true });
       // The file's display_name column stays the name of record, so the import does not rebuild it from name parts.
       const result = await applyProfileUpdate(database, subject!, row.profile, actorPersonId, this.createId, { canEditOrganization: () => true, syncDisplayName: false });
       if (!result.ok) throw new Error(`PROFILE_UPDATE_${result.code}`);
