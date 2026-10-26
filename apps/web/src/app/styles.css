@@ -1,7 +1,7 @@
 /* Colour tokens. Pages read --accent; [data-module] sets it per module (see DESIGN.md). */
 :root {
   --brand: #0f5e5e;
-  --alert-count: #dc2626;
+  --alert-count: #c2410c;
   --brand-deep: #0f4f50;
   --brand-deeper: #0c4344;
   --ink: #12302f;
@@ -188,9 +188,11 @@ a.module-tile:hover .module-go { color: var(--accent); transform: translateX(2px
 .soon-tag { border: 1px solid var(--line); border-radius: 6px; color: #627d98; font-size: .8rem; padding: 2px 8px; white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { .module-tile, .module-go { transition: none; } a.module-tile:hover { transform: none; } }
 @media (max-width: 720px) { .module-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .module-tile { min-height: 132px; padding: 14px; } .module-text span { display: none; } .module-icon { width: 44px; height: 44px; } .hero-stats { width: 100%; } .hero-stat { flex: 1; min-width: 0; } }
-.nav-badge { display: inline-block; min-width: 22px; height: 22px; margin-left: 8px; border-radius: 999px; background: var(--alert-count); color: #fff; font-size: .8rem; font-weight: 700; line-height: 22px; padding: 0 6px; text-align: center; }
+.nav-badge { display: inline-block; min-width: 22px; height: 22px; margin-left: auto; border-radius: 999px; background: var(--alert-count); color: #fff; font-size: .8rem; font-weight: 700; line-height: 22px; padding: 0 6px; text-align: center; }
 /* Notification bell, top right of every page */
-.app-topbar { display: flex; justify-content: flex-end; margin: -8px 0 8px; }
+.app-topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 24px; }
+.app-topbar .permission-notice { margin: 0; }
+.count-badge { display: inline-block; min-width: 22px; height: 22px; margin-left: 8px; border-radius: 999px; background: var(--alert-count); color: #fff; font-size: .8rem; font-weight: 700; line-height: 22px; padding: 0 6px; text-align: center; vertical-align: middle; }
 .notification-bell { position: relative; }
 .bell-button { position: relative; display: inline-grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink); cursor: pointer; }
 .bell-button:hover, .bell-button[aria-expanded="true"] { border-color: var(--line-strong); }

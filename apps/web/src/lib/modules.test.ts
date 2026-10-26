@@ -98,6 +98,12 @@ describe('leave module', () => {
     expect(sectionHrefs('leave', manager)).toEqual(['/leave/mine', '/leave/new', '/leave/approvals', '/leave/calendar', '/leave/all', '/leave/settings', '/leave/holidays', '/leave/balances']);
   });
 
+  it('counts the ใบลา waiting on the person on the อนุมัติการลา section', async () => {
+    const approvals = moduleRegistry.find((entry) => entry.code === 'leave')!.sections!.find((section) => section.href === '/leave/approvals')!;
+    const query = vi.fn().mockResolvedValue([{ requestId: 'r1' }]);
+    expect(await approvals.badge!({ query } as unknown as Database, subject())).toBe(1);
+  });
+
   it('badges the ใบลา waiting on the person', async () => {
     const leave = moduleRegistry.find((entry) => entry.code === 'leave')!;
     const query = vi.fn().mockResolvedValue([{ requestId: 'r1' }, { requestId: 'r2' }]);

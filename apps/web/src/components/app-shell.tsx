@@ -12,6 +12,6 @@ export function AppShell({ navigation, bell = { unread: 0, items: [] }, children
       <SidebarNav items={navigation} />
       <SignOutButton />
     </aside>
-    <main className="app-main"><div className="app-topbar"><NotificationBell unread={bell.unread} items={bell.items} /></div><p className="permission-notice">{t('permissionNotice')}</p>{children}</main>
+    <main className="app-main"><div className="app-topbar"><p className="permission-notice">{t('permissionNotice')}</p><NotificationBell unread={bell.unread} items={bell.items} /></div>{children}</main>
   </ShellFrame>;
 }
