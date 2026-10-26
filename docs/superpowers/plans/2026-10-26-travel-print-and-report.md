@@ -1,6 +1,6 @@
 # ไปราชการ print form and report Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** A printable แบบขออนุมัติไปราชการ and a รายงานการไปราชการ the หัวหน้าคณะ files after the trip.
 
@@ -31,9 +31,9 @@
 
 **Interfaces:** `TravelReportService(database, createId).save(personId, travelId, input, today): Promise<{ ok: true } | { ok: false; code: 'NOT_FOUND' | 'REPORT_NOT_DUE' }>`; `travelReportInputSchema`; `TravelListItem.reportStatus: 'SUBMITTED' | 'MISSING' | 'NOT_DUE'`.
 
-- [ ] Failing tests: due rules, leader only, update keeps one row, audit without text, list/filters.
-- [ ] Implement; tests pass.
-- [ ] Commit `feat(travel): post-trip report table, service and queries`.
+- [x] Failing tests: due rules, leader only, update keeps one row, audit without text, list/filters.
+- [x] Implement; tests pass.
+- [x] Commit `feat(travel): post-trip report table, service and queries`.
 
 ### Task 2: Report API and screens
 

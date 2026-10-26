@@ -3,6 +3,9 @@ import type { Database } from '@backoffice/db';
 import { leaveUnits } from '../leave/leave-days';
 
 type Reader = Pick<Database, 'query'>;
+
+/** Today's date in Asia/Bangkok, which has no daylight saving. */
+export const bangkokToday = (now: Date = new Date()) => new Date(now.getTime() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
 const NO_HOLIDAYS: ReadonlySet<string> = new Set();
 export const ACTIVE_STATUSES = "('IN_REVIEW', 'RETURNED', 'APPROVED')";
 

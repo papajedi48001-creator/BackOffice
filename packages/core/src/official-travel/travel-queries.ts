@@ -4,25 +4,29 @@ import type { LeaveStepView } from '../leave/leave-queries';
 import { canManageTravel } from './travel-access';
 import { OFFICIAL_TRAVEL_MODULE } from './travel-module';
 import { tripStatus, type TripStatus } from './travel-status';
+import { bangkokToday } from './travel-store';
 
 const LIST_LIMIT = 1000;
 
-export interface TravelListItem { travelId: string; subject: string; place: string; province: string; travelType: TravelTypeCode; startDate: string; endDate: string; startHalf: LeaveStartHalf; endHalf: LeaveEndHalf; days: number; status: TripStatus; leaderDisplayName: string | null; memberCount: number }
+export interface TravelListItem { travelId: string; subject: string; place: string; province: string; travelType: TravelTypeCode; startDate: string; endDate: string; startHalf: LeaveStartHalf; endHalf: LeaveEndHalf; days: number; status: TripStatus; leaderDisplayName: string | null; memberCount: number; reportStatus: TravelReportStatus }
+/** SUBMITTED once filed; MISSING when an approved trip has ended without one; NOT_DUE otherwise. */
+export type TravelReportStatus = 'SUBMITTED' | 'MISSING' | 'NOT_DUE';
+export interface TravelReportView { summary: string; application: string; submittedAt: string; updatedAt: string }
 export interface TravelMemberView { requestId: string; personId: string; displayName: string | null; organizationName: string | null; status: RequestStatus; steps: LeaveStepView[]; canDecide: boolean }
-export interface TravelDetail extends TravelListItem { organiser: string; vehicle: TravelVehicle; fundingSource: TravelFunding; costs: { allowance: number; lodging: number; transport: number; registration: number; total: number }; leaderPersonId: string; members: TravelMemberView[]; canEdit: boolean; canCancel: boolean }
+export interface TravelDetail extends TravelListItem { organiser: string; vehicle: TravelVehicle; fundingSource: TravelFunding; costs: { allowance: number; lodging: number; transport: number; registration: number; total: number }; leaderPersonId: string; members: TravelMemberView[]; canEdit: boolean; canCancel: boolean; report: TravelReportView | null; canReport: boolean }
 export interface TravelPendingItem { requestId: string; travelId: string; personId: string; personDisplayName: string | null; organizationName: string | null; subject: string; place: string; travelType: TravelTypeCode; startDate: string; endDate: string; startHalf: LeaveStartHalf; endHalf: LeaveEndHalf; days: number; submittedAt: string | null }
-export interface TravelFilter { from?: string; to?: string; travelType?: TravelTypeCode; status?: TripStatus }
+export interface TravelFilter { from?: string; to?: string; travelType?: TravelTypeCode; status?: TripStatus; reportMissing?: boolean }
 
 type Reader = Pick<Database, 'query'>;
-interface TripRow { travelId: string; subject: string; place: string; province: string; travelType: TravelTypeCode; startDate: string; endDate: string; startHalf: LeaveStartHalf; endHalf: LeaveEndHalf; days: string; leaderPersonId: string; leaderDisplayName: string | null; organiser: string; vehicle: TravelVehicle; fundingSource: TravelFunding; costAllowance: string; costLodging: string; costTransport: string; costRegistration: string }
+interface TripRow { travelId: string; subject: string; place: string; province: string; travelType: TravelTypeCode; startDate: string; endDate: string; startHalf: LeaveStartHalf; endHalf: LeaveEndHalf; days: string; leaderPersonId: string; leaderDisplayName: string | null; organiser: string; vehicle: TravelVehicle; fundingSource: TravelFunding; costAllowance: string; costLodging: string; costTransport: string; costRegistration: string; hasReport: number | string }
 interface MemberRow { travelId: string; requestId: string; personId: string; displayName: string | null; organizationName: string | null; status: RequestStatus }
 
 const date = (column: string) => `DATE_FORMAT(${column}, '%Y-%m-%d')`;
 const instant = (column: string) => `DATE_FORMAT(${column}, '%Y-%m-%dT%H:%i:%sZ')`;
 const TRIPS = `SELECT t.id AS travelId, t.subject, t.place, t.province, t.travel_type AS travelType, ${date('t.start_date')} AS startDate, ${date('t.end_date')} AS endDate, t.start_half AS startHalf, t.end_half AS endHalf, CAST(t.days AS CHAR) AS days,
   t.leader_person_id AS leaderPersonId, lp.display_name AS leaderDisplayName, t.organiser, t.vehicle, t.funding_source AS fundingSource,
-  CAST(t.cost_allowance AS CHAR) AS costAllowance, CAST(t.cost_lodging AS CHAR) AS costLodging, CAST(t.cost_transport AS CHAR) AS costTransport, CAST(t.cost_registration AS CHAR) AS costRegistration
-  FROM official_travel t JOIN person lp ON lp.id = t.leader_person_id`;
+  CAST(t.cost_allowance AS CHAR) AS costAllowance, CAST(t.cost_lodging AS CHAR) AS costLodging, CAST(t.cost_transport AS CHAR) AS costTransport, CAST(t.cost_registration AS CHAR) AS costRegistration, rp.travel_id IS NOT NULL AS hasReport
+  FROM official_travel t JOIN person lp ON lp.id = t.leader_person_id LEFT JOIN official_travel_report rp ON rp.travel_id = t.id`;
 // tripStatus in SQL, so HR's status filter runs before the list cap.
 const TRIP_STATUS = `SELECT CASE WHEN SUM(sr.status = 'RETURNED') > 0 THEN 'RETURNED' WHEN SUM(sr.status = 'IN_REVIEW') > 0 THEN 'IN_REVIEW' WHEN SUM(sr.status <> 'CANCELLED') = 0 OR COUNT(*) = 0 THEN 'CANCELLED'
   WHEN SUM(sr.status NOT IN ('REJECTED', 'CANCELLED')) = 0 THEN 'REJECTED' ELSE 'APPROVED' END FROM official_travel_member sm JOIN request sr ON sr.id = sm.request_id WHERE sm.travel_id = t.id`;
@@ -32,11 +36,11 @@ const ACTIVE_DELEGATORS = `SELECT delegator_person_id FROM delegation WHERE dele
 export class OfficialTravelQueries {
   constructor(private readonly database: Reader) {}
 
-  async mine(personId: string): Promise<TravelListItem[]> {
-    return this.list('EXISTS (SELECT 1 FROM official_travel_member mm WHERE mm.travel_id = t.id AND mm.person_id = ?)', [personId]);
+  async mine(personId: string, today: string = bangkokToday()): Promise<TravelListItem[]> {
+    return this.list('EXISTS (SELECT 1 FROM official_travel_member mm WHERE mm.travel_id = t.id AND mm.person_id = ?)', [personId], today);
   }
 
-  async detail(travelId: string, viewer: AccessSubject): Promise<TravelDetail | null> {
+  async detail(travelId: string, viewer: AccessSubject, today: string = bangkokToday()): Promise<TravelDetail | null> {
     if (!viewer.authenticated || !viewer.personId) return null;
     const [trip] = await this.database.query<TripRow>(`${TRIPS} WHERE t.id = ?`, [travelId]);
     if (!trip) return null;
@@ -54,9 +58,11 @@ export class OfficialTravelQueries {
     if (!isMember && !onSteps && !delegate && !canManageTravel(viewer)) return null;
     const leader = trip.leaderPersonId === viewer.personId;
     const statuses = members.map((member) => member.status);
+    const [report] = await this.database.query<TravelReportView>(`SELECT summary, application, ${instant('submitted_at')} AS submittedAt, ${instant('updated_at')} AS updatedAt FROM official_travel_report WHERE travel_id = ?`, [travelId]);
+    const item = toItem(trip, members, today);
     const costs = { allowance: Number(trip.costAllowance), lodging: Number(trip.costLodging), transport: Number(trip.costTransport), registration: Number(trip.costRegistration) };
     return {
-      ...toItem(trip, members),
+      ...item,
       organiser: trip.organiser, vehicle: trip.vehicle, fundingSource: trip.fundingSource, leaderPersonId: trip.leaderPersonId,
       costs: { ...costs, total: Math.round((costs.allowance + costs.lodging + costs.transport + costs.registration) * 100) / 100 },
       members: members.map((member) => {
@@ -68,7 +74,9 @@ export class OfficialTravelQueries {
         };
       }),
       canEdit: leader && statuses.includes('RETURNED'),
-      canCancel: leader && statuses.some((status) => status === 'IN_REVIEW' || status === 'RETURNED') && !statuses.includes('APPROVED')
+      canCancel: leader && statuses.some((status) => status === 'IN_REVIEW' || status === 'RETURNED') && !statuses.includes('APPROVED'),
+      report: report ?? null,
+      canReport: leader && item.status === 'APPROVED' && trip.endDate < today
     };
   }
 
@@ -108,21 +116,22 @@ export class OfficialTravelQueries {
   }
 
   /** HR's list of every trip; the status filter is the derived trip status. */
-  async all(filter: TravelFilter): Promise<TravelListItem[]> {
+  async all(filter: TravelFilter, today: string = bangkokToday()): Promise<TravelListItem[]> {
     const clauses = ['1 = 1'];
     const parameters: unknown[] = [];
     if (filter.from) { clauses.push('t.end_date >= ?'); parameters.push(filter.from); }
     if (filter.to) { clauses.push('t.start_date <= ?'); parameters.push(filter.to); }
     if (filter.travelType) { clauses.push('t.travel_type = ?'); parameters.push(filter.travelType); }
     if (filter.status) { clauses.push(`(${TRIP_STATUS}) = ?`); parameters.push(filter.status); }
-    return this.list(clauses.join(' AND '), parameters);
+    if (filter.reportMissing) { clauses.push(`rp.travel_id IS NULL AND t.end_date < ? AND (${TRIP_STATUS}) = 'APPROVED'`); parameters.push(today); }
+    return this.list(clauses.join(' AND '), parameters, today);
   }
 
-  private async list(where: string, parameters: unknown[]): Promise<TravelListItem[]> {
+  private async list(where: string, parameters: unknown[], today: string): Promise<TravelListItem[]> {
     const trips = await this.database.query<TripRow>(`${TRIPS} WHERE ${where} ORDER BY t.start_date DESC, t.created_at DESC LIMIT ${LIST_LIMIT}`, parameters as never);
     if (trips.length === 0) return [];
     const members = await this.membersOf(trips.map((trip) => trip.travelId));
-    return trips.map((trip) => toItem(trip, members.filter((member) => member.travelId === trip.travelId)));
+    return trips.map((trip) => toItem(trip, members.filter((member) => member.travelId === trip.travelId), today));
   }
 
   private membersOf(travelIds: string[]): Promise<MemberRow[]> {
@@ -146,6 +155,8 @@ export class OfficialTravelQueries {
   }
 }
 
-function toItem(trip: TripRow, members: MemberRow[]): TravelListItem {
-  return { travelId: trip.travelId, subject: trip.subject, place: trip.place, province: trip.province, travelType: trip.travelType, startDate: trip.startDate, endDate: trip.endDate, startHalf: trip.startHalf, endHalf: trip.endHalf, days: Number(trip.days), status: tripStatus(members.map((member) => member.status)), leaderDisplayName: trip.leaderDisplayName, memberCount: members.length };
+function toItem(trip: TripRow, members: MemberRow[], today: string): TravelListItem {
+  const status = tripStatus(members.map((member) => member.status));
+  const reportStatus: TravelReportStatus = Number(trip.hasReport) ? 'SUBMITTED' : status === 'APPROVED' && trip.endDate < today ? 'MISSING' : 'NOT_DUE';
+  return { travelId: trip.travelId, subject: trip.subject, place: trip.place, province: trip.province, travelType: trip.travelType, startDate: trip.startDate, endDate: trip.endDate, startHalf: trip.startHalf, endHalf: trip.endHalf, days: Number(trip.days), status, leaderDisplayName: trip.leaderDisplayName, memberCount: members.length, reportStatus };
 }

@@ -23,4 +23,7 @@ export type OfficialTravelInput = z.infer<typeof officialTravelInputSchema>;
 export const travelTypeSettingInputSchema = z.object({ approvalTarget: commandChainTargetSchema }).strict();
 export type TravelTypeSettingInput = z.infer<typeof travelTypeSettingInputSchema>;
 
-export type OfficialTravelErrorCode = 'NO_TRAVEL_DAYS' | 'INVALID_MEMBERS' | 'NO_ORGANIZATION' | 'NO_APPROVER' | 'OVERLAPS_LEAVE' | 'OVERLAPS_TRAVEL' | 'NOT_FOUND' | 'NOT_RETURNED' | 'NOT_PENDING';
+export const travelReportInputSchema = z.object({ summary: z.string().trim().min(1).max(5000), application: z.string().trim().min(1).max(5000) }).strict();
+export type TravelReportInput = z.infer<typeof travelReportInputSchema>;
+
+export type OfficialTravelErrorCode = 'REPORT_NOT_DUE' | 'NO_TRAVEL_DAYS' | 'INVALID_MEMBERS' | 'NO_ORGANIZATION' | 'NO_APPROVER' | 'OVERLAPS_LEAVE' | 'OVERLAPS_TRAVEL' | 'NOT_FOUND' | 'NOT_RETURNED' | 'NOT_PENDING';
