@@ -9,3 +9,4 @@ export * from './notifications.ts';
 export * from './rooms.ts';
 export * from './inventory.ts';
 export * from './leave.ts';
+export * from './official-travel.ts';
