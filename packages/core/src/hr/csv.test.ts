@@ -3,7 +3,7 @@ import { parseCsv, parseCsvRecords } from './csv';
 
 describe('parseCsv', () => {
   it('reads quoted cells, escaped quotes, CRLF, a BOM, and Thai text', () => {
-    expect(parseCsv('﻿code,name\r\nNUR,"งานการพยาบาล, ผู้ป่วยใน"\r\nLAB,"ห้อง ""ปฏิบัติการ"""\r\n')).toEqual([
+    expect(parseCsv('\uFEFFcode,name\r\nNUR,"งานการพยาบาล, ผู้ป่วยใน"\r\nLAB,"ห้อง ""ปฏิบัติการ"""\r\n')).toEqual([
       ['code', 'name'], ['NUR', 'งานการพยาบาล, ผู้ป่วยใน'], ['LAB', 'ห้อง "ปฏิบัติการ"']
     ]);
   });

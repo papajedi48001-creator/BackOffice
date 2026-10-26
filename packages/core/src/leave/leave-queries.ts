@@ -1,6 +1,6 @@
 import type { AccessSubject, LeaveBalance, LeaveEndHalf, LeaveStartHalf, LeaveWarning, RequestStatus } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
-import { AuthorizationService } from '../access/authorization-service';
+import { canManageLeave } from './leave-access';
 import { leaveUnits, monthWarnings } from './leave-days';
 import { LEAVE_MODULE } from './leave-module';
 import { LeaveSettingsService, type LeaveType } from './leave-settings-service';
@@ -15,7 +15,6 @@ export interface LeaveFilter { organizationId?: string; from?: string; to?: stri
 type Reader = Pick<Database, 'query'>;
 interface ItemRow extends Omit<LeaveListItem, 'days'> { days: string; personId: string; organizationId: string | null; leaveTypeId: string; leaveRequestId: string; fiscalYear: number; counting: 'WORKING_DAYS' | 'CALENDAR_DAYS'; attachmentFrom: string | null; reason: string; contactDuringLeave: string | null }
 
-const authorization = new AuthorizationService();
 const date = (column: string) => `DATE_FORMAT(${column}, '%Y-%m-%d')`;
 const instant = (column: string) => `DATE_FORMAT(${column}, '%Y-%m-%dT%H:%i:%sZ')`;
 const ACTIVE = new Set(['IN_REVIEW', 'RETURNED', 'APPROVED']);
@@ -57,7 +56,7 @@ export class LeaveQueries {
     const self = row.personId === viewer.personId;
     const approver = steps.some((step) => step.assigneeId === viewer.personId);
     const delegate = steps.some((step) => step.status === 'PENDING' && delegators.has(step.assigneeId));
-    if (!self && !approver && !delegate && !authorization.canActHospitalWide(viewer, 'leave.manage', 'hr')) return null;
+    if (!self && !approver && !delegate && !canManageLeave(viewer)) return null;
     const leave = row.kind === 'LEAVE';
     const days = Number(row.days);
     return {
