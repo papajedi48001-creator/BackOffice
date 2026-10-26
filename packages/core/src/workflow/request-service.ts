@@ -16,6 +16,8 @@ export interface WorkflowRepository {
   appendAudit(event: AuditEvent): Promise<void>;
   /** ตำแหน่ง named in a decision notice; optional so a store without people still works. */
   getPositionTitle?(personId: string): Promise<string | null>;
+  /** Others who must act when a คำขอ is returned or rejected, such as a trip's หัวหน้าคณะ; optional, none by default. */
+  getFollowers?(requestId: string): Promise<string[]>;
 }
 
 export interface ApproverResolver { resolve(input: { moduleCode: string; requestorPersonId: string; organizationId: string; target?: CommandChainTarget }): Promise<ApproverSnapshot[]>; }

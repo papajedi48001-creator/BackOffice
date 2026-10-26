@@ -66,8 +66,8 @@ A บุคลากร asks permission in the system to travel on official duty
    - all CANCELLED → ยกเลิก;
    - every one REJECTED or CANCELLED → ไม่อนุมัติ;
    - otherwise อนุมัติ. A rejected person is shown struck through and does not go; the rest do.
-7. **Resubmit.** Only the หัวหน้าคณะ, only while some person is RETURNED. They may change the trip details but not the people. The overlap checks run again for every person still going, and each RETURNED คำขอ goes up a freshly resolved chain. People already approved stay approved.
-8. **Cancel.** The หัวหน้าคณะ cancels the whole trip while any คำขอ is IN_REVIEW or RETURNED; every such คำขอ is cancelled with the reason given. An approved trip is not cancelled in round 1.
+7. **Resubmit.** Only the หัวหน้าคณะ, only while some person is RETURNED. They may change the trip details but not the people. The overlap checks run again for every person still going. Each RETURNED คำขอ, and each APPROVED one (the trip they were approved for has changed), goes up a freshly resolved chain. A trip is at most 366 days.
+8. **Cancel.** The หัวหน้าคณะ cancels the whole trip while any คำขอ is IN_REVIEW or RETURNED and nobody is APPROVED yet; every waiting คำขอ is cancelled with the reason given. A trip with anyone approved is not cancelled in round 1.
 9. Audit, the workflow change and the outbox notice are written in one transaction. The trip's audit records the หัวหน้าคณะ as actor and carries no costs, subject or reason.
 
 ## Access
@@ -104,7 +104,7 @@ New permission `travel.manage`, granted to `hr-manager`, needing the HR data-own
 
 ## Notifications
 
-The central workflow already sends: "มีคำขอรอพิจารณา" to the next approver, and "<action> > <ตำแหน่ง>" to the person whose คำขอ was decided. A notice for a travel คำขอ is filed under ไปราชการ and opens `/travel/<travelId>`. Nothing about costs or reasons goes in a notice or outbox payload.
+The central workflow already sends: "มีคำขอรอพิจารณา" to the next approver, and "<action> > <ตำแหน่ง>" to the person whose คำขอ was decided. A ส่งกลับแก้ไข or ไม่อนุมัติ also reaches the หัวหน้าคณะ, who is the one to act on it. A notice for a travel คำขอ is filed under ไปราชการ and opens `/travel/<travelId>`. Nothing about costs or reasons goes in a notice or outbox payload.
 
 ## Round 1 limits
 

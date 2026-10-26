@@ -65,7 +65,7 @@ export class OfficialTravelQueries {
         };
       }),
       canEdit: leader && statuses.includes('RETURNED'),
-      canCancel: leader && statuses.some((status) => status === 'IN_REVIEW' || status === 'RETURNED')
+      canCancel: leader && statuses.some((status) => status === 'IN_REVIEW' || status === 'RETURNED') && !statuses.includes('APPROVED')
     };
   }
 
@@ -98,9 +98,9 @@ export class OfficialTravelQueries {
     if (query.length === 0) return [];
     const pattern = `%${query.replace(/[\\%_]/g, (character) => `\\${character}`)}%`;
     return this.database.query(
-      `SELECT p.id AS personId, p.display_name AS displayName, o.name AS organizationName FROM person p
+      `SELECT p.id AS personId, p.display_name AS displayName, MIN(o.name) AS organizationName FROM person p
        JOIN employment_assignment ea ON ea.person_id = p.id AND ea.effective_until IS NULL JOIN organization o ON o.id = ea.organization_id
-       WHERE p.display_name LIKE ? ORDER BY p.display_name LIMIT 20`, [pattern]
+       WHERE p.display_name LIKE ? ESCAPE '\\\\' GROUP BY p.id, p.display_name ORDER BY p.display_name LIMIT 20`, [pattern]
     );
   }
 

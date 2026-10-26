@@ -74,6 +74,18 @@ describe('/api/travel/[travelId]', () => {
   });
 });
 
+describe('a decision landing mid-request', () => {
+  it('answers 409 instead of failing', async () => {
+    ready();
+    mocks.cancel.mockRejectedValueOnce(new Error('REQUEST_NOT_CANCELLABLE'));
+    const response = await CANCEL(json('http://localhost/api/travel/travel-1/cancellation', 'POST', { reason: 'งานเลื่อน' }), params({ travelId: 'travel-1' }));
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({ error: 'NOT_PENDING' });
+    mocks.resubmit.mockRejectedValueOnce(new Error('REQUEST_NOT_RETURNED'));
+    expect((await RESUBMIT(json('http://localhost/api/travel/travel-1', 'PUT', body), params({ travelId: 'travel-1' }))).status).toBe(409);
+  });
+});
+
 describe('GET /api/travel/people', () => {
   it('searches by the q text', async () => {
     ready();

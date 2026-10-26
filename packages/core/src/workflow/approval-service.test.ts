@@ -167,6 +167,16 @@ describe('ApprovalService', () => {
 
     expect(repository.steps.map((candidate) => candidate.status)).toEqual([decision === 'REJECT' ? 'REJECTED' : 'RETURNED', 'CANCELLED', 'CANCELLED']);
   });
+  it.each([['RETURN', true], ['REJECT', true], ['APPROVE', false]] as const)('copies a %s notice to whoever else must act on the คำขอ: %s', async (decision, copied) => {
+    const repository = new DecisionWorkflowRepository({ request: { id: 'request-1', reference: 'REQ-1', moduleCode: 'official-travel', requestorPersonId: 'person-a', organizationSnapshot: { organizationId: 'unit-a' }, status: 'IN_REVIEW' }, steps: [{ id: 'step-1', requestId: 'request-1', sequence: 1, assigneeSnapshot: { personId: 'manager-a', organizationId: 'unit-a' }, status: 'PENDING' }] });
+    repository.followers = ['leader-a'];
+
+    await new ApprovalService(repository, { findActiveFor: async () => null }).decideRequest({ requestId: 'request-1', actorPersonId: 'manager-a', decision, ...(decision === 'APPROVE' ? {} : { reason: 'แก้วันที่' }) });
+
+    const recipients = repository.outbox.filter((event) => event.type === 'notification.in_app').map((event) => (event.payload as { recipientPersonId: string }).recipientPersonId);
+    expect(recipients.includes('leader-a')).toBe(copied);
+    expect(JSON.stringify(repository.outbox)).not.toContain('แก้วันที่');
+  });
   it('labels the decided notification of a leave request with the leave module', async () => {
     const outbox: unknown[] = [];
     const repository: WorkflowRepository = {
@@ -207,4 +217,6 @@ class DecisionWorkflowRepository implements WorkflowRepository {
   async saveCancellation(): Promise<void> {}
   async appendAudit(): Promise<void> {}
   async getPositionTitle(personId: string): Promise<string | null> { return personId === 'manager-a' ? 'หัวหน้ากลุ่มการพยาบาล' : null; }
+  followers: string[] = [];
+  async getFollowers(): Promise<string[]> { return this.followers; }
 }

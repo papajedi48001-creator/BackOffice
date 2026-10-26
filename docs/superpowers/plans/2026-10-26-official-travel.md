@@ -1,6 +1,6 @@
 # ไปราชการ Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** A live "ไปราชการ" module. A หัวหน้าคณะ files one คำขอไปราชการ for one or more ผู้ร่วมเดินทาง. Each person's คำขอ goes up their own สายบังคับบัญชา, and the trip shows on the leave calendar.
 
@@ -51,13 +51,13 @@
 **Interfaces:**
 - Produces: the tables `official_travel_type`, `official_travel` and `official_travel_member`, as in the spec's Data section.
 
-- [ ] **Step 1: Write the failing tests.**
+- [x] **Step 1: Write the failing tests.**
   - In `migrate.test.ts`, assert the three `CREATE TABLE IF NOT EXISTS` statements and the `0013_official_travel.sql` schema_migration record.
   - In the integration test, the seeded types are `['IN_PROVINCE','OUT_OF_PROVINCE','ABROAD']`, all `HOSPITAL`, and re-running the migrations keeps 3 rows.
-- [ ] **Step 2: Run `pnpm --filter @backoffice/db test`.** Expected: FAIL on the missing 0013.
-- [ ] **Step 3: Implement.** Write the SQL with `IF NOT EXISTS` and `INSERT IGNORE` seeds, the Drizzle tables, the migrate list entry, and a modules.md row.
-- [ ] **Step 4: Verify.** Run the db unit tests, then `DATABASE_URL=… pnpm --filter @backoffice/db test:integration`. Expected: PASS.
-- [ ] **Step 5: Commit** `feat(db): add official travel tables`.
+- [x] **Step 2: Run `pnpm --filter @backoffice/db test`.** Expected: FAIL on the missing 0013.
+- [x] **Step 3: Implement.** Write the SQL with `IF NOT EXISTS` and `INSERT IGNORE` seeds, the Drizzle tables, the migrate list entry, and a modules.md row.
+- [x] **Step 4: Verify.** Run the db unit tests, then `DATABASE_URL=… pnpm --filter @backoffice/db test:integration`. Expected: PASS.
+- [x] **Step 5: Commit** `feat(db): add official travel tables`.
 
 ### Task 2: Contracts, permission, trip status and access
 
@@ -73,16 +73,16 @@
   - `canManageTravel(subject)`.
   - `OFFICIAL_TRAVEL_MODULE`.
 
-- [ ] **Step 1: Write the failing tests.**
+- [x] **Step 1: Write the failing tests.**
   - `tripStatus(['APPROVED','RETURNED'])` is `'RETURNED'`.
   - `['APPROVED','IN_REVIEW']` gives `'IN_REVIEW'`, and `['CANCELLED','CANCELLED']` gives `'CANCELLED'`.
   - `['REJECTED','CANCELLED']` gives `'REJECTED'`, and `['APPROVED','REJECTED']` gives `'APPROVED'`.
   - The schema rejects end before start, duplicate member ids and a negative cost.
   - `canManageTravel` is true for hr-manager with the HR data owner, and false without it.
-- [ ] **Step 2: Run the tests.** Expected: FAIL (modules missing).
-- [ ] **Step 3: Implement.** Reuse leave's range checks by exporting `withRangeChecks`/`rangeShape` from `leave.ts`.
-- [ ] **Step 4: Run `pnpm --filter @backoffice/contracts test && pnpm --filter @backoffice/core test`.** Expected: PASS.
-- [ ] **Step 5: Commit** `feat(travel): add official travel contracts, permission and trip status`.
+- [x] **Step 2: Run the tests.** Expected: FAIL (modules missing).
+- [x] **Step 3: Implement.** Reuse leave's range checks by exporting `withRangeChecks`/`rangeShape` from `leave.ts`.
+- [x] **Step 4: Run `pnpm --filter @backoffice/contracts test && pnpm --filter @backoffice/core test`.** Expected: PASS.
+- [x] **Step 5: Commit** `feat(travel): add official travel contracts, permission and trip status`.
 
 ### Task 3: Acting for the requestor in the central workflow
 
@@ -94,14 +94,14 @@
   - `cancelRequest(input, options?: { actorAuthorized?: boolean })` and `resubmitRequest(input, options?: { actorAuthorized?: boolean })`. With `actorAuthorized`, the `NOT_REQUESTOR` check is skipped. The audit records `actorPersonId` as given.
   - `notificationTarget('official-travel', id)` returns `{ moduleCode: 'official-travel', targetPath: '/travel/requests/<id>' }`.
 
-- [ ] **Step 1: Write the failing tests.**
+- [x] **Step 1: Write the failing tests.**
   - A resubmit by another actor with `actorAuthorized: true` succeeds, and the audit actor is that actor. Without the flag, it still throws `NOT_REQUESTOR`.
   - The same two cases for cancel.
   - The notification target for travel.
-- [ ] **Step 2: Run `pnpm --filter @backoffice/core test -- request-service module-notification`.** Expected: FAIL.
-- [ ] **Step 3: Implement.**
-- [ ] **Step 4: Run the same tests.** Expected: PASS.
-- [ ] **Step 5: Commit** `feat(workflow): let a module act for the requestor and route travel notices`.
+- [x] **Step 2: Run `pnpm --filter @backoffice/core test -- request-service module-notification`.** Expected: FAIL.
+- [x] **Step 3: Implement.**
+- [x] **Step 4: Run the same tests.** Expected: PASS.
+- [x] **Step 5: Commit** `feat(workflow): let a module act for the requestor and route travel notices`.
 
 ### Task 4: OfficialTravelService (submit, resubmit, cancel) and leave overlap
 
@@ -119,15 +119,15 @@
     - `cancel(leaderPersonId, travelId, reason)` → `{ ok: true } | { ok: false; code: 'NOT_FOUND' | 'NOT_PENDING' }`
   - `loadTravelTypes(db)` → `Array<{ code; name; approvalTarget; sortOrder }>`.
 
-- [ ] **Step 1: Write the failing integration tests.** They use the leave fixtures' people and units.
+- [x] **Step 1: Write the failing integration tests.** They use the leave fixtures' people and units.
   - Submit for leader plus 2 members writes 1 trip, 3 members and 3 คำขอ, each with its own requestor and steps, and one audit `official_travel.submitted`.
   - A member with an approved ใบลา on day 2 makes submit fail with `{ code: 'OVERLAPS_LEAVE', personId }`, and no rows are written.
   - A second trip over the same dates for the leader gives `OVERLAPS_TRAVEL`.
   - A leave submit over the trip gives `OVERLAPS_OFFICIAL_TRAVEL`.
   - Member A is RETURNED and member B is APPROVED. Resubmit with new dates: A is IN_REVIEW, B stays APPROVED, and the trip dates change. A non-leader gets `NOT_FOUND`.
   - Cancel turns every IN_REVIEW and RETURNED คำขอ into CANCELLED. Cancel on a fully approved trip gives `NOT_PENDING`.
-- [ ] **Step 2: Run `DATABASE_URL=… pnpm --filter @backoffice/core test:integration -- travel-service leave-service`.** Expected: FAIL.
-- [ ] **Step 3: Implement.** Do it in one transaction (READ COMMITTED):
+- [x] **Step 2: Run `DATABASE_URL=… pnpm --filter @backoffice/core test:integration -- travel-service leave-service`.** Expected: FAIL.
+- [x] **Step 3: Implement.** Do it in one transaction (READ COMMITTED):
   1. Lock every member's person row in id order.
   2. Check each member.
   3. Insert the trip.
@@ -135,8 +135,8 @@
   5. Audit.
 
   Map the thrown `NO_APPROVER` to that code with the member's personId.
-- [ ] **Step 4: Run the same command.** Expected: PASS.
-- [ ] **Step 5: Commit** `feat(travel): file, resubmit and cancel official travel; leave refuses trip days`.
+- [x] **Step 4: Run the same command.** Expected: PASS.
+- [x] **Step 5: Commit** `feat(travel): file, resubmit and cancel official travel; leave refuses trip days`.
 
 ### Task 5: OfficialTravelQueries and the calendar
 
@@ -156,14 +156,14 @@
     - `pendingCount(personId)`
     - `all(filter: { from?; to?; travelType?; status? })`
   - The `TeamCalendarRow.days[]` entries gain `kind: 'LEAVE' | 'TRAVEL'` and `place?: string`.
-- [ ] **Step 1: Write the failing tests.**
+- [x] **Step 1: Write the failing tests.**
   - An outsider gets null from `detail`, and the member's head (a step assignee) gets the detail.
   - `pendingCount` for the head is 1 per member waiting on them.
   - The calendar row for a traveller has `kind: 'TRAVEL'` and `place`, and has no `subject` key.
-- [ ] **Step 2: Run the integration tests.** Expected: FAIL.
-- [ ] **Step 3: Implement.**
-- [ ] **Step 4: Run the tests.** Expected: PASS.
-- [ ] **Step 5: Commit** `feat(travel): add official travel queries and show trips on the leave calendar`.
+- [x] **Step 2: Run the integration tests.** Expected: FAIL.
+- [x] **Step 3: Implement.**
+- [x] **Step 4: Run the tests.** Expected: PASS.
+- [x] **Step 5: Commit** `feat(travel): add official travel queries and show trips on the leave calendar`.
 
 ### Task 6: Travel type settings
 
@@ -172,11 +172,11 @@
 
 **Interfaces:**
 - Produces: `TravelSettingsService(db).setApprovalTarget(actorPersonId, code, input)` → `{ ok: true } | { ok: false; code: 'NOT_FOUND' }`, audited as `official_travel.type.update`.
-- [ ] **Step 1: Write the failing test.** Setting ABROAD to `DIVISION` is stored and audited, and an unknown code gives `NOT_FOUND`.
-- [ ] **Step 2: Run it.** Expected: FAIL.
-- [ ] **Step 3: Implement.**
-- [ ] **Step 4: Run it again.** Expected: PASS.
-- [ ] **Step 5: Commit** `feat(travel): let HR set the final approval level per travel type`.
+- [x] **Step 1: Write the failing test.** Setting ABROAD to `DIVISION` is stored and audited, and an unknown code gives `NOT_FOUND`.
+- [x] **Step 2: Run it.** Expected: FAIL.
+- [x] **Step 3: Implement.**
+- [x] **Step 4: Run it again.** Expected: PASS.
+- [x] **Step 5: Commit** `feat(travel): let HR set the final approval level per travel type`.
 
 ### Task 7: API routes and generic-route guards
 
@@ -198,17 +198,17 @@
 **Interfaces:**
 - Consumes: Tasks 4–6.
 - Produces: the JSON routes in the spec's API section.
-- [ ] **Step 1: Write the failing route tests (mocked services, as the leave route tests do).**
+- [x] **Step 1: Write the failing route tests (mocked services, as the leave route tests do).**
   - POST without a session gives 401.
   - POST takes the leader from the session, not the body.
   - A failure gives 400 with `{ error, personId }`.
   - PUT types without `travel.manage` gives 403.
   - A decision on a non-travel คำขอ gives 404.
   - `POST /api/requests` with `official-travel` gives 400.
-- [ ] **Step 2: Run `pnpm --filter @backoffice/web test -- api/travel api/requests`.** Expected: FAIL.
-- [ ] **Step 3: Implement.**
-- [ ] **Step 4: Run the same tests.** Expected: PASS.
-- [ ] **Step 5: Commit** `feat(travel): add official travel API routes`.
+- [x] **Step 2: Run `pnpm --filter @backoffice/web test -- api/travel api/requests`.** Expected: FAIL.
+- [x] **Step 3: Implement.**
+- [x] **Step 4: Run the same tests.** Expected: PASS.
+- [x] **Step 5: Commit** `feat(travel): add official travel API routes`.
 
 ### Task 8: Pages, module entry and copy
 
@@ -228,15 +228,15 @@
   - `packages/i18n/src/th.ts`.
   - `apps/web/src/app/(app)/leave/calendar/page.tsx`: travel cells.
   - `styles.css`.
-- [ ] **Step 1: Write the failing page tests.**
+- [x] **Step 1: Write the failing page tests.**
   - The form adds the leader as a fixed first row and shows the cost total.
   - The detail page shows each member's status and shows decide buttons only where `canDecide` is true.
   - The approvals page lists the pending members.
   - The calendar shows "ไปราชการ · <place>".
-- [ ] **Step 2: Run `pnpm --filter @backoffice/web test -- travel leave/calendar`.** Expected: FAIL.
-- [ ] **Step 3: Implement the pages** with DESIGN.md components (page-heading, detail-list, leave-table-scroll, status).
-- [ ] **Step 4: Run the same tests.** Expected: PASS.
-- [ ] **Step 5: Commit** `feat(travel): add the ไปราชการ module pages`.
+- [x] **Step 2: Run `pnpm --filter @backoffice/web test -- travel leave/calendar`.** Expected: FAIL.
+- [x] **Step 3: Implement the pages** with DESIGN.md components (page-heading, detail-list, leave-table-scroll, status).
+- [x] **Step 4: Run the same tests.** Expected: PASS.
+- [x] **Step 5: Commit** `feat(travel): add the ไปราชการ module pages`.
 
 ### Task 9: Verification and demo
 

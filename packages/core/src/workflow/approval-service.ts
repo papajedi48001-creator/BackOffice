@@ -7,7 +7,7 @@ import type { WorkflowRepository } from './request-service';
 export interface ActiveDelegationFinder { findActiveFor(delegatorPersonId: string, delegatePersonId: string, moduleCode: string): Promise<Pick<Delegation, 'delegatorPersonId' | 'delegatePersonId' | 'moduleCode'> | null>; }
 
 export class ApprovalService {
-  constructor(private readonly repository: Pick<WorkflowRepository, 'transaction' | 'getRequestForUpdate' | 'getSteps' | 'saveRequest' | 'saveStep' | 'saveDecision' | 'saveOutbox' | 'appendAudit' | 'getPositionTitle'>, private readonly delegations: ActiveDelegationFinder, private readonly createId: () => string = randomUUID) {}
+  constructor(private readonly repository: Pick<WorkflowRepository, 'transaction' | 'getRequestForUpdate' | 'getSteps' | 'saveRequest' | 'saveStep' | 'saveDecision' | 'saveOutbox' | 'appendAudit' | 'getPositionTitle' | 'getFollowers'>, private readonly delegations: ActiveDelegationFinder, private readonly createId: () => string = randomUUID) {}
 
   async decideRequest(input: Parameters<typeof decideRequestInputSchema.parse>[0]): Promise<ApprovalDecision> {
     const decisionInput = decideRequestInputSchema.parse(input);
@@ -31,7 +31,9 @@ export class ApprovalService {
       // The requestor hears about every step as "<action> > <ตำแหน่ง of who decided>"; the reason never goes in a notice.
       const action = decisionInput.decision === 'APPROVE' ? 'อนุมัติ' : decisionInput.decision === 'REJECT' ? 'ไม่อนุมัติ' : 'ส่งกลับแก้ไข';
       const actorTitle = (await repository.getPositionTitle?.(decisionInput.actorPersonId))?.trim() || 'ผู้อนุมัติ';
-      const notices = [{ recipientPersonId: request.requestorPersonId, subject: `${action} > ${actorTitle}` }, ...(nextStep ? [{ recipientPersonId: nextStep.assigneeSnapshot.personId, subject: 'มีคำขอรอพิจารณา' }] : [])];
+      // A return or rejection also reaches whoever else must act on it, such as the หัวหน้าคณะ who resubmits a trip.
+      const followers = decisionInput.decision === 'APPROVE' ? [] : (await repository.getFollowers?.(request.id) ?? []).filter((personId) => personId !== request.requestorPersonId);
+      const notices = [{ recipientPersonId: request.requestorPersonId, subject: `${action} > ${actorTitle}` }, ...followers.map((recipientPersonId) => ({ recipientPersonId, subject: `${action} > ${actorTitle}` })), ...(nextStep ? [{ recipientPersonId: nextStep.assigneeSnapshot.personId, subject: 'มีคำขอรอพิจารณา' }] : [])];
       await repository.saveStep({ ...step, status: stepStatus });
       if (decisionInput.decision !== 'APPROVE') {
         for (const leftover of steps.slice(stepIndex + 1)) {

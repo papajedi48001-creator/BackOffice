@@ -17,3 +17,15 @@ export function travelResult(result: { ok: true } | { ok: false; code: string; p
 
 // The หัวหน้าคณะ is always the session's person; one named in the body is dropped, not trusted.
 export const withoutLeader = (body: Record<string, unknown>) => Object.fromEntries(Object.entries(body).filter(([key]) => key !== 'personId' && key !== 'leaderPersonId'));
+
+const raceCodes = new Set(['REQUEST_NOT_CANCELLABLE', 'REQUEST_NOT_RETURNED', 'REQUEST_NOT_PENDING']);
+
+/** Runs a service write; a คำขอ that changed state under it (a decision landed first) answers NOT_PENDING instead of failing. */
+export async function settle<T>(work: () => Promise<T>): Promise<T | { ok: false; code: 'NOT_PENDING' }> {
+  try {
+    return await work();
+  } catch (error) {
+    if (error instanceof Error && raceCodes.has(error.message)) return { ok: false, code: 'NOT_PENDING' };
+    throw error;
+  }
+}

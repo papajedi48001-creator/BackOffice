@@ -74,7 +74,7 @@ describeWithDatabase('OfficialTravelService against MariaDB', () => {
     expect(await service.submit(leader, trip('2027-04-01', '2027-04-01', ['00000000-0000-4000-0000-00000000dead']))).toEqual({ ok: false, code: 'INVALID_MEMBERS', personId: '00000000-0000-4000-0000-00000000dead' });
   });
 
-  it('resubmits only the returned คำขอ and keeps an approved person approved', async () => {
+  it('resubmits the returned คำขอ and sends an approved person back for review of the changed trip', async () => {
     const leader = await createLeavePerson(database, org.section);
     const other = await createLeavePerson(database, org.division);
     const result = await service.submit(leader, trip('2027-05-03', '2027-05-04', [other]));
@@ -82,13 +82,15 @@ describeWithDatabase('OfficialTravelService against MariaDB', () => {
     const [mine, theirs] = await members(result.travelId).then((rows) => [rows.find((row) => row.personId === leader)!, rows.find((row) => row.personId === other)!]);
     expect(await service.resubmit(leader, result.travelId, trip('2027-05-04', '2027-05-05'))).toEqual({ ok: false, code: 'NOT_RETURNED' });
     await decide(mine!.requestId, org.sectionHead, 'RETURN');
+    const leaderNotices = await database.query<{ payload: string }>("SELECT payload FROM outbox_event WHERE type = 'notification.in_app' AND payload LIKE ? AND payload LIKE ?", [`%${mine!.requestId}%`, `%ส่งกลับแก้ไข%`]);
+    expect(leaderNotices.map((row) => JSON.parse(row.payload).recipientPersonId)).toContain(leader);
     await decide(theirs!.requestId, org.divisionHead, 'APPROVE');
     await decide(theirs!.requestId, org.director, 'APPROVE');
     expect(await service.resubmit(other, result.travelId, trip('2027-05-04', '2027-05-05'))).toEqual({ ok: false, code: 'NOT_FOUND' });
     expect(await service.resubmit(leader, result.travelId, trip('2027-05-04', '2027-05-05'))).toEqual({ ok: true });
     const after = await members(result.travelId);
     expect(after.find((row) => row.personId === leader)?.status).toBe('IN_REVIEW');
-    expect(after.find((row) => row.personId === other)?.status).toBe('APPROVED');
+    expect(after.find((row) => row.personId === other)?.status).toBe('IN_REVIEW');
     const [travel] = await database.query<{ startDate: string }>("SELECT DATE_FORMAT(start_date, '%Y-%m-%d') AS startDate FROM official_travel WHERE id = ?", [result.travelId]);
     expect(travel?.startDate).toBe('2027-05-04');
   });
@@ -105,5 +107,17 @@ describeWithDatabase('OfficialTravelService against MariaDB', () => {
     const audits = await database.query<{ metadata: string }>("SELECT metadata FROM audit_event WHERE action = 'official_travel.cancelled' AND target_id = ?", [result.travelId]);
     expect(audits).toHaveLength(1);
     expect(audits[0]!.metadata).not.toContain('งานยกเลิก');
+  });
+
+  it('does not cancel a trip someone is already approved for', async () => {
+    const leader = await createLeavePerson(database, org.section);
+    const other = await createLeavePerson(database, org.division);
+    const result = await service.submit(leader, trip('2027-06-14', '2027-06-14', [other]));
+    if (!result.ok) throw new Error(result.code);
+    const theirs = (await members(result.travelId)).find((row) => row.personId === other)!;
+    await decide(theirs.requestId, org.divisionHead, 'APPROVE');
+    await decide(theirs.requestId, org.director, 'APPROVE');
+    expect(await service.cancel(leader, result.travelId, 'งานยกเลิก')).toEqual({ ok: false, code: 'NOT_PENDING' });
+    expect((await members(result.travelId)).map((row) => row.status).sort()).toEqual(['APPROVED', 'IN_REVIEW']);
   });
 });

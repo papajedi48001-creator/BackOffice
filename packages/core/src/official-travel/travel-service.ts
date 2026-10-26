@@ -48,7 +48,7 @@ export class OfficialTravelService {
     }, { isolationLevel: 'READ COMMITTED' }));
   }
 
-  /** The หัวหน้าคณะ edits the trip and sends each RETURNED คำขอ up a fresh chain; people already approved stay approved. The people cannot change. */
+  /** The หัวหน้าคณะ edits the trip and sends each RETURNED and APPROVED คำขอ up a fresh chain. The people cannot change. */
   async resubmit(leaderPersonId: string, travelId: string, draft: OfficialTravelDraft): Promise<{ ok: true } | TravelFailure> {
     const input = officialTravelInputSchema.parse(draft);
     return this.withPersonFailures(() => this.database.transaction(async (database) => {
@@ -64,19 +64,26 @@ export class OfficialTravelService {
         [input.subject, input.organiser, input.place, input.province, input.travelType, input.vehicle, input.startDate, input.endDate, input.startHalf, input.endHalf, checked.days, input.fundingSource, input.costAllowance, input.costLodging, input.costTransport, input.costRegistration, travelId]
       );
       const requests = new RequestService(new DatabaseWorkflowRepository(database), this.approvers, this.createId);
-      for (const member of returned) await this.forPerson(member.personId, () => requests.resubmitRequest({ requestId: member.requestId, actorPersonId: leaderPersonId, target: checked.type.approvalTarget }, { actorAuthorized: true }));
+      // The trip itself changed, so anyone already approved goes back up with the returned people; their approver sees the new details.
+      const repository = new DatabaseWorkflowRepository(database);
+      for (const member of members.filter((candidate) => candidate.status === 'APPROVED')) {
+        const request = await repository.getRequestForUpdate(member.requestId);
+        if (request) await repository.saveRequest({ ...request, status: 'RETURNED' });
+      }
+      for (const member of members.filter((candidate) => candidate.status === 'RETURNED' || candidate.status === 'APPROVED')) await this.forPerson(member.personId, () => requests.resubmitRequest({ requestId: member.requestId, actorPersonId: leaderPersonId, target: checked.type.approvalTarget }, { actorAuthorized: true }));
       await this.audit(database, 'official_travel.resubmitted', travelId, leaderPersonId, { travelType: input.travelType, memberCount: going.length, startDate: input.startDate, endDate: input.endDate, days: checked.days });
       return { ok: true as const };
     }, { isolationLevel: 'READ COMMITTED' }));
   }
 
-  /** Withdraws every IN_REVIEW or RETURNED คำขอ of the trip; an approved trip stays as it is in round 1. */
+  /** Withdraws every IN_REVIEW or RETURNED คำขอ of the trip while nobody is approved yet; an approved trip stays as it is in round 1. */
   async cancel(leaderPersonId: string, travelId: string, reason: string): Promise<{ ok: true } | { ok: false; code: 'NOT_FOUND' | 'NOT_PENDING' }> {
     return this.database.transaction(async (database) => {
       const members = await this.lockTrip(database, travelId, leaderPersonId);
       if (!members) return { ok: false as const, code: 'NOT_FOUND' as const };
       const waiting = members.filter((member) => member.status === 'IN_REVIEW' || member.status === 'RETURNED');
-      if (waiting.length === 0) return { ok: false as const, code: 'NOT_PENDING' as const };
+      // Someone already approved is going; round 1 does not take an approved trip back.
+      if (waiting.length === 0 || members.some((member) => member.status === 'APPROVED')) return { ok: false as const, code: 'NOT_PENDING' as const };
       const requests = new RequestService(new DatabaseWorkflowRepository(database), this.approvers, this.createId);
       for (const member of waiting) await requests.cancelRequest({ requestId: member.requestId, actorPersonId: leaderPersonId, reason }, { actorAuthorized: true });
       await this.audit(database, 'official_travel.cancelled', travelId, leaderPersonId, { memberCount: waiting.length });
@@ -105,11 +112,11 @@ export class OfficialTravelService {
     return { days: units.length / 2, type, organizations };
   }
 
-  /** The trip's people and their คำขอ status, with the trip row locked; null unless the trip exists and the person leads it. */
+  /** The trip's people and their คำขอ status, with the trip and its คำขอ locked so no decision lands in between; null unless the trip exists and the person leads it. */
   private async lockTrip(database: Database, travelId: string, leaderPersonId: string): Promise<MemberRow[] | null> {
     const [trip] = await database.query<{ leader: string }>('SELECT leader_person_id AS leader FROM official_travel WHERE id = ? FOR UPDATE', [travelId]);
     if (!trip || trip.leader !== leaderPersonId) return null;
-    return database.query<MemberRow>('SELECT m.request_id AS requestId, m.person_id AS personId, r.status FROM official_travel_member m JOIN request r ON r.id = m.request_id WHERE m.travel_id = ? ORDER BY m.person_id', [travelId]);
+    return database.query<MemberRow>('SELECT m.request_id AS requestId, m.person_id AS personId, r.status FROM official_travel_member m JOIN request r ON r.id = m.request_id WHERE m.travel_id = ? ORDER BY m.person_id FOR UPDATE', [travelId]);
   }
 
   private async forPerson<T>(personId: string, work: () => Promise<T>): Promise<T> {

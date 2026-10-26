@@ -25,4 +25,9 @@ describe('officialTravelInputSchema', () => {
     expect(officialTravelInputSchema.safeParse({ ...valid, memberPersonIds: Array.from({ length: 30 }, (_, index) => `p-${index}`) }).success).toBe(false);
     expect(officialTravelInputSchema.safeParse({ ...valid, leaderPersonId: 'x' }).success).toBe(false);
   });
+
+  it('rejects a trip longer than a year', () => {
+    expect(officialTravelInputSchema.safeParse({ ...valid, endDate: '2027-11-12' }).success).toBe(false);
+    expect(officialTravelInputSchema.safeParse({ ...valid, endDate: '2027-11-09' }).success).toBe(true);
+  });
 });

@@ -18,7 +18,7 @@ export const officialTravelInputSchema = withRangeChecks(z.object({
   travelType: travelTypeCodeSchema, vehicle: travelVehicleSchema, fundingSource: travelFundingSchema,
   costAllowance: cost, costLodging: cost, costTransport: cost, costRegistration: cost,
   memberPersonIds: z.array(z.string().min(1)).max(29).refine((ids) => new Set(ids).size === ids.length, { message: 'DUPLICATE_MEMBER' }).default([])
-}).strict());
+}).strict()).refine((trip) => Date.parse(`${trip.endDate}T00:00:00Z`) - Date.parse(`${trip.startDate}T00:00:00Z`) <= 365 * 86_400_000, { message: 'TOO_LONG', path: ['endDate'] });
 export type OfficialTravelInput = z.infer<typeof officialTravelInputSchema>;
 export const travelTypeSettingInputSchema = z.object({ approvalTarget: commandChainTargetSchema }).strict();
 export type TravelTypeSettingInput = z.infer<typeof travelTypeSettingInputSchema>;

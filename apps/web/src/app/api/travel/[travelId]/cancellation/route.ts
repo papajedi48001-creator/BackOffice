@@ -1,5 +1,5 @@
 import { cancelRequestInputSchema } from '@backoffice/contracts';
-import { readInput, travelResult, travelService, withSessionAndDatabase } from '../../travel-route';
+import { readInput, settle, travelResult, travelService, withSessionAndDatabase } from '../../travel-route';
 
 const cancellationInputSchema = cancelRequestInputSchema.pick({ reason: true }).strict();
 
@@ -8,6 +8,6 @@ export async function POST(request: Request, context: { params: Promise<{ travel
     const input = await readInput(request, cancellationInputSchema);
     if (!input.ok) return input.response;
     const { travelId } = await context.params;
-    return travelResult(await travelService(database).cancel(session.personId, travelId, input.value.reason));
+    return travelResult(await settle(() => travelService(database).cancel(session.personId, travelId, input.value.reason)));
   });
 }

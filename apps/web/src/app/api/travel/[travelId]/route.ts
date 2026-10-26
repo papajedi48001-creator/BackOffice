@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { OfficialTravelQueries } from '@backoffice/core';
 import { officialTravelInputSchema } from '@backoffice/contracts';
-import { readInput, travelResult, travelService, withoutLeader, withSessionAndDatabase } from '../travel-route';
+import { readInput, settle, travelResult, travelService, withoutLeader, withSessionAndDatabase } from '../travel-route';
 
 /** The trip, when the viewer is on it, decides it, or is HR; otherwise not found. */
 export async function GET(request: Request, context: { params: Promise<{ travelId: string }> }): Promise<Response> {
@@ -18,6 +18,6 @@ export async function PUT(request: Request, context: { params: Promise<{ travelI
     const input = await readInput(request, officialTravelInputSchema, withoutLeader);
     if (!input.ok) return input.response;
     const { travelId } = await context.params;
-    return travelResult(await travelService(database).resubmit(session.personId, travelId, input.value));
+    return travelResult(await settle(() => travelService(database).resubmit(session.personId, travelId, input.value)));
   });
 }
