@@ -51,6 +51,7 @@ describeWithDatabase('LeaveQueries against MariaDB', () => {
     const person = await createLeavePerson(database, org.section);
     const requestId = await filed(person, '2026-11-02', '2026-11-02', { endHalf: 'MORNING' });
     const own = await queries.detail(requestId, staff(person));
+    expect(own?.leaveTypeId).toBe(LEAVE_TYPE_IDS.VACATION);
     expect(own).toMatchObject({ requestId, reason: 'เหตุผลส่วนตัว', contactDuringLeave: '0899999999', days: 0.5, canCancel: true, canDecide: false, canRequestCancelDays: false });
     expect(own?.steps.map((step) => step.status)).toEqual(['PENDING', 'PENDING', 'PENDING']);
     for (const approver of [org.sectionHead, org.divisionHead, org.director]) expect(await queries.detail(requestId, staff(approver))).not.toBeNull();

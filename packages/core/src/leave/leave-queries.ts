@@ -8,7 +8,7 @@ import { activeUnitsOfPerson, loadBalance, loadHolidaySet } from './leave-store'
 
 export interface LeaveListItem { requestId: string; reference: string; kind: 'LEAVE' | 'CANCEL_DAYS'; leaveTypeName: string; startDate: string; endDate: string; startHalf: LeaveStartHalf; endHalf: LeaveEndHalf; days: number; status: RequestStatus; submittedAt: string | null; personDisplayName: string | null; organizationName: string | null }
 export interface LeaveStepView { sequence: number; assigneeDisplayName: string | null; status: string; decidedAt: string | null; decisionReason: string | null }
-export interface LeaveDetail extends LeaveListItem { reason: string; contactDuringLeave: string | null; medicalCertificateRequired: boolean; warnings: LeaveWarning[]; steps: LeaveStepView[]; cancellations: LeaveListItem[]; canDecide: boolean; canCancel: boolean; canRequestCancelDays: boolean }
+export interface LeaveDetail extends LeaveListItem { leaveTypeId: string; reason: string; contactDuringLeave: string | null; medicalCertificateRequired: boolean; warnings: LeaveWarning[]; steps: LeaveStepView[]; cancellations: LeaveListItem[]; canDecide: boolean; canCancel: boolean; canRequestCancelDays: boolean }
 export interface TeamCalendarRow { personId: string; displayName: string | null; organizationName: string | null; days: Array<{ date: string; part: 'FULL' | 'MORNING' | 'AFTERNOON' }> }
 export interface LeaveFilter { organizationId?: string; from?: string; to?: string; leaveTypeId?: string; status?: RequestStatus }
 
@@ -61,6 +61,7 @@ export class LeaveQueries {
     const days = Number(row.days);
     return {
       ...toItem(row),
+      leaveTypeId: row.leaveTypeId,
       reason: row.reason,
       contactDuringLeave: row.contactDuringLeave,
       medicalCertificateRequired: leave && row.attachmentFrom !== null && days >= Number(row.attachmentFrom),
