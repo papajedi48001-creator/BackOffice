@@ -17,11 +17,10 @@ it('opens the first section the person can see', async () => {
   await expect(ModuleIndex({ code: 'hr' })).rejects.toThrow('redirect:/hr/people');
 });
 
-it('tells a person with no sections that they have no access', async () => {
+it('sends a person without HR roles to their own profile', async () => {
   mocks.headers.mockResolvedValue(new Headers());
   mocks.readSession.mockResolvedValue(session([]));
-  render(await ModuleIndex({ code: 'hr' }));
-  expect(screen.getByRole('alert')).toHaveTextContent('คุณไม่มีสิทธิ์ดูข้อมูลส่วนนี้');
+  await expect(ModuleIndex({ code: 'hr' })).rejects.toThrow('redirect:/hr/me');
 });
 
 it('sends a signed-out person to sign in', async () => {

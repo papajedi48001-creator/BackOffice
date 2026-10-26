@@ -44,7 +44,10 @@ export const moduleRegistry: readonly ModuleEntry[] = [
   withSections({ code: 'hr', href: '/hr', labelKey: 'moduleHr', descriptionKey: 'moduleHrDescription', icon: 'people', group: 'people', status: 'live' }, [
     { href: '/hr/people', labelKey: 'people', visible: hasRole('hr-reader', 'hr-manager') },
     { href: '/hr/organizations', labelKey: 'organizations', visible: hasRole('hr-reader', 'hr-manager') },
-    { href: '/hr/imports', labelKey: 'hrImport', visible: (subject) => authorization.canActHospitalWide(subject, 'hr.person.manage', 'hr') }
+    { href: '/hr/imports', labelKey: 'hrImport', visible: (subject) => authorization.canActHospitalWide(subject, 'hr.person.manage', 'hr') },
+    { href: '/hr/employment-types', labelKey: 'hrEmploymentTypes', visible: (subject) => authorization.canActHospitalWide(subject, 'hr.person.manage', 'hr') },
+    // Last, so HR staff still land on the people list; everyone else lands here.
+    { href: '/hr/me', labelKey: 'hrMyProfile', visible: everyone }
   ]),
   withSections({ code: 'access', href: '/access', labelKey: 'moduleAccess', descriptionKey: 'moduleAccessDescription', icon: 'shield', group: 'governance', status: 'live' }, [
     { href: '/access/roles', labelKey: 'roles', visible: hasRole('hr-manager') },

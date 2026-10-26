@@ -13,17 +13,17 @@ describe('module registry', () => {
     expect(new Set(moduleRegistry.map((entry) => entry.href)).size).toBe(moduleRegistry.length);
   });
 
-  it('shows one entry per module and no sub-pages to a user without roles', () => {
-    expect(hrefs(subject())).toEqual(['/dashboard', '/requests', '/notifications', '/access', '/rooms']);
+  it('shows one entry per module and only their own profile under HR to a user without roles', () => {
+    expect(hrefs(subject())).toEqual(['/dashboard', '/requests', '/notifications', '/hr', '/access', '/rooms']);
     expect(sectionHrefs('access', subject())).toEqual(['/access/audit']);
-    expect(sectionHrefs('hr', subject())).toEqual([]);
+    expect(sectionHrefs('hr', subject())).toEqual(['/hr/me']);
   });
 
   it('gives hr-reader the HR module with people and units only', () => {
     const reader = subject({ roles: [{ name: 'hr-reader', organizationId: 'unit-1' }] });
     expect(hrefs(reader)).toContain('/hr');
     expect(hrefs(reader).filter((href) => href.startsWith('/hr/'))).toEqual([]);
-    expect(sectionHrefs('hr', reader)).toEqual(['/hr/people', '/hr/organizations']);
+    expect(sectionHrefs('hr', reader)).toEqual(['/hr/people', '/hr/organizations', '/hr/me']);
     expect(sectionHrefs('access', reader)).toEqual(['/access/audit']);
   });
 
@@ -31,6 +31,8 @@ describe('module registry', () => {
     expect(sectionHrefs('hr', subject({ roles: [{ name: 'hr-manager', organizationId: null }], dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: ['hr'] }))).toContain('/hr/imports');
     const scoped = subject({ roles: [{ name: 'hr-manager', organizationId: 'unit-1' }], dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: [] });
     expect(sectionHrefs('hr', scoped)).not.toContain('/hr/imports');
+    expect(sectionHrefs('hr', scoped)).not.toContain('/hr/employment-types');
+    expect(sectionHrefs('hr', subject({ roles: [{ name: 'hr-manager', organizationId: null }], dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: ['hr'] }))).toContain('/hr/employment-types');
     expect(sectionHrefs('access', scoped)).toEqual(['/access/roles', '/access/delegations', '/access/audit']);
   });
 
