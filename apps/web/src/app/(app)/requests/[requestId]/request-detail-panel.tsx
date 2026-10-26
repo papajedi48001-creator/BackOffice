@@ -4,9 +4,17 @@ import { useState } from 'react';
 import type { RequestHistoryView } from '@backoffice/core';
 import { t, type MessageKey } from '@backoffice/i18n';
 import { StatusBadge, type RequestDisplayStatus } from '../../../../components/status-badge';
-import { ReasonForm } from './reason-form';
+import { ActionDialog } from '../../../../components/action-dialog';
 
-type ReasonAction = 'REJECT' | 'RETURN' | 'CANCEL';
+type DialogAction = 'APPROVE' | 'REJECT' | 'RETURN' | 'CANCEL' | 'RESUBMIT';
+
+const dialogs: Record<DialogAction, { title: MessageKey; reason: boolean; danger: boolean }> = {
+  APPROVE: { title: 'actionApprove', reason: false, danger: false },
+  RETURN: { title: 'actionReturn', reason: true, danger: false },
+  REJECT: { title: 'actionReject', reason: true, danger: true },
+  CANCEL: { title: 'actionCancelRequest', reason: true, danger: true },
+  RESUBMIT: { title: 'actionResubmit', reason: false, danger: false }
+};
 type HistoryEntry = RequestHistoryView['entries'][number];
 
 const historyLabel: Record<HistoryEntry['kind'], MessageKey> = { APPROVE: 'auditResultApproved', REJECT: 'auditResultRejected', RETURN: 'auditResultReturned', CANCEL: 'requestHistoryCancelled' };
@@ -24,7 +32,7 @@ export function RequestDetailPanel({ requestId, reference, requestorName, organi
 }) {
   const [status, setStatus] = useState<RequestDisplayStatus>(initialStatus);
   const [hasActed, setHasActed] = useState(false);
-  const [openForm, setOpenForm] = useState<ReasonAction | null>(null);
+  const [openForm, setOpenForm] = useState<DialogAction | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<MessageKey | null>(null);
   const [isStale, setIsStale] = useState(false);
@@ -56,7 +64,9 @@ export function RequestDetailPanel({ requestId, reference, requestorName, organi
     }
   }
 
-  function confirmReason(reason: string) {
+  function confirm(reason: string) {
+    if (openForm === 'APPROVE') return send(`${path}/decisions`, { decision: 'APPROVE' }, statusAfterApprove);
+    if (openForm === 'RESUBMIT') return send(`${path}/resubmission`, {}, 'IN_REVIEW');
     if (openForm === 'CANCEL') return send(`${path}/cancellation`, { reason }, 'CANCELLED');
     if (openForm) return send(`${path}/decisions`, { decision: openForm, reason }, openForm === 'REJECT' ? 'REJECTED' : 'RETURNED');
   }
@@ -64,7 +74,7 @@ export function RequestDetailPanel({ requestId, reference, requestorName, organi
   const canApprove = actions.approve && status === 'IN_REVIEW';
   const canCancel = actions.cancel && (status === 'IN_REVIEW' || status === 'RETURNED');
   const canResubmit = actions.resubmit && status === 'RETURNED';
-  const showActions = !hasActed && !isStale && !openForm && (canApprove || canCancel || canResubmit);
+  const showActions = !hasActed && !isStale && (canApprove || canCancel || canResubmit);
 
   return <section>
     <h2>{t('requestDetail')}</h2>
@@ -75,15 +85,15 @@ export function RequestDetailPanel({ requestId, reference, requestorName, organi
       <div><dt>{t('status')}</dt><dd><StatusBadge status={status} /></dd></div>
     </dl>
     {showActions && <div className="request-actions">
-      {canApprove && <button type="button" disabled={isSubmitting} onClick={() => send(`${path}/decisions`, { decision: 'APPROVE' }, statusAfterApprove)}>{t('actionApprove')}</button>}
+      {canApprove && <button type="button" disabled={isSubmitting} onClick={() => setOpenForm('APPROVE')}>{t('actionApprove')}</button>}
       {canApprove && <button type="button" className="button-secondary" disabled={isSubmitting} onClick={() => setOpenForm('RETURN')}>{t('actionReturn')}</button>}
       {canApprove && <button type="button" className="button-danger" disabled={isSubmitting} onClick={() => setOpenForm('REJECT')}>{t('actionReject')}</button>}
-      {canResubmit && <button type="button" disabled={isSubmitting} onClick={() => send(`${path}/resubmission`, {}, 'IN_REVIEW')}>{t('actionResubmit')}</button>}
+      {canResubmit && <button type="button" disabled={isSubmitting} onClick={() => setOpenForm('RESUBMIT')}>{t('actionResubmit')}</button>}
       {canCancel && <button type="button" className="button-danger" disabled={isSubmitting} onClick={() => setOpenForm('CANCEL')}>{t('actionCancelRequest')}</button>}
     </div>}
-    {openForm && !hasActed && <ReasonForm isSubmitting={isSubmitting} onConfirm={confirmReason} onClose={() => { setOpenForm(null); setError(null); }} />}
+    {openForm && !hasActed && <ActionDialog title={t(dialogs[openForm].title)} message={dialogs[openForm].reason ? undefined : `${t('dialogConfirmQuestion')} ${reference}`} confirmLabel={t('confirmAction')} tone={dialogs[openForm].danger ? 'danger' : 'primary'} reason={dialogs[openForm].reason} maxLength={2000} isSubmitting={isSubmitting} error={error ? t(error) : null} onConfirm={(reason) => void confirm(reason)} onClose={() => { setOpenForm(null); setError(null); }} />}
     {hasActed && <p className="action-saved" role="status">{t('actionSaved')}</p>}
-    {error && <p role="alert" className="form-error">{t(error)}</p>}
+    {error && !openForm && <p role="alert" className="form-error">{t(error)}</p>}
     <h3 id="request-history-heading">{t('requestHistory')}</h3>
     {history.length
       ? <ul className="request-history" aria-labelledby="request-history-heading">{history.map((entry, index) => <li key={`${entry.at}-${index}`}>

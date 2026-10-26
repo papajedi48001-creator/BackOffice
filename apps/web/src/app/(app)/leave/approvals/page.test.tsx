@@ -35,6 +35,7 @@ describe('LeaveApprovalsPage', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: 'เลือก REQ-r1' }));
     fireEvent.click(screen.getByRole('checkbox', { name: 'เลือก REQ-r2' }));
     fireEvent.click(screen.getByRole('button', { name: 'อนุมัติที่เลือก' }));
+    fireEvent.click(screen.getByRole('button', { name: 'ยืนยัน' }));
     expect(await within(screen.getByRole('row', { name: /REQ-r1/ })).findByText('อนุมัติแล้ว')).toBeInTheDocument();
     expect(within(screen.getByRole('row', { name: /REQ-r2/ })).getByText('ไม่ใช่ลำดับที่คุณต้องพิจารณา')).toBeInTheDocument();
     const [url, init] = fetchMock.mock.calls[0]! as unknown as [string, RequestInit];

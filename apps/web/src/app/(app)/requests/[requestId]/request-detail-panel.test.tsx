@@ -36,6 +36,9 @@ describe('RequestDetailPanel', () => {
     render(<RequestDetailPanel {...base} actions={{ approve: true, cancel: false, resubmit: false }} statusAfterApprove="IN_REVIEW" />);
 
     fireEvent.click(screen.getByRole('button', { name: 'อนุมัติ' }));
+    expect(screen.getByRole('dialog', { name: 'อนุมัติ' })).toHaveTextContent('REQ-request-demo');
+    expect(fetch).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'ยืนยัน' }));
 
     expect(await screen.findByText('บันทึกแล้ว')).toBeInTheDocument();
     expect(badge()).toBe('รอพิจารณา');
@@ -51,6 +54,7 @@ describe('RequestDetailPanel', () => {
     render(<RequestDetailPanel {...base} actions={{ approve: true, cancel: false, resubmit: false }} />);
 
     fireEvent.click(screen.getByRole('button', { name: action }));
+    expect(screen.getByRole('dialog', { name: action })).toBeInTheDocument();
     const reason = screen.getByRole('textbox', { name: 'เหตุผล' });
     expect(screen.getByRole('button', { name: 'ยืนยัน' })).toBeDisabled();
     fireEvent.change(reason, { target: { value: 'ข้อมูลไม่ครบ' } });
@@ -93,6 +97,7 @@ describe('RequestDetailPanel', () => {
     render(<RequestDetailPanel {...base} status="RETURNED" actions={{ approve: false, cancel: true, resubmit: true }} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'ส่งพิจารณาอีกครั้ง' }));
+    fireEvent.click(screen.getByRole('button', { name: 'ยืนยัน' }));
 
     expect(await screen.findByText('บันทึกแล้ว')).toBeInTheDocument();
     expect(fetch).toHaveBeenCalledWith('/api/requests/request-demo/resubmission', expect.objectContaining({ method: 'POST' }));
@@ -130,6 +135,7 @@ describe('RequestDetailPanel', () => {
     render(<RequestDetailPanel {...base} status="RETURNED" actions={{ approve: false, cancel: true, resubmit: true }} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'ส่งพิจารณาอีกครั้ง' }));
+    fireEvent.click(screen.getByRole('button', { name: 'ยืนยัน' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('ไม่พบผู้อนุมัติของหน่วยงาน กรุณาติดต่อฝ่ายบุคคล');
     expect(badge()).toBe('ส่งกลับแก้ไข');

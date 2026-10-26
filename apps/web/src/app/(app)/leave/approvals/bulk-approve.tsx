@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { LeaveWarning } from '@backoffice/contracts';
 import { t } from '@backoffice/i18n';
+import { ActionDialog } from '../../../../components/action-dialog';
 import { formatLeaveRange, leaveErrorMessage, leaveKindLabel, leaveWarningText } from '../../../../lib/leave-labels';
 
 export interface PendingLeaveRow { requestId: string; reference: string; kind: 'LEAVE' | 'CANCEL_DAYS'; leaveTypeName: string; startDate: string; endDate: string; startHalf: string; endHalf: string; days: number; personDisplayName: string | null; organizationName: string | null; warnings: LeaveWarning[]; medicalCertificateRequired: boolean }
@@ -17,6 +18,7 @@ export function BulkApprove({ items }: { items: PendingLeaveRow[] }) {
   const [outcomes, setOutcomes] = useState<Record<string, Outcome>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const toggle = (requestId: string) => setSelected((current) => { const next = new Set(current); if (next.has(requestId)) next.delete(requestId); else next.add(requestId); return next; });
 
   async function approve() {
@@ -28,6 +30,7 @@ export function BulkApprove({ items }: { items: PendingLeaveRow[] }) {
       const { results } = (await response.json()) as { results: Array<{ requestId: string } & Outcome> };
       setOutcomes(Object.fromEntries(results.map(({ requestId, ...outcome }) => [requestId, outcome])));
       setSelected(new Set());
+      setConfirming(false);
       router.refresh();
     } catch { setError(leaveErrorMessage(null)); } finally { setBusy(false); }
   }
@@ -52,7 +55,8 @@ export function BulkApprove({ items }: { items: PendingLeaveRow[] }) {
         </tr>;
       })}</tbody>
     </table></div>
-    {error && <p role="alert" className="form-error">{error}</p>}
-    <div className="form-actions"><button type="button" disabled={busy} onClick={() => void approve()}>{t('leaveApproveSelected')}</button></div>
+    {error && !confirming && <p role="alert" className="form-error">{error}</p>}
+    <div className="form-actions"><button type="button" disabled={busy} onClick={() => { if (selected.size === 0) { setError(t('leaveNothingSelected')); return; } setError(null); setConfirming(true); }}>{t('leaveApproveSelected')}</button></div>
+    {confirming && <ActionDialog title={t('leaveApproveSelected')} message={`${t('dialogConfirmQuestion')} ${selected.size}`} confirmLabel={t('confirmAction')} isSubmitting={busy} error={error} onConfirm={() => void approve()} onClose={() => { setConfirming(false); setError(null); }} />}
   </div>;
 }
