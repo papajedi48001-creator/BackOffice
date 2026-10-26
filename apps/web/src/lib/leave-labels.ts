@@ -5,7 +5,7 @@ import { formatBangkokDate } from './bangkok-time';
 const statusKeys: Record<string, MessageKey> = { IN_REVIEW: 'leaveStatusInReview', APPROVED: 'leaveStatusApproved', RETURNED: 'leaveStatusReturned', REJECTED: 'leaveStatusRejected', CANCELLED: 'leaveStatusCancelled' };
 const stepKeys: Record<string, MessageKey> = { PENDING: 'leaveStepPending', APPROVED: 'leaveStepApproved', RETURNED: 'leaveStepReturned', REJECTED: 'leaveStepRejected', CANCELLED: 'leaveStepCancelled' };
 const errorKeys: Record<string, MessageKey> = {
-  NO_LEAVE_DAYS: 'leaveErrorNoLeaveDays', CROSSES_FISCAL_YEAR: 'leaveErrorCrossesFiscalYear', INACTIVE_LEAVE_TYPE: 'leaveErrorInactiveType', NO_ENTITLEMENT: 'leaveErrorNoEntitlement',
+  NO_LEAVE_DAYS: 'leaveErrorNoLeaveDays', CROSSES_FISCAL_YEAR: 'leaveErrorCrossesFiscalYear', INACTIVE_LEAVE_TYPE: 'leaveErrorInactiveType', NO_ENTITLEMENT: 'leaveErrorNoEntitlement', NOT_ELIGIBLE: 'leaveErrorNotEligible',
   SERVICE_TOO_SHORT: 'leaveErrorServiceTooShort', APPOINTMENT_DATE_MISSING: 'leaveErrorAppointmentMissing', INSUFFICIENT_BALANCE: 'leaveErrorInsufficientBalance', OVERLAPS_EXISTING_LEAVE: 'leaveErrorOverlaps',
   NO_ORGANIZATION: 'leaveErrorNoOrganization', NO_APPROVER: 'leaveErrorNoApprover', NOT_FOUND: 'leaveErrorNotFound', NOT_APPROVED: 'leaveErrorNotApproved', NOT_RETURNED: 'leaveErrorNotReturned',
   OUTSIDE_LEAVE: 'leaveErrorOutside', OVERLAPS_CANCELLATION: 'leaveErrorOverlapsCancellation', NOT_PENDING: 'leaveErrorNotPending', invalid_input: 'leaveErrorInvalid',

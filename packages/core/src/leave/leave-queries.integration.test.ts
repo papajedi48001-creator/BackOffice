@@ -47,6 +47,16 @@ describeWithDatabase('LeaveQueries against MariaDB', () => {
     expect(mine.map((item) => [item.startDate, item.status, item.days, item.kind])).toEqual([['2026-11-09', 'APPROVED', 3, 'LEAVE'], ['2026-11-02', 'IN_REVIEW', 2, 'LEAVE']]);
   });
 
+  it('leaves out the types a person\'s gender cannot take', async () => {
+    const man = await createLeavePerson(database, org.section, { gender: 'MALE' });
+    const woman = await createLeavePerson(database, org.section, { gender: 'FEMALE' });
+    const codes = async (person: string) => (await queries.balances(person, 2570)).map((row) => row.leaveType.code);
+    expect(await codes(man)).toEqual(['SICK', 'PERSONAL', 'VACATION', 'PATERNITY']);
+    expect(await codes(woman)).toEqual(['SICK', 'PERSONAL', 'VACATION', 'MATERNITY']);
+    expect((await queries.typesFor(man)).map((type) => type.code)).not.toContain('MATERNITY');
+    expect((await queries.typesFor(woman)).map((type) => type.code)).not.toContain('PATERNITY');
+  });
+
   it('shows a ใบลา only to the person, its approvers and HR', async () => {
     const person = await createLeavePerson(database, org.section);
     const requestId = await filed(person, '2026-11-02', '2026-11-02', { endHalf: 'MORNING' });

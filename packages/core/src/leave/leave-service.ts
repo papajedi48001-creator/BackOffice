@@ -10,7 +10,7 @@ import { serviceMonths } from './leave-balance';
 import { fiscalYearOf, leaveUnits, monthWarnings, subtractUnits } from './leave-days';
 import { LEAVE_MODULE } from './leave-module';
 import { LeaveSettingsService, type LeaveType } from './leave-settings-service';
-import { activeUnitsOfPerson, loadBalance, loadHolidaySet, loadPersonContext, type PersonContext } from './leave-store';
+import { activeUnitsOfPerson, genderAllows, loadBalance, loadHolidaySet, loadPersonContext, type PersonContext } from './leave-store';
 
 /** A ใบลา as filed; half days default to FULL. */
 export type LeaveRequestDraft = Omit<LeaveRequestInput, 'startHalf' | 'endHalf'> & { startHalf?: LeaveStartHalf; endHalf?: LeaveEndHalf };
@@ -139,14 +139,15 @@ export class LeaveService {
     if (!leaveType) return fail('NOT_FOUND');
     result.leaveType = leaveType;
     if (!leaveType.isActive) return fail('INACTIVE_LEAVE_TYPE');
+    const person = await loadPersonContext(database, personId);
+    result.person = person;
+    if (!genderAllows(leaveType, person?.gender ?? null)) return fail('NOT_ELIGIBLE');
     if (fiscalYearOf(input.endDate) !== fiscalYear) return fail('CROSSES_FISCAL_YEAR');
     const holidays = await loadHolidaySet(database, monthStart(input.startDate), monthEnd(input.endDate));
     const units = leaveUnits(input, leaveType.counting, holidays);
     result.days = units.length / 2;
     result.medicalCertificateRequired = leaveType.attachmentRequiredFromDays !== null && result.days >= leaveType.attachmentRequiredFromDays;
     if (result.days === 0) return fail('NO_LEAVE_DAYS');
-    const person = await loadPersonContext(database, personId);
-    result.person = person;
     const entitlementRows = person?.employmentTypeId ? await database.query<{ minServiceMonths: number }>('SELECT min_service_months AS minServiceMonths FROM leave_entitlement WHERE employment_type_id = ? AND leave_type_id = ?', [person.employmentTypeId, leaveType.id]) : [];
     const minServiceMonths = entitlementRows[0] ? Number(entitlementRows[0].minServiceMonths) : null;
     if (minServiceMonths === null) return fail('NO_ENTITLEMENT');

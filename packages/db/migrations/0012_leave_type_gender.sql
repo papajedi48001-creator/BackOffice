@@ -1,0 +1,3 @@
+ALTER TABLE leave_type ADD COLUMN IF NOT EXISTS eligible_gender VARCHAR(8) NULL;
+UPDATE leave_type SET eligible_gender = 'FEMALE' WHERE id = '00000000-0000-4000-9000-000000000004';
+UPDATE leave_type SET eligible_gender = 'MALE' WHERE id = '00000000-0000-4000-9000-000000000005';

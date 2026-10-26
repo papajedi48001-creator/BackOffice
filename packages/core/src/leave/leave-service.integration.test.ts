@@ -21,6 +21,22 @@ describeWithDatabase('LeaveService submit against MariaDB', () => {
   });
   afterAll(async () => { await database.close(); });
 
+  it('takes ลาคลอดบุตร only from women and ลาไปช่วยภริยาคลอดบุตร only from men', async () => {
+    const man = await createLeavePerson(database, org.section, { gender: 'MALE' });
+    const woman = await createLeavePerson(database, org.section, { gender: 'FEMALE' });
+    const unknown = await createLeavePerson(database, org.section);
+    const maternity = { leaveTypeId: LEAVE_TYPE_IDS.MATERNITY, startDate: '2027-01-04', endDate: '2027-01-08', reason: 'คลอดบุตร' };
+    const paternity = { leaveTypeId: LEAVE_TYPE_IDS.PATERNITY, startDate: '2027-01-04', endDate: '2027-01-08', reason: 'ภริยาคลอดบุตร' };
+    expect((await service.preview(man, maternity)).error).toBe('NOT_ELIGIBLE');
+    expect(await service.submit(man, maternity)).toEqual({ ok: false, code: 'NOT_ELIGIBLE' });
+    expect((await service.preview(woman, paternity)).error).toBe('NOT_ELIGIBLE');
+    expect((await service.preview(woman, maternity)).error).toBeNull();
+    expect((await service.preview(man, paternity)).error).toBeNull();
+    // Without a recorded gender nobody is turned away; HR fills it in the staff profile.
+    expect((await service.preview(unknown, maternity)).error).toBeNull();
+    expect((await service.preview(unknown, paternity)).error).toBeNull();
+  });
+
   it('previews days and the balance left after this ใบลา without writing anything', async () => {
     const person = await createLeavePerson(database, org.section);
     const result = await service.preview(person, vacation('2026-11-02', '2026-11-06'));

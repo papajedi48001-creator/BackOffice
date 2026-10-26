@@ -20,8 +20,10 @@ import LeaveBalancesPage from './balances/page';
 
 const manager = { authenticated: true, personId: 'hr-a', roles: [{ name: 'hr-manager', organizationId: null }], dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: ['hr'] };
 const staff = { authenticated: true, personId: 'person-a', roles: [], dataOwnerModules: [] };
-const vacation = { id: 'lt-3', code: 'VACATION', name: 'ลาพักผ่อน', counting: 'WORKING_DAYS', approvalTarget: 'HOSPITAL', attachmentRequiredFromDays: null, isActive: true, sortOrder: 3 };
+const sick = { id: 'lt-1', code: 'SICK', name: 'ลาป่วย', counting: 'WORKING_DAYS', approvalTarget: 'HOSPITAL', attachmentRequiredFromDays: 30, eligibleGender: null, isActive: true, sortOrder: 1 };
+const vacation = { id: 'lt-3', code: 'VACATION', name: 'ลาพักผ่อน', counting: 'WORKING_DAYS', approvalTarget: 'HOSPITAL', attachmentRequiredFromDays: null, eligibleGender: null, isActive: true, sortOrder: 3 };
 const civil = { id: 'et-1', code: 'CIVIL_SERVANT', name: 'ข้าราชการ', isActive: true, sortOrder: 1 };
+const government = { id: 'et-2', code: 'GOVERNMENT_EMPLOYEE', name: 'พนักงานราชการ', isActive: true, sortOrder: 2 };
 const query = (value: Record<string, string> = {}) => ({ searchParams: Promise.resolve(value) });
 function as(session: unknown) {
   mocks.headers.mockResolvedValue(new Headers());
@@ -32,7 +34,7 @@ function as(session: unknown) {
   mocks.listHolidays.mockResolvedValue([{ date: '2026-12-05', name: 'วันพ่อแห่งชาติ' }]);
   mocks.getMinWorkingDays.mockResolvedValue(15);
   mocks.allLeave.mockResolvedValue([]);
-  mocks.listEmploymentTypes.mockResolvedValue([civil]);
+  mocks.listEmploymentTypes.mockResolvedValue([civil, government]);
 }
 
 afterEach(() => { vi.clearAllMocks(); vi.unstubAllGlobals(); });
@@ -40,7 +42,7 @@ afterEach(() => { vi.clearAllMocks(); vi.unstubAllGlobals(); });
 describe('HR leave pages', () => {
   it('shows staff no access on every HR page', async () => {
     as(staff);
-    for (const page of [await AllLeavePage(query()), await LeaveSettingsPage(), await LeaveHolidaysPage(query()), await LeaveBalancesPage()]) {
+    for (const page of [await AllLeavePage(query()), await LeaveSettingsPage(query()), await LeaveHolidaysPage(query()), await LeaveBalancesPage()]) {
       const { unmount } = render(page);
       expect(screen.getByRole('alert')).toHaveTextContent('คุณไม่มีสิทธิ์ดูข้อมูลส่วนนี้');
       unmount();
@@ -59,12 +61,78 @@ describe('HR leave pages', () => {
     expect(within(download).getByLabelText('เหตุผลการส่งออก')).toBeRequired();
   });
 
-  it('edits types, entitlements and the minimum working days', async () => {
+  it('shows one ประเภทการจ้าง at a time, chosen from tabs at the top', async () => {
+    as(manager);
+    render(await LeaveSettingsPage(query()));
+    const tabs = screen.getByRole('navigation', { name: 'ตั้งค่าการลา' });
+    expect(within(tabs).getAllByRole('link').map((link) => [link.textContent, link.getAttribute('href')])).toEqual([
+      ['ข้าราชการ', '/leave/settings?tab=et-1'], ['พนักงานราชการ', '/leave/settings?tab=et-2'], ['ประเภทการลาและวันทำการ', '/leave/settings?tab=types']
+    ]);
+    expect(within(tabs).getByRole('link', { name: 'ข้าราชการ' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('form', { name: 'สิทธิ์การลา ข้าราชการ ลาพักผ่อน' })).toBeInTheDocument();
+    expect(screen.queryByRole('form', { name: 'สิทธิ์การลา พนักงานราชการ ลาพักผ่อน' })).toBeNull();
+    expect(screen.queryByRole('form', { name: 'แก้ไขประเภทการลา ลาพักผ่อน' })).toBeNull();
+  });
+
+  it('opens another ประเภทการจ้าง, or the leave types tab, from the query', async () => {
+    as(manager);
+    const { unmount } = render(await LeaveSettingsPage(query({ tab: 'et-2' })));
+    expect(screen.getByRole('link', { name: 'พนักงานราชการ' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('form', { name: 'สิทธิ์การลา พนักงานราชการ ลาพักผ่อน' })).toBeInTheDocument();
+    expect(screen.queryByRole('form', { name: 'สิทธิ์การลา ข้าราชการ ลาพักผ่อน' })).toBeNull();
+    unmount();
+    render(await LeaveSettingsPage(query({ tab: 'types', type: 'lt-3' })));
+    expect(screen.getByRole('form', { name: 'แก้ไขประเภทการลา ลาพักผ่อน' })).toBeInTheDocument();
+    expect(screen.getByRole('spinbutton', { name: 'วันทำการขั้นต่ำต่อเดือน' })).toHaveValue(15);
+    expect(screen.queryByRole('form', { name: 'สิทธิ์การลา ข้าราชการ ลาพักผ่อน' })).toBeNull();
+  });
+
+  it('shows one ประเภทการลา at a time from its own tabs, with a tab to add one', async () => {
+    as(manager);
+    mocks.listTypes.mockResolvedValue([sick, vacation]);
+    const { unmount } = render(await LeaveSettingsPage(query({ tab: 'types' })));
+    const typeTabs = screen.getByRole('navigation', { name: 'ประเภทการลา' });
+    expect(within(typeTabs).getAllByRole('link').map((link) => [link.textContent, link.getAttribute('href')])).toEqual([
+      ['ลาป่วย', '/leave/settings?tab=types&type=lt-1'], ['ลาพักผ่อน', '/leave/settings?tab=types&type=lt-3'], ['เพิ่มประเภทการลา', '/leave/settings?tab=types&type=new']
+    ]);
+    expect(within(typeTabs).getByRole('link', { name: 'ลาป่วย' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('form', { name: 'แก้ไขประเภทการลา ลาป่วย' })).toBeInTheDocument();
+    expect(screen.queryByRole('form', { name: 'แก้ไขประเภทการลา ลาพักผ่อน' })).toBeNull();
+    expect(screen.queryByRole('form', { name: 'เพิ่มประเภทการลา' })).toBeNull();
+    unmount();
+    render(await LeaveSettingsPage(query({ tab: 'types', type: 'new' })));
+    expect(screen.getByRole('form', { name: 'เพิ่มประเภทการลา' })).toBeInTheDocument();
+    expect(screen.queryByRole('form', { name: 'แก้ไขประเภทการลา ลาป่วย' })).toBeNull();
+  });
+
+  it('sets which gender a leave type is for', async () => {
     as(manager);
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
-    render(await LeaveSettingsPage());
-    expect(screen.getByRole('form', { name: 'แก้ไขประเภทการลา ลาพักผ่อน' })).toBeInTheDocument();
+    mocks.listTypes.mockResolvedValue([{ ...vacation, id: 'lt-4', code: 'MATERNITY', name: 'ลาคลอดบุตร', eligibleGender: 'FEMALE' }]);
+    render(await LeaveSettingsPage(query({ tab: 'types' })));
+    const form = screen.getByRole('form', { name: 'แก้ไขประเภทการลา ลาคลอดบุตร' });
+    const gender = within(form).getByLabelText('เฉพาะเพศ');
+    expect(gender).toHaveValue('FEMALE');
+    expect(within(gender).getAllByRole('option').map((option) => option.textContent)).toEqual(['ทุกเพศ', 'ชาย', 'หญิง']);
+    fireEvent.change(gender, { target: { value: '' } });
+    fireEvent.click(within(form).getByRole('button', { name: 'บันทึก' }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const [, init] = fetchMock.mock.calls[0]! as unknown as [string, RequestInit];
+    expect(JSON.parse(init.body as string).eligibleGender).toBeNull();
+  });
+
+  it('falls back to the first ประเภทการจ้าง for an unknown tab', async () => {
+    as(manager);
+    render(await LeaveSettingsPage(query({ tab: 'nope' })));
+    expect(screen.getByRole('link', { name: 'ข้าราชการ' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('saves an entitlement from its tab', async () => {
+    as(manager);
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(await LeaveSettingsPage(query()));
     const entitlement = screen.getByRole('form', { name: 'สิทธิ์การลา ข้าราชการ ลาพักผ่อน' });
     expect(within(entitlement).getByLabelText('วันต่อปี')).toHaveValue(10);
     fireEvent.change(within(entitlement).getByLabelText('วันต่อปี'), { target: { value: '12' } });
@@ -73,7 +141,6 @@ describe('HR leave pages', () => {
     const [url, init] = fetchMock.mock.calls[0]! as unknown as [string, RequestInit];
     expect(url).toBe('/api/leave/entitlements');
     expect(JSON.parse(init.body as string)).toEqual({ employmentTypeId: 'et-1', leaveTypeId: 'lt-3', daysPerYear: 12, firstYearDays: null, maxAccumulatedDays: 20, maxAccumulatedDaysAfter10Years: 30, minServiceMonths: 6 });
-    expect(screen.getByRole('spinbutton', { name: 'วันทำการขั้นต่ำต่อเดือน' })).toHaveValue(15);
   });
 
   it('lists the year’s holidays and adds one', async () => {

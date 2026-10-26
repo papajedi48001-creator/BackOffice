@@ -269,3 +269,10 @@ video.inventory-camera { display: block; flex-basis: 100%; width: 100%; max-widt
 .leave-balance dl div { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid #e6edf3; padding-top: 4px; }
 .leave-balance dt { color: #486581; }
 .leave-balance dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+.leave-tabs { margin: 0 0 4px; border-bottom: 1px solid #d9e2ec; }
+.leave-tabs ul { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.leave-tabs a { display: inline-block; min-height: 44px; border-bottom: 3px solid transparent; color: #334e68; padding: 10px 14px; text-decoration: none; white-space: nowrap; font-weight: 700; }
+.leave-tabs a:hover { color: #0b7285; }
+.leave-tabs a[aria-current="page"] { border-bottom-color: #0b7285; color: #0b7285; }
+.leave-tabs-sub { margin-bottom: 12px; }
+.leave-tabs-sub a { font-weight: 400; min-height: 40px; padding: 8px 12px; }

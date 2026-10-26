@@ -57,6 +57,16 @@ describeWithDatabase('LeaveSettingsService against MariaDB', () => {
     expect(await service.updateType(randomUUID(), typeInput('ไม่มี'), actor)).toEqual({ ok: false, code: 'NOT_FOUND' });
   });
 
+  it('stores which gender a type is for, and clears it', async () => {
+    const code = unique();
+    const created = await service.createType({ code, ...typeInput(`เฉพาะเพศ ${code}`), eligibleGender: 'FEMALE' }, actor);
+    if (!created.ok) throw new Error('create failed');
+    expect((await service.listTypes()).find((type) => type.id === created.id)?.eligibleGender).toBe('FEMALE');
+    expect(await service.updateType(created.id!, { ...typeInput(`เฉพาะเพศ ${code}`), eligibleGender: null }, actor)).toEqual({ ok: true });
+    expect((await service.listTypes()).find((type) => type.id === created.id)?.eligibleGender).toBeNull();
+    expect(JSON.parse((await audits(created.id!)).find((event) => event.action === 'leave.type.update')!.metadata)).toEqual({ leaveTypeCode: code, changedFields: ['eligibleGender'] });
+  });
+
   it('upserts an entitlement and deletes it', async () => {
     const input = { employmentTypeId: governmentEmployee, leaveTypeId: sick, daysPerYear: 30, firstYearDays: null, maxAccumulatedDays: null, maxAccumulatedDaysAfter10Years: null, minServiceMonths: 0 };
     await service.setEntitlement(input, actor);

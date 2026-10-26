@@ -1,4 +1,4 @@
-import type { LeaveBalance, LeaveCounting, LeaveEndHalf, LeaveStartHalf } from '@backoffice/contracts';
+import { genderForPrefix, genderSchema, type Gender, type LeaveBalance, type LeaveCounting, type LeaveEndHalf, type LeaveStartHalf } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { computeBalance, type Entitlement } from './leave-balance';
 import { leaveUnits, subtractUnits } from './leave-days';
@@ -8,12 +8,18 @@ type Reader = Pick<Database, 'query'>;
 const ACTIVE_STATUSES = "('IN_REVIEW', 'RETURNED', 'APPROVED')";
 const dateColumn = (column: string) => `DATE_FORMAT(${column}, '%Y-%m-%d')`;
 
-export interface PersonContext { organizationId: string | null; employmentTypeId: string | null; appointedOn: string | null }
+export interface PersonContext { organizationId: string | null; employmentTypeId: string | null; appointedOn: string | null; gender: Gender | null }
+
+/** A type limited to one gender is closed to the other; a person without a recorded gender is never turned away. */
+export const genderAllows = (leaveType: Pick<LeaveType, 'eligibleGender'>, gender: Gender | null) => leaveType.eligibleGender === null || gender === null || leaveType.eligibleGender === gender;
 
 /** The person's current unit (from the open employment record), ประเภทการจ้าง and วันบรรจุ; null for an unknown person. */
 export async function loadPersonContext(db: Reader, personId: string): Promise<PersonContext | null> {
-  const [row] = await db.query<PersonContext>(`SELECT (SELECT organization_id FROM employment_assignment WHERE person_id = p.id AND effective_until IS NULL ORDER BY effective_from DESC LIMIT 1) AS organizationId, hp.employment_type_id AS employmentTypeId, ${dateColumn('hp.appointed_on')} AS appointedOn FROM person p LEFT JOIN hr_person_profile hp ON hp.person_id = p.id WHERE p.id = ?`, [personId]);
-  return row ?? null;
+  const [row] = await db.query<Omit<PersonContext, 'gender'> & { gender: string | null; namePrefix: string | null }>(`SELECT (SELECT organization_id FROM employment_assignment WHERE person_id = p.id AND effective_until IS NULL ORDER BY effective_from DESC LIMIT 1) AS organizationId, hp.employment_type_id AS employmentTypeId, ${dateColumn('hp.appointed_on')} AS appointedOn, hp.gender, hp.name_prefix AS namePrefix FROM person p LEFT JOIN hr_person_profile hp ON hp.person_id = p.id WHERE p.id = ?`, [personId]);
+  if (!row) return null;
+  const { namePrefix, gender, ...context } = row;
+  // The recorded gender wins; otherwise a prefix such as นาย or นางสาว tells it.
+  return { ...context, gender: genderSchema.safeParse(gender).data ?? genderForPrefix(namePrefix) };
 }
 
 export async function loadHolidaySet(db: Reader, from: string, to: string): Promise<Set<string>> {

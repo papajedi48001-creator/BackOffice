@@ -53,6 +53,10 @@ export async function seedLocalDemo(database: Database, protector: NationalIdPro
   }
   // Leave needs an ประเภทการจ้าง and วันบรรจุ; an existing profile keeps whatever HR already set.
   await database.execute("INSERT IGNORE INTO hr_person_profile (person_id, employment_type_id, appointed_on, updated_at) SELECT person.id, type.id, '2015-06-01', UTC_TIMESTAMP() FROM person JOIN hr_employment_type type ON type.code = 'CIVIL_SERVANT' WHERE person.employee_code IN (" + people.map(() => '?').join(', ') + ')', people.map(([code]) => code));
+  const genders: Array<[code: string, gender: 'MALE' | 'FEMALE']> = [['DIR001', 'MALE'], ['HR001', 'FEMALE'], ['NUR001', 'FEMALE'], ['NUR014', 'FEMALE'], ['NUR022', 'MALE'], ['ADM003', 'FEMALE'], ['LAB002', 'MALE'], ['PHA005', 'FEMALE']];
+  for (const [code, gender] of genders) {
+    await database.execute('UPDATE hr_person_profile profile JOIN person ON person.id = profile.person_id SET profile.gender = ? WHERE person.employee_code = ? AND profile.gender IS NULL', [gender, code]);
+  }
   await database.execute("INSERT INTO data_owner_assignment (id, module_code, organization_id, person_id, created_at) SELECT ?, 'hr', NULL, person.id, UTC_TIMESTAMP() FROM person WHERE person.employee_code = 'HR001' AND NOT EXISTS (SELECT 1 FROM data_owner_assignment existing WHERE existing.person_id = person.id AND existing.module_code = 'hr' AND existing.organization_id IS NULL)", [randomUUID()]);
   return { accountsCreated: usernames.length, usernames };
 }
