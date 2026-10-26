@@ -43,8 +43,8 @@
 
 ### Task 3: ไปราชการ review leftovers
 
-- [ ] Failing tests: mixed half day gives two entries; page renders both; status filter in SQL; overlap code wins over balance.
-- [ ] Implement; tests pass.
-- [ ] Commit `fix(travel): calendar half days, status filter and overlap order`.
+- [x] Failing tests: mixed half day gives two entries; page renders both; status filter in SQL; overlap code wins over balance.
+- [x] Implement; tests pass.
+- [x] Commit `fix(travel): calendar half days, status filter and overlap order`.
 
 Verification: `pnpm lint && pnpm typecheck && pnpm test`, `DATABASE_URL=mysql://backoffice:local-development-only@127.0.0.1:3306/backoffice_fresh pnpm test:integration`, `git diff --check origin/main...HEAD`.

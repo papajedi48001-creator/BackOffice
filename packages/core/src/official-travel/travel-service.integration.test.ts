@@ -67,6 +67,12 @@ describeWithDatabase('OfficialTravelService against MariaDB', () => {
     expect((await leave.submit(leader, { leaveTypeId: LEAVE_TYPE_IDS.VACATION, startDate: '2027-03-03', endDate: '2027-03-03', reason: 'ธุระ' })).ok).toBe(true);
   });
 
+  it('names the trip, not the balance, when a ใบลา over a trip is also too long', async () => {
+    const leader = await createLeavePerson(database, org.section);
+    expect((await service.submit(leader, trip('2027-05-03', '2027-05-03'))).ok).toBe(true);
+    expect(await leave.submit(leader, { leaveTypeId: LEAVE_TYPE_IDS.VACATION, startDate: '2027-05-03', endDate: '2027-06-30', reason: 'ธุระ' })).toEqual({ ok: false, code: 'OVERLAPS_OFFICIAL_TRAVEL' });
+  });
+
   it('names a person with no unit or no record', async () => {
     const leader = await createLeavePerson(database, org.section);
     const homeless = await createLeavePerson(database, null);

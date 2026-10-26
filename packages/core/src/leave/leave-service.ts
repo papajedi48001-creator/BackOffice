@@ -185,11 +185,12 @@ export class LeaveService {
     result.balance = { ...balance, pending: balance.pending + result.days, remaining: balance.remaining - result.days };
     const otherUnits = await activeUnitsOfPerson(database, personId, monthStart(input.startDate), monthEnd(input.endDate), excludeRequestId);
     result.warnings = monthWarnings({ units, otherUnits, holidays, minimum: await new LeaveSettingsService(database as Database).getMinWorkingDays() });
+    // A trip is the real reason a ใบลา cannot go ahead, so it is named before a short balance.
+    const away = new Set(await activeTravelUnitsOfPerson(database, personId, input.startDate, input.endDate));
+    if (units.some((unit) => away.has(unit))) return fail('OVERLAPS_OFFICIAL_TRAVEL');
     if (result.days > balance.remaining) return fail('INSUFFICIENT_BALANCE');
     const taken = new Set(otherUnits);
     if (units.some((unit) => taken.has(unit))) return fail('OVERLAPS_EXISTING_LEAVE');
-    const away = new Set(await activeTravelUnitsOfPerson(database, personId, input.startDate, input.endDate));
-    if (units.some((unit) => away.has(unit))) return fail('OVERLAPS_OFFICIAL_TRAVEL');
     if (!person?.organizationId) return fail('NO_ORGANIZATION');
     return result;
   }

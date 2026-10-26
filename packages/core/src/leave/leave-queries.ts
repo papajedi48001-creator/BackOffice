@@ -127,14 +127,20 @@ export class LeaveQueries {
     );
     const rows = await Promise.all(people.map(async (person) => {
       const [leaveUnitList, trips] = await Promise.all([activeUnitsOfPerson(this.database, person.personId, from, to), this.tripsOf(person.personId, from, to)]);
-      const units = new Set(leaveUnitList);
+      const leaveUnits = new Set(leaveUnitList);
+      const travelUnitSet = new Set<string>();
       const places = new Map<string, string>();
-      for (const trip of trips) for (const unit of travelUnits(trip)) if (unit.slice(0, 10) >= from && unit.slice(0, 10) <= to) { units.add(unit); places.set(unit.slice(0, 10), trip.place); }
-      const dates = [...new Set([...units].map((unit) => unit.slice(0, 10)))].sort();
-      const days = dates.map((day): TeamCalendarDay => {
-        const part = units.has(`${day}:AM`) && units.has(`${day}:PM`) ? 'FULL' as const : units.has(`${day}:AM`) ? 'MORNING' as const : 'AFTERNOON' as const;
-        const place = places.get(day);
-        return place === undefined ? { date: day, part, kind: 'LEAVE' } : { date: day, part, kind: 'TRAVEL', place };
+      for (const trip of trips) for (const unit of travelUnits(trip)) if (unit.slice(0, 10) >= from && unit.slice(0, 10) <= to) { travelUnitSet.add(unit); places.set(unit.slice(0, 10), trip.place); }
+      const dates = [...new Set([...leaveUnits, ...travelUnitSet].map((unit) => unit.slice(0, 10)))].sort();
+      const partOf = (units: Set<string>, day: string) => units.has(`${day}:AM`) && units.has(`${day}:PM`) ? 'FULL' as const : units.has(`${day}:AM`) ? 'MORNING' as const : units.has(`${day}:PM`) ? 'AFTERNOON' as const : null;
+      // A date with a leave half and a trip half gives one entry per kind, each with its own half.
+      const days = dates.flatMap((day): TeamCalendarDay[] => {
+        const leavePart = partOf(leaveUnits, day);
+        const travelPart = partOf(travelUnitSet, day);
+        return [
+          ...(leavePart ? [{ date: day, part: leavePart, kind: 'LEAVE' as const }] : []),
+          ...(travelPart ? [{ date: day, part: travelPart, kind: 'TRAVEL' as const, place: places.get(day) ?? '' }] : [])
+        ];
       });
       return { personId: person.personId, displayName: person.displayName, organizationName: person.organizationName, days };
     }));
