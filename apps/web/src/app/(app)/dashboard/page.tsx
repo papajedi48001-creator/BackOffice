@@ -12,7 +12,7 @@ export default async function DashboardPage() {
   const session = await readSession(new Request('http://localhost', { headers: await headers() }));
   if (!session?.authenticated) redirect('/');
   let modules = visibleModules(session);
-  let summary: LauncherSummary = { displayName: null, organizationName: null, pendingApprovals: null, unreadNotifications: null };
+  let summary: LauncherSummary = { displayName: null, greetingName: null, organizationName: null, pendingApprovals: null, unreadNotifications: null };
   let badges: Record<string, number | undefined> = {};
   const databaseUrl = readRuntimeValue('DATABASE_URL');
   if (databaseUrl && session.personId) {

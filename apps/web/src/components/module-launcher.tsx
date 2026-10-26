@@ -4,7 +4,7 @@ import type { DashboardSummary } from '@backoffice/core';
 import type { ModuleEntry, ModuleGroup } from '../lib/modules';
 import { ModuleIcon } from './module-icon';
 
-export interface LauncherSummary extends Pick<DashboardSummary, 'displayName' | 'organizationName'> { pendingApprovals: number | null; unreadNotifications: number | null; }
+export interface LauncherSummary extends Pick<DashboardSummary, 'displayName' | 'greetingName' | 'organizationName'> { pendingApprovals: number | null; unreadNotifications: number | null; }
 
 const groups: Array<[ModuleGroup, MessageKey]> = [['mine', 'launcherGroupMine'], ['people', 'launcherGroupPeople'], ['services', 'launcherGroupServices'], ['governance', 'launcherGroupGovernance']];
 const thaiDate = new Intl.DateTimeFormat('th-TH-u-ca-buddhist', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Bangkok' });
@@ -39,7 +39,7 @@ export function ModuleLauncher({ modules, badges, summary, today }: { modules: M
       </div>
     </section>
     <nav aria-label={t('launcherModulesLabel')}>
-      {groups.map(([group, title]) => <Section key={group} id={`launcher-${group}`} title={t(title)} entries={live.filter((entry) => entry.group === group)} countFor={countFor} />)}
+      {groups.map(([group, title]) => <Section key={group} id={`launcher-${group}`} title={group === 'mine' && summary.greetingName ? `${t('launcherGroupMineOf')}${summary.greetingName}` : t(title)} entries={live.filter((entry) => entry.group === group)} countFor={countFor} />)}
       <Section id="launcher-planned" title={t('launcherGroupPlanned')} entries={modules.filter((entry) => entry.status === 'planned')} countFor={() => undefined} />
     </nav>
   </div>;

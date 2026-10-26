@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { createServer } from 'node:net';
-import { findSeedDemo, isPortFree, lanAddresses, parseEnv, renderEnv } from './setup-local-lib.mjs';
+import { findSeedDemo, isPortFree, lanAddresses, parseEnv, renderEnv, startsWorkerWithWeb } from './setup-local-lib.mjs';
 
 const example = readFileSync(new URL('../.env.example', import.meta.url), 'utf8');
 
@@ -72,4 +72,9 @@ test('isPortFree reports a port another process is listening on as busy', async 
     await new Promise((resolve) => server.close(resolve));
   }
   assert.equal(await isPortFree(port), true);
+});
+
+test('web starts the outbox worker too, so notifications reach the bell, unless told not to', () => {
+  assert.equal(startsWorkerWithWeb(['node', 'setup-local.mjs', 'web']), true);
+  assert.equal(startsWorkerWithWeb(['node', 'setup-local.mjs', 'web', '--no-worker']), false);
 });

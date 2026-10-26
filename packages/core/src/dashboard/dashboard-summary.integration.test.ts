@@ -50,7 +50,12 @@ describeWithDatabase('loadDashboardSummary against MariaDB', () => {
   afterAll(async () => { await database.close(); });
 
   it('counts only requests waiting on this person and their unread in-app notifications', async () => {
-    await expect(loadDashboardSummary(database, me)).resolves.toEqual({ displayName: 'คุณทดสอบ', organizationName, pendingApprovals: 2, unreadNotifications: 2 });
+    await expect(loadDashboardSummary(database, me)).resolves.toEqual({ displayName: 'คุณทดสอบ', greetingName: 'คุณทดสอบ', organizationName, pendingApprovals: 2, unreadNotifications: 2 });
+  });
+
+  it('greets by the first name on the HR record when there is one', async () => {
+    await database.execute("INSERT INTO hr_person_profile (person_id, first_name, updated_at) VALUES (?, 'พรทิพย์', UTC_TIMESTAMP())", [other]);
+    expect((await loadDashboardSummary(database, other)).greetingName).toBe('พรทิพย์');
   });
 
   it('orders steps by number, so step 2 waits before step 10', async () => {
@@ -59,6 +64,6 @@ describeWithDatabase('loadDashboardSummary against MariaDB', () => {
   });
 
   it('returns empty values for an unknown person', async () => {
-    await expect(loadDashboardSummary(database, randomUUID())).resolves.toEqual({ displayName: null, organizationName: null, pendingApprovals: 0, unreadNotifications: 0 });
+    await expect(loadDashboardSummary(database, randomUUID())).resolves.toEqual({ displayName: null, greetingName: null, organizationName: null, pendingApprovals: 0, unreadNotifications: 0 });
   });
 });

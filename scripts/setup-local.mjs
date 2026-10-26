@@ -2,15 +2,15 @@
 /* global process, console -- Node script outside the workspace packages */
 // Local development setup for other developers' machines. See docs/runbooks/local-setup.md.
 //   node scripts/setup-local.mjs          install, write .env, start MariaDB + Redis, migrate, seed demo data
-//   node scripts/setup-local.mjs web      build and start the web app on port 3000 with .env loaded
-//   node scripts/setup-local.mjs worker   start the outbox worker with .env loaded
+//   node scripts/setup-local.mjs web      build and start the web app on port 3000, plus the outbox worker (--no-worker to skip)
+//   node scripts/setup-local.mjs worker   start only the outbox worker with .env loaded
 //   node scripts/setup-local.mjs lan      serve the web app over HTTPS to the LAN (port 8443)
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { networkInterfaces } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { findSeedDemo, isPortFree, lanAddresses, parseEnv, renderEnv } from './setup-local-lib.mjs';
+import { findSeedDemo, isPortFree, lanAddresses, parseEnv, renderEnv, startsWorkerWithWeb } from './setup-local-lib.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const envFile = path.join(root, '.env');
@@ -132,7 +132,7 @@ async function setup() {
   } else {
     console.log('\n! seed:demo is not available on this branch yet; no demo accounts were created.');
   }
-  console.log('\nOK Ready. Next: `node scripts/setup-local.mjs web` and open http://localhost:3000');
+  console.log('\nOK Ready. Next: `node scripts/setup-local.mjs web` (it also starts the notification worker) and open http://localhost:3000');
 }
 
 function web() {
@@ -142,9 +142,21 @@ function web() {
     run('pnpm', ['--filter', '@backoffice/web', 'build'], { env });
   }
   const port = env.BACKOFFICE_WEB_PORT ?? '3000';
+  if (startsWorkerWithWeb(process.argv)) startWorkerInBackground();
   step(`Starting the web app on http://localhost:${port}`);
   // pnpm forwards extra arguments to the script; a literal "--" would reach next as a directory name.
   run('pnpm', ['--filter', '@backoffice/web', 'start', '-p', port], { env });
+}
+
+// Runs next to the web app so approvals reach the bell; it stops when the web app stops.
+function startWorkerInBackground() {
+  step('Starting the outbox worker (notifications) alongside the web app');
+  const viaShell = process.platform === 'win32';
+  const options = { cwd: root, stdio: 'inherit', shell: viaShell, env: { ...process.env, ...loadEnv() } };
+  const child = viaShell ? spawn('pnpm --filter @backoffice/worker start', options) : spawn('pnpm', ['--filter', '@backoffice/worker', 'start'], options);
+  const stop = () => { if (child.exitCode === null) child.kill(); };
+  process.on('exit', stop);
+  for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => { stop(); process.exit(130); });
 }
 
 function worker() {

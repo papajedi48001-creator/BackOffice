@@ -57,3 +57,8 @@ export function isPortFree(port) {
     server.listen(port, '0.0.0.0', () => server.close(() => resolve(true)));
   });
 }
+
+/** `web` also runs the outbox worker, which delivers notifications; `--no-worker` leaves it to a separate terminal. */
+export function startsWorkerWithWeb(argv) {
+  return !argv.includes('--no-worker');
+}

@@ -33,14 +33,11 @@ node scripts/setup-local.mjs
 
 ## เปิดระบบ
 
-เปิดสองหน้าต่าง terminal:
-
 ```bash
-node scripts/setup-local.mjs web      # build แล้วเปิดเว็บที่ http://localhost:3000 (ใส่ --no-build เพื่อข้ามการ build)
-node scripts/setup-local.mjs worker   # ส่งการแจ้งเตือนจาก outbox
+node scripts/setup-local.mjs web      # build แล้วเปิดเว็บที่ http://localhost:3000 พร้อม worker ที่ส่งการแจ้งเตือน (--no-build ข้ามการ build)
 ```
 
-ทั้งสองคำสั่งโหลดค่าจาก `.env` ให้เอง
+คำสั่ง `web` เปิด worker ให้ด้วย การแจ้งเตือนจึงขึ้นที่กระดิ่งทันทีที่มีการอนุมัติ ถ้าต้องการรัน worker แยกหน้าต่าง ให้ใส่ `--no-worker` แล้วรัน `node scripts/setup-local.mjs worker` อีกหน้าต่าง ทั้งสองคำสั่งโหลดค่าจาก `.env` ให้เอง
 
 ## บัญชีทดลอง
 

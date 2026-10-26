@@ -194,8 +194,8 @@ a.module-tile:hover .module-go { color: var(--accent); transform: translateX(2px
 .app-topbar .permission-notice { margin: 0; }
 .count-badge { display: inline-block; min-width: 22px; height: 22px; margin-left: 8px; border-radius: 999px; background: var(--alert-count); color: #fff; font-size: .8rem; font-weight: 700; line-height: 22px; padding: 0 6px; text-align: center; vertical-align: middle; }
 .notification-bell { position: relative; }
-.bell-button { position: relative; display: inline-grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink); cursor: pointer; }
-.bell-button:hover, .bell-button[aria-expanded="true"] { border-color: var(--line-strong); }
+.app-main .bell-button { position: relative; display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; line-height: 0; border: 0; border-radius: 10px; background: var(--accent); color: #fff; cursor: pointer; }
+.app-main .bell-button:hover, .app-main .bell-button[aria-expanded="true"] { background: var(--accent-strong); }
 .bell-count { position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; border-radius: 999px; background: var(--alert-count); color: #fff; font-size: .75rem; font-weight: 700; line-height: 20px; padding: 0 5px; text-align: center; }
 .bell-panel { position: absolute; z-index: 20; top: calc(100% + 8px); right: 0; width: min(380px, calc(100vw - 32px)); border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: 0 12px 32px rgb(18 38 29 / 16%); padding: 8px; }
 .bell-title { margin: 4px 8px 8px; color: var(--muted); font-size: .85rem; font-weight: 700; }
