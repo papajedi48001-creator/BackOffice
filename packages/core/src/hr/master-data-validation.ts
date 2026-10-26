@@ -7,7 +7,7 @@ export type MasterDataErrorCode =
   | 'INVALID_CSV' | 'MISSING_COLUMN' | 'TOO_MANY_ROWS' | 'REQUIRED' | 'TOO_LONG' | 'INVALID_NATIONAL_ID' | 'INVALID_DATE' | 'INVALID_STATUS'
   | 'DUPLICATE_CODE' | 'DUPLICATE_NATIONAL_ID' | 'NATIONAL_ID_CONFLICT' | 'UNKNOWN_ORGANIZATION' | 'UNKNOWN_MANAGER' | 'SELF_MANAGER'
   | 'PARENT_CYCLE' | 'EFFECTIVE_DATE_NOT_AFTER_CURRENT' | 'UNKNOWN_UNIT_TYPE' | 'UNKNOWN_HEAD' | 'INACTIVE_HEAD' | 'HEAD_ALREADY_SCHEDULED'
-  | 'UNKNOWN_EMPLOYMENT_TYPE' | 'INACTIVE_EMPLOYMENT_TYPE' | 'INVALID_GENDER' | 'GENDER_REQUIRED';
+  | 'UNKNOWN_EMPLOYMENT_TYPE' | 'INACTIVE_EMPLOYMENT_TYPE' | 'INVALID_GENDER' | 'GENDER_REQUIRED' | 'BIRTH_DATE_IN_FUTURE';
 
 /** A validation problem. It names the cell, never its value, so national IDs cannot leak through the report. */
 export interface MasterDataError { file: MasterDataFile; row: number | null; column: string | null; code: MasterDataErrorCode; }
@@ -61,7 +61,7 @@ export function validateMasterData(files: MasterDataFiles, existing: ExistingMas
   for (const { cells } of peopleTable?.rows ?? []) if (cells.employee_code) headStatusByCode.set(cells.employee_code, (cells.status || 'ACTIVE').toUpperCase());
   const organizations = organizationTable ? validateOrganizations(organizationTable, existing, headStatusByCode, now, errors) : [];
   const knownOrganizationCodes = new Set([...existing.organizations.flatMap((organization) => organization.code ? [organization.code] : []), ...organizationTable?.rows.map(({ cells }) => cells.code).filter(Boolean) ?? []]);
-  const people = peopleTable ? validatePeople(peopleTable, existing, knownOrganizationCodes, organizations, lookup, employmentTypes, errors) : [];
+  const people = peopleTable ? validatePeople(peopleTable, existing, knownOrganizationCodes, organizations, lookup, employmentTypes, now, errors) : [];
   return { organizations, people, errors };
 }
 
@@ -125,7 +125,7 @@ function reachesAncestor(start: string, target: string, parentByCode: Map<string
   return false;
 }
 
-function validatePeople(table: Table, existing: ExistingMasterData, knownOrganizationCodes: Set<string>, organizations: OrganizationImportRow[], lookup: (nationalId: string) => string, employmentTypes: readonly EmploymentType[], errors: MasterDataError[]): PersonImportRow[] {
+function validatePeople(table: Table, existing: ExistingMasterData, knownOrganizationCodes: Set<string>, organizations: OrganizationImportRow[], lookup: (nationalId: string) => string, employmentTypes: readonly EmploymentType[], now: Date, errors: MasterDataError[]): PersonImportRow[] {
   const existingByCode = new Map(existing.people.flatMap((person) => person.employeeCode ? [[person.employeeCode, person] as const] : []));
   const existingByLookup = new Map(existing.people.map((person) => [person.nationalIdLookup, person]));
   // Units and people created by this import get placeholder ids, which never equal a stored id, so moving to them always counts as a change.
@@ -183,7 +183,7 @@ function validatePeople(table: Table, existing: ExistingMasterData, knownOrganiz
     const current = existingPerson?.assignment;
     const assignmentChanged = !current || organizationIdByCode.get(organizationCode ?? '') !== current.organizationId || (managerEmployeeCode ? personIdByCode.get(managerEmployeeCode) ?? null : null) !== current.managerPersonId;
     if (current && assignmentChanged && effectiveFrom && effectiveFrom.getTime() <= current.effectiveFrom.getTime()) fail('effective_from', 'EFFECTIVE_DATE_NOT_AFTER_CURRENT');
-    const profile = readProfile(cells, existingPerson?.profile ?? null, employmentTypes, fail);
+    const profile = readProfile(cells, existingPerson?.profile ?? null, employmentTypes, now, fail);
     const storedProfile = existingPerson?.profile ?? emptyProfile;
     const profileChanged = (Object.keys(profile) as (keyof ImportProfile)[]).some((field) => profile[field] !== storedProfile[field]);
     errors.push(...rowErrors);
@@ -192,7 +192,7 @@ function validatePeople(table: Table, existing: ExistingMasterData, knownOrganiz
   return result;
 }
 
-function readProfile(cells: Cells, stored: ImportProfile | null, employmentTypes: readonly EmploymentType[], fail: (column: string, code: MasterDataErrorCode) => void): Partial<ImportProfile> {
+function readProfile(cells: Cells, stored: ImportProfile | null, employmentTypes: readonly EmploymentType[], now: Date, fail: (column: string, code: MasterDataErrorCode) => void): Partial<ImportProfile> {
   const profile: Partial<ImportProfile> = {};
   const text = (column: string, field: 'namePrefix' | 'firstName' | 'lastName' | 'positionLevel', max: number) => {
     const value = cells[column];
@@ -207,8 +207,10 @@ function readProfile(cells: Cells, stored: ImportProfile | null, employmentTypes
   for (const [column, field] of [['birth_date', 'birthDate'], ['appointed_on', 'appointedOn']] as const) {
     if (!cells[column]) continue;
     const day = parseBangkokDate(cells[column]);
-    if (!day) fail(column, 'INVALID_DATE');
-    else profile[field] = new Date(day.getTime() + bangkokOffsetMs).toISOString().slice(0, 10);
+    const value = day ? new Date(day.getTime() + bangkokOffsetMs).toISOString().slice(0, 10) : null;
+    if (!value) fail(column, 'INVALID_DATE');
+    else if (field === 'birthDate' && value > new Date(now.getTime() + bangkokOffsetMs).toISOString().slice(0, 10)) fail(column, 'BIRTH_DATE_IN_FUTURE');
+    else profile[field] = value;
   }
   if (cells.employment_type) {
     const type = employmentTypes.find((candidate) => candidate.code === cells.employment_type || candidate.name === cells.employment_type);
@@ -223,7 +225,7 @@ function readProfile(cells: Cells, stored: ImportProfile | null, employmentTypes
     if (!given) { fail('gender', 'INVALID_GENDER'); return profile; }
   }
   if (given === undefined && profile.namePrefix === undefined) return profile;
-  const gender = resolveGender(profile.namePrefix, given, stored?.gender ?? null);
+  const gender = resolveGender(profile.namePrefix, given, { namePrefix: stored?.namePrefix ?? null, gender: stored?.gender ?? null });
   if (gender === 'GENDER_REQUIRED') fail('gender', 'GENDER_REQUIRED');
   else profile.gender = gender;
   return profile;

@@ -144,7 +144,15 @@ describeWithDatabase('HrProfileService writes against MariaDB', () => {
   it('needs a gender for a prefix that does not tell and accepts an override', async () => {
     const id = await person(await organization());
     expect(await service.updateProfile(id, { namePrefix: 'ดร.' }, manager)).toEqual({ ok: false, code: 'GENDER_REQUIRED' });
+    expect(await service.updateProfile(id, { namePrefix: 'ดร.', gender: null }, manager)).toEqual({ ok: false, code: 'GENDER_REQUIRED' });
     expect(await service.updateProfile(id, { namePrefix: 'นาง', gender: 'MALE' }, manager)).toEqual({ ok: true });
+    expect((await profileRow(id))?.gender).toBe('MALE');
+  });
+
+  it('keeps an overridden gender when the same prefix is saved again', async () => {
+    const id = await person(await organization());
+    expect(await service.updateProfile(id, { namePrefix: 'นาง', gender: 'MALE' }, manager)).toEqual({ ok: true });
+    expect(await service.updateProfile(id, { namePrefix: 'นาง', positionLevel: 'ชำนาญการ' }, manager)).toEqual({ ok: true });
     expect((await profileRow(id))?.gender).toBe('MALE');
   });
 

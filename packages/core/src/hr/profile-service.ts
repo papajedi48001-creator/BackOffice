@@ -141,7 +141,7 @@ export async function applyProfileUpdate(database: QueryDatabase, subject: Profi
     if (!options.canEditOrganization(valid.organizationId)) return { ok: false, code: 'FORBIDDEN' };
     organizationName = target.name;
   }
-  const gender = resolveGender(valid.namePrefix, valid.gender, stored.gender as Gender | null);
+  const gender = resolveGender(valid.namePrefix, valid.gender, { namePrefix: stored.namePrefix, gender: stored.gender as Gender | null });
   if (gender === 'GENDER_REQUIRED') return { ok: false, code: 'GENDER_REQUIRED' };
   const after: Record<string, string | null | undefined> = {
     namePrefix: valid.namePrefix, firstName: valid.firstName, lastName: valid.lastName, gender, birthDate: valid.birthDate,

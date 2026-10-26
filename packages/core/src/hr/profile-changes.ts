@@ -16,11 +16,15 @@ export function diffProfile(before: Values, after: Partial<Record<string, string
 }
 
 /**
- * The gender to store. `prefix` and `given` are undefined when the save leaves them out.
- * A given gender wins; otherwise a known prefix decides; otherwise the stored gender stays, and a prefix that does not tell needs one.
+ * The gender to store. `prefix` and `given` are undefined when the save leaves them out; a null `given` is the form's blank choice.
+ * A given gender wins. Otherwise a stored gender stays while the prefix is unchanged, so HR's override survives a re-save or re-import.
+ * Otherwise a known prefix decides, and a prefix that does not tell needs a gender.
  */
-export function resolveGender(prefix: string | null | undefined, given: Gender | null | undefined, stored: Gender | null): Gender | null | 'GENDER_REQUIRED' {
-  if (given !== undefined) return given;
-  if (prefix === undefined || prefix === null) return stored;
-  return genderForPrefix(prefix) ?? stored ?? 'GENDER_REQUIRED';
+export function resolveGender(prefix: string | null | undefined, given: Gender | null | undefined, stored: { namePrefix: string | null; gender: Gender | null }): Gender | null | 'GENDER_REQUIRED' {
+  if (given) return given;
+  const effectivePrefix = prefix === undefined ? stored.namePrefix : prefix;
+  if (given === null) return genderForPrefix(effectivePrefix) ?? (effectivePrefix === null ? null : 'GENDER_REQUIRED');
+  const prefixChanged = prefix !== undefined && prefix !== stored.namePrefix;
+  if ((!prefixChanged && stored.gender) || effectivePrefix === null) return stored.gender;
+  return genderForPrefix(effectivePrefix) ?? stored.gender ?? 'GENDER_REQUIRED';
 }

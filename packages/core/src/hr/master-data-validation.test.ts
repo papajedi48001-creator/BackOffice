@@ -213,5 +213,20 @@ describe('validateMasterData', () => {
       expect(unclear.people[0]!.profile.gender).toBe('MALE');
       expect(unclear.people[0]!.profileChanged).toBe(true);
     });
+
+    it('keeps a gender HR overrode when the same prefix is imported again', () => {
+      const existing: ExistingMasterData = { organizations: [{ id: 'org-hosp', code: 'HOSP', name: 'โรงพยาบาล', parentId: null }], people: [{ id: 'person-1', employeeCode: 'E001', nationalIdLookup: lookup(director), displayName: 'นางสมศรี ใจดี', positionTitle: 'ผู้อำนวยการ', employmentStatus: 'ACTIVE', assignment: { organizationId: 'org-hosp', managerPersonId: null, effectiveFrom: new Date('2026-01-01T00:00:00Z') }, profile: { namePrefix: 'นาง', firstName: null, lastName: null, gender: 'MALE', birthDate: null, employmentTypeId: null, appointedOn: null, positionLevel: null } }] };
+      const again = run('นาง,,,,,,,', existing);
+      expect(again.errors).toEqual([]);
+      expect(again.people[0]!.profile.gender).toBe('MALE');
+      expect(again.people[0]!.profileChanged).toBe(false);
+    });
+
+    it('rejects a birth date after today in Bangkok', () => {
+      const at = (now: Date, cell: string) => codes(validateMasterData({ organizations: organizations('HOSP,โรงพยาบาล,'), people: [profileHeader, `${base},,,,ชาย,${cell},,,`].join('\n') }, emptyExistingMasterData, lookup, now, types));
+      // 2026-10-25T18:00Z is already 26 Oct in Bangkok.
+      expect(at(new Date('2026-10-25T18:00:00Z'), '2026-10-26')).toEqual([]);
+      expect(at(new Date('2026-10-25T18:00:00Z'), '2026-10-27')).toEqual(['people:2:birth_date:BIRTH_DATE_IN_FUTURE']);
+    });
   });
 });

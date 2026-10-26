@@ -15,7 +15,7 @@ const errorMessages: Record<string, string> = {
   EFFECTIVE_DATE_NOT_AFTER_CURRENT: 'วันที่มีผลต้องหลังวันที่ของการสังกัดปัจจุบัน',
   UNKNOWN_UNIT_TYPE: 'ชนิดหน่วยงานต้องเป็น งาน, กลุ่มงาน หรือ โรงพยาบาล', UNKNOWN_HEAD: 'ไม่พบรหัสหัวหน้าหน่วยงาน', INACTIVE_HEAD: 'หัวหน้าหน่วยงานต้องมีสถานะ ACTIVE',
   UNKNOWN_EMPLOYMENT_TYPE: 'ไม่พบประเภทการจ้างนี้', INACTIVE_EMPLOYMENT_TYPE: 'ประเภทการจ้างนี้ปิดใช้งานแล้ว',
-  INVALID_GENDER: 'เพศต้องเป็น ชาย หรือ หญิง', GENDER_REQUIRED: 'คำนำหน้านี้บอกเพศไม่ได้ กรุณาระบุเพศ',
+  INVALID_GENDER: 'เพศต้องเป็น ชาย หรือ หญิง', GENDER_REQUIRED: 'คำนำหน้านี้บอกเพศไม่ได้ กรุณาระบุเพศ', BIRTH_DATE_IN_FUTURE: 'วันเกิดต้องไม่เกินวันนี้',
   HEAD_ALREADY_SCHEDULED: 'หน่วยงานนี้มีหัวหน้าที่ตั้งล่วงหน้าไว้แล้ว จึงนำเข้าหัวหน้าคนอื่นก่อนวันเริ่มนั้นไม่ได้'
 };
 

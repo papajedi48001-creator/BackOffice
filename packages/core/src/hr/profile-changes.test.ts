@@ -21,24 +21,36 @@ describe('diffProfile', () => {
 });
 
 describe('resolveGender', () => {
+  const none = { namePrefix: null, gender: null };
+
   it('takes the gender from a known prefix when none is given', () => {
-    expect(resolveGender('นาย', undefined, null)).toBe('MALE');
-    expect(resolveGender('นางสาว', undefined, 'MALE')).toBe('FEMALE');
+    expect(resolveGender('นาย', undefined, none)).toBe('MALE');
+    expect(resolveGender('นางสาว', undefined, { namePrefix: 'นาย', gender: 'MALE' })).toBe('FEMALE');
   });
 
   it('lets a given gender override the prefix', () => {
-    expect(resolveGender('นาง', 'MALE', null)).toBe('MALE');
+    expect(resolveGender('นาง', 'MALE', none)).toBe('MALE');
+  });
+
+  it('keeps an override when the prefix is saved again unchanged', () => {
+    expect(resolveGender('นาง', undefined, { namePrefix: 'นาง', gender: 'MALE' })).toBe('MALE');
   });
 
   it('needs a gender for a prefix that does not tell, unless one is stored', () => {
-    expect(resolveGender('ดร.', undefined, null)).toBe('GENDER_REQUIRED');
-    expect(resolveGender('ดร.', undefined, 'FEMALE')).toBe('FEMALE');
-    expect(resolveGender('ดร.', 'MALE', null)).toBe('MALE');
+    expect(resolveGender('ดร.', undefined, none)).toBe('GENDER_REQUIRED');
+    expect(resolveGender('ดร.', undefined, { namePrefix: 'นาง', gender: 'FEMALE' })).toBe('FEMALE');
+    expect(resolveGender('ดร.', 'MALE', none)).toBe('MALE');
   });
 
-  it('keeps the stored gender when neither prefix nor gender is given, and clears it on request', () => {
-    expect(resolveGender(undefined, undefined, 'FEMALE')).toBe('FEMALE');
-    expect(resolveGender(undefined, null, 'FEMALE')).toBeNull();
-    expect(resolveGender(null, undefined, 'MALE')).toBe('MALE');
+  it('treats a blank gender from the form as not chosen', () => {
+    expect(resolveGender('ดร.', null, none)).toBe('GENDER_REQUIRED');
+    expect(resolveGender('ดร.', null, { namePrefix: 'ดร.', gender: 'FEMALE' })).toBe('GENDER_REQUIRED');
+    expect(resolveGender('นาง', null, none)).toBe('FEMALE');
+  });
+
+  it('keeps the stored gender when neither prefix nor gender is given, and clears it only when no prefix needs it', () => {
+    expect(resolveGender(undefined, undefined, { namePrefix: null, gender: 'FEMALE' })).toBe('FEMALE');
+    expect(resolveGender(undefined, null, { namePrefix: null, gender: 'FEMALE' })).toBeNull();
+    expect(resolveGender(null, undefined, { namePrefix: 'นาย', gender: 'MALE' })).toBe('MALE');
   });
 });

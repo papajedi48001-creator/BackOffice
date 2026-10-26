@@ -66,13 +66,16 @@ export const calendarDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine
   return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }, 'INVALID_DATE');
 
+/** A birth date no later than today in Bangkok. */
+const birthDateSchema = calendarDateSchema.refine((value) => value <= new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10), 'BIRTH_DATE_IN_FUTURE');
+
 const optionalText = (max: number) => z.string().trim().min(1).max(max).nullable().optional();
 const phoneSchema = z.string().trim().regex(/^[0-9+\- ]{1,32}$/).nullable().optional();
 
 /** Personal and work fields HR edits. An absent field keeps its stored value; null clears it. */
 export const updatePersonProfileInputSchema = z.object({
   namePrefix: optionalText(32), firstName: optionalText(120), lastName: optionalText(120),
-  gender: genderSchema.nullable().optional(), birthDate: calendarDateSchema.nullable().optional(),
+  gender: genderSchema.nullable().optional(), birthDate: birthDateSchema.nullable().optional(),
   employmentTypeId: z.string().min(1).nullable().optional(), appointedOn: calendarDateSchema.nullable().optional(),
   positionTitle: optionalText(255), positionLevel: optionalText(120), organizationId: z.string().min(1).optional()
 }).strict();

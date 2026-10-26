@@ -40,6 +40,8 @@ describe('staff profile contracts', () => {
   it('accepts a partial profile update and an explicit gender override', () => {
     expect(updatePersonProfileInputSchema.parse({ namePrefix: 'นาง', gender: 'MALE' })).toEqual({ namePrefix: 'นาง', gender: 'MALE' });
     expect(updatePersonProfileInputSchema.parse({ birthDate: null }).birthDate).toBeNull();
+    expect(updatePersonProfileInputSchema.safeParse({ birthDate: '2999-01-01' }).success).toBe(false);
+    expect(updatePersonProfileInputSchema.safeParse({ appointedOn: '2999-01-01' }).success).toBe(true);
     expect(updatePersonProfileInputSchema.safeParse({ gender: 'OTHER' }).success).toBe(false);
     expect(updatePersonProfileInputSchema.safeParse({ appointedOn: '2026-02-30' }).success).toBe(false);
     expect(updatePersonProfileInputSchema.safeParse({ organizationId: null }).success).toBe(false);
