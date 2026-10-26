@@ -31,4 +31,11 @@ describeWithDatabase('seedLocalDemo', () => {
     const [manager] = await database.query<{ managerCode: string }>("SELECT manager.employee_code AS managerCode FROM person staff JOIN employment_assignment assignment ON assignment.person_id = staff.id AND assignment.effective_until IS NULL JOIN person manager ON manager.id = assignment.manager_person_id WHERE staff.employee_code = 'NUR014'");
     expect(manager?.managerCode).toBe('NUR001');
   });
+
+  it('gives every sample person an employment type and appointment date so they can file leave', async () => {
+    await seedLocalDemo(database, protector, { password: 'demo-password-2569' });
+    const profiles = await database.query<{ code: string; employmentTypeCode: string | null; appointedOn: string | null }>("SELECT person.employee_code AS code, type.code AS employmentTypeCode, DATE_FORMAT(profile.appointed_on, '%Y-%m-%d') AS appointedOn FROM person LEFT JOIN hr_person_profile profile ON profile.person_id = person.id LEFT JOIN hr_employment_type type ON type.id = profile.employment_type_id WHERE person.employee_code IN ('NUR014', 'NUR022', 'HR001')");
+    expect(profiles).toHaveLength(3);
+    for (const profile of profiles) expect(profile).toMatchObject({ employmentTypeCode: 'CIVIL_SERVANT', appointedOn: '2015-06-01' });
+  });
 });

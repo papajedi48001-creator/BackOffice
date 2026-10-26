@@ -47,6 +47,8 @@ export async function seedLocalDemo(database: Database, protector: NationalIdPro
     if (!(await database.query('SELECT id FROM role WHERE name = ? LIMIT 1', [role])).length) await database.execute('INSERT INTO role (id, name, created_at) VALUES (?, ?, UTC_TIMESTAMP())', [randomUUID(), role]);
     await database.execute('INSERT INTO role_assignment (id, person_id, role_id, organization_id, created_at) SELECT ?, person.id, role.id, NULL, UTC_TIMESTAMP() FROM person JOIN role ON role.name = ? WHERE person.employee_code = ? AND NOT EXISTS (SELECT 1 FROM role_assignment existing WHERE existing.person_id = person.id AND existing.role_id = role.id AND existing.organization_id IS NULL)', [randomUUID(), role, code]);
   }
+  // Leave needs an ประเภทการจ้าง and วันบรรจุ; an existing profile keeps whatever HR already set.
+  await database.execute("INSERT IGNORE INTO hr_person_profile (person_id, employment_type_id, appointed_on, updated_at) SELECT person.id, type.id, '2015-06-01', UTC_TIMESTAMP() FROM person JOIN hr_employment_type type ON type.code = 'CIVIL_SERVANT' WHERE person.employee_code IN (" + people.map(() => '?').join(', ') + ')', people.map(([code]) => code));
   await database.execute("INSERT INTO data_owner_assignment (id, module_code, organization_id, person_id, created_at) SELECT ?, 'hr', NULL, person.id, UTC_TIMESTAMP() FROM person WHERE person.employee_code = 'HR001' AND NOT EXISTS (SELECT 1 FROM data_owner_assignment existing WHERE existing.person_id = person.id AND existing.module_code = 'hr' AND existing.organization_id IS NULL)", [randomUUID()]);
   return { accountsCreated: usernames.length, usernames };
 }

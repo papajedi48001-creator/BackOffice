@@ -261,3 +261,4 @@ video.inventory-camera { display: block; flex-basis: 100%; width: 100%; max-widt
 .leave-entitlement-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
 .leave-detail { display: grid; gap: 20px; max-width: 960px; }
 @media (max-width: 720px) { .leave-form, .leave-filter { padding: 14px; } .leave-entitlement-grid { grid-template-columns: 1fr; } .leave-calendar th:first-child, .leave-calendar td:first-child { min-width: 8rem; } }
+.reason-form > input:not([type="hidden"]) { width: 100%; min-height: 44px; border: 1px solid #9fb3c8; border-radius: 8px; background: #fff; color: #102a43; padding: 9px 12px; }
