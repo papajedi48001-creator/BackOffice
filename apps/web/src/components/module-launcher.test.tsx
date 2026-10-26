@@ -5,7 +5,7 @@ import { ModuleLauncher } from './module-launcher';
 
 const byCode = (...codes: string[]) => moduleRegistry.filter((entry) => codes.includes(entry.code)) as ModuleEntry[];
 const planned = moduleRegistry.filter((entry) => entry.status === 'planned');
-const summary = { displayName: 'สมชาย ใจดี', organizationName: 'กลุ่มงานบริหารทั่วไป', pendingApprovals: 3, unreadNotifications: 5 };
+const summary = { displayName: 'สมชาย ใจดี', greetingName: null as string | null, organizationName: 'กลุ่มงานบริหารทั่วไป', pendingApprovals: 3, unreadNotifications: 5 };
 const today = new Date('2026-10-21T03:00:00Z');
 
 it('links live modules and does not link planned ones', () => {
@@ -48,4 +48,9 @@ it('greets by name and shows the Buddhist-era date', () => {
 it('greets without a name when none is recorded', () => {
   render(<ModuleLauncher modules={[]} badges={{}} summary={{ ...summary, displayName: null }} today={today} />);
   expect(screen.getByRole('heading', { name: 'สวัสดี' })).toBeInTheDocument();
+});
+
+it('names my group after me, by first name only', () => {
+  render(<ModuleLauncher modules={byCode('requests')} badges={{}} summary={{ ...summary, displayName: 'นางพรทิพย์ ตัวอย่างงาม', greetingName: 'พรทิพย์' }} today={today} />);
+  expect(screen.getByRole('heading', { name: 'งานของพรทิพย์' })).toBeInTheDocument();
 });
