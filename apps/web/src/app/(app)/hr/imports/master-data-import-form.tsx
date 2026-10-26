@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 type ImportError = { file: 'organizations' | 'people'; row: number | null; column: string | null; code: string };
-type ImportSummary = { organizationsCreated: number; organizationsUpdated: number; peopleCreated: number; peopleUpdated: number; assignmentsChanged: number; headsChanged: number };
+type ImportSummary = { organizationsCreated: number; organizationsUpdated: number; peopleCreated: number; peopleUpdated: number; assignmentsChanged: number; headsChanged: number; profilesChanged: number };
 type Outcome = { kind: 'checked' | 'imported'; summary: ImportSummary } | { kind: 'invalid'; errors: ImportError[] } | { kind: 'failed' };
 
 const fileLabels = { organizations: 'หน่วยงาน', people: 'บุคลากร' } as const;
@@ -14,6 +14,8 @@ const errorMessages: Record<string, string> = {
   UNKNOWN_ORGANIZATION: 'ไม่พบรหัสหน่วยงาน', UNKNOWN_MANAGER: 'ไม่พบรหัสผู้บังคับบัญชา', SELF_MANAGER: 'ผู้บังคับบัญชาเป็นคนเดียวกับบุคลากร', PARENT_CYCLE: 'หน่วยงานแม่วนกลับมาที่ตัวเอง',
   EFFECTIVE_DATE_NOT_AFTER_CURRENT: 'วันที่มีผลต้องหลังวันที่ของการสังกัดปัจจุบัน',
   UNKNOWN_UNIT_TYPE: 'ชนิดหน่วยงานต้องเป็น งาน, กลุ่มงาน หรือ โรงพยาบาล', UNKNOWN_HEAD: 'ไม่พบรหัสหัวหน้าหน่วยงาน', INACTIVE_HEAD: 'หัวหน้าหน่วยงานต้องมีสถานะ ACTIVE',
+  UNKNOWN_EMPLOYMENT_TYPE: 'ไม่พบประเภทการจ้างนี้', INACTIVE_EMPLOYMENT_TYPE: 'ประเภทการจ้างนี้ปิดใช้งานแล้ว',
+  INVALID_GENDER: 'เพศต้องเป็น ชาย หรือ หญิง', GENDER_REQUIRED: 'คำนำหน้านี้บอกเพศไม่ได้ กรุณาระบุเพศ',
   HEAD_ALREADY_SCHEDULED: 'หน่วยงานนี้มีหัวหน้าที่ตั้งล่วงหน้าไว้แล้ว จึงนำเข้าหัวหน้าคนอื่นก่อนวันเริ่มนั้นไม่ได้'
 };
 
@@ -84,5 +86,5 @@ export function MasterDataImportForm() {
 }
 
 function describe(summary: ImportSummary): string {
-  return `หน่วยงานใหม่ ${summary.organizationsCreated} แก้ไข ${summary.organizationsUpdated}, บุคลากรใหม่ ${summary.peopleCreated} แก้ไข ${summary.peopleUpdated}, การสังกัดที่เปลี่ยน ${summary.assignmentsChanged}, หัวหน้าหน่วยงานที่เปลี่ยน ${summary.headsChanged}`;
+  return `หน่วยงานใหม่ ${summary.organizationsCreated} แก้ไข ${summary.organizationsUpdated}, บุคลากรใหม่ ${summary.peopleCreated} แก้ไข ${summary.peopleUpdated}, การสังกัดที่เปลี่ยน ${summary.assignmentsChanged}, หัวหน้าหน่วยงานที่เปลี่ยน ${summary.headsChanged}, ประวัติบุคลากรที่เปลี่ยน ${summary.profilesChanged}`;
 }

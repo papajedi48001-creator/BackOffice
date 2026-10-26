@@ -170,4 +170,48 @@ describe('validateMasterData', () => {
       expect(result.organizations[0]).toMatchObject({ unitType: undefined, headEmployeeCode: null });
     });
   });
+
+  describe('staff profile columns', () => {
+    const profileHeader = `${peopleHeader},name_prefix,first_name,last_name,gender,birth_date,employment_type,appointed_on,position_level`;
+    const base = `E001,${director},นพ.สมชาย ใจดี,ผู้อำนวยการ,HOSP,,2026-10-01,ACTIVE`;
+    const types = [
+      { id: 'type-civil', code: 'CIVIL_SERVANT', name: 'ข้าราชการ', isActive: true, sortOrder: 1 },
+      { id: 'type-old', code: 'OLD_TYPE', name: 'ประเภทเลิกใช้', isActive: false, sortOrder: 9 }
+    ];
+    const run = (profileCells: string, existing: ExistingMasterData = emptyExistingMasterData) => validateMasterData({ organizations: organizations('HOSP,โรงพยาบาล,'), people: [profileHeader, `${base},${profileCells}`].join('\n') }, existing, lookup, new Date(), types);
+
+    it('reads the profile columns, derives gender from the prefix and matches a type by name or code', () => {
+      const byName = run('นพ.,สมชาย,ใจดี,,17/5/2533,ข้าราชการ,2015-04-01,ชำนาญการพิเศษ');
+      expect(byName.errors).toEqual([]);
+      expect(byName.people[0]!.profile).toEqual({ namePrefix: 'นพ.', firstName: 'สมชาย', lastName: 'ใจดี', gender: 'MALE', birthDate: '1990-05-17', employmentTypeId: 'type-civil', appointedOn: '2015-04-01', positionLevel: 'ชำนาญการพิเศษ' });
+      expect(byName.people[0]!.profileChanged).toBe(true);
+      expect(run(',,,หญิง,,CIVIL_SERVANT,,').people[0]!.profile).toEqual({ gender: 'FEMALE', employmentTypeId: 'type-civil' });
+    });
+
+    it('treats empty profile cells as keep and an absent column the same way', () => {
+      const result = validateMasterData({ organizations: organizations('HOSP,โรงพยาบาล,'), people: people(base) }, emptyExistingMasterData, lookup, new Date(), types);
+      expect(result.people[0]!.profile).toEqual({});
+      expect(result.people[0]!.profileChanged).toBe(false);
+    });
+
+    it('reports each bad profile cell by row and column without its value', () => {
+      expect(codes(run('ดร.,,,,,,,'))).toEqual(['people:2:gender:GENDER_REQUIRED']);
+      expect(codes(run(',,,อื่น,,,,'))).toEqual(['people:2:gender:INVALID_GENDER']);
+      expect(codes(run(',,,,30/2/2533,ลูกจ้างอวกาศ,2026-13-01,'))).toEqual(['people:2:birth_date:INVALID_DATE', 'people:2:appointed_on:INVALID_DATE', 'people:2:employment_type:UNKNOWN_EMPLOYMENT_TYPE']);
+      expect(codes(run(',,,,,ประเภทเลิกใช้,,'))).toEqual(['people:2:employment_type:INACTIVE_EMPLOYMENT_TYPE']);
+      expect(codes(run(`${'ก'.repeat(33)},,,ชาย,,,,`))).toEqual(['people:2:name_prefix:TOO_LONG']);
+      expect(JSON.stringify(run(',,,,30/2/2533,ลูกจ้างอวกาศ,,').errors)).not.toContain('ลูกจ้างอวกาศ');
+    });
+
+    it('compares against the stored profile, keeps a retired type a person already has, and keeps a stored gender for an unclear prefix', () => {
+      const existing: ExistingMasterData = { organizations: [{ id: 'org-hosp', code: 'HOSP', name: 'โรงพยาบาล', parentId: null }], people: [{ id: 'person-1', employeeCode: 'E001', nationalIdLookup: lookup(director), displayName: 'นพ.สมชาย ใจดี', positionTitle: 'ผู้อำนวยการ', employmentStatus: 'ACTIVE', assignment: { organizationId: 'org-hosp', managerPersonId: null, effectiveFrom: new Date('2026-01-01T00:00:00Z') }, profile: { namePrefix: 'นพ.', firstName: 'สมชาย', lastName: 'ใจดี', gender: 'MALE', birthDate: '1990-05-17', employmentTypeId: 'type-old', appointedOn: null, positionLevel: null } }] };
+      const same = run('นพ.,สมชาย,ใจดี,,1990-05-17,ประเภทเลิกใช้,,', existing);
+      expect(same.errors).toEqual([]);
+      expect(same.people[0]!.profileChanged).toBe(false);
+      const unclear = run('ดร.,,,,,,,', existing);
+      expect(unclear.errors).toEqual([]);
+      expect(unclear.people[0]!.profile.gender).toBe('MALE');
+      expect(unclear.people[0]!.profileChanged).toBe(true);
+    });
+  });
 });

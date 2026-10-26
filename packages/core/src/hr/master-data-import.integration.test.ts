@@ -33,7 +33,7 @@ describeWithDatabase('MasterDataImportService against MariaDB', () => {
 
   it('validates without writing, then applies everything with one audit event, and re-applying changes nothing', async () => {
     const files = { organizations, people: people(nursing, '2026-10-01') };
-    const expected = { organizationsCreated: 2, organizationsUpdated: 0, peopleCreated: 2, peopleUpdated: 0, assignmentsChanged: 2, headsChanged: 0 };
+    const expected = { organizationsCreated: 2, organizationsUpdated: 0, peopleCreated: 2, peopleUpdated: 0, assignmentsChanged: 2, headsChanged: 0, profilesChanged: 0 };
 
     await expect(service.validate(files)).resolves.toEqual({ ok: true, summary: expected });
     await expect(database.query('SELECT id FROM organization WHERE code = ?', [hospital])).resolves.toEqual([]);
@@ -48,7 +48,7 @@ describeWithDatabase('MasterDataImportService against MariaDB', () => {
     expect(audits.map((audit) => JSON.parse(audit.metadata))).toEqual([{ counts: expected }]);
     expect(audits[0]!.metadata).not.toContain(nurseId);
 
-    await expect(service.apply(files, actorPersonId)).resolves.toEqual({ ok: true, summary: { organizationsCreated: 0, organizationsUpdated: 0, peopleCreated: 0, peopleUpdated: 0, assignmentsChanged: 0, headsChanged: 0 } });
+    await expect(service.apply(files, actorPersonId)).resolves.toEqual({ ok: true, summary: { organizationsCreated: 0, organizationsUpdated: 0, peopleCreated: 0, peopleUpdated: 0, assignmentsChanged: 0, headsChanged: 0, profilesChanged: 0 } });
   });
 
   it('closes the current assignment when a person moves and keeps the history', async () => {
@@ -139,5 +139,24 @@ describeWithDatabase('MasterDataImportService against MariaDB', () => {
 
     await expect(service.validate({ organizations: file })).resolves.toEqual({ ok: false, errors: [{ file: 'organizations', row: 2, column: 'head_employee_code', code: 'HEAD_ALREADY_SCHEDULED' }] });
     await expect(service.apply({ organizations: file }, actorPersonId)).resolves.toEqual({ ok: false, errors: [{ file: 'organizations', row: 2, column: 'head_employee_code', code: 'HEAD_ALREADY_SCHEDULED' }] });
+  });
+
+  it('imports staff profile columns with one profile audit per person and nothing on a repeat', async () => {
+    const code = `P${run}`;
+    const person = nationalId(`4${String(Date.now()).slice(-11)}`);
+    const header = `${peopleHeader},name_prefix,first_name,last_name,gender,birth_date,employment_type,appointed_on,position_level`;
+    const file = `${header}\n${code},${person},นางสมศรี มีสุข,พยาบาลวิชาชีพ,${nursing},,2026-10-01,,นาง,สมศรี,มีสุข,,1/2/2530,ข้าราชการ,2012-06-01,ชำนาญการ`;
+    await expect(service.validate({ people: file })).resolves.toMatchObject({ ok: true, summary: { peopleCreated: 1, profilesChanged: 1 } });
+    await expect(service.apply({ people: file }, actorPersonId)).resolves.toMatchObject({ ok: true, summary: { peopleCreated: 1, profilesChanged: 1 } });
+    const [stored] = await database.query<{ id: string; displayName: string; gender: string; birthDate: string; type: string; appointedOn: string; positionLevel: string }>(
+      `SELECT p.id, p.display_name AS displayName, pr.gender, DATE_FORMAT(pr.birth_date, '%Y-%m-%d') AS birthDate, t.code AS type, DATE_FORMAT(pr.appointed_on, '%Y-%m-%d') AS appointedOn, pr.position_level AS positionLevel
+       FROM person p JOIN hr_person_profile pr ON pr.person_id = p.id JOIN hr_employment_type t ON t.id = pr.employment_type_id WHERE p.employee_code = ?`, [code]);
+    expect(stored).toMatchObject({ displayName: 'นางสมศรี มีสุข', gender: 'FEMALE', birthDate: '1987-02-01', type: 'CIVIL_SERVANT', appointedOn: '2012-06-01', positionLevel: 'ชำนาญการ' });
+    const audits = await database.query<{ metadata: string }>("SELECT metadata FROM audit_event WHERE target_type = 'person' AND target_id = ? AND action = 'hr.person.profile.update'", [stored!.id]);
+    expect(audits).toHaveLength(1);
+    expect(JSON.parse(audits[0]!.metadata).workChanges.employmentType).toEqual({ from: null, to: 'ข้าราชการ' });
+    expect(audits[0]!.metadata).not.toContain('1987-02-01');
+    await expect(service.apply({ people: file }, actorPersonId)).resolves.toMatchObject({ ok: true, summary: { peopleUpdated: 0, profilesChanged: 0 } });
+    await expect(service.validate({ people: file.replace('ข้าราชการ', 'ประเภทไม่มีจริง') })).resolves.toEqual({ ok: false, errors: [{ file: 'people', row: 2, column: 'employment_type', code: 'UNKNOWN_EMPLOYMENT_TYPE' }] });
   });
 });
