@@ -96,8 +96,8 @@ New permission `travel.manage`, granted to `hr-manager`, needing the HR data-own
 
 ## API
 
-- `POST /api/travel` file; `GET /api/travel/<travelId>` detail; `POST /api/travel/<travelId>/resubmission`; `POST /api/travel/<travelId>/cancellation` (reason in the body).
-- `POST /api/travel/decisions` `{ requestId, decision, reason? }`, which checks the คำขอ is a travel one before the central decision.
+- `POST /api/travel` file; `GET /api/travel/<travelId>` detail; `PUT /api/travel/<travelId>` edit and resubmit; `POST /api/travel/<travelId>/cancellation` (reason in the body).
+- Decisions use the central `POST /api/requests/<requestId>/decisions`, as leave does. The generic submit, resubmit and cancel routes refuse an `official-travel` คำขอ with `travel_request_route`.
 - `GET /api/travel/people?q=` staff search for the form: id, display name and unit only.
 - `PUT /api/travel/types/<code>` `{ approvalTarget }` (`travel.manage`).
 - Errors: 401 signed out, 403 without `travel.manage` on HR routes, 404 `NOT_FOUND`, 409 `NOT_PENDING`, 400 `{ error: code, personId? }`.

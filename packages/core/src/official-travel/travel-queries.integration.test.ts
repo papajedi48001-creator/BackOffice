@@ -93,4 +93,3 @@ describeWithDatabase('OfficialTravelQueries against MariaDB', () => {
     expect(await queries.people('  ')).toEqual([]);
   });
 });
-
