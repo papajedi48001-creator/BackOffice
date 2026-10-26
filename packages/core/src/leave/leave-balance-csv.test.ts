@@ -11,7 +11,7 @@ const header = 'employee_code,display_name,leave_type,carried_days,used_days';
 
 describe('validateLeaveBalances', () => {
   it('matches a leave type by code or Thai name', () => {
-    const result = validateLeaveBalances(`﻿${header}\nE001,สมชาย,VACATION,5,2.5\nE002,สมหญิง,ลาพักผ่อน,0,0\n`, context);
+    const result = validateLeaveBalances(`\uFEFF${header}\nE001,สมชาย,VACATION,5,2.5\nE002,สมหญิง,ลาพักผ่อน,0,0\n`, context);
     expect(result.errors).toEqual([]);
     expect(result.rows).toEqual([{ personId: 'person-1', leaveTypeId: 'type-vacation', carriedDays: 5, usedDays: 2.5 }, { personId: 'person-2', leaveTypeId: 'type-vacation', carriedDays: 0, usedDays: 0 }]);
   });

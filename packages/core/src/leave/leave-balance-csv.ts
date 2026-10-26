@@ -31,7 +31,7 @@ export async function exportLeaveBalancesCsv(db: Pick<Database, 'query'>, fiscal
     [fiscalYear]
   );
   const lines = rows.map((row) => [row.employeeCode, row.displayName ?? '', row.code, String(Number(row.carriedDays ?? 0)), String(Number(row.usedDays ?? 0))].map(cell).join(','));
-  return `﻿${[COLUMNS.join(','), ...lines].join('\r\n')}\r\n`;
+  return `\uFEFF${[COLUMNS.join(','), ...lines].join('\r\n')}\r\n`;
 }
 
 /** Checks every row before anything is stored. Errors name the row and column, never the cell's value. */

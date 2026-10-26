@@ -29,7 +29,7 @@ describeWithDatabase('leave balance CSV against MariaDB', () => {
 
   it('exports every active person and entitled type, and re-importing it changes nothing', async () => {
     const text = await exportLeaveBalancesCsv(database, fiscalYear);
-    expect(text.startsWith('﻿employee_code,display_name,leave_type,carried_days,used_days\r\n')).toBe(true);
+    expect(text.startsWith('\uFEFFemployee_code,display_name,leave_type,carried_days,used_days\r\n')).toBe(true);
     const lines = text.split('\r\n').filter((line) => line.startsWith(`${code},`));
     expect(lines.map((line) => line.split(',')[2])).toEqual(['SICK', 'PERSONAL', 'VACATION', 'MATERNITY', 'PATERNITY']);
     expect(text).not.toContain('ciphertext');
