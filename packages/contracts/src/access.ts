@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const permissionSchema = z.enum(['hr.person.read', 'hr.person.manage', 'hr.organization.manage', 'data.export', 'room.manage', 'room.booking.decide', 'inventory.item.manage', 'inventory.stock.receive', 'inventory.stock.read', 'inventory.opening.certify']);
+export const permissionSchema = z.enum(['hr.person.read', 'hr.person.manage', 'hr.organization.manage', 'hr.person.private.read', 'data.export', 'room.manage', 'room.booking.decide', 'inventory.item.manage', 'inventory.stock.receive', 'inventory.stock.read', 'inventory.opening.certify']);
 export type Permission = z.infer<typeof permissionSchema>;
 
 export const accessSubjectSchema = z.object({

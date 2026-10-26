@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { AuthorizationService, HrDirectory } from '@backoffice/core';
@@ -21,12 +22,13 @@ export default async function PeoplePage() {
       <h2>{t('peopleTitle')}</h2>
       {people.length === 0 ? <p>{t('noPeople')}</p> : (
         <table>
-          <thead><tr><th>{t('employeeCode')}</th><th>{t('displayName')}</th><th>{t('positionTitle')}</th><th>{t('organization')}</th><th>{t('nationalIdLabel')}</th><th>{t('employmentStatus')}</th></tr></thead>
+          <thead><tr><th>{t('employeeCode')}</th><th>{t('displayName')}</th><th>{t('positionTitle')}</th><th>{t('hrFieldEmploymentType')}</th><th>{t('organization')}</th><th>{t('nationalIdLabel')}</th><th>{t('employmentStatus')}</th></tr></thead>
           <tbody>{people.map((person) => (
             <tr key={person.id}>
               <td>{person.employeeCode ?? t('notAssigned')}</td>
-              <td>{person.displayName ?? t('notAssigned')}</td>
+              <td><Link href={`/hr/people/${person.id}`}>{person.displayName ?? t('notAssigned')}</Link></td>
               <td>{person.positionTitle ?? t('notAssigned')}</td>
+              <td>{person.employmentTypeName ?? t('notAssigned')}</td>
               <td>{person.organizationName ?? t('notAssigned')}</td>
               <td>{person.nationalIdMasked ?? t('notAssigned')}</td>
               <td>{person.employmentStatus === 'ACTIVE' ? t('employmentActive') : t('employmentInactive')}</td>

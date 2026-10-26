@@ -22,7 +22,7 @@ describe('MasterDataImportForm', () => {
   });
 
   it('enables import after a clean check and reports what was saved', async () => {
-    const summary = { organizationsCreated: 1, organizationsUpdated: 0, peopleCreated: 2, peopleUpdated: 0, assignmentsChanged: 2, headsChanged: 1 };
+    const summary = { organizationsCreated: 1, organizationsUpdated: 0, peopleCreated: 2, peopleUpdated: 0, assignmentsChanged: 2, headsChanged: 1, profilesChanged: 3 };
     const fetchMock = vi.fn(async (_url: string, init: RequestInit) => new Response(JSON.stringify({ mode: (init.body as FormData).get('mode'), summary }), { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
     render(<MasterDataImportForm />);
@@ -34,6 +34,7 @@ describe('MasterDataImportForm', () => {
 
     expect(await screen.findByText(/^นำเข้าเรียบร้อย/)).toHaveAttribute('role', 'status');
     expect(screen.getByText(/หัวหน้าหน่วยงานที่เปลี่ยน 1/)).toBeInTheDocument();
+    expect(screen.getByText(/ประวัติบุคลากรที่เปลี่ยน 3/)).toBeInTheDocument();
     expect(fetchMock).toHaveBeenLastCalledWith('/api/hr/imports', expect.objectContaining({ method: 'POST' }));
     expect((fetchMock.mock.calls[1]![1].body as FormData).get('mode')).toBe('apply');
   });
@@ -53,5 +54,23 @@ describe('MasterDataImportForm', () => {
     expect(screen.getByRole('cell', { name: 'ไม่พบรหัสหัวหน้าหน่วยงาน' })).toBeInTheDocument();
     expect(screen.getByRole('cell', { name: 'หัวหน้าหน่วยงานต้องมีสถานะ ACTIVE' })).toBeInTheDocument();
     expect(screen.getByRole('cell', { name: 'หน่วยงานนี้มีหัวหน้าที่ตั้งล่วงหน้าไว้แล้ว จึงนำเข้าหัวหน้าคนอื่นก่อนวันเริ่มนั้นไม่ได้' })).toBeInTheDocument();
+  });
+
+  it('explains staff profile problems in Thai', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ mode: 'validate', errors: [
+      { file: 'people', row: 2, column: 'employment_type', code: 'UNKNOWN_EMPLOYMENT_TYPE' },
+      { file: 'people', row: 3, column: 'employment_type', code: 'INACTIVE_EMPLOYMENT_TYPE' },
+      { file: 'people', row: 4, column: 'gender', code: 'INVALID_GENDER' },
+      { file: 'people', row: 5, column: 'gender', code: 'GENDER_REQUIRED' }
+    ] }), { status: 422 })));
+    render(<MasterDataImportForm />);
+
+    choosePeopleFile();
+    fireEvent.click(screen.getByRole('button', { name: 'ตรวจสอบไฟล์' }));
+
+    expect(await screen.findByRole('cell', { name: 'ไม่พบประเภทการจ้างนี้' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'ประเภทการจ้างนี้ปิดใช้งานแล้ว' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'เพศต้องเป็น ชาย หรือ หญิง' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'คำนำหน้านี้บอกเพศไม่ได้ กรุณาระบุเพศ' })).toBeInTheDocument();
   });
 });
