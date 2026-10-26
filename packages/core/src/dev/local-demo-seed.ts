@@ -17,7 +17,7 @@ const people: Array<[code: string, nationalId: string, name: string, position: s
   ['LAB002', syntheticNationalId('110000000107'), 'นายอรรถพล ตัวอย่างชัย', 'นักเทคนิคการแพทย์', 'LAB', 'DIR001'],
   ['PHA005', syntheticNationalId('110000000108'), 'เภสัชกรหญิงศิริพร สมมุติ', 'เภสัชกรชำนาญการ', 'PHA', 'DIR001']
 ];
-const roles: Array<[code: string, role: string]> = [['HR001', 'hr-manager'], ['ADM003', 'room-manager'], ['ADM003', 'room-booking-approver']];
+const roles: Array<[code: string, role: string]> = [['HR001', 'hr-manager'], ['ADM003', 'room-manager'], ['ADM003', 'room-booking-approver'], ['ADM003', 'inventory-officer'], ['DIR001', 'inventory-supervisor']];
 
 export interface LocalDemoSeedResult { accountsCreated: number; usernames: string[]; }
 

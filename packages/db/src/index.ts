@@ -17,3 +17,4 @@ export * from './schema/audit.ts';
 export * from './schema/files.ts';
 export * from './schema/outbox.ts';
 export * from './schema/rooms.ts';
+export * from './schema/inventory.ts';

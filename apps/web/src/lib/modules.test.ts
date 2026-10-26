@@ -74,4 +74,14 @@ describe('moduleLabel', () => {
   it('falls back to the system name for an unknown module', () => {
     expect(moduleLabel('not-registered')).toBe('ระบบ Back Office');
   });
+
+  it('opens inventory to hospital-wide supplies roles only, with sections by role', () => {
+    const officer = subject({ roles: [{ name: 'inventory-officer', organizationId: null }] });
+    const supervisor = subject({ roles: [{ name: 'inventory-supervisor', organizationId: null }] });
+    expect(sectionHrefs('inventory', officer)).toEqual(['/inventory/stock', '/inventory/receipts', '/inventory/opening', '/inventory/items', '/inventory/vendors']);
+    expect(sectionHrefs('inventory', supervisor)).toEqual(['/inventory/stock', '/inventory/opening']);
+    expect(hrefs(officer)).toContain('/inventory');
+    expect(hrefs(subject())).not.toContain('/inventory');
+    expect(hrefs(subject({ roles: [{ name: 'inventory-officer', organizationId: 'ward-1' }] }))).not.toContain('/inventory');
+  });
 });

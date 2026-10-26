@@ -5,7 +5,9 @@ const permissionsByRole: Record<string, readonly Permission[]> = {
   'hr-manager': ['hr.person.read', 'hr.person.manage', 'hr.organization.manage', 'hr.person.private.read'],
   'data-exporter': ['data.export'],
   'room-manager': ['room.manage'],
-  'room-booking-approver': ['room.booking.decide']
+  'room-booking-approver': ['room.booking.decide'],
+  'inventory-officer': ['inventory.item.manage', 'inventory.stock.receive', 'inventory.stock.read'],
+  'inventory-supervisor': ['inventory.opening.certify', 'inventory.stock.read']
 };
 
 export function roleGrantsPermission(roleName: string, permission: Permission): boolean {

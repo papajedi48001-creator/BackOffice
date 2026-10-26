@@ -4,11 +4,11 @@ import { createDatabase } from '@backoffice/db';
 import { t } from '@backoffice/i18n';
 import { readRuntimeValue } from '../../../../lib/runtime-env';
 import { readSession } from '../../../../lib/session';
-import { AuditEventTable, type AuditEventRow } from './audit-event-table';
+import { auditActionNames, AuditEventTable, type AuditEventRow } from './audit-event-table';
 
 type StoredAuditEventRow = { createdAt: string | Date; action: string; result: string; metadata: string };
 
-const auditActions = new Set<AuditEventRow['action']>(['workflow.request.submitted', 'workflow.request.decided', 'workflow.request.cancelled', 'workflow.request.resubmitted']);
+const auditActions = new Set<AuditEventRow['action']>(auditActionNames);
 const auditResults = new Set<AuditEventRow['result']>(['SUCCESS', 'APPROVE', 'REJECT', 'RETURN']);
 
 export default async function AuditPage() {
@@ -32,8 +32,10 @@ function toAuditEventRow(row: StoredAuditEventRow): AuditEventRow | null {
   if (!auditActions.has(row.action as AuditEventRow['action']) || !auditResults.has(row.result as AuditEventRow['result'])) return null;
   let requestReference: string | null = null;
   try {
-    const metadata = JSON.parse(row.metadata) as { requestReference?: unknown };
+    // Requests record `requestReference`; module documents such as inventory receipts record `reference`.
+    const metadata = JSON.parse(row.metadata) as { requestReference?: unknown; reference?: unknown };
     if (typeof metadata.requestReference === 'string') requestReference = metadata.requestReference;
+    else if (typeof metadata.reference === 'string') requestReference = metadata.reference;
   } catch {
     return null;
   }
