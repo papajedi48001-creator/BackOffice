@@ -63,6 +63,32 @@ describe('OrganizationPage', () => {
     expect(document.querySelector('option[value="E009 ลาออกแล้ว"]')).toBeNull();
   });
 
+  it('names the head of a hospital unit ผู้อำนวยการ', async () => {
+    ready(hrManager);
+    mocks.getOrganization.mockResolvedValue({ ...unit, unitType: 'HOSPITAL', headActive: false });
+
+    render(await page());
+
+    expect(screen.getByText('ผู้อำนวยการ', { selector: 'dt' })).toBeInTheDocument();
+    expect(screen.getByText('ผู้อำนวยการพ้นสภาพ')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'ประวัติผู้อำนวยการ' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'ผู้อำนวยการ' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'ผู้อำนวยการคนใหม่' })).toBeInTheDocument();
+    expect(screen.getByLabelText('วันที่เริ่มเป็นผู้อำนวยการ')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'ตั้งเป็นผู้อำนวยการ' })).toBeInTheDocument();
+    expect(screen.queryByText(/หัวหน้า/)).not.toBeInTheDocument();
+  });
+
+  it('says a hospital unit has no director yet', async () => {
+    ready(hrReader);
+    mocks.getOrganization.mockResolvedValue({ ...unit, unitType: 'HOSPITAL', headPersonId: null, headHistory: [] });
+
+    render(await page());
+
+    expect(screen.getByText('ยังไม่มีผู้อำนวยการ')).toBeInTheDocument();
+    expect(screen.getByText('ยังไม่เคยตั้งผู้อำนวยการ')).toBeInTheDocument();
+  });
+
   it('warns when the current head is no longer active', async () => {
     ready(hrReader);
     mocks.getOrganization.mockResolvedValue({ ...unit, headActive: false });

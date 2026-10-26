@@ -5,7 +5,7 @@ import { AuthorizationService, HrDirectory } from '@backoffice/core';
 import { t } from '@backoffice/i18n';
 import { bangkokToday, formatBangkokDate } from '../../../../../lib/bangkok-time';
 import { getSharedDatabase } from '../../../../../lib/database';
-import { unitTypeLabelKeys } from '../../../../../lib/organization-unit-type';
+import { headLabelKeys, unitTypeLabelKeys } from '../../../../../lib/organization-unit-type';
 import { readSession } from '../../../../../lib/session';
 import { OrganizationForms } from './organization-forms';
 
@@ -31,6 +31,7 @@ export default async function OrganizationPage({ params }: { params: Promise<{ o
     ? (await directory.listPeople({ organizationIds: 'all' })).filter((person) => person.employmentStatus === 'ACTIVE').map((person) => ({ id: person.id, label: `${person.employeeCode ?? ''} ${person.displayName ?? ''}`.trim() }))
     : [];
   const current = organization.headHistory.find((term) => term.personId === organization.headPersonId);
+  const labels = headLabelKeys(organization.unitType);
   const personLabel = (term: { displayName: string | null; employeeCode: string | null }) => `${term.displayName ?? ''}${term.employeeCode ? ` (${term.employeeCode})` : ''}`;
 
   return <section>
@@ -38,12 +39,12 @@ export default async function OrganizationPage({ params }: { params: Promise<{ o
     <h2>{organization.name}</h2>
     <dl className="organization-summary">
       <dt>{t('hrUnitType')}</dt><dd>{organization.unitType ? t(unitTypeLabelKeys[organization.unitType]) : t('hrUnitTypeNone')}</dd>
-      <dt>{t('hrOrganizationHead')}</dt><dd>{current ? personLabel(current) : <span className="organization-no-head">{t('hrNoHead')}</span>}{current && !organization.headActive ? <> <span className="organization-no-head">{t('hrHeadInactive')}</span></> : null}</dd>
+      <dt>{t(labels.head)}</dt><dd>{current ? personLabel(current) : <span className="organization-no-head">{t(labels.none)}</span>}{current && !organization.headActive ? <> <span className="organization-no-head">{t(labels.inactive)}</span></> : null}</dd>
     </dl>
     {canManage ? <OrganizationForms organizationId={organization.id} unitType={organization.unitType} people={people} today={bangkokToday()} /> : null}
-    <h3>{t('hrHeadHistory')}</h3>
-    {organization.headHistory.length === 0 ? <p>{t('hrNoHeadHistory')}</p> : <table>
-      <thead><tr><th>{t('hrOrganizationHead')}</th><th>{t('hrHeadTermFrom')}</th><th>{t('hrHeadTermUntil')}</th></tr></thead>
+    <h3>{t(labels.history)}</h3>
+    {organization.headHistory.length === 0 ? <p>{t(labels.noHistory)}</p> : <table>
+      <thead><tr><th>{t(labels.head)}</th><th>{t('hrHeadTermFrom')}</th><th>{t('hrHeadTermUntil')}</th></tr></thead>
       <tbody>{organization.headHistory.map((term) => <tr key={`${term.personId}-${term.effectiveFrom}`}><td>{personLabel(term)}</td><td>{formatDay(term.effectiveFrom)}</td><td>{term.effectiveUntil ? formatDay(term.effectiveUntil) : t('hrHeadTermCurrent')}</td></tr>)}</tbody>
     </table>}
   </section>;

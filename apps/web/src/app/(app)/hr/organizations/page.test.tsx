@@ -44,7 +44,7 @@ describe('OrganizationsPage', () => {
     expect(hospital).toHaveAttribute('href', '/hr/organizations/hosp');
     const hospitalItem = hospital.closest('li')!;
     expect(within(hospitalItem).getAllByText('โรงพยาบาล')[0]).toBeInTheDocument();
-    expect(within(hospitalItem).getByText('หัวหน้า นพ.สมชาย ใจดี')).toBeInTheDocument();
+    expect(within(hospitalItem).getByText('ผู้อำนวยการ นพ.สมชาย ใจดี')).toBeInTheDocument();
     const nursingItem = screen.getByRole('link', { name: 'กลุ่มการพยาบาล' }).closest('li')!;
     expect(within(nursingItem).getByText('กลุ่มงาน')).toBeInTheDocument();
     expect(within(nursingItem).getByText('ยังไม่มีหัวหน้า')).toBeInTheDocument();
@@ -58,7 +58,7 @@ describe('OrganizationsPage', () => {
 
     render(await OrganizationsPage());
 
-    expect(screen.getByText('หัวหน้าพ้นสภาพ')).toBeInTheDocument();
+    expect(screen.getByText('ผู้อำนวยการพ้นสภาพ')).toBeInTheDocument();
   });
 
   it('shows no data to a person without HR read permission', async () => {

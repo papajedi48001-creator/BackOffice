@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { OrganizationUnitType } from '@backoffice/contracts';
 import { t } from '@backoffice/i18n';
-import { unitTypeLabelKeys } from '../../../../../lib/organization-unit-type';
+import { headLabelKeys, unitTypeLabelKeys } from '../../../../../lib/organization-unit-type';
 
 const errorKeys = { PERSON_NOT_ACTIVE: 'hrHeadPersonNotActive', EFFECTIVE_FROM_BEFORE_CURRENT: 'hrHeadStartsBeforeCurrent', ORGANIZATION_NOT_FOUND: 'hrOrganizationNotFound' } as const;
 
@@ -14,6 +14,7 @@ export function OrganizationForms({ organizationId, unitType, people, today }: {
   const [selectedType, setSelectedType] = useState<string>(unitType ?? '');
   const [headLabel, setHeadLabel] = useState('');
   const [effectiveFrom, setEffectiveFrom] = useState(today);
+  const labels = headLabelKeys(unitType);
 
   async function save(path: string, method: 'PUT' | 'POST', body: unknown): Promise<void> {
     setError(null);
@@ -49,14 +50,14 @@ export function OrganizationForms({ organizationId, unitType, people, today }: {
       <button type="submit">{t('hrSaveUnitType')}</button>
     </form>
     <form className="organization-form" onSubmit={submitHead}>
-      <label>{t('hrNewHead')}
+      <label>{t(labels.newHead)}
         <input list="organization-head-people" value={headLabel} onChange={(event) => setHeadLabel(event.target.value)} />
       </label>
       <datalist id="organization-head-people">{people.map((person) => <option key={person.id} value={person.label} />)}</datalist>
-      <label>{t('hrHeadStartDate')}
+      <label>{t(labels.startDate)}
         <input type="date" value={effectiveFrom} onChange={(event) => setEffectiveFrom(event.target.value)} required />
       </label>
-      <button type="submit">{t('hrAssignHead')}</button>
+      <button type="submit">{t(labels.assign)}</button>
     </form>
   </div>;
 }
