@@ -1,22 +1,10 @@
 import { NextResponse } from 'next/server';
-import { LeaveBalanceImportService, canManageLeave, exportLeaveBalancesCsv } from '@backoffice/core';
-import { csvDownload, exportReason, forbidden, invalidInput, withSessionAndDatabase } from '../leave-route';
+import { LeaveBalanceImportService, canManageLeave } from '@backoffice/core';
+import { fiscalYearOf, forbidden, invalidInput, withSessionAndDatabase } from '../leave-route';
 
 const maxFileBytes = 2 * 1024 * 1024;
-const fiscalYearOf = (value: unknown) => { const year = Number(value); return Number.isInteger(year) && year >= 2500 && year <= 2700 ? year : null; };
 
-/** ยอดยกมา template with what is stored, for HR to edit and import again. */
-export async function GET(request: Request): Promise<Response> {
-  return withSessionAndDatabase(request, async (session, database) => {
-    if (!canManageLeave(session)) return forbidden();
-    const url = new URL(request.url);
-    const fiscalYear = fiscalYearOf(url.searchParams.get('fiscalYear'));
-    const reason = exportReason(url);
-    if (!fiscalYear || !reason) return invalidInput([...(fiscalYear ? [] : ['fiscalYear']), ...(reason ? [] : ['reason'])]);
-    return csvDownload(database, { actorPersonId: session.personId, reason, scope: { fiscalYear, dataset: 'balances' } }, `leave-balances-${fiscalYear}.csv`, () => exportLeaveBalancesCsv(database, fiscalYear));
-  });
-}
-
+/** Imports HR's edited ยอดยกมา file; nothing is stored unless every row is valid. */
 export async function POST(request: Request): Promise<Response> {
   return withSessionAndDatabase(request, async (session, database) => {
     if (!canManageLeave(session)) return forbidden();

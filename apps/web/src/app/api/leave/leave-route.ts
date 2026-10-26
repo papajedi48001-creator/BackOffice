@@ -21,9 +21,17 @@ export const withoutPersonId = (body: Record<string, unknown>) => Object.fromEnt
 
 export const invalidInput = (fields: string[]) => NextResponse.json({ error: 'invalid_input', fields }, { status: 400 });
 
-/** Reads the required export reason (1–500 characters) from the query string. */
-export function exportReason(url: URL): string | null {
-  const reason = url.searchParams.get('reason')?.trim() ?? '';
+/** Export forms post their fields, so the reason never sits in a URL, an access log or browser history. Null when the body is not a form. */
+export async function exportForm(request: Request): Promise<{ get(name: string): string | null } | null> {
+  try {
+    const form = await request.formData();
+    return { get: (name) => { const value = form.get(name); return typeof value === 'string' ? value : null; } };
+  } catch { return null; }
+}
+
+/** The required export reason, 1–500 characters. */
+export function exportReason(form: { get(name: string): string | null }): string | null {
+  const reason = form.get('reason')?.trim() ?? '';
   return reason.length >= 1 && reason.length <= 500 ? reason : null;
 }
 
@@ -37,3 +45,5 @@ export async function csvDownload(database: Database, input: { actorPersonId: st
   });
   return new Response(await build(), { headers: { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': `attachment; filename="${filename}"` } });
 }
+
+export const fiscalYearOf = (value: unknown) => { const year = Number(value); return Number.isInteger(year) && year >= 2500 && year <= 2700 ? year : null; };

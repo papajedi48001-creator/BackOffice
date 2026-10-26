@@ -101,5 +101,9 @@ describeWithDatabase('LeaveQueries against MariaDB', () => {
     expect(inSection.map((item) => item.requestId)).toContain(mine);
     expect(inSection.every((item) => item.organizationName === `งาน ${org.section}`)).toBe(true);
     expect(await queries.allLeave({ organizationId: org.section, status: 'APPROVED', from: '2026-11-23', to: '2026-11-23' })).not.toContainEqual(expect.objectContaining({ requestId: mine }));
+    // The on-screen list is capped; the CSV export asks for every row.
+    const unit = { from: '2026-11-23', to: '2026-11-23' };
+    expect(await queries.allLeave(unit, { limit: 1 })).toHaveLength(1);
+    expect((await queries.allLeave(unit, { limit: null })).length).toBeGreaterThanOrEqual(2);
   });
 });

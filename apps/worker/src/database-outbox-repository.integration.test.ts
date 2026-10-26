@@ -13,7 +13,8 @@ describeWithDatabase('DatabaseOutboxRepository against MariaDB', () => {
 
   it('backs off a failing event and stops selecting it once dead-lettered', async () => {
     const id = randomUUID();
-    await db.execute("INSERT INTO outbox_event (id, type, idempotency_key, payload, occurred_at) VALUES (?, 'notification.in_app', ?, '{not json', UTC_TIMESTAMP())", [id, `retry-test:${id}`]);
+    // Oldest first, so other suites' pending events in the shared database never push it past the batch limit.
+    await db.execute("INSERT INTO outbox_event (id, type, idempotency_key, payload, occurred_at) VALUES (?, 'notification.in_app', ?, '{not json', '2000-01-01 00:00:00')", [id, `retry-test:${id}`]);
     const repository = new DatabaseOutboxRepository(db, { maxAttempts: 3 });
     expect((await repository.pending()).find((event) => event.id === id)?.payload).toEqual({});
 

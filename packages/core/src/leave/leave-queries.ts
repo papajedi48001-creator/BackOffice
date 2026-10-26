@@ -6,6 +6,8 @@ import { LEAVE_MODULE } from './leave-module';
 import { LeaveSettingsService, type LeaveType } from './leave-settings-service';
 import { activeUnitsOfPerson, loadBalance, loadHolidaySet } from './leave-store';
 
+const LIST_LIMIT = 1000;
+
 export interface LeaveListItem { requestId: string; reference: string; kind: 'LEAVE' | 'CANCEL_DAYS'; leaveTypeName: string; startDate: string; endDate: string; startHalf: LeaveStartHalf; endHalf: LeaveEndHalf; days: number; status: RequestStatus; submittedAt: string | null; personDisplayName: string | null; organizationName: string | null }
 export interface LeaveStepView { sequence: number; assigneeDisplayName: string | null; status: string; decidedAt: string | null; decisionReason: string | null }
 export interface LeaveDetail extends LeaveListItem { leaveTypeId: string; reason: string; contactDuringLeave: string | null; medicalCertificateRequired: boolean; warnings: LeaveWarning[]; steps: LeaveStepView[]; cancellations: LeaveListItem[]; canDecide: boolean; canCancel: boolean; canRequestCancelDays: boolean }
@@ -119,7 +121,8 @@ export class LeaveQueries {
     return rows.filter((row) => row.days.length > 0);
   }
 
-  async allLeave(filter: LeaveFilter): Promise<LeaveListItem[]> {
+  /** HR's list. The page keeps the default cap; the CSV export passes `limit: null` so no row is dropped. */
+  async allLeave(filter: LeaveFilter, options: { limit?: number | null } = {}): Promise<LeaveListItem[]> {
     const clauses: string[] = ['1 = 1'];
     const parameters: unknown[] = [];
     if (filter.organizationId) { clauses.push('organizationId = ?'); parameters.push(filter.organizationId); }
@@ -127,11 +130,12 @@ export class LeaveQueries {
     if (filter.to) { clauses.push('startDate <= ?'); parameters.push(filter.to); }
     if (filter.leaveTypeId) { clauses.push('leaveTypeId = ?'); parameters.push(filter.leaveTypeId); }
     if (filter.status) { clauses.push('status = ?'); parameters.push(filter.status); }
-    return (await this.items(clauses.join(' AND '), parameters)).map(toItem);
+    return (await this.items(clauses.join(' AND '), parameters, options.limit === undefined ? LIST_LIMIT : options.limit)).map(toItem);
   }
 
-  private items(where: string, parameters: unknown[]): Promise<ItemRow[]> {
-    return this.database.query<ItemRow>(`SELECT * FROM ${ITEMS} WHERE ${where} ORDER BY startDate DESC, submittedAt DESC LIMIT 1000`, parameters as never);
+  private items(where: string, parameters: unknown[], limit: number | null = LIST_LIMIT): Promise<ItemRow[]> {
+    const capped = limit === null ? '' : ` LIMIT ${Math.max(Math.floor(limit), 0)}`;
+    return this.database.query<ItemRow>(`SELECT * FROM ${ITEMS} WHERE ${where} ORDER BY startDate DESC, submittedAt DESC${capped}`, parameters as never);
   }
 
   private async pendingIds(personId: string): Promise<string[]> {

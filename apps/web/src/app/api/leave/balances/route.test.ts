@@ -12,8 +12,14 @@ vi.mock('@backoffice/core', async (importOriginal) => ({
   ExportService: class { requestExport = mocks.requestExport; }
 }));
 
-import { GET as DOWNLOAD, POST as IMPORT } from './route';
-import { GET as ALL } from '../all/route';
+import * as balancesRoute from './route';
+import { POST as DOWNLOAD } from './export/route';
+import * as allRoute from '../all/route';
+
+const IMPORT = balancesRoute.POST;
+const ALL = allRoute.POST;
+/** Exports post a form, so the export reason never sits in a URL, a log line or browser history. */
+const posted = (url: string, fields: Record<string, string>) => new Request(url, { method: 'POST', body: new URLSearchParams(fields) });
 
 const manager = { authenticated: true, personId: 'hr-a', roles: [{ name: 'hr-manager', organizationId: null }], dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: ['hr'] };
 const staff = { authenticated: true, personId: 'person-a', roles: [], dataOwnerModules: [] };
@@ -23,22 +29,29 @@ const upload = (csv: string, fiscalYear = '2570') => { const form = new FormData
 
 afterEach(() => vi.clearAllMocks());
 
-describe('GET /api/leave/balances', () => {
+describe('POST /api/leave/balances/export', () => {
+  it('has no GET export, so a link cannot record an export in HR\'s name', () => {
+    expect('GET' in balancesRoute).toBe(false);
+    expect('GET' in allRoute).toBe(false);
+  });
+
   it('needs an HR manager, a fiscal year and a reason', async () => {
+    const url = 'http://localhost/api/leave/balances/export';
     as(null);
-    expect((await DOWNLOAD(new Request('http://localhost/api/leave/balances?fiscalYear=2570&reason=x'))).status).toBe(401);
+    expect((await DOWNLOAD(posted(url, { fiscalYear: '2570', reason: 'x' }))).status).toBe(401);
     as(staff);
-    expect((await DOWNLOAD(new Request('http://localhost/api/leave/balances?fiscalYear=2570&reason=x'))).status).toBe(403);
+    expect((await DOWNLOAD(posted(url, { fiscalYear: '2570', reason: 'x' }))).status).toBe(403);
     as(manager);
-    expect((await DOWNLOAD(new Request('http://localhost/api/leave/balances?fiscalYear=2570'))).status).toBe(400);
-    expect((await DOWNLOAD(new Request('http://localhost/api/leave/balances?reason=x'))).status).toBe(400);
+    expect((await DOWNLOAD(posted(url, { fiscalYear: '2570' }))).status).toBe(400);
+    expect((await DOWNLOAD(posted(url, { reason: 'x' }))).status).toBe(400);
+    expect((await DOWNLOAD(new Request(url, { method: 'POST', body: 'not a form', headers: { 'content-type': 'text/plain' } }))).status).toBe(400);
     expect(mocks.requestExport).not.toHaveBeenCalled();
   });
 
   it('records the export before returning the file', async () => {
     as(manager);
     mocks.exportLeaveBalancesCsv.mockResolvedValue('\uFEFFemployee_code\r\n');
-    const response = await DOWNLOAD(new Request('http://localhost/api/leave/balances?fiscalYear=2570&reason=%E0%B8%9B%E0%B8%A3%E0%B8%B1%E0%B8%9A%E0%B8%A2%E0%B8%AD%E0%B8%94'));
+    const response = await DOWNLOAD(posted('http://localhost/api/leave/balances/export', { fiscalYear: '2570', reason: 'ปรับยอด' }));
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toBe('text/csv; charset=utf-8');
     expect(response.headers.get('content-disposition')).toBe('attachment; filename="leave-balances-2570.csv"');
@@ -61,11 +74,11 @@ describe('POST /api/leave/balances', () => {
   });
 });
 
-describe('GET /api/leave/all', () => {
+describe('POST /api/leave/all', () => {
   it('exports every ใบลา without reasons or contacts', async () => {
     as(manager);
     mocks.allLeave.mockResolvedValue([{ requestId: 'r1', reference: 'REQ-r1', kind: 'LEAVE', leaveTypeName: 'ลาพักผ่อน', startDate: '2026-11-02', endDate: '2026-11-03', startHalf: 'FULL', endHalf: 'FULL', days: 2, status: 'APPROVED', submittedAt: '2026-10-20T01:00:00Z', personDisplayName: 'สมชาย', organizationName: 'งานผู้ป่วยใน' }]);
-    const response = await ALL(new Request('http://localhost/api/leave/all?from=2026-11-01&to=2026-11-30&reason=audit'));
+    const response = await ALL(posted('http://localhost/api/leave/all', { from: '2026-11-01', to: '2026-11-30', reason: 'audit' }));
     expect(response.status).toBe(200);
     expect(response.headers.get('content-disposition')).toBe('attachment; filename="leave-2026-11-01-2026-11-30.csv"');
     const bytes = new Uint8Array(await response.arrayBuffer());
@@ -73,8 +86,8 @@ describe('GET /api/leave/all', () => {
     const text = new TextDecoder().decode(bytes);
     expect(text.split('\r\n')[0]).toBe('reference,display_name,organization,leave_type,kind,start_date,start_half,end_date,end_half,days,status,submitted_at');
     expect(text).not.toMatch(/reason|contact/);
-    expect(mocks.allLeave).toHaveBeenCalledWith({ from: '2026-11-01', to: '2026-11-30' });
+    expect(mocks.allLeave).toHaveBeenCalledWith({ from: '2026-11-01', to: '2026-11-30' }, { limit: null });
     as(staff);
-    expect((await ALL(new Request('http://localhost/api/leave/all?from=2026-11-01&to=2026-11-30&reason=audit'))).status).toBe(403);
+    expect((await ALL(posted('http://localhost/api/leave/all', { from: '2026-11-01', to: '2026-11-30', reason: 'audit' }))).status).toBe(403);
   });
 });

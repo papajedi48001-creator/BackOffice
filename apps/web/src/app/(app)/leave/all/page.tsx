@@ -33,7 +33,7 @@ export default async function AllLeavePage({ searchParams }: { searchParams: Pro
     <h2>{t('leaveAll')}</h2>
     <form aria-label={t('leaveFilter')} className="leave-filter" method="get" action="/leave/all">{fields}<div className="form-actions"><button type="submit">{t('leaveFilter')}</button></div></form>
     {items.length === 0 ? <p>{t('leaveNoneFound')}</p> : <LeaveTable items={items} showPerson />}
-    <form aria-label={t('leaveDownloadCsv')} className="reason-form" method="get" action="/api/leave/all">
+    <form aria-label={t('leaveDownloadCsv')} className="reason-form" method="post" action="/api/leave/all">
       <input type="hidden" name="from" value={from} /><input type="hidden" name="to" value={to} />
       {filter.status && <input type="hidden" name="status" value={filter.status} />}
       {filter.leaveTypeId && <input type="hidden" name="leaveTypeId" value={filter.leaveTypeId} />}

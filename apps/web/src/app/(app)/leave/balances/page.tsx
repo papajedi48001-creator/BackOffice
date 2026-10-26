@@ -12,7 +12,7 @@ export default async function LeaveBalancesPage() {
   return <section>
     <h2>{t('leaveBalances')}</h2>
     <p className="permission-notice">{t('leaveBalancesHelp')}</p>
-    <form aria-label={t('leaveDownloadBalances')} className="reason-form" method="get" action="/api/leave/balances">
+    <form aria-label={t('leaveDownloadBalances')} className="reason-form" method="post" action="/api/leave/balances/export">
       <div className="form-field"><label htmlFor="balance-year">{t('leaveFiscalYear')}</label><input id="balance-year" name="fiscalYear" type="number" min={2500} max={2700} required defaultValue={fiscalYear} /></div>
       <label htmlFor="balance-reason">{t('leaveExportReason')}</label>
       <input id="balance-reason" name="reason" required maxLength={500} />

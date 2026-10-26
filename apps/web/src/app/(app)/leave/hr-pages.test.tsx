@@ -55,6 +55,7 @@ describe('HR leave pages', () => {
     expect(mocks.allLeave).toHaveBeenCalledWith({ from: '2026-11-01', to: '2026-11-30', status: 'APPROVED' });
     const download = screen.getByRole('form', { name: 'ดาวน์โหลด CSV' });
     expect(download).toHaveAttribute('action', '/api/leave/all');
+    expect(download).toHaveAttribute('method', 'post');
     expect(within(download).getByLabelText('เหตุผลการส่งออก')).toBeRequired();
   });
 
@@ -94,7 +95,8 @@ describe('HR leave pages', () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: false, errors: [{ row: 3, column: 'leave_type', code: 'UNKNOWN_LEAVE_TYPE' }] }), { status: 422 }));
     vi.stubGlobal('fetch', fetchMock);
     render(await LeaveBalancesPage());
-    expect(screen.getByRole('form', { name: 'ดาวน์โหลดไฟล์ยอดวันลา' })).toHaveAttribute('action', '/api/leave/balances');
+    expect(screen.getByRole('form', { name: 'ดาวน์โหลดไฟล์ยอดวันลา' })).toHaveAttribute('action', '/api/leave/balances/export');
+    expect(screen.getByRole('form', { name: 'ดาวน์โหลดไฟล์ยอดวันลา' })).toHaveAttribute('method', 'post');
     const upload = screen.getByRole('form', { name: 'นำเข้าไฟล์ยอดวันลา' });
     const fileInput = within(upload).getByLabelText('ไฟล์ CSV');
     Object.defineProperty(fileInput, 'files', { value: [new File(['employee_code'], 'b.csv', { type: 'text/csv' })] });
