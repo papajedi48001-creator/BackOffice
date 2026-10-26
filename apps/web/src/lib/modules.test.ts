@@ -1,7 +1,7 @@
 import type { AccessSubject } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { describe, expect, it, vi } from 'vitest';
-import { moduleCodeForPath, moduleLabel, moduleRegistry, moduleSections, navigationFor, visibleModules } from './modules';
+import { availableModules, moduleCodeForPath, moduleLabel, moduleRegistry, moduleSections, navigationFor, navigationFrom, visibleModules } from './modules';
 
 const subject = (overrides: Partial<AccessSubject> = {}): AccessSubject => ({ authenticated: true, personId: 'p', roles: [], dataOwnerModules: [], ...overrides });
 const hrefs = (value: AccessSubject) => navigationFor(value).map((item) => item.href);
@@ -58,6 +58,34 @@ describe('module registry', () => {
     expect(await roomBooking.badge!(database, subject())).toBe(0);
     expect(query).not.toHaveBeenCalled();
     expect(await roomBooking.badge!(database, subject({ roles: [{ name: 'room-booking-approver', organizationId: null }] }))).toBe(2);
+  });
+});
+
+describe('requests and notifications', () => {
+  it('badges คำขอ with the requests waiting on the person, and การแจ้งเตือน with unread notices', async () => {
+    const requests = moduleRegistry.find((entry) => entry.code === 'requests')!;
+    const notifications = moduleRegistry.find((entry) => entry.code === 'notifications')!;
+    expect(await requests.badge!({ query: vi.fn().mockResolvedValue([{ requestId: 'r1', moduleCode: 'leave' }, { requestId: 'r2', moduleCode: 'requests' }]) } as unknown as Database, subject())).toBe(2);
+    expect(await notifications.badge!({ query: vi.fn().mockResolvedValue([{ total: 3 }]) } as unknown as Database, subject())).toBe(3);
+    expect(await requests.badge!({ query: vi.fn() } as unknown as Database, subject({ personId: null }))).toBe(0);
+  });
+
+  it('leaves out คำขอ for someone who never made or was asked to approve a request', async () => {
+    const codes = async (found: number) => (await availableModules(visibleModules(subject()), { query: vi.fn().mockResolvedValue([{ found }]) } as unknown as Database, subject())).map((entry) => entry.code);
+    expect(await codes(0)).not.toContain('requests');
+    expect(await codes(1)).toContain('requests');
+  });
+
+  it('keeps คำขอ when the check fails, since the page still guards itself', async () => {
+    const modules = await availableModules(visibleModules(subject()), { query: vi.fn().mockRejectedValue(new Error('down')) } as unknown as Database, subject());
+    expect(modules.map((entry) => entry.code)).toContain('requests');
+  });
+
+  it('puts each module\'s count on its menu item', () => {
+    const items = navigationFrom(visibleModules(subject()), { leave: 2, requests: 0 });
+    expect(items.find((item) => item.href === '/leave')?.badge).toBe(2);
+    expect(items.find((item) => item.href === '/requests')?.badge).toBe(0);
+    expect(items[0]).toEqual({ href: '/dashboard', label: 'dashboard', module: 'home' });
   });
 });
 

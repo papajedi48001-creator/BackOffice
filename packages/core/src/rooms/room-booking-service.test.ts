@@ -118,7 +118,7 @@ describe('RoomBookingService.decide', () => {
     expect(repository.bookings.get(booking.id)).toMatchObject({ status: 'APPROVED', decidedByPersonId: 'approver' });
     expect(repository.history.at(-1)).toMatchObject({ action: 'APPROVED', actorPersonId: 'approver', reason: null });
     expect(repository.audit.at(-1)).toMatchObject({ action: 'room_booking.approved', actorPersonId: 'approver' });
-    expect(notifications(repository)).toEqual([{ recipientPersonId: 'booker', subject: 'การจองห้องได้รับอนุมัติ (RB-2569-0001)', targetPath: `/rooms/bookings/${booking.id}`, moduleCode: 'room-booking' }]);
+    expect(notifications(repository)).toEqual([{ recipientPersonId: 'booker', subject: 'อนุมัติ > ผู้รับผิดชอบ (RB-2569-0001)', targetPath: `/rooms/bookings/${booking.id}`, moduleCode: 'room-booking' }]);
   });
 
   it('keeps the rejection reason in the booking history only', async () => {
@@ -129,7 +129,7 @@ describe('RoomBookingService.decide', () => {
 
     expect(repository.bookings.get(booking.id)?.status).toBe('REJECTED');
     expect(repository.history.at(-1)).toMatchObject({ action: 'REJECTED', reason: 'ห้องปิดปรับปรุงช่วงนั้น' });
-    expect(notifications(repository).at(-1)).toMatchObject({ recipientPersonId: 'booker', subject: 'การจองห้องไม่ได้รับอนุมัติ (RB-2569-0001)' });
+    expect(notifications(repository).at(-1)).toMatchObject({ recipientPersonId: 'booker', subject: 'ไม่อนุมัติ > ผู้รับผิดชอบ (RB-2569-0001)' });
     expect(JSON.stringify([repository.audit, repository.outbox])).not.toContain('ปิดปรับปรุง');
   });
 

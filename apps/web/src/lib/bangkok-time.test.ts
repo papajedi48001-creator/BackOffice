@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, datesBetween, formatBangkokDate, formatBangkokTime, formatMinutes, mondayOf, timeOptions } from './bangkok-time';
+import { addDays, datesBetween, formatBangkokDate, formatBangkokDateTime, formatBangkokTime, formatMinutes, mondayOf, timeOptions } from './bangkok-time';
 
 describe('Bangkok time display', () => {
   it('formats a booking date in Thai with the Buddhist year', () => {
@@ -27,5 +27,9 @@ describe('Bangkok time display', () => {
     expect(options[0]).toEqual({ value: 420, label: '07:00' });
     expect(options.at(-1)).toEqual({ value: 1200, label: '20:00' });
     expect(options).toHaveLength(27);
+  });
+
+  it('shows an instant as a Bangkok date and time, crossing midnight', () => {
+    expect(formatBangkokDateTime('2026-10-25T18:30:00.000Z')).toBe('26 ต.ค. 2569 01:30');
   });
 });

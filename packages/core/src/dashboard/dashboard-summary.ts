@@ -1,13 +1,11 @@
 import type { Database } from '@backoffice/db';
+import { waitingOnPersonSql } from '../workflow/request-inbox';
 
 export interface DashboardSummary { displayName: string | null; organizationName: string | null; pendingApprovals: number; unreadNotifications: number; }
 
-// A request waits on a person only when its lowest-numbered pending step is theirs; sequence is stored as text.
 const pendingApprovalsSql = `SELECT COUNT(*) AS total FROM request r
   JOIN approval_step s ON s.request_id = r.id AND s.status = 'PENDING'
-  WHERE r.status = 'IN_REVIEW'
-    AND JSON_VALUE(s.assignee_snapshot, '$.personId') = ?
-    AND NOT EXISTS (SELECT 1 FROM approval_step earlier WHERE earlier.request_id = r.id AND earlier.status = 'PENDING' AND CAST(earlier.sequence AS UNSIGNED) < CAST(s.sequence AS UNSIGNED))`;
+  WHERE ${waitingOnPersonSql}`;
 
 const profileSql = `SELECT p.display_name AS displayName, (
     SELECT o.name FROM employment_assignment a JOIN organization o ON o.id = a.organization_id

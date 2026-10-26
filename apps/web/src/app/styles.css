@@ -1,6 +1,7 @@
 /* Colour tokens. Pages read --accent; [data-module] sets it per module (see DESIGN.md). */
 :root {
   --brand: #0f5e5e;
+  --alert-count: #dc2626;
   --brand-deep: #0f4f50;
   --brand-deeper: #0c4344;
   --ink: #12302f;
@@ -181,13 +182,28 @@ a.module-tile:hover .module-go { color: var(--accent); transform: translateX(2px
 .module-text span { color: var(--muted); font-size: .9rem; line-height: 1.5; }
 .module-go, .module-badge, .soon-tag { position: absolute; top: 16px; right: 16px; }
 .module-go { color: var(--line-strong); font-size: 1.1rem; transition: color .15s, transform .15s; }
-.module-badge { min-width: 28px; border-radius: 8px; background: #c2410c; color: #fff; font-weight: 700; padding: 3px 8px; text-align: center; }
+.module-badge { min-width: 28px; height: 28px; border-radius: 999px; background: var(--alert-count); color: #fff; font-weight: 700; line-height: 28px; padding: 0 8px; text-align: center; }
 .module-tile.is-planned { border-style: dashed; background: transparent; box-shadow: none; }
 .module-tile.is-planned strong { color: #627d98; }
 .soon-tag { border: 1px solid var(--line); border-radius: 6px; color: #627d98; font-size: .8rem; padding: 2px 8px; white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { .module-tile, .module-go { transition: none; } a.module-tile:hover { transform: none; } }
 @media (max-width: 720px) { .module-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .module-tile { min-height: 132px; padding: 14px; } .module-text span { display: none; } .module-icon { width: 44px; height: 44px; } .hero-stats { width: 100%; } .hero-stat { flex: 1; min-width: 0; } }
-.nav-badge { display: inline-block; min-width: 22px; margin-left: 8px; border-radius: 8px; background: #c2410c; color: #fff; font-size: .8rem; font-weight: 700; padding: 1px 7px; text-align: center; }
+.nav-badge { display: inline-block; min-width: 22px; height: 22px; margin-left: 8px; border-radius: 999px; background: var(--alert-count); color: #fff; font-size: .8rem; font-weight: 700; line-height: 22px; padding: 0 6px; text-align: center; }
+/* Notification bell, top right of every page */
+.app-topbar { display: flex; justify-content: flex-end; margin: -8px 0 8px; }
+.notification-bell { position: relative; }
+.bell-button { position: relative; display: inline-grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink); cursor: pointer; }
+.bell-button:hover, .bell-button[aria-expanded="true"] { border-color: var(--line-strong); }
+.bell-count { position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; border-radius: 999px; background: var(--alert-count); color: #fff; font-size: .75rem; font-weight: 700; line-height: 20px; padding: 0 5px; text-align: center; }
+.bell-panel { position: absolute; z-index: 20; top: calc(100% + 8px); right: 0; width: min(380px, calc(100vw - 32px)); border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: 0 12px 32px rgb(18 38 29 / 16%); padding: 8px; }
+.bell-title { margin: 4px 8px 8px; color: var(--muted); font-size: .85rem; font-weight: 700; }
+.bell-panel ul { margin: 0; padding: 0; list-style: none; max-height: 60vh; overflow-y: auto; }
+.bell-panel li button { display: grid; gap: 2px; width: 100%; border: 0; border-radius: 8px; background: transparent; color: var(--ink); cursor: pointer; padding: 8px; text-align: left; }
+.bell-panel li button:hover { background: var(--line-soft); }
+.bell-panel li.is-unread button { background: color-mix(in srgb, var(--alert-count) 7%, white); font-weight: 700; }
+.bell-panel time { color: var(--muted); font-size: .8rem; font-weight: 400; }
+.bell-empty { margin: 8px; color: var(--muted); }
+.bell-all { display: block; margin-top: 4px; color: var(--brand); font-weight: 700; border-top: 1px solid var(--line-soft); padding: 10px 8px 4px; font-size: .9rem; }
 .request-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 0 0 20px; }
 .app-main .request-actions .button-secondary, .app-main .reason-form .button-secondary { border: 1px solid var(--line-strong); background: #fff; color: var(--ink); }
 .app-main .request-actions .button-danger { border: 1px solid #c2410c; background: #fff; color: #9a3412; }

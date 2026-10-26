@@ -21,6 +21,7 @@ export * from './workflow/approval-service';
 export * from './workflow/database-workflow-repository';
 export * from './workflow/request-history';
 export * from './workflow/module-notification';
+export * from './workflow/request-inbox';
 export * from './leave/leave-module';
 export * from './leave/leave-days';
 export * from './leave/leave-balance';

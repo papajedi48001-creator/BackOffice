@@ -70,7 +70,7 @@ export class RoomBookingService {
       await repository.updateBookingStatus(booking.id, booking.status, booking.decidedByPersonId);
       const activeDays = locked.days.filter((day) => day.status === 'ACTIVE').length;
       const historyId = await this.record(repository, booking, actor.personId, approved ? 'APPROVED' : 'REJECTED', approved ? null : valid.reason!, approved ? 'room_booking.approved' : 'room_booking.rejected', activeDays);
-      await this.notify(repository, booking, historyId, booking.bookerPersonId, approved ? `การจองห้องได้รับอนุมัติ (${booking.reference})` : `การจองห้องไม่ได้รับอนุมัติ (${booking.reference})`);
+      await this.notify(repository, booking, historyId, booking.bookerPersonId, `${approved ? 'อนุมัติ' : 'ไม่อนุมัติ'} > ผู้รับผิดชอบ (${booking.reference})`);
       return booking;
     });
   }
