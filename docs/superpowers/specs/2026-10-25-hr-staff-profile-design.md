@@ -1,6 +1,6 @@
 # ทะเบียนประวัติบุคลากร (HR staff profile) — design
 
-Status: draft for review. Sub-project 2 of the HR module; follows the command chain (PR #18).
+Status: approved by wasan (2026-10-22). Sub-project 2 of the HR module; follows the command chain (PR #18).
 
 ## Goal
 
