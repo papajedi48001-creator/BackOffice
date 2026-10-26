@@ -37,6 +37,19 @@ describeWithDatabase('leave balance CSV against MariaDB', () => {
     expect(await service.apply(text, fiscalYear, actor)).toEqual({ ok: true, rowsChanged: 0 });
   });
 
+  it('leaves out types limited to the other gender, by recorded gender or name prefix', async () => {
+    const man = await createLeavePerson(database, null);
+    const woman = await createLeavePerson(database, null);
+    await database.execute("UPDATE person SET employee_code = ? WHERE id = ?", [`M${man.slice(0, 8)}`, man]);
+    await database.execute("UPDATE person SET employee_code = ? WHERE id = ?", [`W${woman.slice(0, 8)}`, woman]);
+    await database.execute("UPDATE hr_person_profile SET gender = 'MALE' WHERE person_id = ?", [man]);
+    await database.execute("UPDATE hr_person_profile SET name_prefix = 'นางสาว' WHERE person_id = ?", [woman]);
+    const text = await exportLeaveBalancesCsv(database, fiscalYear);
+    const typesOf = (prefix: string) => text.split('\r\n').filter((line) => line.startsWith(prefix)).map((line) => line.split(',')[2]);
+    expect(typesOf(`M${man.slice(0, 8)},`)).toEqual(['SICK', 'PERSONAL', 'VACATION', 'PATERNITY']);
+    expect(typesOf(`W${woman.slice(0, 8)},`)).toEqual(['SICK', 'PERSONAL', 'VACATION', 'MATERNITY']);
+  });
+
   it('applies an edited carried value and the balance follows', async () => {
     const text = (await exportLeaveBalancesCsv(database, fiscalYear)).replace(`${code},บุคลากร ${person.slice(0, 8)},VACATION,0,0`, `${code},บุคลากร ${person.slice(0, 8)},VACATION,7.5,1`);
     expect(await service.apply(text, fiscalYear, actor)).toEqual({ ok: true, rowsChanged: 1 });

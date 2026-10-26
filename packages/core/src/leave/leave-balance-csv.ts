@@ -1,9 +1,11 @@
 import { randomUUID } from 'node:crypto';
+import { genderForPrefix, genderSchema } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { AuditService } from '../audit/audit-service';
 import { DatabaseAuditRepository } from '../audit/database-audit-repository';
 import { parseCsvRecords } from '../hr/csv';
 import { LeaveSettingsService, type LeaveType } from './leave-settings-service';
+import { genderAllows } from './leave-store';
 
 export type LeaveBalanceCsvErrorCode = 'MISSING_COLUMN' | 'UNKNOWN_EMPLOYEE' | 'UNKNOWN_LEAVE_TYPE' | 'INVALID_NUMBER' | 'DUPLICATE_ROW';
 export interface LeaveBalanceCsvError { row: number; column: string; code: LeaveBalanceCsvErrorCode }
@@ -23,14 +25,15 @@ const dayAmount = (text: string): number | null => {
 
 /** ยอดยกมา template filled with what is stored for a ปีงบประมาณ: one row per active person and entitled ประเภทการลา. */
 export async function exportLeaveBalancesCsv(db: Pick<Database, 'query'>, fiscalYear: number): Promise<string> {
-  const rows = await db.query<{ employeeCode: string; displayName: string | null; code: string; carriedDays: string | null; usedDays: string | null }>(
-    `SELECT p.employee_code AS employeeCode, p.display_name AS displayName, t.code, CAST(ob.carried_days AS CHAR) AS carriedDays, CAST(ob.used_days AS CHAR) AS usedDays
+  const rows = await db.query<{ employeeCode: string; displayName: string | null; code: string; carriedDays: string | null; usedDays: string | null; eligibleGender: string | null; gender: string | null; namePrefix: string | null }>(
+    `SELECT p.employee_code AS employeeCode, p.display_name AS displayName, t.code, CAST(ob.carried_days AS CHAR) AS carriedDays, CAST(ob.used_days AS CHAR) AS usedDays, t.eligible_gender AS eligibleGender, hp.gender, hp.name_prefix AS namePrefix
      FROM person p JOIN hr_person_profile hp ON hp.person_id = p.id JOIN leave_entitlement e ON e.employment_type_id = hp.employment_type_id JOIN leave_type t ON t.id = e.leave_type_id AND t.is_active = 1
      LEFT JOIN leave_opening_balance ob ON ob.person_id = p.id AND ob.leave_type_id = t.id AND ob.fiscal_year = ?
      WHERE p.employment_status = 'ACTIVE' AND p.employee_code IS NOT NULL ORDER BY p.employee_code, t.sort_order`,
     [fiscalYear]
   );
-  const lines = rows.map((row) => [row.employeeCode, row.displayName ?? '', row.code, String(Number(row.carriedDays ?? 0)), String(Number(row.usedDays ?? 0))].map(cell).join(','));
+  // The same rule as filing: a type limited to one gender is left out for the other.
+  const lines = rows.filter((row) => genderAllows({ eligibleGender: genderSchema.safeParse(row.eligibleGender).data ?? null }, genderSchema.safeParse(row.gender).data ?? genderForPrefix(row.namePrefix))).map((row) => [row.employeeCode, row.displayName ?? '', row.code, String(Number(row.carriedDays ?? 0)), String(Number(row.usedDays ?? 0))].map(cell).join(','));
   return `\uFEFF${[COLUMNS.join(','), ...lines].join('\r\n')}\r\n`;
 }
 

@@ -37,9 +37,9 @@
 
 ### Task 2: Balance CSV follows gender
 
-- [ ] Failing integration test: a male person's export has no ลาคลอดบุตร row; a person without gender keeps it.
-- [ ] Implement in `exportLeaveBalancesCsv` with `genderAllows` and `genderForPrefix`.
-- [ ] Commit `fix(leave): balance export lists only types the person may take`.
+- [x] Failing integration test: a male person's export has no ลาคลอดบุตร row; a person without gender keeps it.
+- [x] Implement in `exportLeaveBalancesCsv` with `genderAllows` and `genderForPrefix`.
+- [x] Commit `fix(leave): balance export lists only types the person may take`.
 
 ### Task 3: ไปราชการ review leftovers
 
