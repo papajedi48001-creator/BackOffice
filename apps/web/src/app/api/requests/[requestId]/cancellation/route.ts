@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { DatabaseWorkflowRepository, RequestService } from '@backoffice/core';
+import { DatabaseWorkflowRepository, OFFICIAL_TRAVEL_MODULE, RequestService } from '@backoffice/core';
 import { getSharedDatabase } from '../../../../../lib/database';
 import { DatabaseApproverResolver } from '../../../../../lib/database-approver-resolver';
 import { requireAuthorized } from '../../../../../lib/require-authorized';
@@ -12,6 +12,9 @@ export async function POST(request: Request, context: { params: Promise<{ reques
     const session = await requireAuthorized(request);
     const body = await request.json().catch(() => ({}));
     const { requestId } = await context.params;
+    // Only the หัวหน้าคณะ cancels a trip, all of it at once, through /api/travel.
+    const [owned] = await database.query<{ moduleCode: string }>('SELECT module_code AS moduleCode FROM request WHERE id = ? LIMIT 1', [requestId]);
+    if (owned?.moduleCode === OFFICIAL_TRAVEL_MODULE) return NextResponse.json({ error: 'travel_request_route' }, { status: 400 });
     const cancelled = await new RequestService(new DatabaseWorkflowRepository(database), new DatabaseApproverResolver(database)).cancelRequest({ requestId, actorPersonId: session.personId!, reason: typeof body?.reason === 'string' ? body.reason : '' });
     return NextResponse.json({ status: cancelled.status });
   } catch (error) {

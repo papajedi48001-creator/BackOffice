@@ -82,4 +82,15 @@ describeWithDatabase('OfficialTravelQueries against MariaDB', () => {
     expect(row?.days).toEqual([{ date: '2027-09-06', part: 'FULL', kind: 'TRAVEL', place: 'สถาบันบำราศนราดูร' }, { date: '2027-09-07', part: 'FULL', kind: 'TRAVEL', place: 'สถาบันบำราศนราดูร' }]);
     expect(JSON.stringify(row)).not.toMatch(/อบรม|1500|subject|cost/);
   });
+
+  it('finds people by name for the form, with their unit and nothing private', async () => {
+    const person = await createLeavePerson(database, org.section);
+    const name = `บุคลากร ${person.slice(0, 8)}`;
+    const found = await queries.people(name.slice(0, 12));
+    expect(found).toContainEqual({ personId: person, displayName: name, organizationName: `งาน ${org.section}` });
+    expect(Object.keys(found[0]!).sort()).toEqual(['displayName', 'organizationName', 'personId']);
+    expect(await queries.people('%')).toEqual([]);
+    expect(await queries.people('  ')).toEqual([]);
+  });
 });
+

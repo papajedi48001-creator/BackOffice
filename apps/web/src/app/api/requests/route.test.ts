@@ -20,6 +20,14 @@ function ready() {
 afterEach(() => vi.clearAllMocks());
 
 describe('POST /api/requests', () => {
+  it('sends official travel to the travel routes', async () => {
+    ready();
+    const response = await submit({ moduleCode: 'official-travel', organizationId: 'unit-a' });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'travel_request_route' });
+    expect(mocks.submitRequest).not.toHaveBeenCalled();
+  });
+
   it('sends leave requests to the leave routes', async () => {
     ready();
     const response = await submit({ moduleCode: 'leave', organizationId: 'unit-a' });

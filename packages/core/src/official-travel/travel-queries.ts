@@ -92,6 +92,18 @@ export class OfficialTravelQueries {
     return (await this.pendingIds(personId)).length;
   }
 
+  /** People in a current unit whose name contains the text, for adding ผู้ร่วมเดินทาง; only id, name and unit. */
+  async people(text: string): Promise<Array<{ personId: string; displayName: string | null; organizationName: string | null }>> {
+    const query = text.trim();
+    if (query.length === 0) return [];
+    const pattern = `%${query.replace(/[\\%_]/g, (character) => `\\${character}`)}%`;
+    return this.database.query(
+      `SELECT p.id AS personId, p.display_name AS displayName, o.name AS organizationName FROM person p
+       JOIN employment_assignment ea ON ea.person_id = p.id AND ea.effective_until IS NULL JOIN organization o ON o.id = ea.organization_id
+       WHERE p.display_name LIKE ? ORDER BY p.display_name LIMIT 20`, [pattern]
+    );
+  }
+
   /** HR's list of every trip; the status filter is the derived trip status. */
   async all(filter: TravelFilter): Promise<TravelListItem[]> {
     const clauses = ['1 = 1'];

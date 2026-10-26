@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createDatabase } from '@backoffice/db';
-import { DatabaseWorkflowRepository, LEAVE_MODULE, RequestService } from '@backoffice/core';
+import { DatabaseWorkflowRepository, LEAVE_MODULE, OFFICIAL_TRAVEL_MODULE, RequestService } from '@backoffice/core';
 import { DatabaseApproverResolver } from '../../../lib/database-approver-resolver';
 import { requireAuthorized } from '../../../lib/require-authorized';
 import { readRuntimeValue } from '../../../lib/runtime-env';
@@ -14,6 +14,7 @@ export async function POST(request: Request): Promise<Response> {
     const body = await request.json();
     // ใบลา carry their own checks and records, so they are filed only through /api/leave.
     if (body.moduleCode === LEAVE_MODULE) return NextResponse.json({ error: 'leave_request_route' }, { status: 400 });
+    if (body.moduleCode === OFFICIAL_TRAVEL_MODULE) return NextResponse.json({ error: 'travel_request_route' }, { status: 400 });
     const database = createDatabase(databaseUrl);
     try {
       const submitted = await new RequestService(new DatabaseWorkflowRepository(database), new DatabaseApproverResolver(database)).submitRequest({ moduleCode: body.moduleCode, requestorPersonId: session.personId!, organizationSnapshot: { organizationId: body.organizationId } });
