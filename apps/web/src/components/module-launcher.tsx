@@ -17,7 +17,7 @@ function Badge({ count }: { count: number | null | undefined }) {
 function Tile({ entry, count }: { entry: ModuleEntry; count: number | null | undefined }) {
   const body = <><span className="module-icon" data-group={entry.status === 'planned' ? 'planned' : entry.group}><ModuleIcon name={entry.icon} /></span><span className="module-text"><strong>{t(entry.labelKey)}</strong><span>{t(entry.descriptionKey)}</span></span></>;
   if (entry.status === 'planned') return <div className="module-tile is-planned" aria-disabled="true">{body}<span className="soon-tag">{t('launcherComingSoon')}</span></div>;
-  return <Link className="module-tile" href={entry.href}>{body}{count ? <Badge count={count} /> : <span className="module-go" aria-hidden="true">→</span>}</Link>;
+  return <Link className="module-tile" data-module={entry.code} href={entry.href}>{body}{count ? <Badge count={count} /> : <span className="module-go" aria-hidden="true">→</span>}</Link>;
 }
 
 function Section({ id, title, entries, countFor }: { id: string; title: string; entries: ModuleEntry[]; countFor: (entry: ModuleEntry) => number | null | undefined }) {

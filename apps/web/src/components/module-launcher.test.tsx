@@ -11,6 +11,7 @@ const today = new Date('2026-10-21T03:00:00Z');
 it('links live modules and does not link planned ones', () => {
   render(<ModuleLauncher modules={[...byCode('requests', 'hr'), ...planned]} badges={{}} summary={summary} today={today} />);
   expect(screen.getByRole('link', { name: /งานบุคคล/ })).toHaveAttribute('href', '/hr');
+  expect(screen.getByRole('link', { name: /งานบุคคล/ })).toHaveAttribute('data-module', 'hr');
   expect(screen.queryByRole('link', { name: /งานซ่อม/ })).toBeNull();
   expect(screen.getByText('งานซ่อม').closest('[aria-disabled="true"]')).not.toBeNull();
   expect(screen.getAllByText('เร็ว ๆ นี้')).toHaveLength(planned.length);

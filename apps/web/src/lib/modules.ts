@@ -3,6 +3,7 @@ import { AuthorizationService, LeaveQueries, RoomBookingQueries, canManageLeave 
 import type { Database } from '@backoffice/db';
 import { t, type MessageKey } from '@backoffice/i18n';
 import type { NavigationItem } from '../components/app-shell';
+import { matchModule } from './module-theme';
 import { canInventory } from './inventory-access';
 
 export type ModuleGroup = 'mine' | 'people' | 'services' | 'governance';
@@ -99,7 +100,12 @@ export function moduleSections(code: string, subject: AccessSubject): ModuleSect
 }
 
 export function navigationFor(subject: AccessSubject): NavigationItem[] {
-  return [{ href: '/dashboard', label: 'dashboard' }, ...visibleModules(subject).filter((entry) => entry.status === 'live').map((entry) => ({ href: entry.href, label: entry.labelKey }))];
+  return [{ href: '/dashboard', label: 'dashboard', module: 'home' }, ...visibleModules(subject).filter((entry) => entry.status === 'live').map((entry) => ({ href: entry.href, label: entry.labelKey, module: entry.code }))];
+}
+
+/** Module a page belongs to, used for its colour. */
+export function moduleCodeForPath(pathname: string): string {
+  return matchModule(pathname, moduleRegistry.filter((entry) => entry.status === 'live').map((entry) => ({ href: entry.href, module: entry.code })));
 }
 
 // Label shown in the central inbox, e.g. "[จองห้องประชุม]". Notifications from before module codes existed came from requests.
