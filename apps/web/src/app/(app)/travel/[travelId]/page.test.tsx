@@ -18,7 +18,7 @@ const detail = {
     { requestId: 'r-a', personId: 'person-a', displayName: 'นางพรทิพย์ ใจดี', organizationName: 'งานผู้ป่วยใน', status: 'IN_REVIEW', steps: [step('PENDING')], canDecide: false },
     { requestId: 'r-b', personId: 'person-b', displayName: 'นายสมชาย ดีมาก', organizationName: 'งานผู้ป่วยใน', status: 'IN_REVIEW', steps: [step('PENDING')], canDecide: true }
   ],
-  canEdit: false, canCancel: false
+  canEdit: false, canCancel: false, reportStatus: 'NOT_DUE', report: null, canReport: false
 };
 const params = (travelId = 'travel-1') => ({ params: Promise.resolve({ travelId }) });
 function ready(view: unknown) {
@@ -54,5 +54,30 @@ describe('TravelPage', () => {
     ready(null);
     await TravelPage(params());
     expect(mocks.notFound).toHaveBeenCalled();
+  });
+
+  it('lets the หัวหน้าคณะ file the report after an approved trip', async () => {
+    ready({ ...detail, status: 'APPROVED', canReport: true, reportStatus: 'MISSING' });
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(await TravelPage(params()));
+    const form = screen.getByRole('form', { name: 'รายงานการไปราชการ' });
+    fireEvent.change(within(form).getByLabelText('สรุปสาระสำคัญที่ได้รับ'), { target: { value: 'ได้แนวทางใหม่' } });
+    fireEvent.change(within(form).getByLabelText('การนำไปใช้ประโยชน์'), { target: { value: 'อบรมต่อในหน่วยงาน' } });
+    fireEvent.submit(form);
+    await waitFor(() => expect(mocks.refresh).toHaveBeenCalled());
+    const [url, init] = fetchMock.mock.calls[0]! as unknown as [string, RequestInit];
+    expect(url).toBe('/api/travel/travel-1/report');
+    expect(init.method).toBe('PUT');
+    expect(JSON.parse(String(init.body))).toEqual({ summary: 'ได้แนวทางใหม่', application: 'อบรมต่อในหน่วยงาน' });
+  });
+
+  it('shows a filed report to everyone who may see the trip, with no form for them', async () => {
+    ready({ ...detail, status: 'APPROVED', reportStatus: 'SUBMITTED', report: { summary: 'ได้แนวทางใหม่', application: 'อบรมต่อในหน่วยงาน', submittedAt: '2026-11-12T03:00:00Z', updatedAt: '2026-11-12T03:00:00Z' } });
+    render(await TravelPage(params()));
+    expect(screen.getByRole('heading', { name: 'รายงานการไปราชการ' })).toBeInTheDocument();
+    expect(screen.getByText('อบรมต่อในหน่วยงาน')).toBeInTheDocument();
+    expect(screen.queryByRole('form', { name: 'รายงานการไปราชการ' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'พิมพ์แบบขออนุมัติ' })).toHaveAttribute('href', '/travel/travel-1/print');
   });
 });

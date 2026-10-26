@@ -37,14 +37,14 @@
 
 ### Task 2: Report API and screens
 
-- [ ] Failing tests: `PUT /api/travel/<id>/report` maps codes; trip page shows the report and the form for the leader; HR list column and filter; mine shows ยังไม่ส่งรายงาน.
-- [ ] Implement; tests pass.
-- [ ] Commit `feat(travel): file and read the post-trip report`.
+- [x] Failing tests: `PUT /api/travel/<id>/report` maps codes; trip page shows the report and the form for the leader; HR list column and filter; mine shows ยังไม่ส่งรายงาน.
+- [x] Implement; tests pass.
+- [x] Commit `feat(travel): file and read the post-trip report`.
 
 ### Task 3: Print form
 
-- [ ] Failing test: print page shows the บันทึกข้อความ, people going, totals, steps without reasons; not found for others.
-- [ ] Implement page, print CSS, link from trip page.
-- [ ] Commit `feat(travel): printable แบบขออนุมัติไปราชการ`.
+- [x] Failing test: print page shows the บันทึกข้อความ, people going, totals, steps without reasons; not found for others.
+- [x] Implement page, print CSS, link from trip page.
+- [x] Commit `feat(travel): printable แบบขออนุมัติไปราชการ`.
 
 Verification: `pnpm lint && pnpm typecheck && pnpm test`, `DATABASE_URL=mysql://backoffice:local-development-only@127.0.0.1:3306/backoffice_fresh pnpm test:integration`, `node --test scripts/*.test.mjs`, `git diff --check origin/main...HEAD`.

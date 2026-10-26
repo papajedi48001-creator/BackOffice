@@ -62,3 +62,32 @@ export function TravelCancel({ travelId }: { travelId: string }) {
     {open && <ActionDialog title={t('travelCancel')} confirmLabel={t('confirmAction')} tone="danger" reason isSubmitting={busy} error={error} onConfirm={(reason) => void confirm(reason)} onClose={() => { setOpen(false); setError(null); }} />}
   </div>;
 }
+
+/** The หัวหน้าคณะ's รายงานการไปราชการ; the server checks who they are and that the trip has ended. */
+export function TravelReportForm({ travelId, initial }: { travelId: string; initial: { summary: string; application: string } }) {
+  const router = useRouter();
+  const [draft, setDraft] = useState(initial);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    setBusy(true); setError(null);
+    try {
+      const response = await fetch(`/api/travel/${encodeURIComponent(travelId)}/report`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ summary: draft.summary.trim(), application: draft.application.trim() }) });
+      if (response.ok) { router.refresh(); return; }
+      setError(travelErrorMessage(((await response.json()) as { error?: string }).error));
+    } catch { setError(travelErrorMessage(null)); } finally { setBusy(false); }
+  }
+
+  return <form aria-label={t('travelReport')} className="reason-form" onSubmit={submit}>
+    <h3>{t('travelReport')}</h3>
+    <p className="permission-notice">{t('travelReportHelp')}</p>
+    <label htmlFor="report-summary">{t('travelReportSummary')}</label>
+    <textarea id="report-summary" value={draft.summary} maxLength={5000} rows={4} required onChange={(event) => setDraft({ ...draft, summary: event.target.value })} />
+    <label htmlFor="report-application">{t('travelReportApplication')}</label>
+    <textarea id="report-application" value={draft.application} maxLength={5000} rows={3} required onChange={(event) => setDraft({ ...draft, application: event.target.value })} />
+    <div className="form-actions"><button type="submit" disabled={busy}>{t('travelReportSave')}</button></div>
+    {error && <p role="alert" className="form-error">{error}</p>}
+  </form>;
+}

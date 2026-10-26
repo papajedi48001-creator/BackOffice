@@ -7,7 +7,7 @@ export { forbidden, readInput, withSessionAndDatabase } from '../hr/profile-rout
 
 export const travelService = (database: Database) => new OfficialTravelService(database, new DatabaseApproverResolver(database));
 
-const statusByCode: Record<string, number> = { NOT_FOUND: 404, NOT_PENDING: 409, NOT_RETURNED: 409 };
+const statusByCode: Record<string, number> = { NOT_FOUND: 404, NOT_PENDING: 409, NOT_RETURNED: 409, REPORT_NOT_DUE: 409 };
 
 /** A service result as JSON: rule failures are 400 with their code and the person they are about, except the codes above. */
 export function travelResult(result: { ok: true } | { ok: false; code: string; personId?: string }, createdStatus = 200): Response {

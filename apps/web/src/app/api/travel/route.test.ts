@@ -1,14 +1,15 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ readSession: vi.fn(), getSharedDatabase: vi.fn(), submit: vi.fn(), resubmit: vi.fn(), cancel: vi.fn(), detail: vi.fn(), people: vi.fn(), setApprovalTarget: vi.fn() }));
+const mocks = vi.hoisted(() => ({ readSession: vi.fn(), getSharedDatabase: vi.fn(), submit: vi.fn(), resubmit: vi.fn(), cancel: vi.fn(), detail: vi.fn(), people: vi.fn(), setApprovalTarget: vi.fn(), saveReport: vi.fn() }));
 vi.mock('../../../lib/session', () => ({ readSession: mocks.readSession }));
 vi.mock('../../../lib/database', () => ({ getSharedDatabase: mocks.getSharedDatabase }));
 vi.mock('@backoffice/core', async (importOriginal) => ({
   ...await importOriginal<typeof import('@backoffice/core')>(),
   OfficialTravelService: class { submit = mocks.submit; resubmit = mocks.resubmit; cancel = mocks.cancel; },
   OfficialTravelQueries: class { detail = mocks.detail; people = mocks.people; },
-  TravelSettingsService: class { setApprovalTarget = mocks.setApprovalTarget; }
+  TravelSettingsService: class { setApprovalTarget = mocks.setApprovalTarget; },
+  TravelReportService: class { save = mocks.saveReport; }
 }));
 
 import { POST } from './route';
@@ -16,6 +17,7 @@ import { GET as DETAIL, PUT as RESUBMIT } from './[travelId]/route';
 import { POST as CANCEL } from './[travelId]/cancellation/route';
 import { GET as PEOPLE } from './people/route';
 import { PUT as SET_TYPE } from './types/[code]/route';
+import { PUT as REPORT } from './[travelId]/report/route';
 
 const staff = { authenticated: true, personId: 'person-a', roles: [{ name: 'staff', organizationId: null }], dataOwnerModules: [] };
 const hr = { authenticated: true, personId: 'person-h', roles: [{ name: 'hr-manager', organizationId: null }], dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: ['hr'] };
@@ -104,5 +106,26 @@ describe('PUT /api/travel/types/[code]', () => {
     mocks.setApprovalTarget.mockResolvedValueOnce({ ok: true });
     expect((await SET_TYPE(json('http://localhost/api/travel/types/ABROAD', 'PUT', { approvalTarget: 'DIVISION' }), params({ code: 'ABROAD' }))).status).toBe(200);
     expect(mocks.setApprovalTarget).toHaveBeenCalledWith('person-h', 'ABROAD', { approvalTarget: 'DIVISION' });
+  });
+});
+
+describe('PUT /api/travel/[travelId]/report', () => {
+  const report = { summary: 'ได้แนวทางใหม่', application: 'อบรมต่อในหน่วยงาน' };
+  it('rejects a signed-out user', async () => {
+    mocks.readSession.mockResolvedValue(null);
+    expect((await REPORT(json('http://localhost/api/travel/travel-1/report', 'PUT', report), params({ travelId: 'travel-1' }))).status).toBe(401);
+  });
+
+  it('saves the report as the session person and maps the codes', async () => {
+    ready();
+    mocks.saveReport.mockResolvedValueOnce({ ok: true }).mockResolvedValueOnce({ ok: false, code: 'NOT_FOUND' }).mockResolvedValueOnce({ ok: false, code: 'REPORT_NOT_DUE' });
+    const send = (value: unknown) => REPORT(json('http://localhost/api/travel/travel-1/report', 'PUT', value), params({ travelId: 'travel-1' }));
+    expect((await send({ ...report, personId: 'someone-else' })).status).toBe(200);
+    expect(mocks.saveReport).toHaveBeenCalledWith('person-a', 'travel-1', report);
+    expect((await send(report)).status).toBe(404);
+    const late = await send(report);
+    expect(late.status).toBe(409);
+    await expect(late.json()).resolves.toEqual({ error: 'REPORT_NOT_DUE' });
+    expect((await send({ ...report, summary: ' ' })).status).toBe(400);
   });
 });

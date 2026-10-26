@@ -385,3 +385,19 @@ video.inventory-camera { display: block; flex-basis: 100%; width: 100%; max-widt
 .module-tile, .hero-stat, .summary-grid article, .leave-balance, .inventory-facts div, .profile-box, .request-create, .room-day, .room-form, .booking-actions, .leave-form, .inventory-form, .organization-form, .master-data-import, .profile-form { border-left-width: 1px; border-left-color: var(--line); border-top: 3px solid var(--accent); border-radius: 10px; }
 .hero-stat { border-top-color: rgba(255, 255, 255, .6); }
 .app-main h3, .module-group h3 { color: var(--brand-deep); font-weight: 600; }
+.travel-print { display: grid; gap: 14px; max-width: 46rem; }
+.travel-print-head { display: grid; gap: 4px; }
+.travel-print-list { display: grid; gap: 6px; margin: 0; }
+.travel-print-list div { display: grid; grid-template-columns: 12rem 1fr; gap: 10px; }
+.travel-print-list dt { font-weight: 700; }
+.travel-print-list dd { margin: 0; }
+.travel-print-table { width: 100%; border-collapse: collapse; }
+.travel-print-table th, .travel-print-table td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
+.travel-print-signature { margin-top: 28px; text-align: right; }
+.travel-detail-links { display: flex; gap: 8px; }
+@media print {
+  .sidebar, .app-header, .module-nav, .travel-print-actions { display: none !important; }
+  .app-shell, .app-main { display: block; padding: 0; margin: 0; background: #fff; }
+  @page { size: A4 portrait; margin: 18mm 16mm; }
+  .travel-print { max-width: none; font-family: 'TH Sarabun New', var(--font-body, sans-serif); color: #000; }
+}
