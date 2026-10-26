@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { roleGrantsPermission } from './policy';
+import { requiresDataOwner, roleGrantsPermission } from './policy';
 
 describe('inventory roles', () => {
   it('lets an inventory officer keep the catalogue, receive stock and read stock', () => {
@@ -13,5 +13,13 @@ describe('inventory roles', () => {
     expect(roleGrantsPermission('inventory-supervisor', 'inventory.opening.certify')).toBe(true);
     expect(roleGrantsPermission('inventory-supervisor', 'inventory.stock.read')).toBe(true);
     expect(roleGrantsPermission('inventory-supervisor', 'inventory.stock.receive')).toBe(false);
+  });
+});
+
+describe('leave permission', () => {
+  it('lets an HR manager manage leave as a data owner, and nobody else', () => {
+    expect(roleGrantsPermission('hr-manager', 'leave.manage')).toBe(true);
+    expect(roleGrantsPermission('hr-reader', 'leave.manage')).toBe(false);
+    expect(requiresDataOwner('leave.manage')).toBe(true);
   });
 });

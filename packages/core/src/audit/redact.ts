@@ -1,5 +1,5 @@
 const blockedKeys = new Set(['nationalid', 'national_id', 'citizenid', 'password', 'passwordhash', 'token', 'authorization']);
-const allowedKeys = new Set(['personId', 'unitType', 'workChanges', 'moduleCode', 'requestReference', 'reason', 'changedFields', 'status', 'organizationId', 'counts', 'bookingReference', 'roomId', 'dayCount', 'reference', 'itemId', 'vendorId', 'lineCount']);
+const allowedKeys = new Set(['personId', 'unitType', 'workChanges', 'moduleCode', 'requestReference', 'reason', 'changedFields', 'status', 'organizationId', 'counts', 'bookingReference', 'roomId', 'dayCount', 'reference', 'itemId', 'vendorId', 'lineCount', 'leaveTypeCode', 'days', 'fiscalYear', 'rowsChanged', 'startDate', 'endDate']);
 
 export function redactAuditMetadata(metadata: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(metadata)
