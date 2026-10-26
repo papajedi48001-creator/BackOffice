@@ -27,6 +27,7 @@ export * from './leave/leave-balance';
 export * from './leave/leave-settings-service';
 export * from './leave/leave-store';
 export * from './leave/leave-service';
+export * from './leave/leave-queries';
 export * from './audit/audit-service';
 export * from './audit/database-audit-repository';
 export * from './files/attachment-service';
