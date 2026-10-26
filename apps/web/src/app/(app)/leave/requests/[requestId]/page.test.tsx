@@ -70,6 +70,23 @@ describe('LeaveRequestPage', () => {
     expect((fetchMock.mock.calls[0]! as unknown as [string])[0]).toBe('/api/leave/r1/cancel-days');
   });
 
+  it('lets the owner edit and resend a returned ขอยกเลิกวันลา', async () => {
+    ready({ ...detail, requestId: 'c1', reference: 'REQ-c1', kind: 'CANCEL_DAYS', status: 'RETURNED', startDate: '2026-11-05', endDate: '2026-11-06', days: 2, reason: 'กลับมาทำงาน', contactDuringLeave: null, warnings: [], canCancel: true });
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(await LeaveRequestPage(params('c1')));
+    const form = screen.getByRole('form', { name: 'แก้ไขคำขอยกเลิกวันลาที่ถูกส่งกลับ' });
+    expect(screen.getByLabelText('ตั้งแต่วันที่')).toHaveValue('2026-11-05');
+    expect(screen.getByLabelText('เหตุผลที่ขอยกเลิก')).toHaveValue('กลับมาทำงาน');
+    fireEvent.change(screen.getByLabelText('ตั้งแต่วันที่'), { target: { value: '2026-11-06' } });
+    fireEvent.submit(form);
+    await waitFor(() => expect(mocks.refresh).toHaveBeenCalled());
+    const [url, init] = fetchMock.mock.calls[0]! as unknown as [string, RequestInit];
+    expect(url).toBe('/api/leave/c1');
+    expect(init.method).toBe('PUT');
+    expect(JSON.parse(String(init.body))).toEqual({ startDate: '2026-11-06', endDate: '2026-11-06', startHalf: 'FULL', endHalf: 'FULL', reason: 'กลับมาทำงาน' });
+  });
+
   it('is not found for a ใบลา the viewer may not see', async () => {
     ready(null);
     await LeaveRequestPage(params('hidden'));

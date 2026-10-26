@@ -93,6 +93,31 @@ describeWithDatabase('LeaveService lifecycle against MariaDB', () => {
     expect(audits[0]!.metadata).not.toMatch(/กลับมาทำงานก่อน/);
   });
 
+  it('resubmits a returned ขอยกเลิกวันลา with a new range to the same approver', async () => {
+    const person = await createLeavePerson(database, org.section);
+    const requestId = await approved(person, '2026-11-02', '2026-11-06');
+    const cancellation = await service.requestCancelDays(person, requestId, { startDate: '2026-11-05', endDate: '2026-11-06', reason: 'กลับมาทำงานก่อน' });
+    if (!cancellation.ok) throw new Error(cancellation.code);
+    await decide(cancellation.requestId, org.director, 'RETURN');
+    expect(await service.resubmitCancelDays(org.sectionHead, cancellation.requestId, { startDate: '2026-11-06', endDate: '2026-11-06', reason: 'x' })).toEqual({ ok: false, code: 'NOT_FOUND' });
+    expect(await service.resubmitCancelDays(person, requestId, { startDate: '2026-11-06', endDate: '2026-11-06', reason: 'x' })).toEqual({ ok: false, code: 'NOT_FOUND' });
+    expect(await service.resubmit(person, cancellation.requestId, vacation('2026-11-06', '2026-11-06'))).toEqual({ ok: false, code: 'NOT_FOUND' });
+    expect(await service.resubmitCancelDays(person, cancellation.requestId, { startDate: '2026-11-09', endDate: '2026-11-09', reason: 'นอกช่วง' })).toEqual({ ok: false, code: 'OUTSIDE_LEAVE' });
+    // Its own returned range does not count as an overlap.
+    expect(await service.resubmitCancelDays(person, cancellation.requestId, { startDate: '2026-11-06', endDate: '2026-11-06', reason: 'กลับมาวันศุกร์' })).toEqual({ ok: true });
+    expect(await status(cancellation.requestId)).toBe('IN_REVIEW');
+    expect(await service.resubmitCancelDays(person, cancellation.requestId, { startDate: '2026-11-06', endDate: '2026-11-06', reason: 'ซ้ำ' })).toEqual({ ok: false, code: 'NOT_RETURNED' });
+    const [row] = await database.query<{ startDate: string; days: string; reason: string }>("SELECT DATE_FORMAT(start_date, '%Y-%m-%d') AS startDate, CAST(days AS CHAR) AS days, reason FROM leave_cancellation WHERE request_id = ?", [cancellation.requestId]);
+    expect(row).toEqual({ startDate: '2026-11-06', days: '1.0', reason: 'กลับมาวันศุกร์' });
+    const pending = await database.query<{ assignee: string }>("SELECT assignee_snapshot AS assignee FROM approval_step WHERE request_id = ? AND status = 'PENDING'", [cancellation.requestId]);
+    expect(pending.map((step) => JSON.parse(step.assignee).personId)).toEqual([org.director]);
+    const audits = await database.query<{ metadata: string }>("SELECT metadata FROM audit_event WHERE target_id = ? AND action = 'leave.cancel_days.resubmitted'", [cancellation.requestId]);
+    expect(JSON.parse(audits[0]!.metadata)).toMatchObject({ leaveTypeCode: 'VACATION', days: 1 });
+    expect(audits[0]!.metadata).not.toMatch(/กลับมาวันศุกร์/);
+    await decide(cancellation.requestId, org.director, 'APPROVE');
+    expect((await loadBalance(database, person, vacationType, 2570))?.used).toBe(4);
+  });
+
   it('refuses ขอยกเลิกวันลา on a pending ใบลา', async () => {
     const person = await createLeavePerson(database, org.section);
     const requestId = await filed(person, '2026-11-02', '2026-11-06');

@@ -164,6 +164,13 @@ describe('RequestService', () => {
       expect(repository.steps.get('request-1')).toHaveLength(2);
     });
 
+    it('sends a resubmit to fixed approvers without resolving a chain', async () => {
+      const { repository, service } = await returned(async () => { throw new Error('should not resolve'); });
+      const request = await service.resubmitRequest({ requestId: 'request-1', actorPersonId: 'person-a' }, { approvers: [{ personId: 'manager-a', organizationId: 'unit-a' }] });
+      expect(request.approvalSteps.map((step) => [step.sequence, step.assigneeSnapshot.personId, step.status])).toEqual([[1, 'manager-a', 'RETURNED'], [2, 'manager-b', 'CANCELLED'], [3, 'manager-a', 'PENDING']]);
+      expect(repository.requests.get('request-1')?.status).toBe('IN_REVIEW');
+    });
+
     it('refuses a request that was not returned', async () => {
       const { repository, service } = await returned(async () => [{ personId: 'manager-c', organizationId: 'unit-a' }]);
       await repository.saveRequest({ ...repository.requests.get('request-1')!, status: 'IN_REVIEW' });

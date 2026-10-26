@@ -1,10 +1,10 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ readSession: vi.fn(), getSharedDatabase: vi.fn(), resubmit: vi.fn(), cancelPending: vi.fn(), requestCancelDays: vi.fn() }));
+const mocks = vi.hoisted(() => ({ readSession: vi.fn(), getSharedDatabase: vi.fn(), resubmit: vi.fn(), resubmitCancelDays: vi.fn(), cancelPending: vi.fn(), requestCancelDays: vi.fn() }));
 vi.mock('../../../../lib/session', () => ({ readSession: mocks.readSession }));
 vi.mock('../../../../lib/database', () => ({ getSharedDatabase: mocks.getSharedDatabase }));
-vi.mock('@backoffice/core', async (importOriginal) => ({ ...await importOriginal<typeof import('@backoffice/core')>(), LeaveService: class { resubmit = mocks.resubmit; cancelPending = mocks.cancelPending; requestCancelDays = mocks.requestCancelDays; } }));
+vi.mock('@backoffice/core', async (importOriginal) => ({ ...await importOriginal<typeof import('@backoffice/core')>(), LeaveService: class { resubmit = mocks.resubmit; resubmitCancelDays = mocks.resubmitCancelDays; cancelPending = mocks.cancelPending; requestCancelDays = mocks.requestCancelDays; } }));
 
 import { PUT } from './route';
 import { POST as CANCEL } from './cancellation/route';
@@ -31,6 +31,18 @@ describe('leave request actions', () => {
     const body = { leaveTypeId: 'type-vacation', startDate: '2026-11-02', endDate: '2026-11-03', reason: 'พักผ่อน' };
     expect((await call(PUT, body, 'PUT')).status).toBe(200);
     expect(mocks.resubmit.mock.calls[0]?.slice(0, 2)).toEqual(['person-a', 'request-1']);
+    expect((await call(PUT, body, 'PUT')).status).toBe(404);
+    expect((await call(PUT, { ...body, reason: '' }, 'PUT')).status).toBe(400);
+  });
+
+  it('resubmits a returned ขอยกเลิกวันลา when the body has no ประเภทการลา', async () => {
+    mocks.readSession.mockResolvedValue(staff);
+    mocks.getSharedDatabase.mockReturnValue({});
+    mocks.resubmitCancelDays.mockResolvedValueOnce({ ok: true }).mockResolvedValueOnce({ ok: false, code: 'NOT_FOUND' });
+    const body = { startDate: '2026-11-03', endDate: '2026-11-03', reason: 'กลับมาทำงาน', personId: 'someone-else' };
+    expect((await call(PUT, body, 'PUT')).status).toBe(200);
+    expect(mocks.resubmitCancelDays).toHaveBeenCalledWith('person-a', 'request-1', { startDate: '2026-11-03', endDate: '2026-11-03', startHalf: 'FULL', endHalf: 'FULL', reason: 'กลับมาทำงาน' });
+    expect(mocks.resubmit).not.toHaveBeenCalled();
     expect((await call(PUT, body, 'PUT')).status).toBe(404);
     expect((await call(PUT, { ...body, reason: '' }, 'PUT')).status).toBe(400);
   });
