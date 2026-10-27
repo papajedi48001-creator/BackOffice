@@ -1,12 +1,12 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ headers: vi.fn(), redirect: vi.fn(), notFound: vi.fn(), refresh: vi.fn(), push: vi.fn(), readSession: vi.fn(), getSharedDatabase: vi.fn(), detail: vi.fn() }));
+const mocks = vi.hoisted(() => ({ headers: vi.fn(), redirect: vi.fn(), notFound: vi.fn(), refresh: vi.fn(), push: vi.fn(), readSession: vi.fn(), getSharedDatabase: vi.fn(), detail: vi.fn(), activeRequestForTravel: vi.fn() }));
 vi.mock('next/headers', () => ({ headers: mocks.headers }));
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect, notFound: mocks.notFound, useRouter: () => ({ refresh: mocks.refresh, push: mocks.push }) }));
 vi.mock('../../../../lib/session', () => ({ readSession: mocks.readSession }));
 vi.mock('../../../../lib/database', () => ({ getSharedDatabase: mocks.getSharedDatabase }));
-vi.mock('@backoffice/core', async (importOriginal) => ({ ...await importOriginal<typeof import('@backoffice/core')>(), OfficialTravelQueries: class { detail = mocks.detail; } }));
+vi.mock('@backoffice/core', async (importOriginal) => ({ ...await importOriginal<typeof import('@backoffice/core')>(), OfficialTravelQueries: class { detail = mocks.detail; }, FleetQueries: class { activeRequestForTravel = mocks.activeRequestForTravel; } }));
 
 import TravelPage from './page';
 
@@ -79,6 +79,56 @@ describe('TravelPage', () => {
     expect(screen.getByText('อบรมต่อในหน่วยงาน')).toBeInTheDocument();
     expect(screen.queryByRole('form', { name: 'รายงานการไปราชการ' })).toBeNull();
     expect(screen.getByRole('link', { name: 'พิมพ์แบบขออนุมัติ' })).toHaveAttribute('href', '/travel/travel-1/print');
+  });
+  describe('ขอใช้รถ', () => {
+    const approved = { ...detail, status: 'APPROVED', endDate: '2026-11-11', members: detail.members.map((member) => ({ ...member, status: 'APPROVED' })) };
+    const asMember = (view: unknown, existing: { id: string; reference: string; requesterPersonId: string } | null = null, personId = 'person-a', roles: unknown[] = []) => {
+      ready(view);
+      mocks.readSession.mockResolvedValue({ authenticated: true, personId, roles, dataOwnerModules: [] });
+      mocks.activeRequestForTravel.mockResolvedValue(existing);
+    };
+    beforeEach(() => { vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-10-27T03:00:00Z')); });
+    afterEach(() => { vi.useRealTimers(); });
+
+    it('offers ขอใช้รถ to an approved member of an approved trip by รถราชการ that has not ended', async () => {
+      asMember(approved);
+      render(await TravelPage(params()));
+      expect(screen.getByRole('link', { name: 'ขอใช้รถ' })).toHaveAttribute('href', '/fleet/new?travel=travel-1');
+    });
+
+    it('links the requester to the ใบ already filed instead', async () => {
+      asMember(approved, { id: 'f9', reference: 'VR-2570-0009', requesterPersonId: 'person-a' });
+      render(await TravelPage(params()));
+      expect(screen.queryByRole('link', { name: 'ขอใช้รถ' })).toBeNull();
+      expect(screen.getByRole('link', { name: 'ดูใบขอใช้รถ' })).toHaveAttribute('href', '/fleet/requests/f9');
+    });
+
+    it('tells a co-traveller who did not file it that the trip has a ใบ, without a link they could not open', async () => {
+      asMember(approved, { id: 'f9', reference: 'VR-2570-0009', requesterPersonId: 'person-b' });
+      render(await TravelPage(params()));
+      expect(screen.queryByRole('link', { name: 'ดูใบขอใช้รถ' })).toBeNull();
+      expect(screen.queryByRole('link', { name: 'ขอใช้รถ' })).toBeNull();
+      expect(screen.getByText('มีใบขอใช้รถแล้ว VR-2570-0009')).toBeInTheDocument();
+    });
+
+    it('links the หัวหน้าหมวดยานพาหนะ to the ใบ when they are going too', async () => {
+      asMember(approved, { id: 'f9', reference: 'VR-2570-0009', requesterPersonId: 'person-b' }, 'person-a', [{ name: 'fleet-manager', organizationId: null }]);
+      render(await TravelPage(params()));
+      expect(screen.getByRole('link', { name: 'ดูใบขอใช้รถ' })).toHaveAttribute('href', '/fleet/requests/f9');
+    });
+
+    it('offers nothing for a private car, a trip still in review, an ended trip or someone not going', async () => {
+      for (const view of [{ ...approved, vehicle: 'PRIVATE_CAR' }, { ...approved, status: 'IN_REVIEW' }, { ...approved, endDate: '2026-10-26' }]) {
+        asMember(view);
+        const { unmount } = render(await TravelPage(params()));
+        expect(screen.queryByRole('link', { name: 'ขอใช้รถ' })).toBeNull();
+        unmount();
+      }
+      ready(approved);
+      mocks.activeRequestForTravel.mockResolvedValue(null);
+      render(await TravelPage(params()));
+      expect(screen.queryByRole('link', { name: 'ขอใช้รถ' })).toBeNull();
+    });
   });
 
   it('links the attached หนังสือเชิญ for everyone who may see the trip', async () => {

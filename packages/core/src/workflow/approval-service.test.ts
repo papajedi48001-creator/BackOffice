@@ -177,6 +177,33 @@ describe('ApprovalService', () => {
     expect(recipients.includes('leader-a')).toBe(copied);
     expect(JSON.stringify(repository.outbox)).not.toContain('แก้วันที่');
   });
+  it('notifies the approval watchers only when the final step approves, never on a reject or an earlier step', async () => {
+    const step = (id: string, sequence: number) => ({ id, requestId: 'request-1', sequence, assigneeSnapshot: { personId: `manager-${sequence}`, organizationId: 'unit-a' }, status: 'PENDING' as const });
+    const run = async (decision: 'APPROVE' | 'REJECT', steps: ApprovalStep[]) => {
+      const repository = new DecisionWorkflowRepository({ request: { id: 'request-1', reference: 'REQ-1', moduleCode: 'fleet', requestorPersonId: 'person-a', organizationSnapshot: { organizationId: 'unit-a' }, status: 'IN_REVIEW' }, steps });
+      const asked: string[] = [];
+      repository.watchers = [{ personId: 'fleet-1', subject: 'มีใบขอใช้รถรอจัดรถ', targetPath: '/fleet/requests/by-request/request-1' }, { personId: 'manager-1', subject: 'มีใบขอใช้รถรอจัดรถ', targetPath: '/fleet/requests/by-request/request-1' }];
+      repository.onWatchers = (request) => asked.push(request.moduleCode);
+      await new ApprovalService(repository, { findActiveFor: async () => null }, (() => { let n = 0; return () => `id-${++n}`; })()).decideRequest({ requestId: 'request-1', actorPersonId: 'manager-1', decision, ...(decision === 'APPROVE' ? {} : { reason: 'ไม่เหมาะสม' }) });
+      return { repository, asked };
+    };
+
+    const final = await run('APPROVE', [step('step-1', 1)]);
+    const notices = final.repository.outbox.filter((event) => event.type === 'notification.in_app');
+    expect(final.asked).toEqual(['fleet']);
+    expect(notices.map((event) => event.idempotencyKey)).toContain('notification.in_app:request-approved:id-1:recipient:fleet-1');
+    expect(notices.find((event) => (event.payload as { recipientPersonId: string }).recipientPersonId === 'fleet-1')?.payload).toMatchObject({ moduleCode: 'fleet', targetPath: '/fleet/requests/by-request/request-1', subject: 'มีใบขอใช้รถรอจัดรถ' });
+    // The head who just approved is already told by the decision itself, so a watcher equal to the actor gets no second notice.
+    expect(notices.some((event) => event.idempotencyKey === 'notification.in_app:request-approved:id-1:recipient:manager-1')).toBe(false);
+
+    const earlier = await run('APPROVE', [step('step-1', 1), step('step-2', 2)]);
+    expect(earlier.asked).toEqual([]);
+    expect(earlier.repository.outbox.filter((event) => event.idempotencyKey.startsWith('notification.in_app:request-approved:'))).toEqual([]);
+
+    const rejected = await run('REJECT', [step('step-1', 1)]);
+    expect(rejected.asked).toEqual([]);
+    expect(rejected.repository.outbox.filter((event) => event.idempotencyKey.startsWith('notification.in_app:request-approved:'))).toEqual([]);
+  });
   it('labels the decided notification of a leave request with the leave module', async () => {
     const outbox: unknown[] = [];
     const repository: WorkflowRepository = {
@@ -219,4 +246,7 @@ class DecisionWorkflowRepository implements WorkflowRepository {
   async getPositionTitle(personId: string): Promise<string | null> { return personId === 'manager-a' ? 'หัวหน้ากลุ่มการพยาบาล' : null; }
   followers: string[] = [];
   async getFollowers(): Promise<string[]> { return this.followers; }
+  watchers: Array<{ personId: string; subject: string; targetPath: string }> = [];
+  onWatchers: (request: { id: string; moduleCode: string }) => void = () => undefined;
+  async getApprovalWatchers(request: { id: string; moduleCode: string }): Promise<Array<{ personId: string; subject: string; targetPath: string }>> { this.onWatchers(request); return this.watchers; }
 }

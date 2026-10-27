@@ -132,4 +132,34 @@ describeWithDatabase('DatabaseWorkflowRepository', () => {
     expect(await repository.getPositionTitle(titled)).toBe('หัวหน้ากลุ่มการพยาบาล');
     expect(await repository.getPositionTitle(untitled)).toBeNull();
   });
+
+  it('finds only active hospital-wide fleet-managers as approval watchers of a fleet คำขอ and nobody for another module', async () => {
+    await runMigrations(database);
+    const managerId = randomUUID();
+    const scopedManagerId = randomUUID();
+    const plainId = randomUUID();
+    const leaverId = randomUUID();
+    const unitId = randomUUID();
+    await database.execute('INSERT INTO organization (id, name, created_at) VALUES (?, ?, UTC_TIMESTAMP())', [unitId, 'Fleet watcher unit']);
+    await database.execute('INSERT INTO person (id, national_id_ciphertext, national_id_lookup, created_at) VALUES (?, ?, ?, UTC_TIMESTAMP()), (?, ?, ?, UTC_TIMESTAMP()), (?, ?, ?, UTC_TIMESTAMP()), (?, ?, ?, UTC_TIMESTAMP())', [managerId, 'c-m', randomUUID(), scopedManagerId, 'c-s', randomUUID(), plainId, 'c-p', randomUUID(), leaverId, 'c-l', randomUUID()]);
+    await database.execute("UPDATE person SET employment_status = 'INACTIVE' WHERE id = ?", [leaverId]);
+    for (const name of ['fleet-manager', 'fleet-watch-other']) {
+      if ((await database.query('SELECT id FROM role WHERE name = ?', [name])).length === 0) await database.execute('INSERT INTO role (id, name, created_at) VALUES (UUID(), ?, UTC_TIMESTAMP())', [name]);
+    }
+    await database.execute('INSERT INTO role_assignment (id, person_id, role_id, organization_id, created_at) SELECT UUID(), ?, id, NULL, UTC_TIMESTAMP() FROM role WHERE name = ? LIMIT 1', [managerId, 'fleet-manager']);
+    await database.execute('INSERT INTO role_assignment (id, person_id, role_id, organization_id, created_at) SELECT UUID(), ?, id, ?, UTC_TIMESTAMP() FROM role WHERE name = ? LIMIT 1', [scopedManagerId, unitId, 'fleet-manager']);
+    await database.execute('INSERT INTO role_assignment (id, person_id, role_id, organization_id, created_at) SELECT UUID(), ?, id, NULL, UTC_TIMESTAMP() FROM role WHERE name = ? LIMIT 1', [plainId, 'fleet-watch-other']);
+    await database.execute('INSERT INTO role_assignment (id, person_id, role_id, organization_id, created_at) SELECT UUID(), ?, id, NULL, UTC_TIMESTAMP() FROM role WHERE name = ? LIMIT 1', [leaverId, 'fleet-manager']);
+    const repository = new DatabaseWorkflowRepository(database);
+
+    const watchers = await repository.getApprovalWatchers({ id: 'request-9', moduleCode: 'fleet' });
+
+    const ids = watchers.map((watcher) => watcher.personId);
+    expect(ids).toContain(managerId);
+    expect(ids).not.toContain(scopedManagerId);
+    expect(ids).not.toContain(plainId);
+    expect(ids).not.toContain(leaverId);
+    expect(watchers[0]).toEqual({ personId: expect.any(String), subject: 'มีใบขอใช้รถรอจัดรถ', targetPath: '/fleet/requests/by-request/request-9' });
+    expect(await repository.getApprovalWatchers({ id: 'request-9', moduleCode: 'leave' })).toEqual([]);
+  });
 });

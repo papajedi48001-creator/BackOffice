@@ -38,6 +38,7 @@
 [data-module="room-booking"] { --accent: #1d4e89; }
 [data-module="inventory"] { --accent: #8a4f12; }
 [data-module="access"] { --accent: #475569; }
+[data-module="fleet"] { --accent: #a63d40; }
 
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; }
@@ -401,6 +402,80 @@ video.inventory-camera { display: block; flex-basis: 100%; width: 100%; max-widt
   @page { size: A4 portrait; margin: 18mm 16mm; }
   .travel-print { max-width: none; font-family: 'TH Sarabun New', var(--font-body, sans-serif); color: #000; }
 }
+
+/* ยานพาหนะ: tokens only; the accent comes from [data-module="fleet"]. */
+.fleet-counts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 16px 0 24px; padding: 0; list-style: none; }
+.fleet-counts li { display: grid; gap: 4px; border: 1px solid var(--line); border-top: 3px solid var(--accent); border-radius: 12px; background: var(--surface); padding: 14px 16px; }
+.fleet-counts span { color: var(--muted); }
+.fleet-counts strong { font-size: 1.75rem; font-variant-numeric: tabular-nums; }
+.fleet-queue-soon td:first-child { box-shadow: inset 4px 0 0 var(--accent); }
+.fleet-queue-overdue { background: color-mix(in srgb, var(--alert-count) 8%, var(--surface)); }
+.fleet-queue-overdue td:first-child { box-shadow: inset 4px 0 0 var(--alert-count); }
+.fleet-flag { display: inline-block; margin-top: 4px; color: var(--accent-strong); font-size: .8rem; font-weight: 700; }
+.fleet-queue-overdue .fleet-flag { color: var(--alert-count); }
+.fleet-dispatch-actions { margin: 0; flex-wrap: nowrap; }
+.fleet-dispatch-actions button { white-space: nowrap; }
+.fleet-queue-reference a { white-space: nowrap; }
+.fleet-assign-new .form-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.fleet-assign-new input, .fleet-assign-new select { width: 100%; min-width: 0; }
+.fleet-assign-new input[type="datetime-local"] { padding-inline: 8px; }
+.leave-calendar.fleet-calendar table { min-width: 0; table-layout: fixed; }
+.leave-calendar.fleet-calendar th:first-child, .leave-calendar.fleet-calendar td:first-child { width: 8.5rem; min-width: 0; overflow-wrap: anywhere; }
+.fleet-calendar th, .fleet-calendar td { overflow-wrap: anywhere; }
+.fleet-board { display: grid; gap: 6px; margin: 12px 0 24px; overflow-x: auto; }
+.fleet-board-row { display: grid; grid-template-columns: 11rem minmax(560px, 1fr); align-items: center; gap: 12px; border-bottom: 1px solid var(--line-soft); padding: 6px 0; }
+.fleet-board-track { position: relative; min-height: 40px; border-radius: 8px; background: var(--accent-soft); }
+.fleet-board-head .fleet-board-track { min-height: 20px; background: none; color: var(--muted); font-size: .75rem; }
+.fleet-board-head .fleet-board-track span { position: absolute; transform: translateX(-50%); }
+.fleet-board-free { display: block; padding: 10px 12px; color: var(--muted); }
+.fleet-bar { position: absolute; top: 4px; bottom: 4px; overflow: hidden; border-radius: 6px; background: var(--accent); color: var(--surface); font-size: .75rem; line-height: 32px; padding: 0 8px; text-decoration: none; text-overflow: ellipsis; white-space: nowrap; }
+.fleet-bar-departed { background: var(--accent-strong); }
+.fleet-bar-returned { background: var(--accent-tint); color: var(--ink); }
+.fleet-flagged { padding-left: 20px; }
+.fleet-tabs { display: flex; gap: 4px; margin-bottom: 12px; border-bottom: 1px solid var(--line); }
+.app-main .fleet-tab { border: 0; border-bottom: 3px solid transparent; border-radius: 0; background: none; color: var(--muted); padding: 8px 12px; }
+.app-main .fleet-tab-active { border-bottom-color: var(--accent); color: var(--ink); font-weight: 700; }
+.app-main .fleet-tab:hover:not(:disabled) { background: var(--accent-soft); color: var(--ink); }
+.fleet-option-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.fleet-option-list label { display: flex; align-items: center; gap: 8px; min-height: 44px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
+.fleet-assign-new { display: grid; gap: 12px; }
+.fleet-assign select, .fleet-form select, .fleet-settings-form select { min-height: 44px; }
+.fleet-form .form-field small { color: var(--muted); font-size: .85rem; }
+.fleet-calendar td { vertical-align: top; text-align: left; }
+.fleet-block { margin: 2px 0; border-radius: 6px; padding: 4px 6px; font-size: .75rem; text-align: left; }
+.fleet-block span { display: block; }
+.fleet-week-nav { display: flex; flex-wrap: wrap; gap: 12px; }
+.fleet-driving { max-width: 640px; }
+.fleet-drive-card { display: grid; gap: 8px; margin: 0 0 16px; border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 12px; background: var(--surface); padding: 16px; }
+.fleet-drive-card header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; font-size: 1.1rem; }
+.fleet-drive-card p { margin: 0; }
+.fleet-drive-requests { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.fleet-drive-requests li { border-top: 1px solid var(--line-soft); padding-top: 8px; line-height: 1.6; }
+.fleet-call { display: inline-block; min-height: 44px; line-height: 44px; color: var(--accent-strong); font-weight: 700; }
+.fleet-log-button { width: 100%; min-height: 56px; border-radius: 12px; font-size: 1.15rem; font-weight: 700; }
+.fleet-odometer { width: 100%; min-height: 56px; border: 1px solid var(--line-strong); border-radius: 8px; font-size: 1.5rem; font-variant-numeric: tabular-nums; padding: 8px 12px; }
+.fleet-history { padding-left: 20px; line-height: 1.8; }
+.fleet-add { margin: 12px 0 24px; }
+.fleet-add summary, .fleet-settings details summary { cursor: pointer; color: var(--accent-strong); font-weight: 700; }
+@media (max-width: 720px) {
+  .fleet-board-row { grid-template-columns: 7rem minmax(480px, 1fr); }
+  /* The รอจัดรถ queue becomes one card per ใบ, so จัดรถ and ไม่จัดรถ stay on screen without sideways scroll. */
+  .fleet-queue { overflow: visible; }
+  .fleet-queue table { min-width: 0; overflow: visible; }
+  .fleet-queue table, .fleet-queue tbody, .fleet-queue tr, .fleet-queue td { display: block; width: 100%; }
+  .fleet-queue thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .fleet-queue tr { margin: 0 0 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 6px 0; }
+  .fleet-queue tr.fleet-queue-soon { box-shadow: inset 4px 0 0 var(--accent); }
+  .fleet-queue tr.fleet-queue-overdue { box-shadow: inset 4px 0 0 var(--alert-count); }
+  .fleet-queue td, .fleet-queue tr:last-child td { border-bottom: 0; padding: 6px 16px; }
+  .fleet-queue tr td:first-child { box-shadow: none; }
+  .fleet-queue td[data-label]::before { content: attr(data-label); display: block; color: var(--muted); font-size: .8rem; font-weight: 700; }
+  .fleet-queue-actions .fleet-dispatch-actions { flex-wrap: nowrap; padding-top: 4px; }
+  .fleet-queue-actions .fleet-dispatch-actions button { flex: 1; min-height: 44px; }
+  .leave-calendar.fleet-calendar table { min-width: 640px; }
+  .leave-calendar.fleet-calendar th:first-child, .leave-calendar.fleet-calendar td:first-child { width: 7rem; }
+}
+@media (max-width: 520px) { .fleet-assign-new .form-row { grid-template-columns: minmax(0, 1fr); } }
 .attachment-field .field-help { margin: 4px 0 0; color: var(--muted); font-size: 0.9rem; }
 .attachment-field p a { overflow-wrap: anywhere; }
 

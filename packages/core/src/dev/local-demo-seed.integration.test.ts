@@ -25,7 +25,7 @@ describeWithDatabase('seedLocalDemo', () => {
     const roles = await database.query<{ name: string }>("SELECT role.name FROM role_assignment assignment JOIN role ON role.id = assignment.role_id JOIN local_account account ON account.person_id = assignment.person_id WHERE account.username = 'hr001'");
     expect(roles.map((role) => role.name)).toContain('hr-manager');
     const roomRoles = await database.query<{ name: string }>("SELECT role.name FROM role_assignment assignment JOIN role ON role.id = assignment.role_id JOIN local_account account ON account.person_id = assignment.person_id WHERE account.username = 'adm003'");
-    expect(roomRoles.map((role) => role.name).sort()).toEqual(['inventory-officer', 'room-booking-approver', 'room-manager']);
+    expect(roomRoles.map((role) => role.name).sort()).toEqual(['fleet-manager', 'inventory-officer', 'room-booking-approver', 'room-manager']);
     const supervisorRoles = await database.query<{ name: string; organizationId: string | null }>("SELECT role.name, assignment.organization_id AS organizationId FROM role_assignment assignment JOIN role ON role.id = assignment.role_id JOIN local_account account ON account.person_id = assignment.person_id WHERE account.username = 'dir001'");
     expect(supervisorRoles).toEqual([{ name: 'inventory-supervisor', organizationId: null }]);
     const [manager] = await database.query<{ managerCode: string }>("SELECT manager.employee_code AS managerCode FROM person staff JOIN employment_assignment assignment ON assignment.person_id = staff.id AND assignment.effective_until IS NULL JOIN person manager ON manager.id = assignment.manager_person_id WHERE staff.employee_code = 'NUR014'");
@@ -50,5 +50,18 @@ describeWithDatabase('seedLocalDemo', () => {
     await seedLocalDemo(database, protector, { password: 'demo-password-2569' });
     const heads = await database.query<{ unit: string; head: string }>("SELECT organization.code AS unit, person.employee_code AS head FROM hr_organization_head head JOIN organization ON organization.id = head.organization_id JOIN person ON person.id = head.person_id WHERE head.effective_until IS NULL AND organization.code IN ('HOSP', 'NUR') ORDER BY organization.code");
     expect(heads).toEqual([{ unit: 'HOSP', head: 'DIR001' }, { unit: 'NUR', head: 'NUR001' }]);
+  });
+
+  it('seeds a fleet manager, two drivers and three cars (one in repair), once', async () => {
+    await seedLocalDemo(database, protector, { password: 'demo-password-2569' });
+    await seedLocalDemo(database, protector, { password: 'demo-password-2569' });
+    const managers = await database.query<{ code: string; organizationId: string | null }>("SELECT person.employee_code AS code, assignment.organization_id AS organizationId FROM role_assignment assignment JOIN role ON role.id = assignment.role_id JOIN person ON person.id = assignment.person_id WHERE role.name = 'fleet-manager' AND person.employee_code = 'ADM003'");
+    expect(managers).toEqual([{ code: 'ADM003', organizationId: null }]);
+    const drivers = await database.query<{ code: string; phone: string; isActive: number }>("SELECT person.employee_code AS code, driver.phone, driver.is_active AS isActive FROM fleet_driver driver JOIN person ON person.id = driver.person_id WHERE person.employee_code IN ('LAB002', 'PHA005') ORDER BY person.employee_code");
+    expect(drivers).toEqual([{ code: 'LAB002', phone: '0-4400-0001', isActive: 1 }, { code: 'PHA005', phone: '0-4400-0002', isActive: 1 }]);
+    const vehicles = await database.query<{ registration: string; kind: string; seats: number; status: string }>("SELECT registration, kind, seats, status FROM fleet_vehicle WHERE registration IN ('กข 1234', 'นข 5678', 'ฮฮ 9012') ORDER BY registration");
+    expect(vehicles).toHaveLength(3);
+    expect(vehicles.find((vehicle) => vehicle.registration === 'ฮฮ 9012')).toMatchObject({ kind: 'SEDAN', seats: 4, status: 'IN_REPAIR' });
+    expect(vehicles.find((vehicle) => vehicle.registration === 'กข 1234')).toMatchObject({ kind: 'VAN', seats: 12, status: 'ACTIVE' });
   });
 });

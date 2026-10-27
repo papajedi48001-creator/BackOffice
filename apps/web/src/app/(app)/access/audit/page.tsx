@@ -32,10 +32,11 @@ function toAuditEventRow(row: StoredAuditEventRow): AuditEventRow | null {
   if (!auditActions.has(row.action as AuditEventRow['action']) || !auditResults.has(row.result as AuditEventRow['result'])) return null;
   let requestReference: string | null = null;
   try {
-    // Requests record `requestReference`; module documents such as inventory receipts record `reference`.
-    const metadata = JSON.parse(row.metadata) as { requestReference?: unknown; reference?: unknown };
+    // Requests record `requestReference`; module documents such as inventory receipts record `reference`; เที่ยวรถ and รถราชการ record the car's `registration`.
+    const metadata = JSON.parse(row.metadata) as { requestReference?: unknown; reference?: unknown; registration?: unknown };
     if (typeof metadata.requestReference === 'string') requestReference = metadata.requestReference;
     else if (typeof metadata.reference === 'string') requestReference = metadata.reference;
+    else if (typeof metadata.registration === 'string') requestReference = metadata.registration;
   } catch {
     return null;
   }

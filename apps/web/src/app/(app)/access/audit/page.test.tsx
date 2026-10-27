@@ -75,4 +75,20 @@ describe('AuditPage', () => {
     expect(screen.getByText('ยกเลิกใบรับเข้า')).toBeInTheDocument();
     expect(screen.getByText('RC-2569-0004')).toBeInTheDocument();
   });
+  it('shows fleet events by their ใบ reference or, for a เที่ยวรถ, the car registration', async () => {
+    mocks.headers.mockResolvedValue(new Headers());
+    mocks.readSession.mockReturnValue({ authenticated: true, personId: 'person-a', roles: [] });
+    mocks.readRuntimeValue.mockReturnValue('mysql://test');
+    mocks.query.mockResolvedValue([
+      { createdAt: '2026-10-01T07:00:00.000Z', action: 'fleet.request.assigned', result: 'SUCCESS', metadata: '{"reference":"VR-2570-0001","status":"ASSIGNED"}' },
+      { createdAt: '2026-10-01T08:00:00.000Z', action: 'fleet.trip.departed', result: 'SUCCESS', metadata: '{"registration":"กข 1234","status":"DEPARTED","odometer":1200}' }
+    ]);
+    mocks.createDatabase.mockReturnValue({ query: mocks.query, close: mocks.close });
+
+    render(await AuditPage());
+
+    expect(screen.getByText('VR-2570-0001')).toBeInTheDocument();
+    expect(screen.getByText('กข 1234')).toBeInTheDocument();
+    expect(screen.getByText('ออกเดินทาง')).toBeInTheDocument();
+  });
 });

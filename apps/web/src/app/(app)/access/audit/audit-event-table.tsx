@@ -4,7 +4,9 @@ export type AuditEventRow = {
   createdAt: string;
   action: 'workflow.request.submitted' | 'workflow.request.decided' | 'workflow.request.cancelled' | 'workflow.request.resubmitted'
     | 'inventory.category.created' | 'inventory.category.updated' | 'inventory.item.created' | 'inventory.item.updated' | 'inventory.vendor.created' | 'inventory.vendor.updated'
-    | 'inventory.opening.submitted' | 'inventory.opening.returned' | 'inventory.opening.certified' | 'inventory.receipt.posted' | 'inventory.receipt.voided';
+    | 'inventory.opening.submitted' | 'inventory.opening.returned' | 'inventory.opening.certified' | 'inventory.receipt.posted' | 'inventory.receipt.voided'
+    | 'fleet.request.submitted' | 'fleet.request.resubmitted' | 'fleet.request.cancelled' | 'fleet.request.assigned' | 'fleet.request.unassigned' | 'fleet.request.declined'
+    | 'fleet.trip.updated' | 'fleet.trip.departed' | 'fleet.trip.returned' | 'fleet.trip.cancelled' | 'fleet.vehicle.create' | 'fleet.vehicle.update' | 'fleet.driver.create' | 'fleet.driver.update';
   result: 'SUCCESS' | 'APPROVE' | 'REJECT' | 'RETURN';
   requestReference: string | null;
 };
@@ -24,7 +26,21 @@ const actionLabels: Record<AuditEventRow['action'], string> = {
   'inventory.opening.returned': t('auditInventoryOpeningReturned'),
   'inventory.opening.certified': t('auditInventoryOpeningCertified'),
   'inventory.receipt.posted': t('auditInventoryReceiptPosted'),
-  'inventory.receipt.voided': t('auditInventoryReceiptVoided')
+  'inventory.receipt.voided': t('auditInventoryReceiptVoided'),
+  'fleet.request.submitted': t('auditFleetRequestSubmitted'),
+  'fleet.request.resubmitted': t('auditFleetRequestResubmitted'),
+  'fleet.request.cancelled': t('auditFleetRequestCancelled'),
+  'fleet.request.assigned': t('auditFleetRequestAssigned'),
+  'fleet.request.unassigned': t('auditFleetRequestUnassigned'),
+  'fleet.request.declined': t('auditFleetRequestDeclined'),
+  'fleet.trip.updated': t('auditFleetTripUpdated'),
+  'fleet.trip.departed': t('auditFleetTripDeparted'),
+  'fleet.trip.returned': t('auditFleetTripReturned'),
+  'fleet.trip.cancelled': t('auditFleetTripCancelled'),
+  'fleet.vehicle.create': t('auditFleetVehicleCreate'),
+  'fleet.vehicle.update': t('auditFleetVehicleUpdate'),
+  'fleet.driver.create': t('auditFleetDriverCreate'),
+  'fleet.driver.update': t('auditFleetDriverUpdate')
 };
 export const auditActionNames = Object.keys(actionLabels) as AuditEventRow['action'][];
 
