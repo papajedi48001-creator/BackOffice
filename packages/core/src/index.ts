@@ -49,6 +49,7 @@ export * from './fleet/fleet-notices';
 export * from './fleet/fleet-store';
 export * from './fleet/fleet-request-service';
 export * from './fleet/fleet-dispatch-service';
+export * from './fleet/fleet-queries';
 export * from './audit/audit-service';
 export * from './audit/database-audit-repository';
 export * from './files/attachment-service';
