@@ -18,6 +18,8 @@ export interface WorkflowRepository {
   getPositionTitle?(personId: string): Promise<string | null>;
   /** Others who must act when a คำขอ is returned or rejected, such as a trip's หัวหน้าคณะ; optional, none by default. */
   getFollowers?(requestId: string): Promise<string[]>;
+  /** Others to tell when a คำขอ is fully approved, such as the dispatchers who must now assign a car; optional, none by default. Each gets one in-app notice. */
+  getApprovalWatchers?(request: { id: string; moduleCode: string }): Promise<Array<{ personId: string; subject: string; targetPath: string }>>;
 }
 
 export interface ApproverResolver { resolve(input: { moduleCode: string; requestorPersonId: string; organizationId: string; target?: CommandChainTarget }): Promise<ApproverSnapshot[]>; }

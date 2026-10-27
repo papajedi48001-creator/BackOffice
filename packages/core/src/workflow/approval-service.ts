@@ -7,7 +7,7 @@ import type { WorkflowRepository } from './request-service';
 export interface ActiveDelegationFinder { findActiveFor(delegatorPersonId: string, delegatePersonId: string, moduleCode: string): Promise<Pick<Delegation, 'delegatorPersonId' | 'delegatePersonId' | 'moduleCode'> | null>; }
 
 export class ApprovalService {
-  constructor(private readonly repository: Pick<WorkflowRepository, 'transaction' | 'getRequestForUpdate' | 'getSteps' | 'saveRequest' | 'saveStep' | 'saveDecision' | 'saveOutbox' | 'appendAudit' | 'getPositionTitle' | 'getFollowers'>, private readonly delegations: ActiveDelegationFinder, private readonly createId: () => string = randomUUID) {}
+  constructor(private readonly repository: Pick<WorkflowRepository, 'transaction' | 'getRequestForUpdate' | 'getSteps' | 'saveRequest' | 'saveStep' | 'saveDecision' | 'saveOutbox' | 'appendAudit' | 'getPositionTitle' | 'getFollowers' | 'getApprovalWatchers'>, private readonly delegations: ActiveDelegationFinder, private readonly createId: () => string = randomUUID) {}
 
   async decideRequest(input: Parameters<typeof decideRequestInputSchema.parse>[0]): Promise<ApprovalDecision> {
     const decisionInput = decideRequestInputSchema.parse(input);
@@ -34,6 +34,8 @@ export class ApprovalService {
       // A return or rejection also reaches whoever else must act on it, such as the หัวหน้าคณะ who resubmits a trip.
       const followers = decisionInput.decision === 'APPROVE' ? [] : (await repository.getFollowers?.(request.id) ?? []).filter((personId) => personId !== request.requestorPersonId);
       const notices = [{ recipientPersonId: request.requestorPersonId, subject: `${action} > ${actorTitle}` }, ...followers.map((recipientPersonId) => ({ recipientPersonId, subject: `${action} > ${actorTitle}` })), ...(nextStep ? [{ recipientPersonId: nextStep.assigneeSnapshot.personId, subject: 'มีคำขอรอพิจารณา' }] : [])];
+      // Only the final approval reaches watchers; the deciding head already has the decision notice above, so is not told twice.
+      const watchers = status === 'APPROVED' ? (await repository.getApprovalWatchers?.({ id: request.id, moduleCode: request.moduleCode }) ?? []).filter((watcher) => watcher.personId !== decisionInput.actorPersonId) : [];
       await repository.saveStep({ ...step, status: stepStatus });
       if (decisionInput.decision !== 'APPROVE') {
         for (const leftover of steps.slice(stepIndex + 1)) {
@@ -45,6 +47,9 @@ export class ApprovalService {
       await repository.saveOutbox(outbox);
       for (const { recipientPersonId, subject } of notices) {
         await repository.saveOutbox({ id: this.createId(), type: 'notification.in_app', idempotencyKey: `notification.in_app:request-decided:${decision.id}:recipient:${recipientPersonId}`, payload: notificationEventPayloadSchema.parse({ ...notificationTarget(request.moduleCode, request.id), recipientPersonId, requestId: request.id, subject }), occurredAt: new Date().toISOString(), processedAt: null });
+      }
+      for (const { personId, subject, targetPath } of watchers) {
+        await repository.saveOutbox({ id: this.createId(), type: 'notification.in_app', idempotencyKey: `notification.in_app:request-approved:${decision.id}:recipient:${personId}`, payload: notificationEventPayloadSchema.parse({ ...notificationTarget(request.moduleCode, request.id), targetPath, recipientPersonId: personId, requestId: request.id, subject }), occurredAt: new Date().toISOString(), processedAt: null });
       }
       await new AuditService({ append: (event) => repository.appendAudit(event) }, this.createId).recordAudit({ actorPersonId: decision.actorPersonId, action: 'workflow.request.decided', targetType: 'request', targetId: request.id, result: decision.decision, metadata: { moduleCode: request.moduleCode, requestReference: request.reference, status, organizationId: request.organizationSnapshot.organizationId } });
       return decision;
