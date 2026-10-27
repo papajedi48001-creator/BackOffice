@@ -42,9 +42,9 @@
 - [x] Commit `feat(leave,travel): attach a file to a ใบลา or trip`.
 
 ### Task 4: Web
-- [ ] Failing tests: upload route codes (401, 503, 413, 415, 422, 201); download route headers and 404; AttachmentField uploads and reports the id; leave and travel forms send it; detail pages link it.
-- [ ] Implement.
-- [ ] Commit `feat(web): upload and download attachments on leave and travel`.
+- [x] Failing tests: upload route codes (401, 503, 413, 415, 422, 201); download route headers and 404; AttachmentField uploads and reports the id; leave and travel forms send it; detail pages link it.
+- [x] Implement.
+- [x] Commit `feat(web): upload and download attachments on leave and travel`.
 
 ### Task 5: Local services
 - [ ] Dev compose runs SeaweedFS S3 and ClamAV; runbook lines; env examples.

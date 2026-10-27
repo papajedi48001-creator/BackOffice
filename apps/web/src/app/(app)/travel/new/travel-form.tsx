@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { t } from '@backoffice/i18n';
+import { AttachmentField, type AttachedFile } from '../../../../components/attachment-field';
 import { TRAVEL_FUNDING, TRAVEL_TYPES, TRAVEL_VEHICLES, formatBaht, travelErrorMessage, travelFundingLabel, travelTypeLabel, travelVehicleLabel } from '../../../../lib/travel-labels';
 
 export interface TravelPerson { personId: string; displayName: string | null; organizationName: string | null }
@@ -18,7 +19,7 @@ const amount = (value: string) => { const number = Number(value); return Number.
 const label = (person: TravelPerson) => person.displayName ?? '—';
 
 /** Files a คำขอไปราชการ, or with `travelId` edits and resubmits a returned one. The หัวหน้าคณะ is fixed first; people cannot change on an edit. */
-export function TravelForm({ leader, travelId, initial, fixedMembers }: { leader: TravelPerson; travelId?: string; initial?: TravelFormValues; fixedMembers?: TravelPerson[] }) {
+export function TravelForm({ leader, travelId, initial, fixedMembers, attachments = false, initialAttachment = null }: { leader: TravelPerson; travelId?: string; initial?: TravelFormValues; fixedMembers?: TravelPerson[]; attachments?: boolean; initialAttachment?: AttachedFile | null }) {
   const router = useRouter();
   const [form, setForm] = useState<TravelFormValues>(initial ?? empty);
   const [others, setOthers] = useState<TravelPerson[]>([]);
@@ -26,6 +27,7 @@ export function TravelForm({ leader, travelId, initial, fixedMembers }: { leader
   const [found, setFound] = useState<TravelPerson[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [file, setFile] = useState<AttachedFile | null>(initialAttachment);
   const people = fixedMembers ?? [leader, ...others];
 
   useEffect(() => {
@@ -52,7 +54,8 @@ export function TravelForm({ leader, travelId, initial, fixedMembers }: { leader
       subject: form.subject.trim(), organiser: form.organiser.trim(), place: form.place.trim(), province: form.province.trim(), travelType: form.travelType, vehicle: form.vehicle, fundingSource: form.fundingSource,
       startDate: form.startDate, endDate: form.endDate, startHalf: form.startHalf, endHalf: form.endHalf,
       ...Object.fromEntries(costFields.map(([field]) => [field, amount(form[field])])),
-      memberPersonIds: travelId ? [] : others.map((person) => person.personId)
+      memberPersonIds: travelId ? [] : others.map((person) => person.personId),
+      ...(attachments ? { attachmentId: file?.attachmentId ?? null } : {})
     };
     try {
       const response = await fetch(travelId ? `/api/travel/${encodeURIComponent(travelId)}` : '/api/travel', { method: travelId ? 'PUT' : 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
@@ -122,7 +125,7 @@ export function TravelForm({ leader, travelId, initial, fixedMembers }: { leader
         </ul>)}
       </>}
     </fieldset>
-    <p className="permission-notice">{t('travelAttachmentNote')}</p>
+    {attachments ? <AttachmentField id="travel-attachment" label={t('attachmentTravel')} value={file} onChange={setFile} /> : <p className="permission-notice">{t('travelAttachmentNote')}</p>}
     {error && <p role="alert" className="form-error">{error}</p>}
     <div className="form-actions"><button type="submit" disabled={busy}>{travelId ? t('travelResubmit') : t('travelSubmit')}</button></div>
   </form>;

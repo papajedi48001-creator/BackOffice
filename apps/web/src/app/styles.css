@@ -401,3 +401,5 @@ video.inventory-camera { display: block; flex-basis: 100%; width: 100%; max-widt
   @page { size: A4 portrait; margin: 18mm 16mm; }
   .travel-print { max-width: none; font-family: 'TH Sarabun New', var(--font-body, sans-serif); color: #000; }
 }
+.attachment-field .field-help { margin: 4px 0 0; color: var(--muted); font-size: 0.9rem; }
+.attachment-field p a { overflow-wrap: anywhere; }

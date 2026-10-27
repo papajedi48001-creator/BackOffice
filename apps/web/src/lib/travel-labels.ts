@@ -6,7 +6,7 @@ const vehicleKeys: Record<string, MessageKey> = { GOVERNMENT_CAR: 'travelVehicle
 const fundingKeys: Record<string, MessageKey> = { HOSPITAL_FUND: 'travelFundingHospital', ORGANISER: 'travelFundingOrganiser', NONE: 'travelFundingNone' };
 const errorKeys: Record<string, MessageKey> = {
   NO_TRAVEL_DAYS: 'travelErrorNoDays', INVALID_MEMBERS: 'travelErrorInvalidMembers', NO_ORGANIZATION: 'travelErrorNoOrganization', NO_APPROVER: 'travelErrorNoApprover', OVERLAPS_LEAVE: 'travelErrorOverlapsLeave', OVERLAPS_TRAVEL: 'travelErrorOverlapsTravel',
-  NOT_FOUND: 'travelErrorNotFound', NOT_RETURNED: 'travelErrorNotReturned', NOT_PENDING: 'travelErrorNotPending', REPORT_NOT_DUE: 'travelErrorReportNotDue', invalid_input: 'leaveErrorInvalid',
+  NOT_FOUND: 'travelErrorNotFound', NOT_RETURNED: 'travelErrorNotReturned', NOT_PENDING: 'travelErrorNotPending', REPORT_NOT_DUE: 'travelErrorReportNotDue', invalid_input: 'leaveErrorInvalid', INVALID_ATTACHMENT: 'attachmentErrorInvalid',
   CONFLICT_OF_INTEREST: 'leaveErrorConflict', APPROVER_REQUIRED: 'leaveErrorApproverRequired', REQUEST_NOT_PENDING: 'leaveErrorRequestNotPending'
 };
 const bahtFormatter = new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

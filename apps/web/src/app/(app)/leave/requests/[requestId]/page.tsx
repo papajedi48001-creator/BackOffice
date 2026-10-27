@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { LeaveQueries, LeaveSettingsService } from '@backoffice/core';
 import { t } from '@backoffice/i18n';
 import { formatBangkokDate, formatBangkokTime } from '../../../../../lib/bangkok-time';
+import { attachmentsEnabled } from '../../../../../lib/attachments';
 import { getSharedDatabase } from '../../../../../lib/database';
 import { formatLeaveRange, leaveKindLabel, leaveStepLabel, leaveWarningText } from '../../../../../lib/leave-labels';
 import { LeaveForm } from '../../new/leave-form';
@@ -32,6 +33,7 @@ export default async function LeaveRequestPage({ params }: { params: Promise<{ r
       <div><strong>{t('leaveDays')}</strong><span>{view.days}</span></div>
       <div><strong>{view.kind === 'LEAVE' ? t('leaveReason') : t('leaveCancelDaysReason')}</strong><span>{view.reason}</span></div>
       {view.contactDuringLeave && <div><strong>{t('leaveContact')}</strong><span>{view.contactDuringLeave}</span></div>}
+      {view.attachment && <div><strong>{t('attachmentFile')}</strong><span><a href={`/api/attachments/${encodeURIComponent(view.attachment.attachmentId)}/download`}>{view.attachment.filename ?? t('attachmentFile')}</a></span></div>}
       <div><strong>{t('leaveSubmittedAt')}</strong><span>{instant(view.submittedAt)}</span></div>
     </div>
     {view.medicalCertificateRequired && <p className="leave-notice">{t('leaveMedicalCertificateFlag')}</p>}
@@ -43,7 +45,7 @@ export default async function LeaveRequestPage({ params }: { params: Promise<{ r
     </table></div>
     {view.cancellations.length > 0 && <><h3>{t('leaveCancellations')}</h3><LeaveTable items={view.cancellations} /></>}
     <LeaveActions requestId={view.requestId} canDecide={view.canDecide} canCancel={view.canCancel} canRequestCancelDays={view.canRequestCancelDays} returnedCancelDays={view.kind === 'CANCEL_DAYS' && view.status === 'RETURNED' && view.canCancel ? { startDate: view.startDate, endDate: view.endDate, startHalf: view.startHalf, endHalf: view.endHalf, reason: view.reason } : undefined} />
-    {editable && <><h3>{t('leaveEditReturned')}</h3><LeaveForm types={types} requestId={view.requestId} initial={{ leaveTypeId: view.leaveTypeId, startDate: view.startDate, endDate: view.endDate, startHalf: view.startHalf, endHalf: view.endHalf, reason: view.reason, contactDuringLeave: view.contactDuringLeave }} /></>}
+    {editable && <><h3>{t('leaveEditReturned')}</h3><LeaveForm types={types} requestId={view.requestId} attachments={attachmentsEnabled()} initialAttachment={view.attachment} initial={{ leaveTypeId: view.leaveTypeId, startDate: view.startDate, endDate: view.endDate, startHalf: view.startHalf, endHalf: view.endHalf, reason: view.reason, contactDuringLeave: view.contactDuringLeave }} /></>}
     {owner && <p><a href="/leave/mine">{t('leaveBack')}</a></p>}
   </section>;
 }

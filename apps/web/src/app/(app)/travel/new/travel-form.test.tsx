@@ -49,4 +49,22 @@ describe('TravelForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'ส่งขออนุมัติ' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('นางพรทิพย์ ใจดี: มีใบลาในช่วงวันที่นี้');
   });
+
+  it('sends the attached หนังสือเชิญ, or explains the old way while attachments are off', async () => {
+    const fetchMock = vi.fn(async (url: string) => url === '/api/attachments' ? json({ attachmentId: 'att-1', filename: 'เชิญ.pdf', contentType: 'application/pdf', sizeBytes: 8 }, 201) : json({ ok: true, travelId: 'travel-1' }, 201));
+    vi.stubGlobal('fetch', fetchMock);
+    const { unmount } = render(<TravelForm leader={leader} />);
+    expect(screen.getByText('หนังสือเชิญ: ระบบยังแนบไฟล์ไม่ได้ ให้ส่งสำเนาตามช่องทางเดิม')).toBeInTheDocument();
+    expect(screen.queryByLabelText('หนังสือเชิญหรือเอกสารประกอบ')).not.toBeInTheDocument();
+    unmount();
+    render(<TravelForm leader={leader} attachments />);
+    fillTrip();
+    fireEvent.change(screen.getByLabelText('หนังสือเชิญหรือเอกสารประกอบ'), { target: { files: [new File(['%PDF-1.7'], 'เชิญ.pdf', { type: 'application/pdf' })] } });
+    expect(await screen.findByRole('link', { name: 'เชิญ.pdf' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'ส่งขออนุมัติ' }));
+    await waitFor(() => expect(mocks.push).toHaveBeenCalled());
+    const [url, init] = fetchMock.mock.calls.at(-1)! as unknown as [string, RequestInit];
+    expect(url).toBe('/api/travel');
+    expect(JSON.parse(init.body as string).attachmentId).toBe('att-1');
+  });
 });

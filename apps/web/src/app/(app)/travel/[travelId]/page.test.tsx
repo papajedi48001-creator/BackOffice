@@ -28,7 +28,7 @@ function ready(view: unknown) {
   mocks.detail.mockResolvedValue(view);
 }
 
-afterEach(() => { vi.clearAllMocks(); vi.unstubAllGlobals(); });
+afterEach(() => { vi.clearAllMocks(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
 describe('TravelPage', () => {
   it('shows the trip, each person with their own status, and decide buttons only where the viewer decides', async () => {
@@ -79,5 +79,12 @@ describe('TravelPage', () => {
     expect(screen.getByText('อบรมต่อในหน่วยงาน')).toBeInTheDocument();
     expect(screen.queryByRole('form', { name: 'รายงานการไปราชการ' })).toBeNull();
     expect(screen.getByRole('link', { name: 'พิมพ์แบบขออนุมัติ' })).toHaveAttribute('href', '/travel/travel-1/print');
+  });
+
+  it('links the attached หนังสือเชิญ for everyone who may see the trip', async () => {
+    ready({ ...detail, attachment: { attachmentId: 'att-2', filename: 'เชิญ.pdf' } });
+    for (const [name, value] of Object.entries({ S3_ENDPOINT: 'http://seaweedfs:8333', S3_BUCKET: 'b', S3_ACCESS_KEY_ID: 'k', S3_SECRET_ACCESS_KEY: 's', CLAMD_HOST: 'clamav' })) vi.stubEnv(name, value);
+    render(await TravelPage(params()));
+    expect(screen.getByRole('link', { name: 'เชิญ.pdf' })).toHaveAttribute('href', '/api/attachments/att-2/download');
   });
 });

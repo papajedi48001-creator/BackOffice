@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { OfficialTravelQueries } from '@backoffice/core';
 import { t, type MessageKey } from '@backoffice/i18n';
 import { formatBangkokDate, formatBangkokTime } from '../../../../lib/bangkok-time';
+import { attachmentsEnabled } from '../../../../lib/attachments';
 import { getSharedDatabase } from '../../../../lib/database';
 import { formatLeaveRange, leaveStepLabel } from '../../../../lib/leave-labels';
 import { formatBaht, travelFundingLabel, travelTypeLabel, travelVehicleLabel } from '../../../../lib/travel-labels';
@@ -36,6 +37,7 @@ export default async function TravelPage({ params }: { params: Promise<{ travelI
       <div><strong>{t('travelFunding')}</strong><span>{travelFundingLabel(view.fundingSource)}</span></div>
       <div><strong>{t('travelCosts')}</strong><span>{costRows.filter(([key]) => view.costs[key] > 0).map(([key, label]) => `${withoutUnit(t(label))} ${formatBaht(view.costs[key])}`).join(' · ') || '—'}</span></div>
       <div><strong>{t('travelCostTotal')}</strong><span>{formatBaht(view.costs.total)} {t('travelBaht')}</span></div>
+      {view.attachment && <div><strong>{t('attachmentFile')}</strong><span><a href={`/api/attachments/${encodeURIComponent(view.attachment.attachmentId)}/download`}>{view.attachment.filename ?? t('attachmentFile')}</a></span></div>}
     </div>
     <h3>{t('travelMembers')}</h3>
     <div className="leave-table-scroll"><table>
@@ -59,6 +61,8 @@ export default async function TravelPage({ params }: { params: Promise<{ travelI
       leader={leader ?? { personId: view.leaderPersonId, displayName: view.leaderDisplayName, organizationName: null }}
       travelId={view.travelId}
       fixedMembers={view.members}
+      attachments={attachmentsEnabled()}
+      initialAttachment={view.attachment}
       initial={{ subject: view.subject, organiser: view.organiser, place: view.place, province: view.province, travelType: view.travelType, vehicle: view.vehicle, fundingSource: view.fundingSource, startDate: view.startDate, endDate: view.endDate, startHalf: view.startHalf, endHalf: view.endHalf, costAllowance: String(view.costs.allowance || ''), costLodging: String(view.costs.lodging || ''), costTransport: String(view.costs.transport || ''), costRegistration: String(view.costs.registration || '') }}
     /></>}
     <p className="travel-detail-links"><a href={`/travel/${view.travelId}/print`}>{t('travelPrint')}</a> · <a href="/travel/mine">{t('travelBack')}</a></p>
