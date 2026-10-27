@@ -43,15 +43,15 @@ export default async function FleetDashboardPage() {
     </ul>
 
     <h3>{t('fleetQueue')}</h3>
-    {view.queue.length === 0 ? <p>{t('fleetQueueEmpty')}</p> : <div className="leave-table-scroll"><table>
+    {view.queue.length === 0 ? <p>{t('fleetQueueEmpty')}</p> : <div className="leave-table-scroll fleet-queue"><table>
       <thead><tr><th>{t('fleetReference')}</th><th>{t('fleetRequester')}</th><th>{t('fleetDestination')}</th><th>{t('fleetTimes')}</th><th>{t('fleetPassengers')}</th><th></th></tr></thead>
       <tbody>{view.queue.map((item) => <tr key={item.id} className={item.overdue ? 'fleet-queue-overdue' : item.soon ? 'fleet-queue-soon' : undefined}>
-        <td><Link href={`/fleet/requests/${item.id}`}>{item.reference}</Link>{(item.overdue || item.soon) && <><br /><span className="fleet-flag">{t(item.overdue ? 'fleetOverdue' : 'fleetSoon')}</span></>}</td>
-        <td>{item.requesterName ?? '—'}<br /><small>{item.organizationName ?? ''}</small></td>
-        <td>{item.destination} · {item.province}<br /><small>{item.purpose}</small></td>
-        <td>{formatFleetRange(item.departAt, item.returnAt)}</td>
-        <td>{item.passengerCount} {t('fleetPeopleUnit')}</td>
-        <td><DispatchActions request={{ id: item.id, reference: item.reference, departAt: item.departAt, returnAt: item.returnAt }} /></td>
+        <td className="fleet-queue-reference"><Link href={`/fleet/requests/${item.id}`}>{item.reference}</Link>{(item.overdue || item.soon) && <><br /><span className="fleet-flag">{t(item.overdue ? 'fleetOverdue' : 'fleetSoon')}</span></>}</td>
+        <td data-label={t('fleetRequester')}>{item.requesterName ?? '—'}<br /><small>{item.organizationName ?? ''}</small></td>
+        <td data-label={t('fleetDestination')}>{item.destination} · {item.province}<br /><small>{item.purpose}</small></td>
+        <td data-label={t('fleetTimes')}>{formatFleetRange(item.departAt, item.returnAt)}</td>
+        <td data-label={t('fleetPassengers')}>{item.passengerCount} {t('fleetPeopleUnit')}</td>
+        <td className="fleet-queue-actions"><DispatchActions request={{ id: item.id, reference: item.reference, departAt: item.departAt, returnAt: item.returnAt }} /></td>
       </tr>)}</tbody>
     </table></div>}
 
