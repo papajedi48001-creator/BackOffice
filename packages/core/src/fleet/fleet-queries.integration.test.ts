@@ -103,6 +103,16 @@ describeWithDatabase('FleetQueries against MariaDB', () => {
     expect(seen?.history.map((entry) => entry.action)).toEqual(['ASSIGNED']);
   });
 
+  it('closes a cancelled ใบ to the driver of the เที่ยวรถ it was cancelled off', async () => {
+    const { id, requester } = await waiting();
+    const driverId = await driver();
+    await assign(id, (await vehicle()).id, driverId);
+    expect(await queries.detail(id, subject(driverId))).toMatchObject({ id });
+    expect(await requests.cancel(requester, id, 'เหตุผลลับ')).toEqual({ ok: true });
+    expect(await queries.detail(id, subject(driverId))).toBeNull();
+    expect(await queries.detail(id, subject(requester))).toMatchObject({ status: 'CANCELLED', trip: null });
+  });
+
   it('lists the history in order with reasons, and the requester may resubmit only a returned ใบ', async () => {
     const requester = await createLeavePerson(database, org.section);
     const id = await filed(requester);
@@ -255,6 +265,10 @@ describeWithDatabase('FleetQueries against MariaDB', () => {
     await database.execute("UPDATE fleet_trip SET status = 'RETURNED', returned_at = '2026-10-27 05:00:00' WHERE id = ?", [t1]);
     expect((await queries.driving(driverId)).map((entry) => entry.id)).toEqual([t1, t2]);
     expect(await queries.driving(randomUUID())).toEqual([]);
+    await database.execute("UPDATE fleet_trip SET status = 'DEPARTED', returned_at = NULL, ends_at = '2026-10-26 09:00:00' WHERE id = ?", [t1]);
+    expect((await queries.driving(driverId)).map((entry) => entry.id)).toEqual([t1, t2]);
+    await database.execute("UPDATE fleet_trip SET status = 'PLANNED' WHERE id = ?", [t1]);
+    expect((await queries.driving(driverId)).map((entry) => entry.id)).toEqual([t2]);
 
     expect(await queries.trip(t2, subject(driverId))).toMatchObject({ id: t2, registration: car.registration, status: 'PLANNED' });
     expect(await queries.trip(t2, subject(manager, true))).toMatchObject({ id: t2 });

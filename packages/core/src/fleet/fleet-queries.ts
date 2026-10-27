@@ -66,7 +66,7 @@ export class FleetQueries {
     const [row] = await this.database.query<RequestRow>(`${REQUESTS} WHERE f.id = ?`, [id]);
     if (!row) return null;
     const manager = canManageFleet(viewer);
-    const trip = row.tripId ? (await this.database.query<FleetTripSummary & { driverPersonId: string }>(
+    const trip = row.tripId && row.dispatchStatus === 'ASSIGNED' ? (await this.database.query<FleetTripSummary & { driverPersonId: string }>(
       `SELECT t.id, v.registration, v.make_model AS makeModel, t.driver_person_id AS driverPersonId, dp.display_name AS driverName, COALESCE(d.phone, '') AS driverPhone, t.status
        FROM fleet_trip t JOIN fleet_vehicle v ON v.id = t.vehicle_id JOIN person dp ON dp.id = t.driver_person_id LEFT JOIN fleet_driver d ON d.person_id = t.driver_person_id WHERE t.id = ?`, [row.tripId]))[0] ?? null : null;
     const requester = row.requesterPersonId === personId;
@@ -145,10 +145,10 @@ export class FleetQueries {
     return vehicles.map((vehicle) => ({ vehicle, blocks: blocks.filter((block) => block.vehicleId === vehicle.id).map(({ startsAt, endsAt, province, status }) => ({ startsAt, endsAt, province, status })) }));
   }
 
-  /** The driver's PLANNED and DEPARTED เที่ยวรถ ending today or later, and today's RETURNED ones. */
+  /** The driver's DEPARTED เที่ยวรถ (even overdue), PLANNED ones ending today or later, and today's RETURNED ones. */
   async driving(personId: string): Promise<DriverTrip[]> {
     const { start } = this.today();
-    const rows = await this.database.query<TripRow>(`${TRIP_DETAIL} WHERE t.driver_person_id = ? AND ((t.status IN ('PLANNED', 'DEPARTED') AND t.ends_at >= ?) OR (t.status = 'RETURNED' AND t.returned_at >= ?)) ORDER BY t.starts_at, t.id`, [personId, start, start]);
+    const rows = await this.database.query<TripRow>(`${TRIP_DETAIL} WHERE t.driver_person_id = ? AND (t.status = 'DEPARTED' OR (t.status = 'PLANNED' AND t.ends_at >= ?) OR (t.status = 'RETURNED' AND t.returned_at >= ?)) ORDER BY t.starts_at, t.id`, [personId, start, start]);
     return this.withRequests(rows);
   }
 
