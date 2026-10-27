@@ -43,6 +43,7 @@ export * from './fleet/fleet-module';
 export * from './fleet/fleet-status';
 export * from './fleet/fleet-rules';
 export * from './fleet/fleet-access';
+export * from './fleet/fleet-catalog-service';
 export * from './audit/audit-service';
 export * from './audit/database-audit-repository';
 export * from './files/attachment-service';
