@@ -63,7 +63,7 @@ describe('POST /api/fleet/requests', () => {
     const response = await FILE(json('POST', filing));
     expect(response.status).toBe(201);
     await expect(response.json()).resolves.toEqual({ ok: true, fleetRequestId: 'fr-1' });
-    expect(mocks.submit).toHaveBeenCalledWith('person-a', { ...filing, passengerNames: '' });
+    expect(mocks.submit).toHaveBeenCalledWith('person-a', { ...filing, passengerNames: '', contactPhone: '' });
     const forged = await FILE(json('POST', { ...filing, requesterPersonId: 'person-z' }));
     expect(forged.status).toBe(400);
     expect(mocks.submit).toHaveBeenCalledTimes(1);
@@ -92,7 +92,7 @@ describe('/api/fleet/requests/[id]', () => {
     ready();
     mocks.resubmit.mockResolvedValueOnce({ ok: true }).mockRejectedValueOnce(new Error('REQUEST_NOT_RETURNED'));
     expect((await RESUBMIT(json('PUT', filing), id)).status).toBe(200);
-    expect(mocks.resubmit).toHaveBeenCalledWith('person-a', 'id-1', { ...filing, passengerNames: '' });
+    expect(mocks.resubmit).toHaveBeenCalledWith('person-a', 'id-1', { ...filing, passengerNames: '', contactPhone: '' });
     const raced = await RESUBMIT(json('PUT', filing), id);
     expect(raced.status).toBe(409);
     await expect(raced.json()).resolves.toEqual({ error: 'NOT_PENDING' });
