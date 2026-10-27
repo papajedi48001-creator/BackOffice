@@ -24,11 +24,11 @@ export class AttachmentService {
   }
 
   /** The bytes of a file the authorizer lets this person see; NOT_FOUND otherwise, so a refusal never confirms the file exists. */
-  async openAttachment(input: DownloadInput, authorizer: DownloadAuthorizer): Promise<{ attachment: Attachment; bytes: Uint8Array }> {
+  async openAttachment(input: DownloadInput, authorizer: DownloadAuthorizer, options: { recordDownload?: boolean } = {}): Promise<{ attachment: Attachment; bytes: Uint8Array }> {
     const attachment = await this.attachments.findById(input.attachmentId);
     if (!attachment || !(await authorizer.canDownload(input, attachment))) throw new Error('NOT_FOUND');
     const bytes = await this.storage.getPrivate(attachment.objectKey);
-    await this.attachments.recordDownload(attachment.id, input.actorPersonId);
+    if (options.recordDownload !== false) await this.attachments.recordDownload(attachment.id, input.actorPersonId);
     return { attachment, bytes };
   }
 }
@@ -37,5 +37,6 @@ function hasExpectedSignature(contentType: UploadAttachmentInput['contentType'],
   const startsWith = (...prefix: number[]) => prefix.every((value, index) => bytes[index] === value);
   if (contentType === 'application/pdf') return startsWith(0x25, 0x50, 0x44, 0x46, 0x2d);
   if (contentType === 'image/jpeg') return startsWith(0xff, 0xd8, 0xff);
+  if (contentType === 'image/webp') return startsWith(0x52, 0x49, 0x46, 0x46) && [0x57, 0x45, 0x42, 0x50].every((value, index) => bytes[8 + index] === value);
   return startsWith(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a);
 }

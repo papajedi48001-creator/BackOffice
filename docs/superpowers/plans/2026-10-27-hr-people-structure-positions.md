@@ -33,7 +33,7 @@ Each service sits behind Next.js route handlers guarded by `canActHospitalWide`.
 
 ---
 
-### Task A1: Unit structure service and migration 0017
+### Task A1: Unit structure service and migration 0018
 - [x] Failing integration tests in `packages/core/src/hr/organization-structure-service.integration.test.ts`:
   - create a กลุ่มงาน, and a งาน under it;
   - refuse a duplicate sibling name (`DUPLICATE_NAME`);
@@ -42,7 +42,7 @@ Each service sits behind Next.js route handlers guarded by `canActHospitalWide`.
   - delete a กลุ่มงาน: its งาน are deleted too, their assignments and head terms are closed, and the audit counts are right;
   - `HrDirectory.listOrganizations` hides deleted units;
   - a profile save to a deleted unit gives `UNKNOWN_ORGANIZATION`.
-- [x] Migration `0017_organization_soft_delete.sql`, the Drizzle `deletedAt` field, and the service.
+- [x] Migration `0018_organization_soft_delete.sql` (renumbered from 0017 after `0017_person_photo.sql` landed on main), the Drizzle `deletedAt` field, and the service.
 - [x] Commit `feat(hr): add, rename, move and delete กลุ่มงาน and งาน`.
 
 ### Task A2: Routes and organizations UI
@@ -75,7 +75,7 @@ Each service sits behind Next.js route handlers guarded by `canActHospitalWide`.
     - delete it only when unused, otherwise `POSITION_IN_USE`;
     - a CSV import adds or updates by name;
     - a profile save checks the position and level (`UNKNOWN_POSITION`, `INACTIVE_POSITION`, `LEVEL_NOT_ALLOWED`).
-- [ ] Migration `0018_hr_position.sql`: the table, the seed, and `hr_person_profile.position_id`.
+- [ ] Migration `0019_hr_position.sql`: the table, the seed, and `hr_person_profile.position_id`.
 - [ ] Commit `feat(hr): position catalogue with ก.พ. levels`.
 
 ### Task B2: Positions page and person form suggestions

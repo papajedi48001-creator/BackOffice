@@ -90,6 +90,10 @@ export const updatePersonProfileInputSchema = z.object({
 }).strict();
 export type UpdatePersonProfileInput = z.infer<typeof updatePersonProfileInputSchema>;
 
+/** ข้อมูลส่วนตัว the person edits for themself; work fields stay with HR. */
+export const updateOwnPersonalInputSchema = updatePersonProfileInputSchema.pick({ namePrefix: true, firstName: true, lastName: true, gender: true, birthDate: true }).strict();
+export type UpdateOwnPersonalInput = z.infer<typeof updateOwnPersonalInputSchema>;
+
 /** Contact fields the person edits for themself. */
 export const updatePersonContactInputSchema = z.object({
   phone: phoneSchema, address: optionalText(500),

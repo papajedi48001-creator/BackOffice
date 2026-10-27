@@ -12,7 +12,7 @@ Status: draft for wasan's review. Agreed section by section in the thread "พ�
 |---|---|---|
 | 1 | Who picks the car | The requester gives destination, times and passengers only. งานยานพาหนะ assigns the car and driver. |
 | 2 | Approval | Two stages: the requester's head agrees through the central workflow (`NEAREST_HEAD`), then the หัวหน้าหมวดยานพาหนะ assigns a car or declines. |
-| 3 | ไปราชการ | An approved คำขอไปราชการ with vehicle รถราชการ has a "ขอใช้รถ" button. It prefills the form and skips the head stage, because the trip itself was already approved up the chain. Other uses (documents, patient transfer between units) file a normal ใบขอใช้รถ. |
+| 3 | ไปราชการ | (Changed: the ใบ is now filed automatically when the trip is approved; see `2026-10-27-fleet-auto-from-travel-design.md`. The button stays as the fallback.) An approved คำขอไปราชการ with vehicle รถราชการ has a "ขอใช้รถ" button. It prefills the form and skips the head stage, because the trip itself was already approved up the chain. Other uses (documents, patient transfer between units) file a normal ใบขอใช้รถ. |
 | 4 | Drivers | Drivers are บุคลากร in the staff registry, added to a driver list by the หัวหน้าหมวด. They are notified of their work and see their own schedule. The module's first page is the หัวหน้าหมวด's dashboard and dispatch centre. |
 | 5 | Trip log | The driver taps ออกเดินทาง and กลับถึง with the odometer reading at each. |
 | 6 | Shared rides | The หัวหน้าหมวด creates a เที่ยวรถ (car + driver + time range) and can attach several ใบขอใช้รถ to it. The odometer is logged per เที่ยวรถ. Seat count is recorded on the car for the หัวหน้าหมวด's reference only; the system does not check passengers against it. |

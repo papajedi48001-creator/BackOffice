@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { updatePersonContactInputSchema, updatePersonProfileInputSchema, type AccessSubject, type Gender, type UpdatePersonContactInput, type UpdatePersonProfileInput } from '@backoffice/contracts';
+import { MAX_PROFILE_PHOTO_BYTES, profilePhotoContentTypeSchema, updateOwnPersonalInputSchema, updatePersonContactInputSchema, updatePersonProfileInputSchema, type AccessSubject, type Gender, type UpdateOwnPersonalInput, type UpdatePersonContactInput, type UpdatePersonProfileInput } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { AuditService } from '../audit/audit-service';
 import { DatabaseAuditRepository } from '../audit/database-audit-repository';
@@ -10,7 +10,7 @@ import { profileAccess, type ProfileAccess } from './profile-access';
 export interface ProfileWork {
   personId: string; employeeCode: string | null; displayName: string | null; employmentStatus: string;
   organizationId: string | null; organizationName: string | null; positionTitle: string | null; positionLevel: string | null;
-  employmentTypeId: string | null; employmentTypeName: string | null; appointedOn: string | null;
+  employmentTypeId: string | null; employmentTypeName: string | null; appointedOn: string | null; photoAttachmentId: string | null;
 }
 export interface ProfilePrivate {
   namePrefix: string | null; firstName: string | null; lastName: string | null; gender: Gender | null; birthDate: string | null;
@@ -20,7 +20,7 @@ export type WorkChanges = Record<string, { from: string | null; to: string | nul
 export interface ProfileChange { at: string; actorDisplayName: string | null; action: string; changedFields: string[]; workChanges: WorkChanges; }
 export interface ProfileView { work: ProfileWork; private: ProfilePrivate | null; access: ProfileAccess; history: ProfileChange[]; }
 
-export const profileAuditActions = ['hr.person.profile.update', 'hr.person.contact.update'] as const;
+export const profileAuditActions = ['hr.person.profile.update', 'hr.person.personal.update', 'hr.person.contact.update', 'hr.person.photo.update'] as const;
 const historyLimit = 50;
 const workFields = ['employmentType', 'appointedOn', 'positionTitle', 'positionLevel', 'organization'] as const;
 const contactFields = ['phone', 'address', 'emergencyContactName', 'emergencyContactRelationship', 'emergencyContactPhone'] as const;
@@ -36,6 +36,10 @@ export type ProfileSubject = { personId: string; organizationId: string | null; 
 
 export type UpdateProfileResult = { ok: true } | { ok: false; code: 'NOT_FOUND' | 'FORBIDDEN' | 'GENDER_REQUIRED' | 'UNKNOWN_EMPLOYMENT_TYPE' | 'INACTIVE_EMPLOYMENT_TYPE' | 'UNKNOWN_ORGANIZATION' };
 export type UpdateContactResult = { ok: true } | { ok: false; code: 'NOT_FOUND' | 'FORBIDDEN' };
+export type UpdateOwnPersonalResult = { ok: true } | { ok: false; code: 'NOT_FOUND' | 'FORBIDDEN' | 'GENDER_REQUIRED' };
+export type SetPhotoResult = { ok: true } | { ok: false; code: 'NOT_FOUND' | 'FORBIDDEN' | 'INVALID_PHOTO' };
+
+const isSelf = (actor: AccessSubject, personId: string) => actor.authenticated && actor.personId === personId;
 
 /** Reads and edits a บุคลากร's profile. Private columns are only selected for a viewer allowed to see them. */
 export class HrProfileService {
@@ -45,7 +49,7 @@ export class HrProfileService {
     const [work] = await this.database.query<ProfileWork>(
       `SELECT p.id AS personId, p.employee_code AS employeeCode, p.display_name AS displayName, p.employment_status AS employmentStatus,
          a.organization_id AS organizationId, o.name AS organizationName, p.position_title AS positionTitle, pr.position_level AS positionLevel,
-         pr.employment_type_id AS employmentTypeId, t.name AS employmentTypeName, DATE_FORMAT(pr.appointed_on, '%Y-%m-%d') AS appointedOn
+         pr.employment_type_id AS employmentTypeId, t.name AS employmentTypeName, DATE_FORMAT(pr.appointed_on, '%Y-%m-%d') AS appointedOn, pr.photo_attachment_id AS photoAttachmentId
        FROM person p
        LEFT JOIN employment_assignment a ON a.id = (SELECT latest.id FROM employment_assignment latest WHERE latest.person_id = p.id AND latest.effective_until IS NULL ORDER BY latest.effective_from DESC LIMIT 1)
        LEFT JOIN organization o ON o.id = a.organization_id
@@ -115,13 +119,48 @@ export class HrProfileService {
     }, { isolationLevel: 'READ COMMITTED' });
   }
 
+  /** The person's own ข้อมูลส่วนตัว (prefix, names, gender, birth date). Nobody edits another person's through this; HR uses updateProfile. */
+  async updateOwnPersonal(personId: string, input: UpdateOwnPersonalInput, actor: AccessSubject): Promise<UpdateOwnPersonalResult> {
+    const valid = updateOwnPersonalInputSchema.parse(input);
+    if (!isSelf(actor, personId)) return { ok: false, code: 'FORBIDDEN' };
+    return this.database.transaction(async (database): Promise<UpdateOwnPersonalResult> => {
+      const subject = await lockProfileSubject(database, personId);
+      if (!subject) return { ok: false, code: 'NOT_FOUND' };
+      const result = await applyProfileUpdate(database, subject, valid, personId, this.createId, { canEditOrganization: () => false, syncDisplayName: true, auditAction: 'hr.person.personal.update' });
+      return result.ok || result.code === 'NOT_FOUND' || result.code === 'FORBIDDEN' || result.code === 'GENDER_REQUIRED' ? result as UpdateOwnPersonalResult : { ok: false, code: 'FORBIDDEN' };
+    }, { isolationLevel: 'READ COMMITTED' });
+  }
+
+  /** Sets (or with null removes) the person's own photo: an image they uploaded themself, of an allowed type and size. */
+  async setOwnPhoto(personId: string, attachmentId: string | null, actor: AccessSubject): Promise<SetPhotoResult> {
+    if (!isSelf(actor, personId)) return { ok: false, code: 'FORBIDDEN' };
+    return this.database.transaction(async (database): Promise<SetPhotoResult> => {
+      const subject = await lockProfileSubject(database, personId);
+      if (!subject) return { ok: false, code: 'NOT_FOUND' };
+      if (attachmentId !== null) {
+        const [file] = await database.query<{ contentType: string; sizeBytes: string; createdBy: string }>('SELECT content_type AS contentType, size_bytes AS sizeBytes, created_by_person_id AS createdBy FROM attachment WHERE id = ?', [attachmentId]);
+        if (!file || file.createdBy !== personId || !profilePhotoContentTypeSchema.safeParse(file.contentType).success || Number(file.sizeBytes) > MAX_PROFILE_PHOTO_BYTES) return { ok: false, code: 'INVALID_PHOTO' };
+      }
+      const [current] = await database.query<{ photo: string | null }>('SELECT photo_attachment_id AS photo FROM hr_person_profile WHERE person_id = ?', [personId]);
+      if ((current?.photo ?? null) === attachmentId) return { ok: true };
+      await database.execute(`INSERT INTO hr_person_profile (person_id, photo_attachment_id, updated_at) VALUES (?, ?, UTC_TIMESTAMP())
+        ON DUPLICATE KEY UPDATE photo_attachment_id = VALUES(photo_attachment_id), updated_at = VALUES(updated_at)`, [personId, attachmentId]);
+      await recordProfileAudit(database, 'hr.person.photo.update', personId, personId, { changedFields: ['photo'], workChanges: {} }, this.createId);
+      return { ok: true };
+    }, { isolationLevel: 'READ COMMITTED' });
+  }
+
+  async photoAttachmentOf(personId: string): Promise<string | null> {
+    const [row] = await this.database.query<{ photo: string | null }>('SELECT photo_attachment_id AS photo FROM hr_person_profile WHERE person_id = ?', [personId]);
+    return row?.photo ?? null;
+  }
 }
 
 /**
  * Writes personal and work fields for a person whose row the caller already locked, with one audit event.
  * Access is the caller's job; the master data import calls this inside its own transaction.
  */
-export async function applyProfileUpdate(database: QueryDatabase, subject: ProfileSubject, valid: UpdatePersonProfileInput, actorPersonId: string, createId: () => string, options: { canEditOrganization: (organizationId: string) => boolean; syncDisplayName: boolean }): Promise<UpdateProfileResult> {
+export async function applyProfileUpdate(database: QueryDatabase, subject: ProfileSubject, valid: UpdatePersonProfileInput, actorPersonId: string, createId: () => string, options: { canEditOrganization: (organizationId: string) => boolean; syncDisplayName: boolean; auditAction?: string }): Promise<UpdateProfileResult> {
   const stored = await readStoredProfile(database, subject.personId);
   let employmentTypeName = stored.employmentTypeId ? await employmentTypeNameOf(database, stored.employmentTypeId) : null;
   const before: Record<string, string | null> = { ...pick(stored, ['namePrefix', 'firstName', 'lastName', 'gender', 'birthDate', 'appointedOn', 'positionLevel']) as Record<string, string | null>, employmentType: employmentTypeName, positionTitle: subject.positionTitle, organization: subject.organizationName };
@@ -163,7 +202,7 @@ export async function applyProfileUpdate(database: QueryDatabase, subject: Profi
   if (moved && valid.organizationId) await moveAssignment(database, subject, valid.organizationId, createId);
   // No unit (ไม่มีสังกัด): the open assignment is closed and none replaces it.
   if (moved && valid.organizationId === null) await database.execute('UPDATE employment_assignment SET effective_until = UTC_TIMESTAMP() WHERE person_id = ? AND effective_until IS NULL', [subject.personId]);
-  await recordProfileAudit(database, 'hr.person.profile.update', subject.personId, actorPersonId, changes, createId);
+  await recordProfileAudit(database, options.auditAction ?? 'hr.person.profile.update', subject.personId, actorPersonId, changes, createId);
   return { ok: true };
 }
 
