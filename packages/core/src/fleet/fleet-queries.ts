@@ -46,7 +46,7 @@ interface RequestRow { id: string; reference: string; requesterPersonId: string;
 
 const instant = (column: string) => `DATE_FORMAT(${column}, '%Y-%m-%dT%H:%i:%s.000Z')`;
 /** Oldest first within a second, where `created_at` ties. `HEAD_*` are the head's decisions on the คำขอ, merged in from the central workflow. */
-const ACTION_ORDER = ['SUBMITTED', 'HEAD_RETURN', 'HEAD_REJECT', 'RESUBMITTED', 'HEAD_APPROVE', 'ASSIGNED', 'UNASSIGNED', 'DECLINED', 'CANCELLED'];
+const ACTION_ORDER = ['SUBMITTED', 'FILED_FROM_TRAVEL', 'HEAD_RETURN', 'HEAD_REJECT', 'RESUBMITTED', 'HEAD_APPROVE', 'ASSIGNED', 'UNASSIGNED', 'DECLINED', 'CANCELLED'];
 /** The head's decisions on the ใบ's คำขอ, as history entries; a reason only for ส่งกลับแก้ไข and ไม่เห็นชอบ. */
 const HEAD_DECISIONS = `SELECT CONCAT('HEAD_', d.decision) AS action, p.display_name AS actorName, CASE WHEN d.decision IN ('RETURN', 'REJECT') THEN d.reason END AS reason, ${instant('d.created_at')} AS createdAt
   FROM approval_decision d JOIN approval_step s ON s.id = d.approval_step_id LEFT JOIN person p ON p.id = d.actor_person_id WHERE s.request_id = ? AND d.decision IN ('APPROVE', 'RETURN', 'REJECT')`;
