@@ -37,3 +37,30 @@ export function FleetCancel({ fleetRequestId }: { fleetRequestId: string }) {
 export function FleetUnassign({ fleetRequestId }: { fleetRequestId: string }) {
   return <FleetStep label={t('fleetUnassign')} url={`/api/fleet/requests/${encodeURIComponent(fleetRequestId)}/assignment`} method="DELETE" tone="primary" />;
 }
+
+type Decision = 'APPROVE' | 'RETURN' | 'REJECT';
+const decisionLabels = { APPROVE: 'fleetHeadApprove', RETURN: 'fleetHeadReturn', REJECT: 'fleetHeadReject' } as const;
+
+/** The head stage: เห็นชอบ, ส่งกลับแก้ไข or ไม่เห็นชอบ the head คำขอ through the central workflow, which re-checks that the viewer decides it now. */
+export function HeadDecision({ requestId }: { requestId: string }) {
+  const router = useRouter();
+  const [dialog, setDialog] = useState<Decision | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function confirm(decision: Decision, reason: string) {
+    setBusy(true); setError(null);
+    const sent = await sendFleet(`/api/requests/${encodeURIComponent(requestId)}/decisions`, 'POST', decision === 'APPROVE' ? { decision } : { decision, reason });
+    setBusy(false);
+    if (sent.error) { setError(sent.error); return; }
+    setDialog(null);
+    router.refresh();
+  }
+
+  return <>
+    <button type="button" disabled={busy} onClick={() => setDialog('APPROVE')}>{t('fleetHeadApprove')}</button>
+    <button type="button" className="button-secondary" disabled={busy} onClick={() => setDialog('RETURN')}>{t('fleetHeadReturn')}</button>
+    <button type="button" className="button-danger" disabled={busy} onClick={() => setDialog('REJECT')}>{t('fleetHeadReject')}</button>
+    {dialog && <ActionDialog title={t(decisionLabels[dialog])} message={dialog === 'APPROVE' ? t('dialogConfirmQuestion') : undefined} confirmLabel={t('confirmAction')} tone={dialog === 'REJECT' ? 'danger' : 'primary'} reason={dialog !== 'APPROVE'} isSubmitting={busy} error={error} onConfirm={(reason) => void confirm(dialog, reason)} onClose={() => { setDialog(null); setError(null); }} />}
+  </>;
+}

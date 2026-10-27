@@ -7,6 +7,7 @@ import { formatFleetRange } from '../../../../../lib/fleet-labels';
 import { TripLogActions } from '../../driving/trip-log-actions';
 import { fleetContext, FleetPageMessage, TripStatusPill } from '../../fleet-page';
 import { FleetUnassign } from '../../requests/[id]/fleet-actions';
+import { TripEdit } from './trip-edit';
 
 /** รายละเอียดเที่ยวรถ for the หัวหน้าหมวด and its driver; the query returns nothing to anyone else. */
 export default async function FleetTripPage({ params }: { params: Promise<{ id: string }> }) {
@@ -24,6 +25,9 @@ export default async function FleetTripPage({ params }: { params: Promise<{ id: 
       {trip.odometerOut !== null && <div><strong>{t('fleetOdometerOut')}</strong><span>{trip.odometerOut.toLocaleString('th-TH')}{trip.departedAt ? ` · ${formatBangkokDateTime(trip.departedAt)}` : ''}</span></div>}
       {trip.odometerIn !== null && <div><strong>{t('fleetOdometerIn')}</strong><span>{trip.odometerIn.toLocaleString('th-TH')}{trip.returnedAt ? ` · ${formatBangkokDateTime(trip.returnedAt)}` : ''}</span></div>}
     </div>
+    {manager && trip.status === 'PLANNED' && <div className="request-actions">
+      <TripEdit trip={{ id: trip.id, vehicleId: trip.vehicleId, registration: trip.registration, makeModel: trip.makeModel, driverPersonId: trip.driverPersonId, driverName: trip.driverName, startsAt: trip.startsAt, endsAt: trip.endsAt }} />
+    </div>}
     <TripLogActions tripId={trip.id} status={trip.status} label={trip.registration} />
     <h3>{t('fleetRequest')}</h3>
     <div className="leave-table-scroll"><table>

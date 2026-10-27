@@ -23,7 +23,7 @@ const errorKeys: Record<string, MessageKey> = {
   NOT_FOUND: 'fleetErrorNotFound', NOT_PENDING: 'fleetErrorNotPending', NOT_RETURNED: 'fleetErrorNotReturned',
   VEHICLE_BUSY: 'fleetErrorVehicleBusy', DRIVER_BUSY: 'fleetErrorDriverBusy', VEHICLE_UNAVAILABLE: 'fleetErrorVehicleUnavailable', DRIVER_INACTIVE: 'fleetErrorDriverInactive', TRIP_DOES_NOT_COVER: 'fleetErrorTripDoesNotCover',
   DEPARTURE_TOO_EARLY: 'fleetErrorDepartureTooEarly', ODOMETER_BELOW_LAST: 'fleetErrorOdometerBelowLast', ODOMETER_BELOW_OUT: 'fleetErrorOdometerBelowOut',
-  DRIVER_HAS_TRIPS: 'fleetErrorDriverHasTrips', DUPLICATE_REGISTRATION: 'fleetErrorDuplicateRegistration', fleet_request_route: 'fleetErrorRequestRoute', invalid_input: 'leaveErrorInvalid'
+  DRIVER_HAS_TRIPS: 'fleetErrorDriverHasTrips', DUPLICATE_REGISTRATION: 'fleetErrorDuplicateRegistration', fleet_request_route: 'fleetErrorRequestRoute', invalid_input: 'leaveErrorInvalid', decision_not_accepted: 'actionNotAccepted'
 };
 
 export const VEHICLE_KINDS: readonly VehicleKind[] = ['SEDAN', 'PICKUP', 'VAN', 'AMBULANCE', 'OTHER'];
@@ -54,8 +54,8 @@ export function formatFleetRange(startsAt: string, endsAt: string): string {
   return startDay === endDay ? `${start} – ${formatBangkokTime(endsAt)}` : `${start} – ${formatBangkokDate(endDay)} ${formatBangkokTime(endsAt)}`;
 }
 
-/** POSTs or PUTs JSON to a fleet route; the Thai error text, or null when it worked. Reasons travel in the body only. */
-export async function sendFleet(url: string, method: 'POST' | 'PUT' | 'DELETE', body?: unknown): Promise<{ error: string | null; result: Record<string, unknown> }> {
+/** Sends JSON to a fleet (or central decisions) route; the Thai error text, or null when it worked. Reasons travel in the body only. */
+export async function sendFleet(url: string, method: 'POST' | 'PUT' | 'PATCH' | 'DELETE', body?: unknown): Promise<{ error: string | null; result: Record<string, unknown> }> {
   try {
     const response = await fetch(url, { method, headers: { 'content-type': 'application/json' }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
     const result = (await response.json().catch(() => ({}))) as Record<string, unknown>;

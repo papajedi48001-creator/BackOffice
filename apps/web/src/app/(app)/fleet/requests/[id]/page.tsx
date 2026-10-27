@@ -7,7 +7,7 @@ import { fleetHistoryLabel, formatFleetRange, toBangkokLocal } from '../../../..
 import { DispatchActions } from '../../dashboard/assign-dialog';
 import { fleetContext, FleetPageMessage, FleetStatus } from '../../fleet-page';
 import { FleetForm } from '../../new/fleet-form';
-import { FleetCancel, FleetUnassign } from './fleet-actions';
+import { FleetCancel, FleetUnassign, HeadDecision } from './fleet-actions';
 
 /** รายละเอียดใบ: who may see it, and which actions they get, is decided by the query on the server. */
 export default async function FleetRequestPage({ params }: { params: Promise<{ id: string }> }) {
@@ -32,6 +32,7 @@ export default async function FleetRequestPage({ params }: { params: Promise<{ i
       </>}
     </div>
     <div className="request-actions">
+      {view.canDecide && view.requestId && <HeadDecision requestId={view.requestId} />}
       {view.canCancel && <FleetCancel fleetRequestId={view.id} />}
       {manager && view.trip?.status === 'PLANNED' && <FleetUnassign fleetRequestId={view.id} />}
       {manager && view.trip && <Link className="button-link" href={`/fleet/trips/${view.trip.id}`}>{t('fleetOpenTrip')}</Link>}

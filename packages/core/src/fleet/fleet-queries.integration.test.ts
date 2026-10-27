@@ -300,8 +300,23 @@ describeWithDatabase('FleetQueries against MariaDB', () => {
     expect(await queries.activeRequestForTravel(travelId)).toBeNull();
     const result = await requests.submit(leader, { ...draft, officialTravelId: travelId });
     if (!result.ok) throw new Error(result.code);
-    expect(await queries.activeRequestForTravel(travelId)).toBe(result.fleetRequestId);
+    expect(await queries.activeRequestForTravel(travelId)).toEqual({ id: result.fleetRequestId, reference: expect.stringMatching(/^VR-/), requesterPersonId: leader });
     expect(await requests.cancel(leader, result.fleetRequestId, 'ไม่ไปแล้ว')).toEqual({ ok: true });
     expect(await queries.activeRequestForTravel(travelId)).toBeNull();
+  });
+  it('lets only the pending head step\'s assignee or an active ผู้แทน decide, and only while the head คำขอ is in review', async () => {
+    const requester = await createLeavePerson(database, org.section);
+    const id = await filed(requester);
+    const deputy = await createLeavePerson(database, org.section);
+    await database.execute("INSERT INTO delegation (id, delegator_person_id, delegate_person_id, module_code, reason, effective_from, effective_until, created_at) VALUES (?, ?, ?, 'fleet', 'ประชุม', UTC_TIMESTAMP() - INTERVAL 1 DAY, UTC_TIMESTAMP() + INTERVAL 1 DAY, UTC_TIMESTAMP())", [randomUUID(), org.sectionHead, deputy]);
+    expect(await queries.detail(id, subject(org.sectionHead))).toMatchObject({ canDecide: true });
+    expect(await queries.detail(id, subject(deputy))).toMatchObject({ canDecide: true });
+    expect(await queries.detail(id, subject(requester))).toMatchObject({ canDecide: false });
+    expect(await queries.detail(id, subject(manager, true))).toMatchObject({ canDecide: false });
+    const [row] = await database.query<{ requestId: string }>('SELECT request_id AS requestId FROM fleet_request WHERE id = ?', [id]);
+    await new ApprovalService(new DatabaseWorkflowRepository(database), { findActiveFor: async () => null }).decideRequest({ requestId: row!.requestId, actorPersonId: org.sectionHead, decision: 'APPROVE' });
+    const decided = await queries.detail(id, subject(org.sectionHead));
+    expect(decided).toMatchObject({ status: 'WAITING', canDecide: false });
+    expect((await queries.detail((await waiting()).id, subject(manager, true)))?.canDecide).toBe(false);
   });
 });

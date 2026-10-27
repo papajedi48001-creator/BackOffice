@@ -82,9 +82,9 @@ describe('TravelPage', () => {
   });
   describe('ขอใช้รถ', () => {
     const approved = { ...detail, status: 'APPROVED', endDate: '2026-11-11', members: detail.members.map((member) => ({ ...member, status: 'APPROVED' })) };
-    const asMember = (view: unknown, existing: string | null = null) => {
+    const asMember = (view: unknown, existing: { id: string; reference: string; requesterPersonId: string } | null = null, personId = 'person-a', roles: unknown[] = []) => {
       ready(view);
-      mocks.readSession.mockResolvedValue({ authenticated: true, personId: 'person-a', roles: [], dataOwnerModules: [] });
+      mocks.readSession.mockResolvedValue({ authenticated: true, personId, roles, dataOwnerModules: [] });
       mocks.activeRequestForTravel.mockResolvedValue(existing);
     };
     beforeEach(() => { vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-10-27T03:00:00Z')); });
@@ -96,10 +96,24 @@ describe('TravelPage', () => {
       expect(screen.getByRole('link', { name: 'ขอใช้รถ' })).toHaveAttribute('href', '/fleet/new?travel=travel-1');
     });
 
-    it('links to the ใบ already filed instead', async () => {
-      asMember(approved, 'f9');
+    it('links the requester to the ใบ already filed instead', async () => {
+      asMember(approved, { id: 'f9', reference: 'VR-2570-0009', requesterPersonId: 'person-a' });
       render(await TravelPage(params()));
       expect(screen.queryByRole('link', { name: 'ขอใช้รถ' })).toBeNull();
+      expect(screen.getByRole('link', { name: 'ดูใบขอใช้รถ' })).toHaveAttribute('href', '/fleet/requests/f9');
+    });
+
+    it('tells a co-traveller who did not file it that the trip has a ใบ, without a link they could not open', async () => {
+      asMember(approved, { id: 'f9', reference: 'VR-2570-0009', requesterPersonId: 'person-b' });
+      render(await TravelPage(params()));
+      expect(screen.queryByRole('link', { name: 'ดูใบขอใช้รถ' })).toBeNull();
+      expect(screen.queryByRole('link', { name: 'ขอใช้รถ' })).toBeNull();
+      expect(screen.getByText('มีใบขอใช้รถแล้ว VR-2570-0009')).toBeInTheDocument();
+    });
+
+    it('links the หัวหน้าหมวดยานพาหนะ to the ใบ when they are going too', async () => {
+      asMember(approved, { id: 'f9', reference: 'VR-2570-0009', requesterPersonId: 'person-b' }, 'person-a', [{ name: 'fleet-manager', organizationId: null }]);
+      render(await TravelPage(params()));
       expect(screen.getByRole('link', { name: 'ดูใบขอใช้รถ' })).toHaveAttribute('href', '/fleet/requests/f9');
     });
 

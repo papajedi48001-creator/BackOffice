@@ -17,6 +17,8 @@ export interface FleetTripSummary { id: string; registration: string; makeModel:
 export interface FleetRequestDetail extends FleetRequestListItem {
   requesterPersonId: string; requesterName: string | null; organizationName: string | null; province: string; passengerCount: number; passengerNames: string; officialTravelId: string | null; requestId: string | null; filedAt: string;
   history: FleetHistoryEntry[]; trip: FleetTripSummary | null; canCancel: boolean; canResubmit: boolean; canDispatch: boolean;
+  /** The viewer may เห็นชอบ, ส่งกลับแก้ไข or ไม่เห็นชอบ the head คำขอ now: its pending step's assignee or their active ผู้แทน, never the requester. */
+  canDecide: boolean;
 }
 export interface QueueItem { id: string; reference: string; requesterName: string | null; organizationName: string | null; purpose: string; destination: string; province: string; departAt: string; returnAt: string; passengerCount: number; soon: boolean; overdue: boolean }
 export interface BoardTrip { id: string; startsAt: string; endsAt: string; driverName: string | null; status: TripStatus; requestCount: number }
@@ -81,7 +83,8 @@ export class FleetQueries {
       requesterPersonId: row.requesterPersonId, requesterName: row.requesterName, organizationName: row.organizationName, province: row.province, passengerCount: Number(row.passengerCount), passengerNames: row.passengerNames,
       officialTravelId: row.officialTravelId, requestId: row.requestId, filedAt: row.filedAt, history,
       trip: trip ? { id: trip.id, registration: trip.registration, makeModel: trip.makeModel, driverName: trip.driverName, driverPhone: trip.driverPhone, status: trip.status } : null,
-      canCancel: requester && canCancel(status), canResubmit: requester && status === 'RETURNED', canDispatch: manager && status === 'WAITING'
+      canCancel: requester && canCancel(status), canResubmit: requester && status === 'RETURNED', canDispatch: manager && status === 'WAITING',
+      canDecide: !requester && row.headStatus === 'IN_REVIEW' && (await this.onHeadStage(row.requestId, personId, true))
     };
   }
 
@@ -91,9 +94,10 @@ export class FleetQueries {
   }
 
   /** The ใบ filed for a คำขอไปราชการ that is still live (not ไม่จัดรถ, ยกเลิก or ไม่เห็นชอบ), newest first; null when there is none. */
-  async activeRequestForTravel(travelId: string): Promise<string | null> {
+  async activeRequestForTravel(travelId: string): Promise<{ id: string; reference: string; requesterPersonId: string } | null> {
     const rows = await this.database.query<RequestRow>(`${REQUESTS} WHERE f.official_travel_id = ? ORDER BY f.created_at DESC, f.id`, [travelId]);
-    return rows.find((row) => !CLOSED.has(statusOf(row)))?.id ?? null;
+    const live = rows.find((row) => !CLOSED.has(statusOf(row)));
+    return live ? { id: live.id, reference: live.reference, requesterPersonId: live.requesterPersonId } : null;
   }
 
   async isActiveDriver(personId: string): Promise<boolean> {
@@ -196,10 +200,11 @@ export class FleetQueries {
   }
 
   /** The assignee of any head step of the คำขอ, or an active ผู้แทน of its pending step. */
-  private async onHeadStage(requestId: string | null, personId: string): Promise<boolean> {
+  /** With `pendingOnly`, only the step waiting now counts: who may decide, rather than who may see. */
+  private async onHeadStage(requestId: string | null, personId: string, pendingOnly = false): Promise<boolean> {
     if (!requestId) return false;
     const [row] = await this.database.query<{ found: number }>(
-      `SELECT 1 AS found FROM approval_step s WHERE s.request_id = ? AND (JSON_VALUE(s.assignee_snapshot, '$.personId') = ?
+      `SELECT 1 AS found FROM approval_step s WHERE s.request_id = ?${pendingOnly ? " AND s.status = 'PENDING'" : ''} AND (JSON_VALUE(s.assignee_snapshot, '$.personId') = ?
          OR (s.status = 'PENDING' AND JSON_VALUE(s.assignee_snapshot, '$.personId') IN (SELECT delegator_person_id FROM delegation WHERE delegate_person_id = ? AND module_code = '${FLEET_MODULE}' AND effective_from <= UTC_TIMESTAMP() AND effective_until > UTC_TIMESTAMP()))) LIMIT 1`,
       [requestId, personId, personId]);
     return row !== undefined;

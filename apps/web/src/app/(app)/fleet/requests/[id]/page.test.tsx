@@ -14,7 +14,7 @@ const base = {
   id: 'f1', reference: 'VR-2570-0001', purpose: 'ส่งเอกสาร', destination: 'สสจ.มหาสารคาม', province: 'มหาสารคาม', departAt: '2026-11-10T01:00:00.000Z', returnAt: '2026-11-10T09:00:00.000Z', status: 'WAITING',
   requesterPersonId: 'person-a', requesterName: 'นางพรทิพย์ ใจดี', organizationName: 'งานผู้ป่วยใน', passengerCount: 2, passengerNames: 'นายเอ นายบี', officialTravelId: null, requestId: 'r1', filedAt: '2026-10-27T03:00:00.000Z',
   history: [{ action: 'SUBMITTED', actorName: 'นางพรทิพย์ ใจดี', reason: null, createdAt: '2026-10-27T03:00:00.000Z' }],
-  trip: null, canCancel: true, canResubmit: false, canDispatch: false
+  trip: null, canCancel: true, canResubmit: false, canDispatch: false, canDecide: false
 };
 const assigned = { ...base, status: 'ASSIGNED', canCancel: false, trip: { id: 't1', registration: 'กข 1234', makeModel: 'Toyota Commuter', driverName: 'นายขับ ดี', driverPhone: '0811111111', status: 'PLANNED' } };
 const params = (id = 'f1') => ({ params: Promise.resolve({ id }) });
@@ -60,5 +60,30 @@ describe('FleetRequestPage', () => {
     ready(null);
     await FleetRequestPage(params());
     expect(mocks.notFound).toHaveBeenCalled();
+  });
+  it('lets the head decide: เห็นชอบ with no reason, ส่งกลับแก้ไข and ไม่เห็นชอบ with one, through the central decisions route', async () => {
+    ready({ ...base, status: 'HEAD_REVIEW', canCancel: false, canDecide: true });
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ id: 'd1' }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(await FleetRequestPage(params()));
+    expect(screen.getByRole('button', { name: 'ส่งกลับแก้ไข' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'ไม่เห็นชอบ' }));
+    fireEvent.change(screen.getByLabelText('เหตุผล'), { target: { value: 'ไม่จำเป็นต้องใช้รถ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ยืนยัน' }));
+    await waitFor(() => expect(mocks.refresh).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole('button', { name: 'เห็นชอบ' }));
+    fireEvent.click(screen.getByRole('button', { name: 'ยืนยัน' }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    const calls = fetchMock.mock.calls as unknown as Array<[string, RequestInit]>;
+    expect(calls.map(([url]) => url)).toEqual(['/api/requests/r1/decisions', '/api/requests/r1/decisions']);
+    expect(JSON.parse(calls[0]![1].body as string)).toEqual({ decision: 'REJECT', reason: 'ไม่จำเป็นต้องใช้รถ' });
+    expect(JSON.parse(calls[1]![1].body as string)).toEqual({ decision: 'APPROVE' });
+  });
+
+  it('shows no decision buttons to anyone who may not decide', async () => {
+    ready({ ...base, status: 'HEAD_REVIEW' });
+    render(await FleetRequestPage(params()));
+    expect(screen.queryByRole('button', { name: 'เห็นชอบ' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'ไม่เห็นชอบ' })).toBeNull();
   });
 });
