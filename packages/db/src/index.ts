@@ -20,3 +20,4 @@ export * from './schema/rooms.ts';
 export * from './schema/inventory.ts';
 export * from './schema/leave.ts';
 export * from './schema/official-travel.ts';
+export * from './schema/fleet.ts';
