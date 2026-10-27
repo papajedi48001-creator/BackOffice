@@ -3,7 +3,7 @@ import { t } from '@backoffice/i18n';
 import { bangkokToday, formatBangkokDate, formatBangkokTime } from '../lib/bangkok-time';
 import { dateFields, genderLabelKeys, profileFieldLabelKeys } from '../lib/hr-profile-labels';
 import { ContactForm, PersonalForm, PhotoForm, ProfileForm } from './hr-profile-forms';
-import { initialsOf } from './profile-menu';
+import { initialsOf } from '../lib/initials';
 
 const day = (value: string | null) => value ? formatBangkokDate(value) : t('notAssigned');
 const text = (value: string | null) => value ?? t('notAssigned');

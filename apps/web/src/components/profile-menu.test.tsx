@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
-import { ProfileMenu, initialsOf } from './profile-menu';
+import { initialsOf } from '../lib/initials';
+import { ProfileMenu } from './profile-menu';
 
 const push = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push, refresh: vi.fn() }) }));
@@ -52,6 +53,7 @@ it('has no badge and no notice list when nothing is unread, but keeps the links'
 
 it('makes initials from a Thai name without its prefix', () => {
   expect(initialsOf('นายสมชาย ใจดี')).toBe('สใ');
+  expect(initialsOf('นายแพทย์ธนพล สมมติชื่อ')).toBe('ธส');
   expect(initialsOf('Jane Doe')).toBe('JD');
   expect(initialsOf(null)).toBe('?');
 });
