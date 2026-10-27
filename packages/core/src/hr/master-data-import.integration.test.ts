@@ -169,9 +169,22 @@ describeWithDatabase('MasterDataImportService against MariaDB', () => {
     const [nursingUnit] = await database.query<{ id: string }>('SELECT id FROM organization WHERE code = ?', [nursing]);
     for (let round = 0; round < 10; round += 1) {
       const target = round % 2 === 0 ? hospitalUnit!.id : nursingUnit!.id;
-      const [imported, saved] = await Promise.all([service.apply({ organizations }, actorPersonId), profiles.updateProfile(nurse!.id, { organizationId: target, positionLevel: `รอบ ${round}` }, manager)]);
+      const [imported, saved] = await Promise.all([service.apply({ organizations }, actorPersonId), profiles.updateProfile(nurse!.id, { organizationId: target, positionLevel: round % 2 === 0 ? 'ปฏิบัติการ' : 'ชำนาญการ' }, manager)]);
       expect(imported.ok).toBe(true);
       expect(saved).toEqual({ ok: true });
     }
+  });
+
+  it('links each imported person to the catalogue position their title names, and re-links on a title change', async () => {
+    const code = `Q${run}`;
+    const id = nationalId(`1${String(Math.floor(Math.random() * 1e11)).padStart(11, '0')}`);
+    const file = (title: string) => `${peopleHeader}\n${code},${id},นางสาวพร ดี,${title},${nursing},,2026-10-01,`;
+    const linked = async () => (await database.query<{ name: string | null }>('SELECT pos.name FROM person p JOIN hr_person_profile pr ON pr.person_id = p.id LEFT JOIN hr_position pos ON pos.id = pr.position_id WHERE p.employee_code = ?', [code]))[0]?.name;
+    await expect(service.apply({ organizations, people: file('พยาบาลวิชาชีพ') }, actorPersonId)).resolves.toMatchObject({ ok: true });
+    expect(await linked()).toBe('พยาบาลวิชาชีพ');
+    await expect(service.apply({ people: file('นักวิชาการสาธารณสุข') }, actorPersonId)).resolves.toMatchObject({ ok: true });
+    expect(await linked()).toBe('นักวิชาการสาธารณสุข');
+    await expect(service.apply({ people: file('ตำแหน่งนอกทะเบียน') }, actorPersonId)).resolves.toMatchObject({ ok: true });
+    expect(await linked()).toBeNull();
   });
 });

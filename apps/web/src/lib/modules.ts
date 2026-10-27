@@ -68,6 +68,7 @@ export const moduleRegistry: readonly ModuleEntry[] = [
     { href: '/hr/organizations', labelKey: 'organizations', visible: hasRole('hr-reader', 'hr-manager') },
     { href: '/hr/imports', labelKey: 'hrImport', visible: (subject) => authorization.canActHospitalWide(subject, 'hr.person.manage', 'hr') },
     { href: '/hr/employment-types', labelKey: 'hrEmploymentTypes', visible: (subject) => authorization.canActHospitalWide(subject, 'hr.person.manage', 'hr') },
+    { href: '/hr/positions', labelKey: 'hrPositions', visible: (subject) => authorization.canActHospitalWide(subject, 'hr.person.manage', 'hr') },
     // Last, so HR staff still land on the people list; everyone else lands here.
     { href: '/hr/me', labelKey: 'hrMyProfile', visible: everyone }
   ]),
