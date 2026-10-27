@@ -46,8 +46,9 @@
 - [x] Implement.
 - [x] Commit `feat(web): upload and download attachments on leave and travel`.
 
-### Task 5: Local services
-- [ ] Dev compose runs SeaweedFS S3 and ClamAV; runbook lines; env examples.
-- [ ] Commit `chore(infra): local object storage and virus scanning`.
+### Task 5: Object storage and virus scanning in every environment
+- [x] Failing tests: dev compose ports and keys, setup-local env, production compose (no MinIO, web keys as secrets, ClamAV egress network, SeaweedFS internal only), restore drill restores SeaweedFS.
+- [x] Dev, staging and production compose run SeaweedFS S3 and ClamAV; backup and restore; runbook lines; env examples.
+- [x] Commit `chore(infra): SeaweedFS and ClamAV for attachments`.
 
 Verification: `pnpm lint && pnpm typecheck && pnpm test`, `DATABASE_URL=… S3_ENDPOINT=http://127.0.0.1:8333 … pnpm test:integration`, `node --test scripts/*.test.mjs`, compose tests, `git diff --check origin/main...HEAD`.

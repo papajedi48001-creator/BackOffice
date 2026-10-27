@@ -31,7 +31,8 @@ trap 'rm -rf "${work_dir}"' EXIT
 
 compose=(docker compose --project-name "${project_name}" --env-file "${env_file}" -f "${compose_file}")
 "${compose[@]}" exec -T mariadb sh -ec 'MYSQL_PWD="$(cat /run/secrets/mariadb_root_password)" mariadb-dump -uroot --single-transaction --routines --events "$MARIADB_DATABASE"' > "${work_dir}/database.sql"
-"${compose[@]}" exec -T minio tar -C /data -cf - . > "${work_dir}/attachments.tar"
+# SeaweedFS keeps volumes, the master state and the filer index under /data; volume files are append-only.
+"${compose[@]}" exec -T seaweedfs tar -C /data -cf - . > "${work_dir}/attachments.tar"
 
 tar -C "${work_dir}" -cf - database.sql attachments.tar | gpg --batch --yes --pinentry-mode loopback --passphrase-file "${key_file}" --symmetric --cipher-algo AES256 --output "${archive}"
 archive_sha256="$(sha256sum "${archive}" | awk '{print $1}')"

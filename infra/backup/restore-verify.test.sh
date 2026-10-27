@@ -29,4 +29,12 @@ done
 assert_restore_contains "person"
 assert_restore_contains "schema_migration"
 assert_restore_contains "BACKUP_ENCRYPTION_KEY_FILE"
+assert_restore_contains "attachment"
+assert_restore_contains "run --rm --no-deps -T --entrypoint tar seaweedfs"
+for script in "${restore_script}" "${script_dir}/backup.sh"; do
+  if grep -qi minio "${script}"; then
+    echo "$(basename "${script}") must back up SeaweedFS, not MinIO" >&2
+    exit 1
+  fi
+done
 echo "restore verification checks ${#required_tables[@]} migrated tables in the encrypted backup"

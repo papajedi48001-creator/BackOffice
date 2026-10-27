@@ -1,6 +1,6 @@
 # ไฟล์แนบส่วนตัว: object storage, scanning and two first uses
 
-Status: approved by wasan ("เอาตามที่แนะนำ", 2026-10-27). File bytes live in S3-compatible object storage on the hospital's own server; MariaDB keeps only the facts about each file. Which storage product runs in staging and production is wasan's open choice (SeaweedFS recommended); the code speaks plain S3 so the choice changes only compose files.
+Status: approved by wasan ("เอาตามที่แนะนำ", 2026-10-27). File bytes live in S3-compatible object storage on the hospital's own server; MariaDB keeps only the facts about each file. wasan chose SeaweedFS (Apache 2.0) for dev, staging and production (2026-10-27), replacing MinIO, whose images are no longer freely available. ClamAV runs beside it. The code speaks plain S3, so another store would change only compose files.
 
 ## Vocabulary
 

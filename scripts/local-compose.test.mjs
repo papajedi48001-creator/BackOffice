@@ -21,14 +21,27 @@ test('dev infrastructure keeps its default host ports', { skip: !hasDocker && 'd
   const { services } = renderCompose({});
   assert.deepEqual(publishedPorts(services.mariadb), ['3307:3306']);
   assert.deepEqual(publishedPorts(services.redis), ['6379:6379']);
-  assert.deepEqual(publishedPorts(services.minio), ['9000:9000', '9001:9001']);
+  assert.deepEqual(publishedPorts(services.seaweedfs), ['8333:8333']);
+  assert.deepEqual(publishedPorts(services.clamav), ['3310:3310']);
+  assert.equal(services.minio, undefined);
 });
 
 test('dev infrastructure host ports follow BACKOFFICE_*_PORT', { skip: !hasDocker && 'docker compose not available' }, () => {
-  const { services } = renderCompose({ BACKOFFICE_DB_PORT: '3308', BACKOFFICE_REDIS_PORT: '6380', BACKOFFICE_MINIO_PORT: '9010', BACKOFFICE_MINIO_CONSOLE_PORT: '9011' });
+  const { services } = renderCompose({ BACKOFFICE_DB_PORT: '3308', BACKOFFICE_REDIS_PORT: '6380', BACKOFFICE_S3_PORT: '8334', BACKOFFICE_CLAMAV_PORT: '3311' });
   assert.deepEqual(publishedPorts(services.mariadb), ['3308:3306']);
   assert.deepEqual(publishedPorts(services.redis), ['6380:6379']);
-  assert.deepEqual(publishedPorts(services.minio), ['9010:9000', '9011:9001']);
+  assert.deepEqual(publishedPorts(services.seaweedfs), ['8334:8333']);
+  assert.deepEqual(publishedPorts(services.clamav), ['3311:3310']);
+});
+
+test('dev SeaweedFS takes the keys .env.example gives the web app', { skip: !hasDocker && 'docker compose not available' }, () => {
+  const { services } = renderCompose({});
+  const config = JSON.parse(readFileSync(new URL('../infra/compose/seaweedfs-dev-s3.json', import.meta.url), 'utf8'));
+  const example = readFileSync(new URL('../.env.example', import.meta.url), 'utf8');
+  const [credential] = config.identities[0].credentials;
+  assert.match(example, new RegExp(`^S3_ACCESS_KEY_ID=${credential.accessKey}$`, 'm'));
+  assert.match(example, new RegExp(`^S3_SECRET_ACCESS_KEY=${credential.secretKey}$`, 'm'));
+  assert.ok(services.seaweedfs.command.includes('-s3.config=/etc/seaweedfs/s3.json'));
 });
 
 test('the lan profile adds an HTTPS proxy only when asked for', { skip: !hasDocker && 'docker compose not available' }, () => {

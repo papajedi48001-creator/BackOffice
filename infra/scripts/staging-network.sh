@@ -68,8 +68,8 @@ case "$mode" in
   start-core)
     render_config
     ensure_network_is_safe
-    "${compose[@]}" up -d mariadb redis minio
-    echo 'Started staging MariaDB, Redis, and MinIO only.'
+    "${compose[@]}" up -d mariadb redis seaweedfs clamav
+    echo 'Started staging MariaDB, Redis, SeaweedFS, and ClamAV only.'
     ;;
   *)
     echo "Usage: $0 {validate|reset-network|start-core}" >&2

@@ -6,7 +6,7 @@
 - A successful encrypted backup is less than 24 hours old.
 - The release images have been scanned and use the approved immutable release tag.
 - `/etc/backoffice/production.env` and every referenced secret file are owned by the operator, mode `0600`, and are outside Git.
-- The approved MinIO AIStor license is stored as `/etc/backoffice/secrets/minio_license`, mode `0600`; never put its contents in an environment file, image, log, or Git.
+- The SeaweedFS S3 keys and identities file exist as described in "Attachment storage and virus scanning" below, mode `0600`; never put the keys in an environment file, image, log, or Git.
 - The Caddy internal CA is trusted on managed client devices, or the Caddy TLS policy has been replaced by an approved certificate policy.
 
 ## Deploy to staging
@@ -21,13 +21,43 @@
 8. Run the notification UAT scenarios using new requests created after this release. Do not replay or mark processed historical `workflow.*` rows.
 9. Check container health, Caddy logs, disk space, backup freshness, queue backlog, and connector error rate through the organization monitoring system.
 
+### Attachment storage and virus scanning
+
+ไฟล์แนบส่วนตัว (ใบรับรองแพทย์, หนังสือเชิญ) are kept in SeaweedFS (Apache 2.0) on the
+internal backplane; MariaDB holds only their details. Every upload is scanned by ClamAV
+before it is stored, and the web app refuses uploads while the scanner is unreachable.
+Downloads always pass through the web app, which checks access on each request.
+
+1. Mirror `chrislusf/seaweedfs` and `clamav/clamav` into the approved registry and set
+   `SEAWEEDFS_IMAGE` and `CLAMAV_IMAGE` to their immutable digests.
+2. Create the S3 keys and the SeaweedFS identities file that holds the same keys:
+
+   ```bash
+   umask 077
+   openssl rand -hex 16 > /etc/backoffice/secrets/s3_access_key_id
+   openssl rand -hex 32 > /etc/backoffice/secrets/s3_secret_access_key
+   printf '{"identities":[{"name":"backoffice","credentials":[{"accessKey":"%s","secretKey":"%s"}],"actions":["Admin","Read","Write","List","Tagging"]}]}\n' \
+     "$(cat /etc/backoffice/secrets/s3_access_key_id)" "$(cat /etc/backoffice/secrets/s3_secret_access_key)" \
+     > /etc/backoffice/secrets/seaweedfs_s3.json
+   ```
+
+   The web app creates the `S3_BUCKET` bucket on first upload.
+3. ClamAV joins the non-internal `updates` network so `freshclam` can download signatures
+   over HTTPS. Allow outbound HTTPS to `database.clamav.net` from the server, or point
+   `freshclam` at an approved local mirror. Give the host about 3 GB of free RAM for
+   `clamd`; the first start can take several minutes while signatures load.
+4. Confirm migration `0015_attachment_filename.sql` is recorded, that `seaweedfs` and
+   `clamav` are healthy, then upload a small PDF on a ใบลา and open it from the detail page.
+   A test file such as the EICAR string must be refused with "ไฟล์นี้ไม่ผ่านการตรวจไวรัส".
+5. Backups include SeaweedFS `/data` as `attachments.tar`; see `infra/backup/README.md`.
+
 ### Staging behind an existing Nginx edge
 
 Use this mode when staging shares a Linux VM with an existing Nginx service. It keeps the Back Office web container private on `127.0.0.1:3100`, leaves the current ports `80` and `443` owned by Nginx, and does not start Caddy.
 
 The shared-Nginx override makes the Docker backplane non-internal so Docker can
-NAT the localhost-published web port. This does not publish MariaDB, Redis, or
-MinIO; their Compose services have no host-port mappings.
+NAT the localhost-published web port. This does not publish MariaDB, Redis,
+SeaweedFS, or ClamAV; their Compose services have no host-port mappings.
 
 1. Obtain an internal DNS record and an internal-CA certificate for the approved staging hostname. Do not reuse an unrelated production hostname.
 2. Copy `infra/nginx/backoffice-staging.conf.template` to an operator-controlled Nginx include, replace `__BACKOFFICE_STAGING_HOSTNAME__`, and set the approved certificate paths.

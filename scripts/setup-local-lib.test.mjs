@@ -8,13 +8,18 @@ import { findSeedDemo, isPortFree, lanAddresses, parseEnv, renderEnv, startsWork
 const example = readFileSync(new URL('../.env.example', import.meta.url), 'utf8');
 
 test('fills database and service URLs from the chosen host ports', () => {
-  const env = parseEnv(renderEnv(example, { dbPort: 3308, redisPort: 6380, minioPort: 9010 }));
+  const env = parseEnv(renderEnv(example, { dbPort: 3308, redisPort: 6380, s3Port: 8334, clamavPort: 3311 }));
   assert.equal(env.DATABASE_URL, 'mysql://backoffice:local-development-only@127.0.0.1:3308/backoffice');
   assert.equal(env.REDIS_URL, 'redis://127.0.0.1:6380');
-  assert.equal(env.S3_ENDPOINT, 'http://127.0.0.1:9010');
+  assert.equal(env.S3_ENDPOINT, 'http://127.0.0.1:8334');
+  assert.equal(env.CLAMD_HOST, '127.0.0.1');
+  assert.equal(env.CLAMD_PORT, '3311');
   assert.equal(env.BACKOFFICE_DB_PORT, '3308');
   assert.equal(env.BACKOFFICE_REDIS_PORT, '6380');
-  assert.equal(env.BACKOFFICE_MINIO_PORT, '9010');
+  assert.equal(env.BACKOFFICE_S3_PORT, '8334');
+  assert.equal(env.BACKOFFICE_CLAMAV_PORT, '3311');
+  assert.equal(env.S3_BUCKET, 'backoffice-attachments');
+  assert.ok(env.S3_ACCESS_KEY_ID && env.S3_SECRET_ACCESS_KEY);
 });
 
 test('uses the compose default ports when none are given', () => {

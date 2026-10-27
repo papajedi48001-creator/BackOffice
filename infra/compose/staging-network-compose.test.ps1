@@ -29,7 +29,7 @@ $expectations = @(
   @{ Content = $helper; Snippet = 'reset-network' },
   @{ Content = $helper; Snippet = 'docker compose' },
   @{ Content = $helper; Snippet = '172.18.0.0/16' },
-  @{ Content = $helper; Snippet = 'up -d mariadb redis minio' }
+  @{ Content = $helper; Snippet = 'up -d mariadb redis seaweedfs clamav' }
   @{ Content = $attributes; Snippet = '*.sh text eol=lf' }
 )
 
