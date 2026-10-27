@@ -163,6 +163,15 @@ describeWithDatabase('FleetRequestService against MariaDB', () => {
       expect(await ofTravel(travelId)).toHaveLength(1);
     });
 
+    it('files exactly one ใบ when two decisions on the same trip follow up at once', async () => {
+      const leader = await createLeavePerson(database, org.section);
+      const member = await createLeavePerson(database, org.section);
+      const travelId = await approvedTrip(leader, [member], 'GOVERNMENT_CAR');
+      const results = await Promise.all([service.fileFromTravelDecision(await memberRequest(travelId, leader), org.sectionHead), service.fileFromTravelDecision(await memberRequest(travelId, member), org.sectionHead)]);
+      expect(results.filter((result) => result.fleetRequestId !== null)).toHaveLength(1);
+      expect(await ofTravel(travelId)).toHaveLength(1);
+    });
+
     it('uses the half-day times and falls back to an approved member when the หัวหน้าคณะ was not approved', async () => {
       const leader = await createLeavePerson(database, org.section);
       const member = await createLeavePerson(database, org.section);

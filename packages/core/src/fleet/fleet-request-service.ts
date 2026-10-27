@@ -105,7 +105,7 @@ export class FleetRequestService {
   /**
    * After a decision on a ไปราชการ คำขอ commits: once the trip by รถราชการ is approved, its ใบ goes straight to the fleet team.
    * Its own READ COMMITTED transaction, locking the trip first as a manual filing does; anything that does not fit files nothing,
-   * and the ขอใช้รถ button stays as the fallback.
+   * and the ขอใช้รถ button stays as the fallback. It checks no access itself: call it only with the actor whose decision just committed.
    */
   async fileFromTravelDecision(requestId: string, actorPersonId: string): Promise<{ fleetRequestId: string | null }> {
     const none = { fleetRequestId: null };
