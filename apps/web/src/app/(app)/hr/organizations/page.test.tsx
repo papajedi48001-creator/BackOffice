@@ -1,16 +1,16 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ headers: vi.fn(), redirect: vi.fn(), readSession: vi.fn(), getSharedDatabase: vi.fn(), listOrganizations: vi.fn() }));
+const mocks = vi.hoisted(() => ({ refresh: vi.fn(), headers: vi.fn(), redirect: vi.fn(), readSession: vi.fn(), getSharedDatabase: vi.fn(), listOrganizations: vi.fn() }));
 vi.mock('next/headers', () => ({ headers: mocks.headers }));
-vi.mock('next/navigation', () => ({ redirect: mocks.redirect }));
+vi.mock('next/navigation', () => ({ redirect: mocks.redirect, useRouter: () => ({ refresh: mocks.refresh }) }));
 vi.mock('../../../../lib/session', () => ({ readSession: mocks.readSession }));
 vi.mock('../../../../lib/database', () => ({ getSharedDatabase: mocks.getSharedDatabase }));
 vi.mock('@backoffice/core', async (importOriginal) => ({ ...await importOriginal<typeof import('@backoffice/core')>(), HrDirectory: class { listOrganizations = mocks.listOrganizations; } }));
 
 import OrganizationsPage from './page';
 
-afterEach(() => vi.clearAllMocks());
+afterEach(() => { vi.clearAllMocks(); vi.unstubAllGlobals(); });
 
 describe('OrganizationsPage', () => {
   it('nests each unit under its parent', async () => {
@@ -69,5 +69,43 @@ describe('OrganizationsPage', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('คุณไม่มีสิทธิ์ดูข้อมูลส่วนนี้');
     expect(mocks.listOrganizations).not.toHaveBeenCalled();
+  });
+
+  it('lets an HR manager add a กลุ่มงาน, and a งาน under a chosen กลุ่มงาน', async () => {
+    mocks.headers.mockResolvedValue(new Headers());
+    mocks.readSession.mockResolvedValue({ authenticated: true, personId: 'manager', roles: [{ name: 'hr-manager', organizationId: null }], dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: ['hr'] });
+    mocks.getSharedDatabase.mockReturnValue({ query: vi.fn() });
+    mocks.listOrganizations.mockResolvedValue([
+      { id: 'hosp', code: 'HOSP', name: 'โรงพยาบาลวาริชภูมิ', parentId: null, activePeople: 1, unitType: 'HOSPITAL' },
+      { id: 'nur', code: 'NUR', name: 'กลุ่มการพยาบาล', parentId: 'hosp', activePeople: 12, unitType: 'DIVISION' }
+    ]);
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true, id: 'new' }), { status: 201 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(await OrganizationsPage());
+
+    const sectionForm = screen.getByRole('form', { name: 'เพิ่มงาน' });
+    fireEvent.change(within(sectionForm).getByLabelText('ชื่องาน'), { target: { value: 'งานผู้ป่วยใน' } });
+    fireEvent.change(within(sectionForm).getByLabelText('กลุ่มงาน'), { target: { value: 'nur' } });
+    fireEvent.click(within(sectionForm).getByRole('button', { name: 'เพิ่มงาน' }));
+    await waitFor(() => expect(mocks.refresh).toHaveBeenCalled());
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('/api/hr/organizations');
+    expect(JSON.parse(init.body as string)).toEqual({ name: 'งานผู้ป่วยใน', unitType: 'SECTION', parentId: 'nur' });
+
+    const divisionForm = screen.getByRole('form', { name: 'เพิ่มกลุ่มงาน' });
+    fireEvent.change(within(divisionForm).getByLabelText('ชื่อกลุ่มงาน'), { target: { value: 'กลุ่มงานเภสัชกรรม' } });
+    fireEvent.click(within(divisionForm).getByRole('button', { name: 'เพิ่มกลุ่มงาน' }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(JSON.parse((fetchMock.mock.calls[1] as unknown as [string, RequestInit])[1].body as string)).toEqual({ name: 'กลุ่มงานเภสัชกรรม', unitType: 'DIVISION' });
+  });
+
+  it('gives an HR reader no add forms', async () => {
+    mocks.headers.mockResolvedValue(new Headers());
+    mocks.readSession.mockResolvedValue({ authenticated: true, personId: 'reader', roles: [{ name: 'hr-reader', organizationId: null }], dataOwnerModules: [] });
+    mocks.getSharedDatabase.mockReturnValue({ query: vi.fn() });
+    mocks.listOrganizations.mockResolvedValue([{ id: 'nur', code: null, name: 'กลุ่มการพยาบาล', parentId: null, activePeople: 1, unitType: 'DIVISION' }]);
+    render(await OrganizationsPage());
+    expect(screen.queryByRole('form', { name: 'เพิ่มงาน' })).toBeNull();
   });
 });

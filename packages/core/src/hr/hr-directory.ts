@@ -4,7 +4,7 @@ import type { Database } from '@backoffice/db';
 export interface DirectoryPerson { id: string; employeeCode: string | null; displayName: string | null; positionTitle: string | null; employmentStatus: string; nationalIdMasked: string | null; employmentTypeName: string | null; organizationName: string | null; organizationCode: string | null; }
 export interface DirectoryOrganization { id: string; code: string | null; name: string; parentId: string | null; activePeople: number; unitType: OrganizationUnitType | null; headPersonId: string | null; headDisplayName: string | null; headActive: boolean; }
 export interface OrganizationHeadTerm { personId: string; displayName: string | null; employeeCode: string | null; effectiveFrom: string; effectiveUntil: string | null; }
-export interface OrganizationDetail { id: string; code: string | null; name: string; unitType: OrganizationUnitType | null; headPersonId: string | null; headActive: boolean; headHistory: OrganizationHeadTerm[]; }
+export interface OrganizationDetail { id: string; code: string | null; name: string; parentId: string | null; unitType: OrganizationUnitType | null; headPersonId: string | null; headActive: boolean; headHistory: OrganizationHeadTerm[]; }
 /** `all` for a hospital-wide reader; otherwise the organizations a scoped role covers. */
 export interface DirectoryScope { organizationIds: 'all' | string[]; }
 
@@ -42,7 +42,7 @@ export class HrDirectory {
     return rows.map(({ headStatus, ...row }) => ({ ...row, activePeople: Number(row.activePeople), headActive: headStatus === 'ACTIVE' }));
   }
   async getOrganization(id: string): Promise<OrganizationDetail | null> {
-    const [organization] = await this.database.query<Omit<OrganizationDetail, 'headPersonId' | 'headHistory'>>('SELECT id, code, name, unit_type AS unitType FROM organization WHERE id = ? AND deleted_at IS NULL', [id]);
+    const [organization] = await this.database.query<Omit<OrganizationDetail, 'headPersonId' | 'headHistory'>>('SELECT id, code, name, parent_id AS parentId, unit_type AS unitType FROM organization WHERE id = ? AND deleted_at IS NULL', [id]);
     if (!organization) return null;
     // Timestamps are formatted in SQL so the driver's local time zone never shifts them.
     const terms = await this.database.query<OrganizationHeadTerm & { employmentStatus: string | null }>(

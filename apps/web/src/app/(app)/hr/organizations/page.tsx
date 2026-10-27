@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { AuthorizationService, HrDirectory, type DirectoryOrganization } from '@backoffice/core';
 import { t } from '@backoffice/i18n';
 import { getSharedDatabase } from '../../../../lib/database';
+import { AddUnitForms } from './structure-forms';
 import { headLabelKeys, unitTypeLabelKeys } from '../../../../lib/organization-unit-type';
 import { readSession } from '../../../../lib/session';
 
@@ -18,6 +19,8 @@ export default async function OrganizationsPage() {
   const database = getSharedDatabase();
   if (!database) return <section><h2>{t('organizationsTitle')}</h2><p role="alert">{t('hrLoadError')}</p></section>;
   const organizations = await new HrDirectory(database).listOrganizations();
+  const canManage = new AuthorizationService().canActHospitalWide(session, 'hr.organization.manage', 'hr');
+  const divisions = organizations.filter((organization) => organization.unitType === 'DIVISION').map(({ id, name }) => ({ id, name }));
   const ids = new Set(organizations.map((organization) => organization.id));
   const childrenOf = new Map<string | null, DirectoryOrganization[]>();
   for (const organization of organizations) {
@@ -25,7 +28,7 @@ export default async function OrganizationsPage() {
     const parentId = organization.parentId && ids.has(organization.parentId) ? organization.parentId : null;
     childrenOf.set(parentId, [...childrenOf.get(parentId) ?? [], organization]);
   }
-  return <section><h2>{t('organizationsTitle')}</h2>{organizations.length === 0 ? <p>{t('noOrganizations')}</p> : <OrganizationTree parentId={null} childrenOf={childrenOf} />}</section>;
+  return <section><h2>{t('organizationsTitle')}</h2>{canManage ? <AddUnitForms divisions={divisions} /> : null}{organizations.length === 0 ? <p>{t('noOrganizations')}</p> : <OrganizationTree parentId={null} childrenOf={childrenOf} />}</section>;
 }
 
 function OrganizationTree({ parentId, childrenOf }: { parentId: string | null; childrenOf: Map<string | null, DirectoryOrganization[]> }) {

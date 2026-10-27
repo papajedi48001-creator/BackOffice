@@ -1,13 +1,14 @@
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
-import { AuthorizationService, HrDirectory } from '@backoffice/core';
+import { AuthorizationService, HrDirectory, OrganizationStructureService } from '@backoffice/core';
 import { t } from '@backoffice/i18n';
 import { bangkokToday, formatBangkokDate } from '../../../../../lib/bangkok-time';
 import { getSharedDatabase } from '../../../../../lib/database';
 import { headLabelKeys, unitTypeLabelKeys } from '../../../../../lib/organization-unit-type';
 import { readSession } from '../../../../../lib/session';
 import { OrganizationForms } from './organization-forms';
+import { UnitEditForms } from '../structure-forms';
 
 const formatDay = (instant: string) => formatBangkokDate(bangkokToday(new Date(instant)));
 
@@ -30,6 +31,8 @@ export default async function OrganizationPage({ params }: { params: Promise<{ o
   const people = canManage
     ? (await directory.listPeople({ organizationIds: 'all' })).filter((person) => person.employmentStatus === 'ACTIVE').map((person) => ({ id: person.id, label: `${person.employeeCode ?? ''} ${person.displayName ?? ''}`.trim() }))
     : [];
+  const divisions = canManage ? (await directory.listOrganizations()).filter((unit) => unit.unitType === 'DIVISION').map(({ id, name }) => ({ id, name })) : [];
+  const impact = canManage ? await new OrganizationStructureService(database).deletionImpact(organization.id) : null;
   const current = organization.headHistory.find((term) => term.personId === organization.headPersonId);
   const labels = headLabelKeys(organization.unitType);
   const personLabel = (term: { displayName: string | null; employeeCode: string | null }) => `${term.displayName ?? ''}${term.employeeCode ? ` (${term.employeeCode})` : ''}`;
@@ -41,6 +44,7 @@ export default async function OrganizationPage({ params }: { params: Promise<{ o
       <dt>{t('hrUnitType')}</dt><dd>{organization.unitType ? t(unitTypeLabelKeys[organization.unitType]) : t('hrUnitTypeNone')}</dd>
       <dt>{t(labels.head)}</dt><dd>{current ? personLabel(current) : <span className="organization-no-head">{t(labels.none)}</span>}{current && !organization.headActive ? <> <span className="organization-no-head">{t(labels.inactive)}</span></> : null}</dd>
     </dl>
+    {canManage && impact ? <UnitEditForms unit={{ id: organization.id, name: organization.name, unitType: organization.unitType, parentId: organization.parentId }} divisions={divisions} impact={impact} /> : null}
     {canManage ? <OrganizationForms organizationId={organization.id} unitType={organization.unitType} people={people} today={bangkokToday()} /> : null}
     <h3>{t(labels.history)}</h3>
     {organization.headHistory.length === 0 ? <p>{t(labels.noHistory)}</p> : <table>
