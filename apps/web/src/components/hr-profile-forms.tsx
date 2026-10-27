@@ -79,6 +79,78 @@ export function ProfileForm({ personId, values, employmentTypes, organizations }
   </form>;
 }
 
+export interface PersonalFormValues { namePrefix: string | null; firstName: string | null; lastName: string | null; gender: Gender | null; birthDate: string | null; }
+
+/** The person's own ข้อมูลส่วนตัว. Work fields are not in this form; the server refuses them too. */
+export function PersonalForm({ endpoint, values }: { endpoint: string; values: PersonalFormValues }) {
+  const { save, feedback } = useSave(endpoint);
+  const [form, setForm] = useState(() => Object.fromEntries(Object.entries(values).map(([key, value]) => [key, value ?? ''])) as Record<keyof PersonalFormValues, string>);
+  const set = (field: keyof PersonalFormValues) => (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setForm((current) => ({ ...current, [field]: event.target.value }));
+  function changePrefix(event: React.ChangeEvent<HTMLInputElement>) {
+    const gender = genderForPrefix(event.target.value);
+    setForm((current) => ({ ...current, namePrefix: event.target.value, gender: gender ?? current.gender }));
+  }
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    const { gender, ...rest } = form;
+    await save({ ...Object.fromEntries(Object.entries(rest).map(([key, value]) => [key, orNull(value)])), gender: gender === '' ? null : gender });
+  }
+  return <form aria-label={t('hrEditPersonal')} className="profile-form" onSubmit={submit}>
+    <h4>{t('hrEditPersonal')}</h4>
+    {feedback}
+    <label>{t('hrFieldNamePrefix')}<input value={form.namePrefix} onChange={changePrefix} maxLength={32} /></label>
+    <label>{t('hrFieldFirstName')}<input value={form.firstName} onChange={set('firstName')} maxLength={120} /></label>
+    <label>{t('hrFieldLastName')}<input value={form.lastName} onChange={set('lastName')} maxLength={120} /></label>
+    <label>{t('hrFieldGender')}
+      <select value={form.gender} onChange={set('gender')}>
+        <option value="">{t('hrGenderNone')}</option>
+        {(Object.keys(genderLabelKeys) as Gender[]).map((gender) => <option key={gender} value={gender}>{t(genderLabelKeys[gender])}</option>)}
+      </select>
+    </label>
+    <label>{t('hrFieldBirthDate')}<input type="date" value={form.birthDate} onChange={set('birthDate')} /></label>
+    <p className="form-hint">{t('hrPersonalWorkNote')}</p>
+    <button type="submit">{t('hrSavePersonal')}</button>
+  </form>;
+}
+
+const photoErrorKeys: Record<string, MessageKey> = { UNSUPPORTED_FILE_TYPE: 'hrPhotoWrongType', FILE_TOO_LARGE: 'hrPhotoTooLarge', INVALID_FILE_CONTENT: 'hrPhotoInvalid', FILE_INFECTED: 'hrPhotoInvalid', INVALID_PHOTO: 'hrPhotoInvalid', object_storage_not_configured: 'hrPhotoUnavailable' };
+
+/** The person's own รูปประจำตัว: JPEG, PNG or WebP up to 2 MB. Without object storage it only says uploads are unavailable. */
+export function PhotoForm({ photoUrl, initials, uploadsEnabled }: { photoUrl: string | null; initials: string; uploadsEnabled: boolean }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<{ kind: 'error' | 'saved'; text: string } | null>(null);
+  async function send(init: RequestInit, saved: MessageKey) {
+    setBusy(true); setMessage(null);
+    try {
+      const response = await fetch('/api/hr/me/photo', init);
+      if (response.ok) { setMessage({ kind: 'saved', text: t(saved) }); router.refresh(); return; }
+      const code = ((await response.json().catch(() => ({}))) as { error?: string }).error;
+      setMessage({ kind: 'error', text: t(code && photoErrorKeys[code] ? photoErrorKeys[code] : 'hrPhotoFailed') });
+    } catch { setMessage({ kind: 'error', text: t('hrPhotoFailed') }); } finally { setBusy(false); }
+  }
+  function upload(file: File | undefined) {
+    if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) { setMessage({ kind: 'error', text: t('hrPhotoWrongType') }); return; }
+    if (file.size > 2 * 1024 * 1024) { setMessage({ kind: 'error', text: t('hrPhotoTooLarge') }); return; }
+    const body = new FormData();
+    body.append('file', file);
+    void send({ method: 'POST', body }, 'hrPhotoSaved');
+  }
+  return <section aria-label={t('hrFieldPhoto')} className="profile-form">
+    <h4>{t('hrFieldPhoto')}</h4>
+    {message && (message.kind === 'error' ? <p role="alert" className="form-error">{message.text}</p> : <p role="status">{message.text}</p>)}
+    <div className="profile-photo-field">
+      {photoUrl ? <img className="profile-avatar" src={photoUrl} alt={t('hrFieldPhoto')} width={72} height={72} /> : <span className="profile-avatar profile-initials" aria-hidden="true">{initials}</span>}
+      {uploadsEnabled ? <>
+        <label>{t('hrPhotoChoose')}<input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy} onChange={(event) => { upload(event.target.files?.[0]); event.target.value = ''; }} /></label>
+        {photoUrl ? <button type="button" className="button-secondary" disabled={busy} onClick={() => void send({ method: 'DELETE' }, 'hrPhotoRemoved')}>{t('hrPhotoRemove')}</button> : null}
+      </> : <p className="form-hint">{t('hrPhotoUnavailable')}</p>}
+    </div>
+    {uploadsEnabled ? <p className="form-hint">{busy ? t('hrPhotoUploading') : t('hrPhotoHint')}</p> : null}
+  </section>;
+}
+
 export interface ContactFormValues { phone: string | null; address: string | null; emergencyContactName: string | null; emergencyContactRelationship: string | null; emergencyContactPhone: string | null; }
 
 export function ContactForm({ endpoint, values }: { endpoint: string; values: ContactFormValues }) {
