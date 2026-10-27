@@ -13,8 +13,8 @@ async function recentNotices(db: Database, personId: string): Promise<BellItem[]
   try {
     const rows = await db.query<NoticeRow>(`SELECT id, module_code AS moduleCode, subject,
         DATE_FORMAT(read_at, '%Y-%m-%dT%H:%i:%s.000Z') AS readAt, DATE_FORMAT(created_at, '%Y-%m-%dT%H:%i:%s.000Z') AS createdAt
-      FROM notification WHERE recipient_person_id = ? AND channel = ? ORDER BY created_at DESC, id LIMIT 10`, [personId, 'in_app']);
-    return rows.map(({ moduleCode, ...row }) => ({ ...row, moduleLabel: moduleLabel(moduleCode) }));
+      FROM notification WHERE recipient_person_id = ? AND channel = ? AND read_at IS NULL ORDER BY created_at DESC, id LIMIT 10`, [personId, 'in_app']);
+    return rows.map(({ moduleCode, ...row }) => ({ ...row, moduleLabel: moduleLabel(moduleCode), ...(moduleCode ? { module: moduleCode } : {}) }));
   } catch (error) {
     console.error('bell_notifications_failed', (error as { code?: unknown }).code ?? 'UNKNOWN');
     return [];

@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { t } from '@backoffice/i18n';
 import { formatBangkokDateTime } from '../lib/bangkok-time';
 
-export interface BellItem { id: string; moduleLabel: string; subject: string; readAt: string | null; createdAt: string; }
+export interface BellItem { id: string; moduleLabel: string; module?: string; subject: string; readAt: string | null; createdAt: string; }
 
 /** Bell at the top right: the newest in-app notices; opening one marks it read and goes to its page. */
 export function NotificationBell({ unread, items }: { unread: number; items: BellItem[] }) {
@@ -29,6 +29,8 @@ export function NotificationBell({ unread, items }: { unread: number; items: Bel
     router.push(body.href);
     router.refresh();
   }
+  const unreadItems = items.filter((item) => !item.readAt);
+  if (!unread) return null;
   const label = unread ? `${t('bellLabel')} ${unread} ${t('unreadNotifications')}` : t('bellLabel');
   return <div className="notification-bell" ref={root}>
     <button type="button" className="bell-button" aria-label={label} aria-expanded={open} aria-controls="bell-panel" onClick={() => setOpen((value) => !value)}>
@@ -37,8 +39,8 @@ export function NotificationBell({ unread, items }: { unread: number; items: Bel
     </button>
     {open && <div id="bell-panel" className="bell-panel">
       <p className="bell-title">{t('bellLabel')}</p>
-      {items.length ? <ul>{items.map((item) => <li key={item.id} className={item.readAt ? undefined : 'is-unread'}>
-        <button type="button" onClick={() => void openNotice(item)}><span className="bell-subject">[{item.moduleLabel}] &gt; [{item.subject}]</span><time dateTime={item.createdAt}>{formatBangkokDateTime(item.createdAt)}</time></button>
+      {unreadItems.length ? <ul>{unreadItems.map((item) => <li key={item.id} className="is-unread" data-module={item.module}>
+        <button type="button" onClick={() => void openNotice(item)}><span className="notice-module">{item.moduleLabel}</span><span className="bell-subject">{item.subject}</span><time dateTime={item.createdAt}>{formatBangkokDateTime(item.createdAt)}</time></button>
       </li>)}</ul> : <p className="bell-empty">{t('bellEmpty')}</p>}
       <Link className="bell-all" href="/notifications" onClick={() => setOpen(false)}>{t('bellSeeAll')}</Link>
     </div>}

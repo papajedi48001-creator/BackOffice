@@ -24,9 +24,9 @@ export async function listPendingApprovals(db: Pick<Database, 'query'>, personId
   return rows.map((row) => ({ ...row, href: requestHref(row.moduleCode, row.requestId) }));
 }
 
-/** Whether the คำขอ menu has anything to show: a request they made, or a step they were ever asked to decide. */
-export async function hasRequestActivity(db: Pick<Database, 'query'>, personId: string): Promise<boolean> {
-  const rows = await db.query<{ found: number }>(`SELECT EXISTS (SELECT 1 FROM request WHERE requestor_person_id = ?)
-      OR EXISTS (SELECT 1 FROM approval_step WHERE JSON_VALUE(assignee_snapshot, '$.personId') = ?) AS found`, [personId, personId]);
+/** Whether the คำขอ menu has anything left to show: a request of theirs still open, or a step waiting on them now. */
+export async function hasOpenRequestWork(db: Pick<Database, 'query'>, personId: string): Promise<boolean> {
+  const rows = await db.query<{ found: number }>(`SELECT EXISTS (SELECT 1 FROM request WHERE requestor_person_id = ? AND status IN ('DRAFT', 'SUBMITTED', 'IN_REVIEW', 'RETURNED'))
+      OR EXISTS (SELECT 1 FROM request r JOIN approval_step s ON s.request_id = r.id AND s.status = 'PENDING' WHERE ${waitingOnPersonSql}) AS found`, [personId, personId]);
   return Number(rows[0]?.found ?? 0) === 1;
 }
