@@ -1,5 +1,5 @@
 import type { AccessSubject } from '@backoffice/contracts';
-import { AuthorizationService, LeaveQueries, OfficialTravelQueries, RoomBookingQueries, canManageLeave, canManageTravel, hasRequestActivity, listPendingApprovals } from '@backoffice/core';
+import { AuthorizationService, LeaveQueries, OfficialTravelQueries, RoomBookingQueries, canManageLeave, canManageTravel, hasOpenRequestWork, listPendingApprovals } from '@backoffice/core';
 import type { Database } from '@backoffice/db';
 import { t, type MessageKey } from '@backoffice/i18n';
 import type { NavigationItem } from '../components/app-shell';
@@ -49,7 +49,7 @@ export const moduleRegistry: readonly ModuleEntry[] = [
     code: 'requests', href: '/requests', labelKey: 'requests', descriptionKey: 'moduleRequestsDescription', icon: 'requests', group: 'mine', status: 'live', visible: everyone,
     // Every module's approvals wait here, so a ใบลา for the director counts on both คำขอ and การลา.
     badge: async (db, subject) => subject.personId ? (await listPendingApprovals(db, subject.personId)).length : 0,
-    available: async (db, subject) => subject.personId ? hasRequestActivity(db, subject.personId) : false
+    available: async (db, subject) => subject.personId ? hasOpenRequestWork(db, subject.personId) : false
   },
   {
     code: 'notifications', href: '/notifications', labelKey: 'notifications', descriptionKey: 'moduleNotificationsDescription', icon: 'bell', group: 'mine', status: 'live', visible: everyone,
