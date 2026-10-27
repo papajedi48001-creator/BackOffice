@@ -140,7 +140,7 @@ export class FleetQueries {
     };
   }
 
-  /** Free ACTIVE cars and free active drivers for the range, by the same overlap rule the server enforces, and the PLANNED เที่ยวรถ that cover it. */
+  /** Free ACTIVE cars and free active drivers for the range, by the same overlap rule the server enforces, and the PLANNED เที่ยวรถ on an ACTIVE car with an active driver that cover it. */
   async availability(from: Date, to: Date): Promise<{ vehicles: VehicleOption[]; drivers: DriverOption[]; trips: TripOption[] }> {
     const range = [toSqlDatetime(to), toSqlDatetime(from)];
     const vehicles = await this.database.query<VehicleOption>(
@@ -148,8 +148,8 @@ export class FleetQueries {
     const drivers = await this.database.query<DriverOption>(
       `SELECT d.person_id AS personId, p.display_name AS displayName, d.phone FROM fleet_driver d JOIN person p ON p.id = d.person_id WHERE d.is_active = 1 AND NOT EXISTS (SELECT 1 FROM fleet_trip WHERE driver_person_id = d.person_id AND ${OVERLAPPING_TRIP}) ORDER BY p.display_name, d.person_id`, range);
     const trips = await this.database.query<TripOption>(
-      `SELECT t.id, v.registration, p.display_name AS driverName, ${instant('t.starts_at')} AS startsAt, ${instant('t.ends_at')} AS endsAt FROM fleet_trip t JOIN fleet_vehicle v ON v.id = t.vehicle_id JOIN person p ON p.id = t.driver_person_id
-       WHERE t.status = 'PLANNED' AND t.starts_at <= ? AND t.ends_at >= ? ORDER BY t.starts_at, t.id`, [range[1], range[0]]);
+      `SELECT t.id, v.registration, p.display_name AS driverName, ${instant('t.starts_at')} AS startsAt, ${instant('t.ends_at')} AS endsAt FROM fleet_trip t JOIN fleet_vehicle v ON v.id = t.vehicle_id JOIN person p ON p.id = t.driver_person_id JOIN fleet_driver d ON d.person_id = t.driver_person_id
+       WHERE t.status = 'PLANNED' AND v.status = 'ACTIVE' AND d.is_active = 1 AND t.starts_at <= ? AND t.ends_at >= ? ORDER BY t.starts_at, t.id`, [range[1], range[0]]);
     return { vehicles, drivers, trips };
   }
 

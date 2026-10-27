@@ -66,7 +66,7 @@ Derived in one query, in this order (as ไปราชการ derives trip st
 4. **Cancel.** The requester, with a reason, while the status is รอหัวหน้าเห็นชอบ, ส่งกลับแก้ไข, รอจัดรถ or จัดรถแล้ว. The head คำขอ (if still pending) is cancelled through the central service. A cancelled ใบ leaves its เที่ยวรถ; a เที่ยวรถ left with no ใบ is cancelled too, and its driver is told.
 5. **Assign (การจัดรถ).** `fleet-manager` only, only a ใบ in รอจัดรถ. Either:
    - **new เที่ยวรถ**: vehicle (ACTIVE), active driver, `starts_at`/`ends_at` (default to the ใบ's times; must cover them); or
-   - **existing เที่ยวรถ** in PLANNED whose range covers the ใบ's times.
+   - **existing เที่ยวรถ** in PLANNED whose range covers the ใบ's times, whose car is still ACTIVE (`VEHICLE_UNAVAILABLE`) and whose driver is still active (`DRIVER_INACTIVE`); เที่ยวรถ that fail this are not offered in เข้าเที่ยวที่มีอยู่.
    The car and the driver may not be on another non-cancelled เที่ยวรถ whose range overlaps (`VEHICLE_BUSY`, `DRIVER_BUSY`, 409). Overlap is checked after `SELECT ... FOR UPDATE` on the vehicle row and the driver row, inside the write transaction.
 6. **Move / unassign.** While the เที่ยวรถ is PLANNED, the หัวหน้าหมวด may move a ใบ to another เที่ยวรถ or take it off (back to รอจัดรถ). Changing a PLANNED เที่ยวรถ's car, driver or times reruns rule 5's checks. A เที่ยวรถ with no ใบ left is cancelled.
 7. **Decline.** `fleet-manager`, a ใบ in รอจัดรถ, reason required → ไม่จัดรถ (closed).

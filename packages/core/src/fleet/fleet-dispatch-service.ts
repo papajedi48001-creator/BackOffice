@@ -168,8 +168,11 @@ export class FleetDispatchService {
       const trip = await lockFleetTrip(database, target.tripId);
       if (!trip) return fail('NOT_FOUND');
       if (trip.status !== 'PLANNED' || !tripCovers({ startsAt: new Date(trip.startsAt), endsAt: new Date(trip.endsAt) }, rider)) return fail('TRIP_DOES_NOT_COVER');
-      const [vehicle] = await database.query<{ registration: string }>('SELECT registration FROM fleet_vehicle WHERE id = ?', [trip.vehicleId]);
-      placed = { ok: true, tripId: trip.id, driverPersonId: trip.driverPersonId, registration: vehicle!.registration, isNew: false };
+      // A เที่ยวรถ flagged by rule 9 (car no longer ACTIVE) or with a paused driver takes no one new; lock order stays the เที่ยวรถ, the car, the driver.
+      const vehicle = await lockFleetVehicle(database, trip.vehicleId);
+      if (!vehicle || vehicle.status !== 'ACTIVE') return fail('VEHICLE_UNAVAILABLE');
+      if (!(await lockFleetDriver(database, trip.driverPersonId))?.isActive) return fail('DRIVER_INACTIVE');
+      placed = { ok: true, tripId: trip.id, driverPersonId: trip.driverPersonId, registration: vehicle.registration, isNew: false };
     } else {
       const crew: Crew = { vehicleId: target.vehicleId, driverPersonId: target.driverPersonId, startsAt: new Date(target.startsAt), endsAt: new Date(target.endsAt) };
       const range = checkTripRange(crew.startsAt, crew.endsAt);

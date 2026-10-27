@@ -90,6 +90,27 @@ describeWithDatabase('FleetDispatchService against MariaDB', () => {
     expect(await request(outside.id)).toEqual({ dispatchStatus: 'WAITING', tripId: null });
   });
 
+  it('refuses to put a ใบ on a PLANNED เที่ยวรถ whose car is no longer ACTIVE or whose driver is inactive', async () => {
+    const car = await vehicle();
+    const driverId = await driver();
+    const tripId = await assigned((await waiting()).id, newTrip(car.id, driverId));
+    const rider = await waiting('2026-11-10T02:00:00Z', '2026-11-10T08:00:00Z');
+    for (const status of ['IN_REPAIR', 'RETIRED']) {
+      await database.execute('UPDATE fleet_vehicle SET status = ? WHERE id = ?', [status, car.id]);
+      expect(await service.assign(manager, rider.id, { tripId })).toEqual({ ok: false, code: 'VEHICLE_UNAVAILABLE' });
+    }
+    await database.execute("UPDATE fleet_vehicle SET status = 'ACTIVE' WHERE id = ?", [car.id]);
+    await database.execute('UPDATE fleet_driver SET is_active = 0 WHERE person_id = ?', [driverId]);
+    expect(await service.assign(manager, rider.id, { tripId })).toEqual({ ok: false, code: 'DRIVER_INACTIVE' });
+    expect(await request(rider.id)).toEqual({ dispatchStatus: 'WAITING', tripId: null });
+    const moving = await waiting('2026-11-10T02:00:00Z', '2026-11-10T08:00:00Z');
+    const source = await assigned(moving.id, newTrip((await vehicle()).id, await driver(), '2026-11-10T02:00:00.000Z', '2026-11-10T08:00:00.000Z'));
+    expect(await service.move(manager, moving.id, { tripId })).toEqual({ ok: false, code: 'DRIVER_INACTIVE' });
+    expect(await request(moving.id)).toEqual({ dispatchStatus: 'ASSIGNED', tripId: source });
+    await database.execute('UPDATE fleet_driver SET is_active = 1 WHERE person_id = ?', [driverId]);
+    expect(await service.assign(manager, rider.id, { tripId })).toEqual({ ok: true, tripId });
+  });
+
   it('checks a new เที่ยวรถ: range, quarter hours, cover, car status and active driver', async () => {
     const { id } = await waiting();
     const car = await vehicle();

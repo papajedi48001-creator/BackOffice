@@ -226,6 +226,22 @@ describeWithDatabase('FleetQueries against MariaDB', () => {
     expect(partly.trips.map((entry) => entry.id)).not.toContain(tripId);
   });
 
+  it('leaves out of availability a PLANNED เที่ยวรถ whose car is no longer ACTIVE or whose driver is inactive', async () => {
+    const car = await vehicle();
+    const driverId = await driver();
+    const { id } = await waiting('2026-12-02T01:00:00Z', '2026-12-02T09:00:00Z');
+    const tripId = await assign(id, car.id, driverId, '2026-12-02T01:00:00.000Z', '2026-12-02T09:00:00.000Z');
+    const listed = async () => (await queries.availability(new Date('2026-12-02T02:00:00Z'), new Date('2026-12-02T05:00:00Z'))).trips.map((entry) => entry.id);
+    expect(await listed()).toContain(tripId);
+    for (const status of ['IN_REPAIR', 'RETIRED']) {
+      await database.execute('UPDATE fleet_vehicle SET status = ? WHERE id = ?', [status, car.id]);
+      expect(await listed()).not.toContain(tripId);
+    }
+    await database.execute("UPDATE fleet_vehicle SET status = 'ACTIVE' WHERE id = ?", [car.id]);
+    await database.execute('UPDATE fleet_driver SET is_active = 0 WHERE person_id = ?', [driverId]);
+    expect(await listed()).not.toContain(tripId);
+  });
+
   it('gives the calendar only the car, time, province and status', async () => {
     const car = await vehicle();
     const one = await waiting('2026-11-10T01:00:00Z', '2026-11-10T09:00:00Z', 'ขอนแก่น');
