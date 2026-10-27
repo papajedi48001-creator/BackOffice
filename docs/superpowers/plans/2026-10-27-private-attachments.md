@@ -32,9 +32,9 @@
 - [x] Commit `feat(db): keep the original name of an attachment`.
 
 ### Task 2: Core files
-- [ ] Failing tests: clamd scanner (fake TCP server: OK, FOUND, no answer, refused); AttachmentService stores after CLEAN, names FILE_INFECTED / SCAN_UNAVAILABLE, opens bytes only when authorized; S3 adapter and repository against SeaweedFS + MariaDB (integration, skipped without `S3_ENDPOINT`); access check for uploader, ใบลา viewer, trip viewer, outsider.
-- [ ] Implement `ClamdScanner`, `S3ObjectStorage`, `DatabaseAttachmentRepository`, `AttachmentAccess`, audit.
-- [ ] Commit `feat(files): scan, store and open private attachments`.
+- [x] Failing tests: clamd scanner (fake TCP server: OK, FOUND, no answer, refused); AttachmentService stores after CLEAN, names FILE_INFECTED / SCAN_UNAVAILABLE, opens bytes only when authorized; S3 adapter and repository against SeaweedFS + MariaDB (integration, skipped without `S3_ENDPOINT`); access check for uploader, ใบลา viewer, trip viewer, outsider.
+- [x] Implement `ClamdScanner`, `S3ObjectStorage`, `DatabaseAttachmentRepository`, `AttachmentAccess`, audit.
+- [x] Commit `feat(files): scan, store and open private attachments`.
 
 ### Task 3: Link to ใบลา and trips
 - [ ] Failing integration tests: submit/resubmit with own attachment, someone else's (INVALID_ATTACHMENT), keep on omit, remove on null; detail returns `{ attachmentId, filename }`.
