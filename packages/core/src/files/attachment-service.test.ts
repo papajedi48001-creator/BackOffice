@@ -65,4 +65,19 @@ describe('AttachmentService', () => {
     await expect(service.openAttachment({ attachmentId: attachment.id, actorPersonId: 'person-c' }, { canDownload: async () => false })).rejects.toThrow('NOT_FOUND');
     await expect(service.openAttachment({ attachmentId: 'missing', actorPersonId: 'person-b' }, { canDownload: async () => true })).rejects.toThrow('NOT_FOUND');
   });
+
+  it('checks a WebP photo by its RIFF header and refuses a PNG claiming to be WebP', async () => {
+    const { service } = setup();
+    const webp = new Uint8Array([0x52, 0x49, 0x46, 0x46, 1, 0, 0, 0, 0x57, 0x45, 0x42, 0x50, 0x56, 0x50]);
+    const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0]);
+    expect((await service.uploadAttachment({ ...upload, filename: 'me.webp', contentType: 'image/webp', bytes: webp })).contentType).toBe('image/webp');
+    await expect(service.uploadAttachment({ ...upload, filename: 'me.webp', contentType: 'image/webp', bytes: png })).rejects.toThrow('INVALID_FILE_CONTENT');
+  });
+
+  it('can open a file without recording a download, for profile photos shown on every page', async () => {
+    const { service, downloads } = setup();
+    const attachment = await service.uploadAttachment(upload);
+    await service.openAttachment({ attachmentId: attachment.id, actorPersonId: 'person-b' }, { canDownload: async () => true }, { recordDownload: false });
+    expect(downloads).toEqual([]);
+  });
 });

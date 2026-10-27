@@ -102,7 +102,7 @@ describeWithDatabase('HrProfileService writes against MariaDB', () => {
     return id;
   }
   const audits = (personId: string) => database.query<{ action: string; metadata: string }>("SELECT action, metadata FROM audit_event WHERE target_type = 'person' AND target_id = ?", [personId]);
-  const profileRow = async (personId: string) => (await database.query<Record<string, unknown>>("SELECT name_prefix AS namePrefix, gender, phone, employment_type_id AS employmentTypeId, position_level AS positionLevel, DATE_FORMAT(birth_date, '%Y-%m-%d') AS birthDate FROM hr_person_profile WHERE person_id = ?", [personId]))[0];
+  const profileRow = async (personId: string) => (await database.query<Record<string, unknown>>("SELECT name_prefix AS namePrefix, first_name AS firstName, last_name AS lastName, gender, phone, employment_type_id AS employmentTypeId, position_level AS positionLevel, DATE_FORMAT(birth_date, '%Y-%m-%d') AS birthDate FROM hr_person_profile WHERE person_id = ?", [personId]))[0];
 
   beforeAll(async () => {
     await runMigrations(database);
@@ -201,5 +201,65 @@ describeWithDatabase('HrProfileService writes against MariaDB', () => {
     const id = await person(own);
     const scoped: AccessSubject = { ...manager, roles: [{ name: 'hr-manager', organizationId: own }] };
     expect(await service.updateProfile(id, { organizationId: await organization() }, scoped)).toEqual({ ok: false, code: 'FORBIDDEN' });
+  });
+  it('lets a person edit their own personal details with one audit event and keeps the display name in step', async () => {
+    const id = await person(await organization());
+    const self: AccessSubject = { authenticated: true, personId: id, roles: [], dataOwnerModules: [] };
+    expect(await service.updateOwnPersonal(id, { namePrefix: 'นาง', firstName: 'สมศรี', lastName: 'มีสุข', birthDate: '1991-02-03' }, self)).toEqual({ ok: true });
+    expect(await profileRow(id)).toMatchObject({ namePrefix: 'นาง', firstName: 'สมศรี', lastName: 'มีสุข', gender: 'FEMALE' });
+    const [named] = await database.query<{ displayName: string; positionTitle: string }>('SELECT display_name AS displayName, position_title AS positionTitle FROM person WHERE id = ?', [id]);
+    expect(named).toEqual({ displayName: 'นางสมศรี มีสุข', positionTitle: 'พยาบาลวิชาชีพ' });
+    const events = await audits(id);
+    expect(events.map((event) => event.action)).toEqual(['hr.person.personal.update']);
+    expect(JSON.parse(events[0]!.metadata)).toEqual({ changedFields: ['namePrefix', 'firstName', 'lastName', 'gender', 'birthDate'] });
+    expect(events[0]!.metadata).not.toContain('สมศรี');
+    const view = await service.get(id, self);
+    if (typeof view === 'string') throw new Error(view);
+    expect(view.history[0]?.changedFields).toEqual(['namePrefix', 'firstName', 'lastName', 'gender', 'birthDate']);
+  });
+
+  it('refuses personal edits for someone else, even by an hr manager, and work fields from the person', async () => {
+    const id = await person(await organization());
+    expect(await service.updateOwnPersonal(id, { firstName: 'แอบแก้' }, manager)).toEqual({ ok: false, code: 'FORBIDDEN' });
+    const self: AccessSubject = { authenticated: true, personId: id, roles: [], dataOwnerModules: [] };
+    await expect(service.updateOwnPersonal(id, { positionTitle: 'ผู้อำนวยการ' } as never, self)).rejects.toThrow();
+    expect(await profileRow(id)).toBeUndefined();
+    expect(await audits(id)).toHaveLength(0);
+  });
+
+  async function attachment(createdBy: string, contentType = 'image/png', sizeBytes = 1024) {
+    const attachmentId = randomUUID();
+    await database.execute('INSERT INTO attachment (id, object_key, content_type, size_bytes, created_by_person_id, created_at) VALUES (?, ?, ?, ?, ?, UTC_TIMESTAMP())', [attachmentId, `attachments/${randomUUID()}`, contentType, String(sizeBytes), createdBy]);
+    return attachmentId;
+  }
+
+  it('sets and removes a person\'s own photo with an audit event that names the field only', async () => {
+    const id = await person(await organization());
+    const noProfile = await person(null);
+    const self: AccessSubject = { authenticated: true, personId: id, roles: [], dataOwnerModules: [] };
+    const photo = await attachment(id);
+    expect(await service.setOwnPhoto(id, photo, self)).toEqual({ ok: true });
+    expect(await service.photoAttachmentOf(id)).toBe(photo);
+    expect(await service.setOwnPhoto(id, null, self)).toEqual({ ok: true });
+    expect(await service.photoAttachmentOf(id)).toBeNull();
+    const events = await audits(id);
+    expect(events.map((event) => event.action).sort()).toEqual(['hr.person.photo.update', 'hr.person.photo.update']);
+    expect(JSON.parse(events[0]!.metadata)).toEqual({ changedFields: ['photo'] });
+    const fresh: AccessSubject = { ...self, personId: noProfile };
+    const second = await attachment(noProfile, 'image/webp');
+    expect(await service.setOwnPhoto(noProfile, second, fresh)).toEqual({ ok: true });
+    expect(await service.photoAttachmentOf(noProfile)).toBe(second);
+  });
+
+  it('refuses a photo for someone else, a file uploaded by another person, a PDF or one over 2 MB', async () => {
+    const id = await person(await organization());
+    const self: AccessSubject = { authenticated: true, personId: id, roles: [], dataOwnerModules: [] };
+    expect(await service.setOwnPhoto(id, await attachment(id), manager)).toEqual({ ok: false, code: 'FORBIDDEN' });
+    expect(await service.setOwnPhoto(id, await attachment(await person(null)), self)).toEqual({ ok: false, code: 'INVALID_PHOTO' });
+    expect(await service.setOwnPhoto(id, await attachment(id, 'application/pdf'), self)).toEqual({ ok: false, code: 'INVALID_PHOTO' });
+    expect(await service.setOwnPhoto(id, await attachment(id, 'image/jpeg', 2 * 1024 * 1024 + 1), self)).toEqual({ ok: false, code: 'INVALID_PHOTO' });
+    expect(await service.setOwnPhoto(id, randomUUID(), self)).toEqual({ ok: false, code: 'INVALID_PHOTO' });
+    expect(await service.photoAttachmentOf(id)).toBeNull();
+    expect(await audits(id)).toHaveLength(0);
   });
 });
