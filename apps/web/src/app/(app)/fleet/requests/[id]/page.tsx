@@ -40,7 +40,7 @@ export default async function FleetRequestPage({ params }: { params: Promise<{ i
     </div>
     {view.canDispatch && <DispatchActions request={{ id: view.id, reference: view.reference, departAt: view.departAt, returnAt: view.returnAt }} />}
     <h3>{t('fleetHistory')}</h3>
-    <ol className="fleet-history">{view.history.map((entry, index) => <li key={`${entry.createdAt}-${index}`}>
+    <ol className="fleet-history" aria-label={t('fleetHistory')}>{view.history.map((entry, index) => <li key={`${entry.createdAt}-${index}`}>
       {formatBangkokDateTime(entry.createdAt)} · {fleetHistoryLabel(entry.action)} · {entry.actorName ?? '—'}{entry.reason ? ` · ${entry.reason}` : ''}
     </li>)}</ol>
     {view.canResubmit && <><h3>{t('fleetEditReturned')}</h3><FleetForm fleetRequestId={view.id} initial={{

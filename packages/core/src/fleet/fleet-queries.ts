@@ -45,8 +45,11 @@ type Reader = Pick<Database, 'query'>;
 interface RequestRow { id: string; reference: string; requesterPersonId: string; requesterName: string | null; organizationName: string | null; purpose: string; destination: string; province: string; departAt: string; returnAt: string; passengerCount: number; passengerNames: string; contactPhone: string; officialTravelId: string | null; requestId: string | null; filedAt: string; dispatchStatus: DispatchStatus; headStatus: RequestStatus | null; tripId: string | null; tripStatus: TripStatus | null }
 
 const instant = (column: string) => `DATE_FORMAT(${column}, '%Y-%m-%dT%H:%i:%s.000Z')`;
-/** Oldest first within a second, where `created_at` ties. */
-const ACTION_ORDER = ['SUBMITTED', 'RESUBMITTED', 'ASSIGNED', 'UNASSIGNED', 'DECLINED', 'CANCELLED'];
+/** Oldest first within a second, where `created_at` ties. `HEAD_*` are the head's decisions on the คำขอ, merged in from the central workflow. */
+const ACTION_ORDER = ['SUBMITTED', 'HEAD_RETURN', 'HEAD_REJECT', 'RESUBMITTED', 'HEAD_APPROVE', 'ASSIGNED', 'UNASSIGNED', 'DECLINED', 'CANCELLED'];
+/** The head's decisions on the ใบ's คำขอ, as history entries; a reason only for ส่งกลับแก้ไข and ไม่เห็นชอบ. */
+const HEAD_DECISIONS = `SELECT CONCAT('HEAD_', d.decision) AS action, p.display_name AS actorName, CASE WHEN d.decision IN ('RETURN', 'REJECT') THEN d.reason END AS reason, ${instant('d.created_at')} AS createdAt
+  FROM approval_decision d JOIN approval_step s ON s.id = d.approval_step_id LEFT JOIN person p ON p.id = d.actor_person_id WHERE s.request_id = ? AND d.decision IN ('APPROVE', 'RETURN', 'REJECT')`;
 const REQUESTS = `SELECT f.id, f.reference, f.requester_person_id AS requesterPersonId, rp.display_name AS requesterName, o.name AS organizationName, f.purpose, f.destination, f.province, ${instant('f.depart_at')} AS departAt, ${instant('f.return_at')} AS returnAt,
   f.passenger_count AS passengerCount, f.passenger_names AS passengerNames, f.contact_phone AS contactPhone, f.official_travel_id AS officialTravelId, f.request_id AS requestId, ${instant('f.created_at')} AS filedAt, f.dispatch_status AS dispatchStatus, r.status AS headStatus, f.trip_id AS tripId, t.status AS tripStatus
   FROM fleet_request f JOIN person rp ON rp.id = f.requester_person_id LEFT JOIN organization o ON o.id = f.organization_id LEFT JOIN request r ON r.id = f.request_id LEFT JOIN fleet_trip t ON t.id = f.trip_id`;
@@ -77,6 +80,7 @@ export class FleetQueries {
     if (!requester && !manager && trip?.driverPersonId !== personId && !(await this.onHeadStage(row.requestId, personId))) return null;
     const history = await this.database.query<FleetHistoryEntry>(
       `SELECT h.action, p.display_name AS actorName, h.reason, ${instant('h.created_at')} AS createdAt FROM fleet_request_history h LEFT JOIN person p ON p.id = h.actor_person_id WHERE h.fleet_request_id = ?`, [id]);
+    if (row.requestId) history.push(...await this.database.query<FleetHistoryEntry>(HEAD_DECISIONS, [row.requestId]));
     history.sort((a, b) => a.createdAt.localeCompare(b.createdAt) || ACTION_ORDER.indexOf(a.action) - ACTION_ORDER.indexOf(b.action));
     const status = statusOf(row);
     return {

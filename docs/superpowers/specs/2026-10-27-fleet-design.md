@@ -45,7 +45,7 @@ Status: draft for wasan's review. Agreed section by section in the thread "พ�
   - `dispatch_status` (`WAITING` | `ASSIGNED` | `DECLINED` | `CANCELLED`), `trip_id` NULL (foreign key to `fleet_trip`).
   - `created_at`, `updated_at`.
 - **`fleet_trip`** (เที่ยวรถ): `id`, `vehicle_id`, `driver_person_id`, `starts_at`, `ends_at` (UTC), `status` (`PLANNED` | `DEPARTED` | `RETURNED` | `CANCELLED`), `odometer_out` INT NULL, `odometer_in` INT NULL, `departed_at` NULL, `returned_at` NULL, `created_by_person_id`, `created_at`, `updated_at`. Index on (`vehicle_id`, `starts_at`) and (`driver_person_id`, `starts_at`).
-- **`fleet_request_history`**: `id`, `fleet_request_id`, `action`, `actor_person_id`, `reason` VARCHAR(500) NULL, `created_at`. Reasons live here only.
+- **`fleet_request_history`**: `id`, `fleet_request_id`, `action`, `actor_person_id`, `reason` VARCHAR(500) NULL, `created_at`. The ใบ's own reasons live here only; the head's decision and its reason stay in the central `approval_decision`, and the รายละเอียดใบ history merges them in by time (เห็นชอบ / ส่งกลับแก้ไข / ไม่เห็นชอบ, with the reason for the last two).
 
 Drizzle schema `packages/db/src/schema/fleet.ts`; migration listed in `migrate.ts`; new tables added to `infra/backup/restore-verify.test.sh`.
 

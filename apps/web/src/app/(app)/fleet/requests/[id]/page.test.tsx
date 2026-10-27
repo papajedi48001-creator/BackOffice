@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ headers: vi.fn(), redirect: vi.fn(), notFound: vi.fn(), refresh: vi.fn(), push: vi.fn(), readSession: vi.fn(), getSharedDatabase: vi.fn(), detail: vi.fn() }));
@@ -85,5 +85,17 @@ describe('FleetRequestPage', () => {
     render(await FleetRequestPage(params()));
     expect(screen.queryByRole('button', { name: 'เห็นชอบ' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'ไม่เห็นชอบ' })).toBeNull();
+  });
+
+  it('shows the head\'s ส่งกลับแก้ไข with its reason in the history of a RETURNED ใบ', async () => {
+    ready({ ...base, status: 'RETURNED', canResubmit: true, history: [
+      { action: 'SUBMITTED', actorName: 'นางพรทิพย์ ใจดี', reason: null, createdAt: '2026-10-27T03:00:00.000Z' },
+      { action: 'HEAD_RETURN', actorName: 'นายหัวหน้า งาน', reason: 'แก้เวลากลับให้ตรงกับการประชุม', createdAt: '2026-10-27T04:00:00.000Z' }
+    ] });
+    render(await FleetRequestPage(params()));
+    const items = within(screen.getByRole('list', { name: 'ประวัติ' })).getAllByRole('listitem');
+    expect(items).toHaveLength(2);
+    expect(items[1]).toHaveTextContent('ส่งกลับแก้ไข · นายหัวหน้า งาน · แก้เวลากลับให้ตรงกับการประชุม');
+    expect(items[1]).not.toHaveTextContent('HEAD_RETURN');
   });
 });

@@ -119,11 +119,15 @@ describeWithDatabase('FleetQueries against MariaDB', () => {
     const id = await filed(requester);
     const [row] = await database.query<{ requestId: string }>('SELECT request_id AS requestId FROM fleet_request WHERE id = ?', [id]);
     await new ApprovalService(new DatabaseWorkflowRepository(database), { findActiveFor: async () => null }).decideRequest({ requestId: row!.requestId, actorPersonId: org.sectionHead, decision: 'RETURN', reason: 'แก้เวลา' });
-    expect(await queries.detail(id, subject(requester))).toMatchObject({ status: 'RETURNED', canResubmit: true, canCancel: true });
+    const returned = await queries.detail(id, subject(requester));
+    expect(returned).toMatchObject({ status: 'RETURNED', canResubmit: true, canCancel: true });
+    expect(returned?.history.map((entry) => [entry.action, entry.reason])).toEqual([['SUBMITTED', null], ['HEAD_RETURN', 'แก้เวลา']]);
+    expect(returned?.history[1]?.actorName).toBe(`บุคลากร ${org.sectionHead.slice(0, 8)}`);
+    expect(returned?.history[1]?.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.000Z$/);
     expect(await requests.cancel(requester, id, 'ไม่ไปแล้ว')).toEqual({ ok: true });
     const cancelled = await queries.detail(id, subject(requester));
     expect(cancelled).toMatchObject({ status: 'CANCELLED', canResubmit: false, canCancel: false });
-    expect(cancelled?.history.map((entry) => [entry.action, entry.reason])).toEqual([['SUBMITTED', null], ['CANCELLED', 'ไม่ไปแล้ว']]);
+    expect(cancelled?.history.map((entry) => [entry.action, entry.reason])).toEqual([['SUBMITTED', null], ['HEAD_RETURN', 'แก้เวลา'], ['CANCELLED', 'ไม่ไปแล้ว']]);
     expect(cancelled?.history[0]?.actorName).toMatch(/^บุคลากร/);
   });
 
@@ -320,6 +324,7 @@ describeWithDatabase('FleetQueries against MariaDB', () => {
     await new ApprovalService(new DatabaseWorkflowRepository(database), { findActiveFor: async () => null }).decideRequest({ requestId: row!.requestId, actorPersonId: org.sectionHead, decision: 'APPROVE' });
     const decided = await queries.detail(id, subject(org.sectionHead));
     expect(decided).toMatchObject({ status: 'WAITING', canDecide: false });
+    expect(decided?.history.map((entry) => [entry.action, entry.reason])).toEqual([['SUBMITTED', null], ['HEAD_APPROVE', null]]);
     expect((await queries.detail((await waiting()).id, subject(manager, true)))?.canDecide).toBe(false);
   });
 });

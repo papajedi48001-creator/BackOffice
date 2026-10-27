@@ -16,7 +16,8 @@ const statusTones: Record<FleetRequestStatus | TripStatus, string> = {
 const tripKeys: Record<TripStatus, MessageKey> = { PLANNED: 'fleetTripPlanned', DEPARTED: 'fleetTripDeparted', RETURNED: 'fleetTripReturned', CANCELLED: 'fleetTripCancelled' };
 const kindKeys: Record<VehicleKind, MessageKey> = { SEDAN: 'fleetKindSedan', PICKUP: 'fleetKindPickup', VAN: 'fleetKindVan', AMBULANCE: 'fleetKindAmbulance', OTHER: 'fleetKindOther' };
 const vehicleStatusKeys: Record<VehicleStatus, MessageKey> = { ACTIVE: 'fleetVehicleActive', IN_REPAIR: 'fleetVehicleInRepair', RETIRED: 'fleetVehicleRetired' };
-const historyKeys: Record<string, MessageKey> = { SUBMITTED: 'fleetHistorySubmitted', RESUBMITTED: 'fleetHistoryResubmitted', CANCELLED: 'fleetHistoryCancelled', ASSIGNED: 'fleetHistoryAssigned', UNASSIGNED: 'fleetHistoryUnassigned', DECLINED: 'fleetHistoryDeclined' };
+const historyKeys: Record<string, MessageKey> = { SUBMITTED: 'fleetHistorySubmitted', RESUBMITTED: 'fleetHistoryResubmitted', CANCELLED: 'fleetHistoryCancelled', ASSIGNED: 'fleetHistoryAssigned', UNASSIGNED: 'fleetHistoryUnassigned', DECLINED: 'fleetHistoryDeclined',
+  HEAD_APPROVE: 'fleetHeadApprove', HEAD_RETURN: 'fleetHeadReturn', HEAD_REJECT: 'fleetHeadReject' };
 const errorKeys: Record<string, MessageKey> = {
   INVALID_RANGE: 'fleetErrorInvalidRange', IN_PAST: 'fleetErrorInPast', TOO_FAR_AHEAD: 'fleetErrorTooFarAhead', TOO_LONG: 'fleetErrorTooLong', NOT_QUARTER_HOUR: 'fleetErrorNotQuarterHour',
   NO_ORGANIZATION: 'fleetErrorNoOrganization', NO_APPROVER: 'fleetErrorNoApprover', TRAVEL_NOT_ELIGIBLE: 'fleetErrorTravelNotEligible', TRAVEL_ALREADY_HAS_CAR: 'fleetErrorTravelAlreadyHasCar',
