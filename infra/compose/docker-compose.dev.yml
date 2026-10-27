@@ -12,14 +12,18 @@ services:
     image: redis:8.4-alpine
     ports: ["${BACKOFFICE_REDIS_PORT:-6379}:6379"]
     volumes: ["redis-data:/data"]
-  minio:
-    image: quay.io/minio/minio:latest
-    command: server /data --console-address :9001
-    environment:
-      MINIO_ROOT_USER: local-minio-admin
-      MINIO_ROOT_PASSWORD: local-minio-development-only
-    ports: ["${BACKOFFICE_MINIO_PORT:-9000}:9000", "${BACKOFFICE_MINIO_CONSOLE_PORT:-9001}:9001"]
-    volumes: ["minio-data:/data"]
+  # ไฟล์แนบส่วนตัว: S3-compatible object storage (Apache 2.0). Keys come from seaweedfs-dev-s3.json.
+  seaweedfs:
+    image: chrislusf/seaweedfs:3.97
+    command: ["server", "-dir=/data", "-volume.max=0", "-master.volumeSizeLimitMB=1024", "-s3", "-s3.port=8333", "-s3.config=/etc/seaweedfs/s3.json"]
+    ports: ["${BACKOFFICE_S3_PORT:-8333}:8333"]
+    volumes: ["seaweedfs-data:/data", "./seaweedfs-dev-s3.json:/etc/seaweedfs/s3.json:ro"]
+  # Virus scanner for uploads. Downloads signatures on first start and needs about 3 GB of RAM;
+  # start it with `node scripts/setup-local.mjs --with-clamav`.
+  clamav:
+    image: clamav/clamav:1.4
+    ports: ["${BACKOFFICE_CLAMAV_PORT:-3310}:3310"]
+    volumes: ["clamav-data:/var/lib/clamav"]
   # Optional: serves the web app running on the host over HTTPS to other machines on the LAN.
   # See docs/runbooks/local-setup.md.
   https-lan:
@@ -34,5 +38,6 @@ services:
 volumes:
   mariadb-data:
   redis-data:
-  minio-data:
+  seaweedfs-data:
+  clamav-data:
   caddy-lan-data:

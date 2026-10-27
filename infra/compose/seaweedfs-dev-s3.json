@@ -1,0 +1,9 @@
+{
+  "identities": [
+    {
+      "name": "backoffice-local",
+      "credentials": [{ "accessKey": "local-s3-access", "secretKey": "local-s3-secret-development-only" }],
+      "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+    }
+  ]
+}

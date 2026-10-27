@@ -30,4 +30,11 @@ describe('officialTravelInputSchema', () => {
     expect(officialTravelInputSchema.safeParse({ ...valid, endDate: '2027-11-12' }).success).toBe(false);
     expect(officialTravelInputSchema.safeParse({ ...valid, endDate: '2027-11-09' }).success).toBe(true);
   });
+
+  it('takes an optional attachment id that may be null to remove the file', () => {
+    expect(officialTravelInputSchema.parse({ ...valid, attachmentId: '00000000-0000-4000-8000-000000000001' }).attachmentId).toBe('00000000-0000-4000-8000-000000000001');
+    expect(officialTravelInputSchema.parse({ ...valid, attachmentId: null }).attachmentId).toBeNull();
+    expect(officialTravelInputSchema.parse(valid).attachmentId).toBeUndefined();
+    expect(officialTravelInputSchema.safeParse({ ...valid, attachmentId: 'not-an-id' }).success).toBe(false);
+  });
 });

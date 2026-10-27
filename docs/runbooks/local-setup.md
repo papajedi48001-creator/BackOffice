@@ -25,7 +25,7 @@ node scripts/setup-local.mjs
 2. รัน `pnpm install --frozen-lockfile`
 3. ตรวจว่าพอร์ตที่ต้องใช้ว่าง (ดู "พอร์ตชน")
 4. สร้าง `.env` จาก `.env.example` พร้อมสุ่ม `BACKOFFICE_SESSION_SECRET`, `NATIONAL_ID_ENCRYPTION_KEY`, `NATIONAL_ID_LOOKUP_KEY` ใหม่ ถ้ามี `.env` อยู่แล้วจะไม่เขียนทับ
-5. เปิด MariaDB และ Redis ด้วย `infra/compose/docker-compose.dev.yml` (เพิ่ม `--with-minio` ถ้าต้องการที่เก็บไฟล์แนบ)
+5. เปิด MariaDB, Redis และ SeaweedFS (ที่เก็บไฟล์แนบ) ด้วย `infra/compose/docker-compose.dev.yml` เพิ่ม `--with-clamav` ถ้าต้องการลองแนบไฟล์ เพราะทุกไฟล์ต้องผ่านการตรวจไวรัสก่อน (ClamAV ใช้ RAM ราว 3 GB และโหลดฐานข้อมูลไวรัสจากอินเทอร์เน็ตครั้งแรกหลายนาที)
 6. รอฐานข้อมูลพร้อมแล้วรัน migration
 7. รัน `seed:demo` ถ้าสาขานั้นมีสคริปต์นี้ เพื่อสร้างหน่วยงาน บุคลากร และบัญชีทดลอง
 
@@ -58,7 +58,7 @@ node scripts/setup-local.mjs web      # build แล้วเปิดเว็�
 
 ## พอร์ตชน
 
-ค่าเริ่มต้นคือ MariaDB `3307`, Redis `6379`, MinIO `9000`/`9001`, เว็บ `3000` และ HTTPS สำหรับ LAN `8443` ถ้าพอร์ตไหนมีโปรแกรมอื่นใช้อยู่ สคริปต์จะหยุดและบอกตัวแปรที่ต้องตั้ง
+ค่าเริ่มต้นคือ MariaDB `3307`, Redis `6379`, SeaweedFS S3 `8333`, ClamAV `3310`, เว็บ `3000` และ HTTPS สำหรับ LAN `8443` ถ้าพอร์ตไหนมีโปรแกรมอื่นใช้อยู่ สคริปต์จะหยุดและบอกตัวแปรที่ต้องตั้ง
 
 ก่อนติดตั้งครั้งแรก ตั้งตัวแปรแล้วรันใหม่:
 
@@ -115,6 +115,6 @@ node --test scripts/setup-local-lib.test.mjs scripts/local-compose.test.mjs
 |---|---|
 | `Ports already in use` | ดู "พอร์ตชน" |
 | `MariaDB did not become ready` | ดู log: `docker compose -f infra/compose/docker-compose.dev.yml logs mariadb` |
-| ดึง image MinIO จาก quay.io ไม่ได้ (401) | ข้าม MinIO ได้ (ค่าเริ่มต้นไม่เปิด) ส่วนแนบไฟล์จะใช้ไม่ได้ |
+| แนบไฟล์แล้วขึ้น "ระบบตรวจไวรัสยังไม่พร้อม" | ยังไม่ได้เปิด ClamAV หรือยังโหลดฐานข้อมูลไวรัสไม่เสร็จ: `docker compose -f infra/compose/docker-compose.dev.yml up -d clamav` แล้วดู `logs clamav` |
 | เครื่องอื่นเปิด URL แล้วค้างหรือ connection refused | ยังไม่ได้อนุญาตพอร์ตใน firewall หรือใช้ IP ผิดการ์ด |
 | ล็อกอินผ่าน `http://<IP>:3000` แล้วเด้งกลับหน้าแรก | คุกกี้ `Secure` ส่งผ่าน http ไม่ได้ ให้ใช้ URL HTTPS จาก `lan` |

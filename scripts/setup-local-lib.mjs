@@ -5,20 +5,22 @@ import { createServer } from 'node:net';
 const devDatabasePassword = 'local-development-only';
 
 /** Builds a local-development .env from .env.example with fresh secrets and the given host ports. */
-export function renderEnv(example, { dbPort = 3307, redisPort = 6379, minioPort = 9000 } = {}) {
+export function renderEnv(example, { dbPort = 3307, redisPort = 6379, s3Port = 8333, clamavPort = 3310 } = {}) {
   const values = {
     DATABASE_URL: `mysql://backoffice:${devDatabasePassword}@127.0.0.1:${dbPort}/backoffice`,
     BACKOFFICE_SESSION_SECRET: randomBytes(48).toString('base64'),
     NATIONAL_ID_ENCRYPTION_KEY: randomBytes(32).toString('hex'),
     NATIONAL_ID_LOOKUP_KEY: randomBytes(32).toString('hex'),
     REDIS_URL: `redis://127.0.0.1:${redisPort}`,
-    S3_ENDPOINT: `http://127.0.0.1:${minioPort}`
+    S3_ENDPOINT: `http://127.0.0.1:${s3Port}`,
+    CLAMD_HOST: '127.0.0.1',
+    CLAMD_PORT: String(clamavPort)
   };
   let text = example;
   for (const [key, value] of Object.entries(values)) {
     text = text.replace(new RegExp(`^${key}=.*$`, 'm'), `${key}=${value}`);
   }
-  const ports = { BACKOFFICE_DB_PORT: dbPort, BACKOFFICE_REDIS_PORT: redisPort, BACKOFFICE_MINIO_PORT: minioPort };
+  const ports = { BACKOFFICE_DB_PORT: dbPort, BACKOFFICE_REDIS_PORT: redisPort, BACKOFFICE_S3_PORT: s3Port, BACKOFFICE_CLAMAV_PORT: clamavPort };
   const portLines = Object.entries(ports).map(([key, value]) => `${key}=${value}`).join('\n');
   return `${text.trimEnd()}\n# Host ports used by infra/compose/docker-compose.dev.yml\n${portLines}\n`;
 }

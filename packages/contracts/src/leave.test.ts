@@ -35,4 +35,11 @@ describe('leave contracts', () => {
     expect(leaveSettingInputSchema.safeParse({ minWorkingDaysPerMonth: 32 }).success).toBe(false);
     expect(leaveSettingInputSchema.safeParse({ minWorkingDaysPerMonth: 15 }).success).toBe(true);
   });
+
+  it('takes an optional attachment id on a ใบลา', () => {
+    const leave = { leaveTypeId: 'type-1', startDate: '2026-11-02', endDate: '2026-11-02', reason: 'ป่วย' };
+    expect(leaveRequestInputSchema.parse({ ...leave, attachmentId: '00000000-0000-4000-8000-000000000001' }).attachmentId).toBe('00000000-0000-4000-8000-000000000001');
+    expect(leaveRequestInputSchema.parse({ ...leave, attachmentId: null }).attachmentId).toBeNull();
+    expect(leaveRequestInputSchema.safeParse({ ...leave, attachmentId: '../x' }).success).toBe(false);
+  });
 });

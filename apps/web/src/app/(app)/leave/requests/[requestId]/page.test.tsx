@@ -25,7 +25,7 @@ function ready(view: unknown) {
   mocks.listTypes.mockResolvedValue([]);
 }
 
-afterEach(() => { vi.clearAllMocks(); vi.unstubAllGlobals(); });
+afterEach(() => { vi.clearAllMocks(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
 describe('LeaveRequestPage', () => {
   it('shows an approver the reason, the warning, the steps and the decide buttons', async () => {
@@ -91,5 +91,15 @@ describe('LeaveRequestPage', () => {
     ready(null);
     await LeaveRequestPage(params('hidden'));
     expect(mocks.notFound).toHaveBeenCalled();
+  });
+
+  it('links the attached file, and lets the owner change it on a returned ใบลา', async () => {
+    ready({ ...detail, status: 'RETURNED', canCancel: true, leaveTypeId: 'lt-1', attachment: { attachmentId: 'att-1', filename: 'ใบรับรองแพทย์.pdf' } });
+    for (const [name, value] of Object.entries({ S3_ENDPOINT: 'http://seaweedfs:8333', S3_BUCKET: 'b', S3_ACCESS_KEY_ID: 'k', S3_SECRET_ACCESS_KEY: 's', CLAMD_HOST: 'clamav' })) vi.stubEnv(name, value);
+    render(await LeaveRequestPage(params()));
+    const links = screen.getAllByRole('link', { name: 'ใบรับรองแพทย์.pdf' });
+    expect(links).toHaveLength(2);
+    for (const link of links) expect(link).toHaveAttribute('href', '/api/attachments/att-1/download');
+    expect(screen.getByRole('button', { name: 'นำไฟล์ออก' })).toBeInTheDocument();
   });
 });

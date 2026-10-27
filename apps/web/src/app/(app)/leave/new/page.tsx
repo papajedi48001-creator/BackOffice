@@ -1,5 +1,6 @@
 import { LeaveQueries } from '@backoffice/core';
 import { t } from '@backoffice/i18n';
+import { attachmentsEnabled } from '../../../../lib/attachments';
 import { getSharedDatabase } from '../../../../lib/database';
 import { leaveSession } from '../leave-page';
 import { LeaveForm } from './leave-form';
@@ -13,6 +14,6 @@ export default async function NewLeavePage() {
   const types = await new LeaveQueries(database).typesFor(session.personId);
   return <section>
     <h2>{t('leaveNew')}</h2>
-    <LeaveForm types={types.map(({ id, code, name, counting }) => ({ id, code, name, counting }))} />
+    <LeaveForm types={types.map(({ id, code, name, counting }) => ({ id, code, name, counting }))} attachments={attachmentsEnabled()} />
   </section>;
 }

@@ -40,14 +40,13 @@ if ($staging -notmatch [regex]::Escape('COMPOSE_PROJECT_NAME=waritch-backoffice-
 
 foreach ($environmentFile in @($stagingEnv, $productionEnv)) {
   $environment = Get-Content -Raw -LiteralPath $environmentFile
-  if ($environment -match 'MINIO_IMAGE=.*:latest') {
-    throw "MinIO image must use an approved immutable reference: $environmentFile"
+  if ($environment -match '(SEAWEEDFS|CLAMAV)_IMAGE=.*:latest') {
+    throw "SeaweedFS and ClamAV images must use an approved immutable reference: $environmentFile"
   }
-  if ($environment -notmatch [regex]::Escape('MINIO_IMAGE=registry.example.internal/waritch-backoffice/minio:replace-with-approved-digest')) {
-    throw "MinIO image must be an approved private-registry placeholder: $environmentFile"
-  }
-  if ($environment -notmatch [regex]::Escape('MINIO_LICENSE_FILE=/etc/backoffice/secrets/minio_license')) {
-    throw "MinIO AIStor requires a file-based license path: $environmentFile"
+  foreach ($required in @('SEAWEEDFS_IMAGE=registry.example.internal/waritch-backoffice/seaweedfs:replace-with-approved-digest', 'CLAMAV_IMAGE=registry.example.internal/waritch-backoffice/clamav:replace-with-approved-digest', 'SEAWEEDFS_S3_CONFIG_FILE=/etc/backoffice/secrets/seaweedfs_s3.json', 'S3_SECRET_ACCESS_KEY_FILE=/etc/backoffice/secrets/s3_secret_access_key')) {
+    if ($environment -notmatch [regex]::Escape($required)) {
+      throw "Missing file-based attachment storage setting ${required}: $environmentFile"
+    }
   }
 }
 

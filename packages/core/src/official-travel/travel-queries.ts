@@ -1,5 +1,6 @@
 import type { AccessSubject, LeaveEndHalf, LeaveStartHalf, RequestStatus, TravelFunding, TravelTypeCode, TravelVehicle } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
+import { linkedAttachment, type LinkedAttachment } from '../files/attachment-link';
 import type { LeaveStepView } from '../leave/leave-queries';
 import { canManageTravel } from './travel-access';
 import { OFFICIAL_TRAVEL_MODULE } from './travel-module';
@@ -13,7 +14,7 @@ export interface TravelListItem { travelId: string; subject: string; place: stri
 export type TravelReportStatus = 'SUBMITTED' | 'MISSING' | 'NOT_DUE' | 'NONE';
 export interface TravelReportView { summary: string; application: string; submittedAt: string; updatedAt: string }
 export interface TravelMemberView { requestId: string; personId: string; displayName: string | null; organizationName: string | null; status: RequestStatus; steps: LeaveStepView[]; canDecide: boolean }
-export interface TravelDetail extends TravelListItem { organiser: string; vehicle: TravelVehicle; fundingSource: TravelFunding; costs: { allowance: number; lodging: number; transport: number; registration: number; total: number }; leaderPersonId: string; members: TravelMemberView[]; canEdit: boolean; canCancel: boolean; report: TravelReportView | null; canReport: boolean; filedAt: string }
+export interface TravelDetail extends TravelListItem { organiser: string; vehicle: TravelVehicle; fundingSource: TravelFunding; costs: { allowance: number; lodging: number; transport: number; registration: number; total: number }; leaderPersonId: string; members: TravelMemberView[]; canEdit: boolean; canCancel: boolean; report: TravelReportView | null; canReport: boolean; filedAt: string; attachment: LinkedAttachment | null }
 export interface TravelPendingItem { requestId: string; travelId: string; personId: string; personDisplayName: string | null; organizationName: string | null; subject: string; place: string; travelType: TravelTypeCode; startDate: string; endDate: string; startHalf: LeaveStartHalf; endHalf: LeaveEndHalf; days: number; submittedAt: string | null }
 export interface TravelFilter { from?: string; to?: string; travelType?: TravelTypeCode; status?: TripStatus; reportMissing?: boolean }
 
@@ -77,6 +78,7 @@ export class OfficialTravelQueries {
       canEdit: leader && statuses.includes('RETURNED'),
       canCancel: leader && statuses.some((status) => status === 'IN_REVIEW' || status === 'RETURNED') && !statuses.includes('APPROVED'),
       report: report ?? null,
+      attachment: await linkedAttachment(this.database, 'official_travel', 'id', travelId),
       canReport: leader && item.status === 'APPROVED' && trip.endDate < today
     };
   }
