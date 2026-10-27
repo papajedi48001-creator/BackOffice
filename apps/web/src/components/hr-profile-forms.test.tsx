@@ -92,4 +92,63 @@ describe('ProfileForm กลุ่มงาน and งาน', () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     expect(sent(fetchMock).organizationId).toBe('old');
   });
+
+});
+
+describe('ProfileForm ตำแหน่งงาน and ระดับตำแหน่ง', () => {
+  const positions = [
+    { name: 'เจ้าพนักงานธุรการ', allowedLevels: ['ปฏิบัติงาน', 'ชำนาญงาน', 'อาวุโส'] },
+    { name: 'พยาบาลวิชาชีพ', allowedLevels: ['ปฏิบัติการ', 'ชำนาญการ', 'ชำนาญการพิเศษ', 'เชี่ยวชาญ'] },
+    { name: 'พนักงานขับรถยนต์', allowedLevels: [] }
+  ];
+  const held = { ...values, positionTitle: 'พยาบาลวิชาชีพ', positionLevel: 'ชำนาญการ' };
+
+  it('suggests positions, and only the levels the chosen position allows', () => {
+    render(<ProfileForm personId="p1" values={held} employmentTypes={[]} units={units} positions={positions} />);
+    const position = screen.getByRole('combobox', { name: 'ตำแหน่งงาน' });
+    const level = screen.getByRole('combobox', { name: 'ระดับตำแหน่ง' });
+    expect(options(position.getAttribute('list')!)).toEqual(['เจ้าพนักงานธุรการ', 'พยาบาลวิชาชีพ', 'พนักงานขับรถยนต์']);
+    expect(options(level.getAttribute('list')!)).toEqual(['ปฏิบัติการ', 'ชำนาญการ', 'ชำนาญการพิเศษ', 'เชี่ยวชาญ']);
+    fireEvent.change(position, { target: { value: 'เจ้าพนักงานธุรการ' } });
+    expect(level).toHaveValue('');
+    expect(options(level.getAttribute('list')!)).toEqual(['ปฏิบัติงาน', 'ชำนาญงาน', 'อาวุโส']);
+  });
+
+  it('refuses an unknown position or a level the position does not allow, without saving', () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    render(<ProfileForm personId="p1" values={held} employmentTypes={[]} units={units} positions={positions} />);
+    fireEvent.change(screen.getByRole('combobox', { name: 'ตำแหน่งงาน' }), { target: { value: 'ตำแหน่งที่ไม่มี' } });
+    fireEvent.click(screen.getByRole('button', { name: 'บันทึกข้อมูล' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('ไม่พบตำแหน่งนี้ กรุณาเลือกจากรายการ');
+    fireEvent.change(screen.getByRole('combobox', { name: 'ตำแหน่งงาน' }), { target: { value: 'เจ้าพนักงานธุรการ' } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'ระดับตำแหน่ง' }), { target: { value: 'ปฏิบัติการ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'บันทึกข้อมูล' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('ระดับนี้ใช้กับตำแหน่งนี้ไม่ได้ตามโครงสร้าง ก.พ.');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('saves a chosen position and level, and shows the server refusal in Thai', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: 'INACTIVE_POSITION' }), { status: 400 }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<ProfileForm personId="p1" values={held} employmentTypes={[]} units={units} positions={positions} />);
+    fireEvent.change(screen.getByRole('combobox', { name: 'ตำแหน่งงาน' }), { target: { value: 'เจ้าพนักงานธุรการ' } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'ระดับตำแหน่ง' }), { target: { value: 'ชำนาญงาน' } });
+    fireEvent.click(screen.getByRole('button', { name: 'บันทึกข้อมูล' }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(sent(fetchMock)).toMatchObject({ positionTitle: 'เจ้าพนักงานธุรการ', positionLevel: 'ชำนาญงาน' });
+    fireEvent.click(screen.getByRole('button', { name: 'บันทึกข้อมูล' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('ตำแหน่งนี้ปิดใช้งานแล้ว');
+  });
+
+  it('keeps an older position that is not in the list while it is untouched', async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<ProfileForm personId="p1" values={{ ...held, positionTitle: 'ตำแหน่งเดิม', positionLevel: 'ระดับเดิม' }} employmentTypes={[]} units={units} positions={positions} />);
+    fireEvent.click(screen.getByRole('button', { name: 'บันทึกข้อมูล' }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(sent(fetchMock)).toMatchObject({ positionTitle: 'ตำแหน่งเดิม', positionLevel: 'ระดับเดิม' });
+  });
 });

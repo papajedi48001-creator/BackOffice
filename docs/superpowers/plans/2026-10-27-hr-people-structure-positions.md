@@ -79,10 +79,10 @@ Each service sits behind Next.js route handlers guarded by `canActHospitalWide`.
 - [x] Commit `feat(hr): position catalogue with ก.พ. levels`.
 
 ### Task B2: Positions page and person form suggestions
-- [ ] Failing tests:
+- [x] Failing tests:
   - the `/hr/positions` page and its routes;
   - the person form suggests positions, and suggests only the allowed levels of the chosen position.
-- [ ] Commit `feat(web): manage positions and suggest position and level`.
+- [x] Commit `feat(web): manage positions and suggest position and level`.
 - [ ] PR B.
 
 ### Task C1: Create a person with an account; edit identity fields

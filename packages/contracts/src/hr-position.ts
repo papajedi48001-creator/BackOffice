@@ -32,3 +32,6 @@ export interface Position extends PositionInput { id: string; holders: number; }
 export function levelAllowed(allowedLevels: readonly string[], level: string | null): boolean {
   return level === null || allowedLevels.includes(level);
 }
+
+/** A position CSV sent as text. A ministry list of a few thousand positions fits well within the limit. */
+export const importPositionsInputSchema = z.object({ csv: z.string().min(1).max(512 * 1024) }).strict();

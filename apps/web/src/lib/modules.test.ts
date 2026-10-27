@@ -33,6 +33,8 @@ describe('module registry', () => {
     expect(sectionHrefs('hr', scoped)).not.toContain('/hr/imports');
     expect(sectionHrefs('hr', scoped)).not.toContain('/hr/employment-types');
     expect(sectionHrefs('hr', subject({ roles: [{ name: 'hr-manager', organizationId: null }], dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: ['hr'] }))).toContain('/hr/employment-types');
+    expect(sectionHrefs('hr', scoped)).not.toContain('/hr/positions');
+    expect(sectionHrefs('hr', subject({ roles: [{ name: 'hr-manager', organizationId: null }], dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: ['hr'] }))).toContain('/hr/positions');
     expect(sectionHrefs('access', scoped)).toEqual(['/access/roles', '/access/delegations', '/access/audit']);
   });
 
