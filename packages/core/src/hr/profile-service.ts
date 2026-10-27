@@ -218,6 +218,11 @@ async function resolvePosition(database: QueryDatabase, subject: ProfileSubject,
   const titleChanged = valid.positionTitle !== undefined && valid.positionTitle !== subject.positionTitle;
   const levelChanged = valid.positionLevel !== undefined && valid.positionLevel !== stored.positionLevel;
   let positionId = stored.positionId;
+  // A person never linked (older data) is linked through the title they already hold, so a level-only change is checked too.
+  if (!titleChanged && positionId === null && subject.positionTitle) {
+    const [found] = await database.query<{ id: string }>('SELECT id FROM hr_position WHERE name = ? LOCK IN SHARE MODE', [subject.positionTitle]);
+    positionId = found?.id ?? null;
+  }
   if (titleChanged) {
     if (valid.positionTitle === null) positionId = null;
     else {

@@ -83,7 +83,9 @@ export function ProfileForm({ personId, values, employmentTypes, units, position
   }
   function changePosition(event: React.ChangeEvent<HTMLInputElement>) {
     const next = positions.find((position) => position.name === event.target.value.trim());
-    setForm((current) => ({ ...current, positionTitle: event.target.value, positionLevel: next && !next.allowedLevels.includes(current.positionLevel) ? '' : current.positionLevel }));
+    // Back on the person's own position, their level comes back; a level the new position does not allow is cleared.
+    const back = event.target.value.trim() === (values.positionTitle ?? '');
+    setForm((current) => ({ ...current, positionTitle: event.target.value, positionLevel: back ? values.positionLevel ?? '' : next && !next.allowedLevels.includes(current.positionLevel) ? '' : current.positionLevel }));
   }
   async function submit(event: React.FormEvent) {
     event.preventDefault();

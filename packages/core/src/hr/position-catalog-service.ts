@@ -19,10 +19,8 @@ export class PositionCatalogService {
 
   async list(options: { activeOnly?: boolean } = {}): Promise<Position[]> {
     const rows = await this.database.query<{ id: string; name: string; category: PositionCategory; allowedLevels: string | string[]; isActive: number; sortOrder: number | string; holders: number | string }>(
-      `SELECT pos.id, pos.name, pos.category, pos.allowed_levels AS allowedLevels, pos.is_active AS isActive, pos.sort_order AS sortOrder, COUNT(pr.person_id) AS holders
-       FROM hr_position pos LEFT JOIN hr_person_profile pr ON pr.position_id = pos.id
-       ${options.activeOnly ? 'WHERE pos.is_active = 1' : ''}
-       GROUP BY pos.id, pos.name, pos.category, pos.allowed_levels, pos.is_active, pos.sort_order ORDER BY pos.sort_order, pos.name`);
+      `SELECT pos.id, pos.name, pos.category, pos.allowed_levels AS allowedLevels, pos.is_active AS isActive, pos.sort_order AS sortOrder, (${holdersSql}) AS holders
+       FROM hr_position pos ${options.activeOnly ? 'WHERE pos.is_active = 1' : ''} ORDER BY pos.sort_order, pos.name`);
     return rows.map((row) => ({ ...row, allowedLevels: levelsOf(row.allowedLevels), isActive: Boolean(row.isActive), sortOrder: Number(row.sortOrder), holders: Number(row.holders) }));
   }
 
@@ -41,6 +39,8 @@ export class PositionCatalogService {
     return withDuplicateName(() => this.database.transaction(async (database) => {
       const [stored] = await database.query<{ name: string }>('SELECT name FROM hr_position WHERE id = ? FOR UPDATE', [id]);
       if (!stored) return { ok: false as const, code: 'NOT_FOUND' as const };
+      // People whose title names the position but who were never linked follow a rename too.
+      if (stored.name !== valid.name) await linkPositionsByTitle(database, (await database.query<{ id: string }>('SELECT id FROM person WHERE position_title = ?', [stored.name])).map((row) => row.id));
       await database.execute('UPDATE hr_position SET name = ?, category = ?, allowed_levels = ?, is_active = ?, sort_order = ?, updated_at = UTC_TIMESTAMP() WHERE id = ?', [valid.name, valid.category, JSON.stringify(valid.allowedLevels), valid.isActive ? 1 : 0, valid.sortOrder, id]);
       // person.position_title is what other modules show, so it follows the catalogue name.
       if (stored.name !== valid.name) await database.execute('UPDATE person p JOIN hr_person_profile pr ON pr.person_id = p.id SET p.position_title = ? WHERE pr.position_id = ?', [valid.name, id]);
@@ -53,7 +53,7 @@ export class PositionCatalogService {
     return this.database.transaction(async (database) => {
       const [stored] = await database.query<{ id: string }>('SELECT id FROM hr_position WHERE id = ? FOR UPDATE', [id]);
       if (!stored) return { ok: false as const, code: 'NOT_FOUND' as const };
-      const [held] = await database.query<{ holders: number | string }>('SELECT COUNT(*) AS holders FROM hr_person_profile WHERE position_id = ?', [id]);
+      const [held] = await database.query<{ holders: number | string }>(`SELECT (${holdersSql}) AS holders FROM hr_position pos WHERE pos.id = ?`, [id]);
       if (Number(held?.holders ?? 0) > 0) return { ok: false as const, code: 'POSITION_IN_USE' as const };
       await database.execute('DELETE FROM hr_position WHERE id = ?', [id]);
       await this.audit(database, actorPersonId, 'hr.position.delete', id, { positionId: id });
@@ -75,19 +75,20 @@ export class PositionCatalogService {
       const category = categoryNames[categoryText] ?? positionCategorySchema.safeParse(categoryText.toUpperCase()).data;
       const allowedLevels = levelsText.split('|').map((level) => level.trim()).filter(Boolean);
       const isActive = activeValues[activeText.toLowerCase()];
-      const code: PositionImportErrorCode | null = name === '' || name.length > 255 ? 'NAME_REQUIRED' : !category ? 'UNKNOWN_CATEGORY' : !levelsFitCategory(category, allowedLevels) ? 'LEVELS_NOT_IN_CATEGORY' : isActive === undefined ? 'INVALID_ACTIVE' : seen.has(name) ? 'DUPLICATE_ROW' : null;
+      const code: PositionImportErrorCode | null = name === '' || name.length > 255 ? 'NAME_REQUIRED' : !category ? 'UNKNOWN_CATEGORY' : !levelsFitCategory(category, allowedLevels) ? 'LEVELS_NOT_IN_CATEGORY' : isActive === undefined ? 'INVALID_ACTIVE' : seen.has(name.toLowerCase()) ? 'DUPLICATE_ROW' : null;
       if (code) { errors.push({ line, code }); continue; }
-      seen.add(name);
+      seen.add(name.toLowerCase());
       parsed.push({ name, category: category!, allowedLevels, isActive: isActive! });
     }
     if (errors.length > 0) return { ok: false, errors };
     return this.database.transaction(async (database): Promise<PositionImportResult> => {
-      const existing = new Map((await database.query<{ id: string; name: string }>('SELECT id, name FROM hr_position FOR UPDATE')).map((row) => [row.name, row.id]));
+      // Names compare without letter case, as the unique key does.
+      const existing = new Map((await database.query<{ id: string; name: string }>('SELECT id, name FROM hr_position FOR UPDATE')).map((row) => [row.name.toLowerCase(), row.id]));
       const [last] = await database.query<{ sortOrder: number | string | null }>('SELECT MAX(sort_order) AS sortOrder FROM hr_position');
       let sortOrder = Number(last?.sortOrder ?? 0);
       let created = 0;
       for (const row of parsed) {
-        const id = existing.get(row.name);
+        const id = existing.get(row.name.toLowerCase());
         if (id) await database.execute('UPDATE hr_position SET category = ?, allowed_levels = ?, is_active = ?, updated_at = UTC_TIMESTAMP() WHERE id = ?', [row.category, JSON.stringify(row.allowedLevels), row.isActive ? 1 : 0, id]);
         else { sortOrder = Math.min(sortOrder + 10, 9999); await insertPosition(database, this.createId(), { ...row, sortOrder }); created += 1; }
       }
@@ -99,6 +100,17 @@ export class PositionCatalogService {
   private audit(database: QueryDatabase, actorPersonId: string, action: string, targetId: string, metadata: Record<string, unknown>): Promise<void> {
     return new AuditService(new DatabaseAuditRepository(database), this.createId).recordAudit({ actorPersonId, action, targetType: 'position', targetId, result: 'SUCCESS', metadata });
   }
+}
+
+/** Holders are people linked to the position, or whose title names it but who were never linked (older data). */
+const holdersSql = 'SELECT COUNT(*) FROM person p LEFT JOIN hr_person_profile pr ON pr.person_id = p.id WHERE pr.position_id = pos.id OR p.position_title = pos.name';
+
+/** Links each person to the catalogue position their title names, or unlinks them when it names none. */
+export async function linkPositionsByTitle(database: QueryDatabase, personIds: string[]): Promise<void> {
+  if (personIds.length === 0) return;
+  const marks = personIds.map(() => '?').join(', ');
+  await database.execute(`INSERT IGNORE INTO hr_person_profile (person_id, updated_at) SELECT p.id, UTC_TIMESTAMP() FROM person p JOIN hr_position pos ON pos.name = p.position_title WHERE p.id IN (${marks})`, personIds);
+  await database.execute(`UPDATE hr_person_profile pr JOIN person p ON p.id = pr.person_id LEFT JOIN hr_position pos ON pos.name = p.position_title SET pr.position_id = pos.id WHERE pr.person_id IN (${marks})`, personIds);
 }
 
 function insertPosition(database: QueryDatabase, id: string, position: PositionInput): Promise<void> {

@@ -101,4 +101,24 @@ describeWithDatabase('PositionCatalogService against MariaDB', () => {
     await expect(new HrProfileService(database).updateProfile(someone, { firstName: 'ทดสอบ', positionTitle: 'ตำแหน่งเก่าที่ไม่อยู่ในทะเบียน', positionLevel: null }, hrManager)).resolves.toEqual({ ok: true });
     expect(await profileOf(someone)).toMatchObject({ positionId: null, positionTitle: 'ตำแหน่งเก่าที่ไม่อยู่ในทะเบียน' });
   });
+
+  it('treats a person whose title matches but who is not linked yet as a holder', async () => {
+    const profiles = new HrProfileService(database);
+    const name = unique('ตำแหน่งยังไม่ผูก');
+    const id = created(await service.create(general(name), actor));
+    const unlinked = await person(name);
+    // A level-only change is still checked against the position the title names.
+    await expect(profiles.updateProfile(unlinked, { positionLevel: 'ปฏิบัติการ' }, hrManager)).resolves.toEqual({ ok: false, code: 'LEVEL_NOT_ALLOWED' });
+    const other = await person(name);
+    expect((await service.list()).find((position) => position.id === id)!.holders).toBe(2);
+    await expect(service.delete(id, actor)).resolves.toEqual({ ok: false, code: 'POSITION_IN_USE' });
+    const renamed = unique('ตำแหน่งผูกแล้ว');
+    await expect(service.update(id, general(renamed), actor)).resolves.toEqual({ ok: true });
+    expect(await profileOf(other)).toEqual({ positionId: id, positionLevel: null, positionTitle: renamed });
+  });
+
+  it('refuses a CSV with two names that differ only in letter case instead of failing', async () => {
+    const name = `Case ${randomUUID().slice(0, 8)}`;
+    await expect(service.importCsv(`name,category,levels,active\n${name},NONE,,1\n${name.toLowerCase()},NONE,,1\n`, actor)).resolves.toEqual({ ok: false, errors: [{ line: 3, code: 'DUPLICATE_ROW' }] });
+  });
 });

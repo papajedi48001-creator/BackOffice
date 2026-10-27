@@ -151,4 +151,13 @@ describe('ProfileForm ตำแหน่งงาน and ระดับตำ�
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     expect(sent(fetchMock)).toMatchObject({ positionTitle: 'ตำแหน่งเดิม', positionLevel: 'ระดับเดิม' });
   });
+
+  it('brings the level back when the position is changed and then changed back', () => {
+    render(<ProfileForm personId="p1" values={held} employmentTypes={[]} units={units} positions={positions} />);
+    const position = screen.getByRole('combobox', { name: 'ตำแหน่งงาน' });
+    fireEvent.change(position, { target: { value: 'พนักงานขับรถยนต์' } });
+    expect(screen.getByRole('combobox', { name: 'ระดับตำแหน่ง' })).toHaveValue('');
+    fireEvent.change(position, { target: { value: 'พยาบาลวิชาชีพ' } });
+    expect(screen.getByRole('combobox', { name: 'ระดับตำแหน่ง' })).toHaveValue('ชำนาญการ');
+  });
 });

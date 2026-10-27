@@ -6,6 +6,7 @@ import { DatabaseAuditRepository } from '../audit/database-audit-repository';
 import type { NationalIdProtector } from '../crypto/national-id';
 import { validateMasterData, type ExistingMasterData, type ExistingOrganization, type ImportProfile, type MasterDataError, type MasterDataFiles, type MasterDataValidation, type OrganizationImportRow } from './master-data-validation';
 import { EmploymentTypeService } from './employment-type-service';
+import { linkPositionsByTitle } from './position-catalog-service';
 import { OrganizationHeadService } from './organization-head-service';
 import { applyProfileUpdate, lockProfileSubject } from './profile-service';
 
@@ -120,6 +121,8 @@ export class MasterDataImportService {
       const result = await applyProfileUpdate(database, subject!, row.profile, actorPersonId, this.createId, { canEditOrganization: () => true, syncDisplayName: false });
       if (!result.ok) throw new Error(`PROFILE_UPDATE_${result.code}`);
     }
+    // person.position_title is written above, so each imported person is linked to the catalogue position it names.
+    await linkPositionsByTitle(database, validation.people.map((row) => personIdByCode.get(row.employeeCode)!));
     // Heads come last because a head may be a person this import creates.
     const heads = new OrganizationHeadService(this.database, this.createId);
     const now = new Date();
