@@ -42,4 +42,14 @@ describe('AuditEventTable', () => {
     expect(screen.getByText('RC-2569-0001')).toBeInTheDocument();
     expect(screen.getByText('รับรองยอดยกมา')).toBeInTheDocument();
   });
+  it('labels every fleet action in Thai', () => {
+    const labels: Array<[AuditEventRow['action'], string]> = [
+      ['fleet.request.submitted', 'ยื่นใบขอใช้รถ'], ['fleet.request.resubmitted', 'ส่งใบขอใช้รถใหม่'], ['fleet.request.cancelled', 'ยกเลิกใบขอใช้รถ'], ['fleet.request.assigned', 'จัดรถ'],
+      ['fleet.request.unassigned', 'ถอดใบออกจากเที่ยวรถ'], ['fleet.request.declined', 'ไม่จัดรถ'], ['fleet.trip.updated', 'แก้ไขเที่ยวรถ'], ['fleet.trip.departed', 'ออกเดินทาง'],
+      ['fleet.trip.returned', 'กลับถึง'], ['fleet.trip.cancelled', 'ยกเลิกเที่ยวรถ'], ['fleet.vehicle.create', 'เพิ่มรถราชการ'], ['fleet.vehicle.update', 'แก้ไขรถราชการ'],
+      ['fleet.driver.create', 'เพิ่มพนักงานขับรถ'], ['fleet.driver.update', 'แก้ไขพนักงานขับรถ']
+    ];
+    render(<AuditEventTable events={labels.map(([action], index) => ({ createdAt: `2026-10-01T07:${String(index).padStart(2, '0')}:00.000Z`, action, result: 'SUCCESS', requestReference: `VR-${index}` }))} />);
+    for (const [, label] of labels) expect(screen.getByText(label)).toBeInTheDocument();
+  });
 });

@@ -9,6 +9,7 @@ import { OVERLAPPING_TRIP, toSqlDatetime } from './fleet-store';
 const LIST_LIMIT = 1000;
 const DAY = 86_400_000;
 const WEEK_START = /^\d{4}-\d{2}-\d{2}$/;
+const CLOSED = new Set<FleetRequestStatus>(['DECLINED', 'CANCELLED', 'HEAD_REJECTED']);
 
 export interface FleetRequestListItem { id: string; reference: string; purpose: string; destination: string; departAt: string; returnAt: string; status: FleetRequestStatus }
 export interface FleetHistoryEntry { action: string; actorName: string | null; reason: string | null; createdAt: string }
@@ -87,6 +88,16 @@ export class FleetQueries {
   async idOfHeadRequest(requestId: string): Promise<string | null> {
     const [row] = await this.database.query<{ id: string }>('SELECT id FROM fleet_request WHERE request_id = ?', [requestId]);
     return row?.id ?? null;
+  }
+
+  /** The ใบ filed for a คำขอไปราชการ that is still live (not ไม่จัดรถ, ยกเลิก or ไม่เห็นชอบ), newest first; null when there is none. */
+  async activeRequestForTravel(travelId: string): Promise<string | null> {
+    const rows = await this.database.query<RequestRow>(`${REQUESTS} WHERE f.official_travel_id = ? ORDER BY f.created_at DESC, f.id`, [travelId]);
+    return rows.find((row) => !CLOSED.has(statusOf(row)))?.id ?? null;
+  }
+
+  async isActiveDriver(personId: string): Promise<boolean> {
+    return (await this.database.query<{ found: number }>('SELECT 1 AS found FROM fleet_driver WHERE person_id = ? AND is_active = 1', [personId])).length > 0;
   }
 
   async waitingCount(): Promise<number> { return (await this.waitingRows()).length; }

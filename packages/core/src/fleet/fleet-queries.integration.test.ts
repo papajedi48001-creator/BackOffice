@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { createDatabase, runMigrations } from '@backoffice/db';
 import { commandChainResolver, createLeaveOrganization, createLeavePerson, insertPerson } from '../leave/leave-fixtures';
+import { OfficialTravelService } from '../official-travel/travel-service';
 import { ApprovalService } from '../workflow/approval-service';
 import { DatabaseWorkflowRepository } from '../workflow/database-workflow-repository';
 import { FleetDispatchService } from './fleet-dispatch-service';
@@ -282,5 +283,25 @@ describeWithDatabase('FleetQueries against MariaDB', () => {
     const driverId = await driver(false, '0833333333');
     expect((await queries.vehicles()).find((entry) => entry.id === car.id)).toEqual({ id: car.id, registration: car.registration, makeModel: 'Toyota Commuter', kind: 'VAN', seats: 12, status: 'RETIRED', note: '' });
     expect((await queries.drivers()).find((entry) => entry.personId === driverId)).toEqual({ personId: driverId, displayName: expect.stringMatching(/^บุคลากร/), phone: '0833333333', isActive: false });
+  });
+
+  it('tells whether a person is an active พนักงานขับรถ', async () => {
+    expect(await queries.isActiveDriver(await driver(true))).toBe(true);
+    expect(await queries.isActiveDriver(await driver(false))).toBe(false);
+    expect(await queries.isActiveDriver(randomUUID())).toBe(false);
+  });
+
+  it('finds the live ใบ filed for a คำขอไปราชการ, and none once it is cancelled', async () => {
+    const leader = await createLeavePerson(database, org.section);
+    const filedTravel = await new OfficialTravelService(database, commandChainResolver(database)).submit(leader, { subject: 'ประชุมวิชาการ', organiser: 'สสจ.', place: 'โรงแรม', province: 'ขอนแก่น', travelType: 'IN_PROVINCE', vehicle: 'GOVERNMENT_CAR', fundingSource: 'HOSPITAL_FUND', startDate: '2026-11-10', endDate: '2026-11-11', memberPersonIds: [] });
+    if (!filedTravel.ok) throw new Error(filedTravel.code);
+    const travelId = filedTravel.travelId;
+    await database.execute("UPDATE request r JOIN official_travel_member m ON m.request_id = r.id SET r.status = 'APPROVED' WHERE m.travel_id = ?", [travelId]);
+    expect(await queries.activeRequestForTravel(travelId)).toBeNull();
+    const result = await requests.submit(leader, { ...draft, officialTravelId: travelId });
+    if (!result.ok) throw new Error(result.code);
+    expect(await queries.activeRequestForTravel(travelId)).toBe(result.fleetRequestId);
+    expect(await requests.cancel(leader, result.fleetRequestId, 'ไม่ไปแล้ว')).toEqual({ ok: true });
+    expect(await queries.activeRequestForTravel(travelId)).toBeNull();
   });
 });

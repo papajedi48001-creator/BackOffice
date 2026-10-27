@@ -14,7 +14,7 @@ describe('module registry', () => {
   });
 
   it('shows one entry per module and only their own profile under HR to a user without roles', () => {
-    expect(hrefs(subject())).toEqual(['/dashboard', '/requests', '/notifications', '/hr', '/access', '/rooms', '/leave', '/travel']);
+    expect(hrefs(subject())).toEqual(['/dashboard', '/requests', '/notifications', '/hr', '/access', '/rooms', '/leave', '/travel', '/fleet']);
     expect(sectionHrefs('access', subject())).toEqual(['/access/audit']);
     expect(sectionHrefs('hr', subject())).toEqual(['/hr/me']);
   });
@@ -96,6 +96,32 @@ describe('official travel module', () => {
     expect(moduleRegistry.find((entry) => entry.code === 'official-travel')).toMatchObject({ status: 'live', group: 'mine', href: '/travel', labelKey: 'moduleTravel' });
     expect(sectionHrefs('official-travel', subject())).toEqual(['/travel/mine', '/travel/new', '/travel/approvals']);
     expect(sectionHrefs('official-travel', manager)).toEqual(['/travel/mine', '/travel/new', '/travel/approvals', '/travel/all', '/travel/settings']);
+  });
+});
+
+describe('fleet module', () => {
+  const manager = subject({ roles: [{ name: 'fleet-manager', organizationId: null }] });
+  const waitingRow = { id: 'f1', dispatchStatus: 'WAITING', headStatus: null, tripStatus: null };
+  /** Three ใบ รอจัดรถ and two of the person's เที่ยวรถ today. */
+  const database = () => ({ query: vi.fn(async (sql: string) => sql.startsWith('SELECT COUNT(*) AS count FROM fleet_trip') ? [{ count: 2 }] : [waitingRow, { ...waitingRow, id: 'f2' }, { ...waitingRow, id: 'f3' }]) }) as unknown as Database;
+
+  it('is live in the services group, opening on my ใบ for everyone and on the dashboard for the หัวหน้าหมวด', () => {
+    expect(moduleRegistry.find((entry) => entry.code === 'fleet')).toMatchObject({ status: 'live', group: 'services', href: '/fleet', labelKey: 'moduleFleet', icon: 'car' });
+    // Whether someone drives comes from fleet_driver, which the synchronous section check cannot read: the link shows to everyone and the page says who it is for.
+    expect(sectionHrefs('fleet', subject())).toEqual(['/fleet/mine', '/fleet/calendar', '/fleet/driving']);
+    expect(sectionHrefs('fleet', manager)).toEqual(['/fleet/dashboard', '/fleet/mine', '/fleet/calendar', '/fleet/driving', '/fleet/settings']);
+    expect(sectionHrefs('fleet', subject({ roles: [{ name: 'fleet-manager', organizationId: 'unit-1' }] }))).not.toContain('/fleet/dashboard');
+    expect(moduleCodeForPath('/fleet/requests/1')).toBe('fleet');
+  });
+
+  it('badges รอจัดรถ for the หัวหน้าหมวด and today\'s เที่ยวรถ for a driver, summed on the module', async () => {
+    const fleet = moduleRegistry.find((entry) => entry.code === 'fleet')!;
+    expect(await fleet.badge!(database(), manager)).toBe(5);
+    expect(await fleet.badge!(database(), subject())).toBe(2);
+    expect(await fleet.badge!(database(), subject({ personId: null }))).toBe(0);
+    const section = (href: string) => fleet.sections!.find((entry) => entry.href === href)!;
+    expect(await section('/fleet/dashboard').badge!(database(), manager)).toBe(3);
+    expect(await section('/fleet/driving').badge!(database(), subject())).toBe(2);
   });
 });
 

@@ -1,5 +1,5 @@
 import type { AccessSubject } from '@backoffice/contracts';
-import { AuthorizationService, LeaveQueries, OfficialTravelQueries, RoomBookingQueries, canManageLeave, canManageTravel, hasRequestActivity, listPendingApprovals } from '@backoffice/core';
+import { AuthorizationService, FleetQueries, LeaveQueries, OfficialTravelQueries, RoomBookingQueries, canManageFleet, canManageLeave, canManageTravel, hasRequestActivity, listPendingApprovals } from '@backoffice/core';
 import type { Database } from '@backoffice/db';
 import { t, type MessageKey } from '@backoffice/i18n';
 import type { NavigationItem } from '../components/app-shell';
@@ -43,6 +43,11 @@ const hasRole = (...names: string[]) => (subject: AccessSubject) => subject.role
 const authorization = new AuthorizationService();
 const withSections = (entry: Omit<ModuleEntry, 'visible'>, sections: readonly ModuleSection[]): ModuleEntry => ({ ...entry, sections, visible: (subject) => sections.some((section) => section.visible(subject)) });
 const planned = (code: string, href: string, labelKey: MessageKey, descriptionKey: MessageKey, icon: ModuleIconName): ModuleEntry => ({ code, href, labelKey, descriptionKey, icon, group: 'services', status: 'planned', visible: everyone });
+
+/** ใบ รอจัดรถ, for the หัวหน้าหมวดยานพาหนะ only. */
+const fleetWaiting = async (db: Database, subject: AccessSubject) => (subject.personId && canManageFleet(subject) ? new FleetQueries(db).waitingCount() : 0);
+/** The person's เที่ยวรถ today that have not left yet; 0 for anyone who does not drive. */
+const fleetDriverToday = async (db: Database, subject: AccessSubject) => (subject.personId ? new FleetQueries(db).driverTodayCount(subject.personId) : 0);
 
 export const moduleRegistry: readonly ModuleEntry[] = [
   {
@@ -106,7 +111,17 @@ export const moduleRegistry: readonly ModuleEntry[] = [
     { href: '/inventory/items', labelKey: 'inventoryItems', visible: (subject) => canInventory(subject, 'inventory.item.manage') },
     { href: '/inventory/vendors', labelKey: 'inventoryVendors', visible: (subject) => canInventory(subject, 'inventory.item.manage') }
   ]),
-  planned('fleet', '/fleet', 'moduleFleet', 'moduleFleetDescription', 'car'),
+  {
+    ...withSections({ code: 'fleet', href: '/fleet', labelKey: 'moduleFleet', descriptionKey: 'moduleFleetDescription', icon: 'car', group: 'services', status: 'live' }, [
+      { href: '/fleet/dashboard', labelKey: 'fleetDashboard', visible: canManageFleet, badge: fleetWaiting },
+      { href: '/fleet/mine', labelKey: 'fleetMine', visible: everyone },
+      { href: '/fleet/calendar', labelKey: 'fleetCalendar', visible: everyone },
+      // A พนักงานขับรถ is a fleet_driver row, not a role, so the synchronous check cannot see it: the link shows to everyone and the page says who it is for.
+      { href: '/fleet/driving', labelKey: 'fleetDriving', visible: everyone, badge: fleetDriverToday },
+      { href: '/fleet/settings', labelKey: 'fleetSettings', visible: canManageFleet }
+    ]),
+    badge: async (db, subject) => (await fleetWaiting(db, subject)) + (await fleetDriverToday(db, subject))
+  },
   planned('attendance', '/attendance', 'moduleAttendance', 'moduleAttendanceDescription', 'clock'),
   planned('asset-register', '/assets', 'moduleAssetRegister', 'moduleAssetRegisterDescription', 'asset'),
   planned('computer-center', '/it', 'moduleComputerCenter', 'moduleComputerCenterDescription', 'monitor'),
