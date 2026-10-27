@@ -24,6 +24,7 @@ export default async function FleetRequestPage({ params }: { params: Promise<{ i
       <div><strong>{t('fleetDestination')}</strong><span>{view.destination} · {view.province}</span></div>
       <div><strong>{t('fleetTimes')}</strong><span>{formatFleetRange(view.departAt, view.returnAt)}</span></div>
       <div><strong>{t('fleetPassengers')}</strong><span>{view.passengerCount} {t('fleetPeopleUnit')}{view.passengerNames ? ` · ${view.passengerNames}` : ''}</span></div>
+      {view.contactPhone && <div><strong>{t('fleetContactPhoneShort')}</strong><span><a href={`tel:${view.contactPhone}`}>{view.contactPhone}</a></span></div>}
       {view.officialTravelId && <div><strong>{t('moduleTravel')}</strong><span><Link href={`/travel/${view.officialTravelId}`}>{t('fleetOpenTravel')}</Link></span></div>}
       {view.trip && <>
         <div><strong>{t('fleetVehicle')}</strong><span>{view.trip.registration} · {view.trip.makeModel}</span></div>
@@ -44,7 +45,7 @@ export default async function FleetRequestPage({ params }: { params: Promise<{ i
     </li>)}</ol>
     {view.canResubmit && <><h3>{t('fleetEditReturned')}</h3><FleetForm fleetRequestId={view.id} initial={{
       purpose: view.purpose, destination: view.destination, province: view.province, departAt: toBangkokLocal(view.departAt), returnAt: toBangkokLocal(view.returnAt),
-      passengerCount: String(view.passengerCount), passengerNames: view.passengerNames
+      passengerCount: String(view.passengerCount), passengerNames: view.passengerNames, contactPhone: view.contactPhone
     }} /></>}
     <p><Link href="/fleet/mine">{t('fleetBack')}</Link></p>
   </section>;

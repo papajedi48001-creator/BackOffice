@@ -85,7 +85,7 @@ describeWithDatabase('FleetQueries against MariaDB', () => {
     expect(await queries.detail(id, subject(manager, true))).toMatchObject({ id });
     expect(await queries.detail(id, subject(manager, false))).toBeNull();
     const own = await queries.detail(id, subject(requester));
-    expect(own).toMatchObject({ canCancel: true, canResubmit: false, canDispatch: false, trip: null, departAt: '2026-11-10T01:00:00.000Z' });
+    expect(own).toMatchObject({ canCancel: true, canResubmit: false, canDispatch: false, trip: null, departAt: '2026-11-10T01:00:00.000Z', contactPhone: '' });
     expect(await queries.detail(id, subject(org.sectionHead))).toMatchObject({ canCancel: false, canResubmit: false, canDispatch: false });
     expect(await queries.detail(id, subject(manager, true))).toMatchObject({ canCancel: false, canDispatch: false });
   });
@@ -245,13 +245,14 @@ describeWithDatabase('FleetQueries against MariaDB', () => {
     await expect(queries.calendar('10/11/2026')).rejects.toThrow();
   });
 
-  it('lists my driving with requester names and phones, and a trip only to the driver or the หัวหน้าหมวด', async () => {
+  it('lists my driving with requester names and the ใบ contact phone, never the profile phone, and a trip only to the driver or the หัวหน้าหมวด', async () => {
     const car = await vehicle();
     const driverId = await driver();
     const todayTrip = await waiting('2026-10-27T06:00:00Z', '2026-10-27T10:00:00Z');
     const later = await waiting('2026-11-05T01:00:00Z', '2026-11-05T09:00:00Z');
     const old = await waiting('2026-10-20T01:00:00Z', '2026-10-20T09:00:00Z');
-    await database.execute("UPDATE hr_person_profile SET phone = '0822222222' WHERE person_id = ?", [todayTrip.requester]);
+    await database.execute("UPDATE hr_person_profile SET phone = '0899999999' WHERE person_id IN (?, ?)", [todayTrip.requester, later.requester]);
+    await database.execute("UPDATE fleet_request SET contact_phone = '0822222222' WHERE id = ?", [todayTrip.id]);
     const t1 = await assign(todayTrip.id, car.id, driverId, '2026-10-27T06:00:00.000Z', '2026-10-27T10:00:00.000Z');
     const t2 = await assign(later.id, car.id, driverId, '2026-11-05T01:00:00.000Z', '2026-11-05T09:00:00.000Z');
     const t3 = await assign(old.id, car.id, driverId, '2026-10-20T01:00:00.000Z', '2026-10-20T09:00:00.000Z');
@@ -261,8 +262,9 @@ describeWithDatabase('FleetQueries against MariaDB', () => {
     const mine = await queries.driving(driverId);
     expect(mine.map((entry) => entry.id)).toEqual([t1, t2]);
     expect(mine[0]).toMatchObject({ registration: car.registration, makeModel: 'Toyota Commuter', status: 'PLANNED', startsAt: '2026-10-27T06:00:00.000Z', endsAt: '2026-10-27T10:00:00.000Z' });
-    expect(mine[0]?.requests).toEqual([{ id: todayTrip.id, reference: expect.stringMatching(/^VR-T7-/), requesterName: expect.stringMatching(/^บุคลากร/), requesterPhone: '0822222222', destination: 'สสจ.มหาสารคาม', passengerCount: 2 }]);
-    expect(mine[1]?.requests[0]?.requesterPhone).toBeNull();
+    expect(mine[0]?.requests).toEqual([{ id: todayTrip.id, reference: expect.stringMatching(/^VR-T7-/), requesterName: expect.stringMatching(/^บุคลากร/), contactPhone: '0822222222', destination: 'สสจ.มหาสารคาม', passengerCount: 2 }]);
+    expect(mine[1]?.requests[0]?.contactPhone).toBe('');
+    expect(JSON.stringify(mine)).not.toContain('0899999999');
     await database.execute("UPDATE fleet_trip SET status = 'RETURNED', returned_at = '2026-10-27 05:00:00' WHERE id = ?", [t1]);
     expect((await queries.driving(driverId)).map((entry) => entry.id)).toEqual([t1, t2]);
     expect(await queries.driving(randomUUID())).toEqual([]);
@@ -273,6 +275,7 @@ describeWithDatabase('FleetQueries against MariaDB', () => {
 
     expect(await queries.trip(t2, subject(driverId))).toMatchObject({ id: t2, registration: car.registration, status: 'PLANNED' });
     expect(await queries.trip(t2, subject(manager, true))).toMatchObject({ id: t2 });
+    expect(JSON.stringify(await queries.trip(t2, subject(manager, true)))).not.toContain('0899999999');
     expect(await queries.trip(t2, subject(todayTrip.requester))).toBeNull();
     expect(await queries.trip(t2, subject(await driver()))).toBeNull();
     expect(await queries.trip(randomUUID(), subject(manager, true))).toBeNull();

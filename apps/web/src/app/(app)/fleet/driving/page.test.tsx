@@ -11,7 +11,7 @@ vi.mock('@backoffice/core', async (importOriginal) => ({ ...await importOriginal
 import FleetDrivingPage from './page';
 
 const trip = (id: string, status: string, registration: string) => ({ id, startsAt: '2026-10-27T01:00:00.000Z', endsAt: '2026-10-27T09:00:00.000Z', status, registration, makeModel: 'Toyota Commuter', odometerOut: status === 'DEPARTED' ? 1000 : null, odometerIn: null,
-  requests: [{ id: `f-${id}`, reference: 'VR-2570-0001', requesterName: 'นางพรทิพย์ ใจดี', requesterPhone: '0822222222', destination: 'สสจ.มหาสารคาม', passengerCount: 3 }] });
+  requests: [{ id: `f-${id}`, reference: 'VR-2570-0001', requesterName: 'นางพรทิพย์ ใจดี', contactPhone: id === 't1' ? '0822222222' : '', destination: 'สสจ.มหาสารคาม', passengerCount: 3 }] });
 function ready(driver: boolean) {
   mocks.headers.mockResolvedValue(new Headers());
   mocks.readSession.mockResolvedValue({ authenticated: true, personId: 'driver-1', roles: [], dataOwnerModules: [] });
@@ -33,6 +33,7 @@ describe('FleetDrivingPage', () => {
     expect(within(planned).getByText(/3 คน/)).toBeInTheDocument();
     expect(within(planned).getByRole('link', { name: /0822222222/ })).toHaveAttribute('href', 'tel:0822222222');
     const departed = screen.getByRole('article', { name: /นข 5678/ });
+    expect(within(departed).queryByRole('link', { name: /โทร/ })).toBeNull();
     expect(within(departed).getByRole('button', { name: 'กลับถึง' })).toBeInTheDocument();
     expect(within(departed).queryByRole('button', { name: 'ออกเดินทาง' })).toBeNull();
   });

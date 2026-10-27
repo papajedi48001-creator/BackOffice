@@ -19,12 +19,16 @@ describe('FleetForm', () => {
     expect(screen.getByLabelText('ปลายทาง')).toHaveValue('โรงแรมตักสิลา');
     expect(screen.getByLabelText('เวลาออก')).toHaveAttribute('step', '900');
     fireEvent.change(screen.getByLabelText('จำนวนผู้โดยสาร'), { target: { value: '3' } });
+    const contact = screen.getByLabelText(/เบอร์ติดต่อระหว่างเดินทาง/);
+    expect(contact).not.toBeRequired();
+    expect(contact).toHaveAttribute('type', 'tel');
+    fireEvent.change(contact, { target: { value: ' 081-234-5678 ' } });
     fireEvent.click(screen.getByRole('button', { name: 'ส่งใบขอใช้รถ' }));
     await waitFor(() => expect(mocks.push).toHaveBeenCalledWith('/fleet/requests/f1'));
     const [url, init] = fetchMock.mock.calls[0]! as unknown as [string, RequestInit];
     expect(url).toBe('/api/fleet/requests');
     expect(init.method).toBe('POST');
-    expect(JSON.parse(init.body as string)).toEqual({ purpose: 'ประชุมวิชาการ', destination: 'โรงแรมตักสิลา', province: 'มหาสารคาม', departAt: '2026-11-10T06:00:00.000Z', returnAt: '2026-11-11T05:00:00.000Z', passengerCount: 3, passengerNames: 'นางพรทิพย์ ใจดี, นายสมชาย ดีมาก', officialTravelId: 'travel-1' });
+    expect(JSON.parse(init.body as string)).toEqual({ purpose: 'ประชุมวิชาการ', destination: 'โรงแรมตักสิลา', province: 'มหาสารคาม', departAt: '2026-11-10T06:00:00.000Z', returnAt: '2026-11-11T05:00:00.000Z', passengerCount: 3, passengerNames: 'นางพรทิพย์ ใจดี, นายสมชาย ดีมาก', contactPhone: '081-234-5678', officialTravelId: 'travel-1' });
   });
 
   it('shows the Thai text for a rule the server refused', async () => {

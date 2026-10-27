@@ -12,7 +12,7 @@ import FleetRequestPage from './page';
 
 const base = {
   id: 'f1', reference: 'VR-2570-0001', purpose: 'ส่งเอกสาร', destination: 'สสจ.มหาสารคาม', province: 'มหาสารคาม', departAt: '2026-11-10T01:00:00.000Z', returnAt: '2026-11-10T09:00:00.000Z', status: 'WAITING',
-  requesterPersonId: 'person-a', requesterName: 'นางพรทิพย์ ใจดี', organizationName: 'งานผู้ป่วยใน', passengerCount: 2, passengerNames: 'นายเอ นายบี', officialTravelId: null, requestId: 'r1', filedAt: '2026-10-27T03:00:00.000Z',
+  requesterPersonId: 'person-a', requesterName: 'นางพรทิพย์ ใจดี', organizationName: 'งานผู้ป่วยใน', passengerCount: 2, passengerNames: 'นายเอ นายบี', contactPhone: '', officialTravelId: null, requestId: 'r1', filedAt: '2026-10-27T03:00:00.000Z',
   history: [{ action: 'SUBMITTED', actorName: 'นางพรทิพย์ ใจดี', reason: null, createdAt: '2026-10-27T03:00:00.000Z' }],
   trip: null, canCancel: true, canResubmit: false, canDispatch: false, canDecide: false
 };

@@ -30,6 +30,8 @@ export const fleetRequestInputSchema = z.object({
   departAt: instant, returnAt: instant,
   passengerCount: z.number().int().min(1).max(99),
   passengerNames: z.string().trim().max(1000).default(''),
+  /** A phone the driver may call during the trip, entered on the ใบ; the HR profile phone is never used. */
+  contactPhone: z.string().trim().max(32).default(''),
   officialTravelId: z.string().min(1).optional()
 }).strict();
 export type FleetRequestInput = z.infer<typeof fleetRequestInputSchema>;

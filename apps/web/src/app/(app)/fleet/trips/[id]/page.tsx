@@ -34,7 +34,7 @@ export default async function FleetTripPage({ params }: { params: Promise<{ id: 
       <thead><tr><th>{t('fleetReference')}</th><th>{t('fleetRequester')}</th><th>{t('fleetDestination')}</th><th>{t('fleetPassengers')}</th><th></th></tr></thead>
       <tbody>{trip.requests.map((request) => <tr key={request.id}>
         <td><Link href={`/fleet/requests/${request.id}`}>{request.reference}</Link></td>
-        <td>{request.requesterName ?? '—'}{request.requesterPhone && <> · <a href={`tel:${request.requesterPhone}`}>{request.requesterPhone}</a></>}</td>
+        <td>{request.requesterName ?? '—'}{request.contactPhone && <> · <a href={`tel:${request.contactPhone}`}>{request.contactPhone}</a></>}</td>
         <td>{request.destination}</td>
         <td>{request.passengerCount} {t('fleetPeopleUnit')}</td>
         <td>{manager && trip.status === 'PLANNED' && <FleetUnassign fleetRequestId={request.id} />}</td>

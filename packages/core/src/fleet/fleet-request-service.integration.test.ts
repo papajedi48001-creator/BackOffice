@@ -140,6 +140,17 @@ describeWithDatabase('FleetRequestService against MariaDB', () => {
     }
   });
 
+  it('stores the contact phone on submit and resubmit, empty when not given', async () => {
+    const requester = await createLeavePerson(database, org.section);
+    const contactPhone = async (id: string) => (await database.query<{ contactPhone: string }>('SELECT contact_phone AS contactPhone FROM fleet_request WHERE id = ?', [id]))[0]!.contactPhone;
+    expect(await contactPhone(await filed(requester))).toBe('');
+    const id = await filed(requester, { contactPhone: '081-111-2222' });
+    expect(await contactPhone(id)).toBe('081-111-2222');
+    await decide((await row(id)).requestId!, org.sectionHead, 'RETURN');
+    expect(await service.resubmit(requester, id, draft({ contactPhone: '089-333-4444' }))).toEqual({ ok: true });
+    expect(await contactPhone(id)).toBe('089-333-4444');
+  });
+
   it('resubmits a returned ใบ with new times, and only then', async () => {
     const requester = await createLeavePerson(database, org.section);
     const id = await filed(requester);

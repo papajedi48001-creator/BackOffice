@@ -46,8 +46,8 @@ export class FleetRequestService {
       const fleetRequestId = this.createId();
       const reference = await nextFleetReference(database, now);
       await database.execute(
-        "INSERT INTO fleet_request (id, reference, requester_person_id, organization_id, request_id, official_travel_id, purpose, destination, province, depart_at, return_at, passenger_count, passenger_names, dispatch_status, trip_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'WAITING', NULL, UTC_TIMESTAMP(), UTC_TIMESTAMP())",
-        [fleetRequestId, reference, requesterPersonId, organizationId, requestId, input.officialTravelId ?? null, input.purpose, input.destination, input.province, toDatetime(input.departAt), toDatetime(input.returnAt), input.passengerCount, input.passengerNames]
+        "INSERT INTO fleet_request (id, reference, requester_person_id, organization_id, request_id, official_travel_id, purpose, destination, province, depart_at, return_at, passenger_count, passenger_names, contact_phone, dispatch_status, trip_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'WAITING', NULL, UTC_TIMESTAMP(), UTC_TIMESTAMP())",
+        [fleetRequestId, reference, requesterPersonId, organizationId, requestId, input.officialTravelId ?? null, input.purpose, input.destination, input.province, toDatetime(input.departAt), toDatetime(input.returnAt), input.passengerCount, input.passengerNames, input.contactPhone]
       );
       await insertHistory(database, { fleetRequestId, action: 'SUBMITTED', actorPersonId: requesterPersonId });
       await auditFleet(database, { action: 'fleet.request.submitted', targetType: 'fleet_request', targetId: fleetRequestId, actorPersonId: requesterPersonId, metadata: { reference, status: requestId ? 'HEAD_REVIEW' : 'WAITING', ...(input.officialTravelId ? { travelId: input.officialTravelId } : {}) } });
@@ -116,8 +116,8 @@ export class FleetRequestService {
 
   private async update(database: Database, fleetRequestId: string, input: FleetRequestInput): Promise<void> {
     await database.execute(
-      'UPDATE fleet_request SET purpose = ?, destination = ?, province = ?, depart_at = ?, return_at = ?, passenger_count = ?, passenger_names = ?, updated_at = UTC_TIMESTAMP() WHERE id = ?',
-      [input.purpose, input.destination, input.province, toDatetime(input.departAt), toDatetime(input.returnAt), input.passengerCount, input.passengerNames, fleetRequestId]
+      'UPDATE fleet_request SET purpose = ?, destination = ?, province = ?, depart_at = ?, return_at = ?, passenger_count = ?, passenger_names = ?, contact_phone = ?, updated_at = UTC_TIMESTAMP() WHERE id = ?',
+      [input.purpose, input.destination, input.province, toDatetime(input.departAt), toDatetime(input.returnAt), input.passengerCount, input.passengerNames, input.contactPhone, fleetRequestId]
     );
   }
 

@@ -432,6 +432,7 @@ video.inventory-camera { display: block; flex-basis: 100%; width: 100%; max-widt
 .fleet-option-list label { display: flex; align-items: center; gap: 8px; min-height: 44px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
 .fleet-assign-new { display: grid; gap: 12px; }
 .fleet-assign select, .fleet-form select, .fleet-settings-form select { min-height: 44px; }
+.fleet-form .form-field small { color: var(--muted); font-size: .85rem; }
 .fleet-calendar td { vertical-align: top; text-align: left; }
 .fleet-block { margin: 2px 0; border-radius: 6px; padding: 4px 6px; font-size: .75rem; text-align: left; }
 .fleet-block span { display: block; }

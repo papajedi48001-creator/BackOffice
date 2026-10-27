@@ -15,7 +15,7 @@ export interface FleetRequestListItem { id: string; reference: string; purpose: 
 export interface FleetHistoryEntry { action: string; actorName: string | null; reason: string | null; createdAt: string }
 export interface FleetTripSummary { id: string; registration: string; makeModel: string; driverName: string | null; driverPhone: string; status: TripStatus }
 export interface FleetRequestDetail extends FleetRequestListItem {
-  requesterPersonId: string; requesterName: string | null; organizationName: string | null; province: string; passengerCount: number; passengerNames: string; officialTravelId: string | null; requestId: string | null; filedAt: string;
+  requesterPersonId: string; requesterName: string | null; organizationName: string | null; province: string; passengerCount: number; passengerNames: string; contactPhone: string; officialTravelId: string | null; requestId: string | null; filedAt: string;
   history: FleetHistoryEntry[]; trip: FleetTripSummary | null; canCancel: boolean; canResubmit: boolean; canDispatch: boolean;
   /** The viewer may เห็นชอบ, ส่งกลับแก้ไข or ไม่เห็นชอบ the head คำขอ now: its pending step's assignee or their active ผู้แทน, never the requester. */
   canDecide: boolean;
@@ -30,7 +30,8 @@ export interface TripOption { id: string; registration: string; driverName: stri
 export interface VehicleView extends VehicleOption { status: VehicleStatus; note: string }
 export interface DriverView extends DriverOption { isActive: boolean }
 export interface CalendarBlock { startsAt: string; endsAt: string; province: string; status: TripStatus }
-export interface DriverTripRequest { id: string; reference: string; requesterName: string | null; requesterPhone: string | null; destination: string; passengerCount: number }
+/** `contactPhone` is the phone the requester entered on the ใบ, empty when none; the HR profile phone is private and never read here. */
+export interface DriverTripRequest { id: string; reference: string; requesterName: string | null; contactPhone: string; destination: string; passengerCount: number }
 export interface DriverTrip { id: string; startsAt: string; endsAt: string; status: TripStatus; registration: string; makeModel: string; odometerOut: number | null; odometerIn: number | null; requests: DriverTripRequest[] }
 export interface FleetTripDetail extends DriverTrip { vehicleId: string; driverPersonId: string; driverName: string | null; driverPhone: string; departedAt: string | null; returnedAt: string | null }
 export interface FleetDashboard {
@@ -41,17 +42,17 @@ export interface FleetDashboard {
 export type FleetViewer = AccessSubject;
 
 type Reader = Pick<Database, 'query'>;
-interface RequestRow { id: string; reference: string; requesterPersonId: string; requesterName: string | null; organizationName: string | null; purpose: string; destination: string; province: string; departAt: string; returnAt: string; passengerCount: number; passengerNames: string; officialTravelId: string | null; requestId: string | null; filedAt: string; dispatchStatus: DispatchStatus; headStatus: RequestStatus | null; tripId: string | null; tripStatus: TripStatus | null }
+interface RequestRow { id: string; reference: string; requesterPersonId: string; requesterName: string | null; organizationName: string | null; purpose: string; destination: string; province: string; departAt: string; returnAt: string; passengerCount: number; passengerNames: string; contactPhone: string; officialTravelId: string | null; requestId: string | null; filedAt: string; dispatchStatus: DispatchStatus; headStatus: RequestStatus | null; tripId: string | null; tripStatus: TripStatus | null }
 
 const instant = (column: string) => `DATE_FORMAT(${column}, '%Y-%m-%dT%H:%i:%s.000Z')`;
 /** Oldest first within a second, where `created_at` ties. */
 const ACTION_ORDER = ['SUBMITTED', 'RESUBMITTED', 'ASSIGNED', 'UNASSIGNED', 'DECLINED', 'CANCELLED'];
 const REQUESTS = `SELECT f.id, f.reference, f.requester_person_id AS requesterPersonId, rp.display_name AS requesterName, o.name AS organizationName, f.purpose, f.destination, f.province, ${instant('f.depart_at')} AS departAt, ${instant('f.return_at')} AS returnAt,
-  f.passenger_count AS passengerCount, f.passenger_names AS passengerNames, f.official_travel_id AS officialTravelId, f.request_id AS requestId, ${instant('f.created_at')} AS filedAt, f.dispatch_status AS dispatchStatus, r.status AS headStatus, f.trip_id AS tripId, t.status AS tripStatus
+  f.passenger_count AS passengerCount, f.passenger_names AS passengerNames, f.contact_phone AS contactPhone, f.official_travel_id AS officialTravelId, f.request_id AS requestId, ${instant('f.created_at')} AS filedAt, f.dispatch_status AS dispatchStatus, r.status AS headStatus, f.trip_id AS tripId, t.status AS tripStatus
   FROM fleet_request f JOIN person rp ON rp.id = f.requester_person_id LEFT JOIN organization o ON o.id = f.organization_id LEFT JOIN request r ON r.id = f.request_id LEFT JOIN fleet_trip t ON t.id = f.trip_id`;
 const statusOf = (row: RequestRow) => fleetRequestStatus({ headStatus: row.headStatus, dispatchStatus: row.dispatchStatus, tripStatus: row.tripStatus });
-const TRIP_REQUESTS = `SELECT f.trip_id AS tripId, f.id, f.reference, p.display_name AS requesterName, hp.phone AS requesterPhone, f.destination, f.passenger_count AS passengerCount
-  FROM fleet_request f JOIN person p ON p.id = f.requester_person_id LEFT JOIN hr_person_profile hp ON hp.person_id = f.requester_person_id WHERE f.dispatch_status = 'ASSIGNED' AND f.trip_id IN (?) ORDER BY f.depart_at, f.reference`;
+const TRIP_REQUESTS = `SELECT f.trip_id AS tripId, f.id, f.reference, p.display_name AS requesterName, f.contact_phone AS contactPhone, f.destination, f.passenger_count AS passengerCount
+  FROM fleet_request f JOIN person p ON p.id = f.requester_person_id WHERE f.dispatch_status = 'ASSIGNED' AND f.trip_id IN (?) ORDER BY f.depart_at, f.reference`;
 
 /** Reads for the ยานพาหนะ screens. Who may see a ใบ or a เที่ยวรถ is decided here, on the server, for every read; times are ISO UTC strings. */
 export class FleetQueries {
@@ -80,7 +81,7 @@ export class FleetQueries {
     const status = statusOf(row);
     return {
       id: row.id, reference: row.reference, purpose: row.purpose, destination: row.destination, departAt: row.departAt, returnAt: row.returnAt, status,
-      requesterPersonId: row.requesterPersonId, requesterName: row.requesterName, organizationName: row.organizationName, province: row.province, passengerCount: Number(row.passengerCount), passengerNames: row.passengerNames,
+      requesterPersonId: row.requesterPersonId, requesterName: row.requesterName, organizationName: row.organizationName, province: row.province, passengerCount: Number(row.passengerCount), passengerNames: row.passengerNames, contactPhone: row.contactPhone,
       officialTravelId: row.officialTravelId, requestId: row.requestId, filedAt: row.filedAt, history,
       trip: trip ? { id: trip.id, registration: trip.registration, makeModel: trip.makeModel, driverName: trip.driverName, driverPhone: trip.driverPhone, status: trip.status } : null,
       canCancel: requester && canCancel(status), canResubmit: requester && status === 'RETURNED', canDispatch: manager && status === 'WAITING',
@@ -217,7 +218,7 @@ export class FleetQueries {
       id: row.id, startsAt: row.startsAt, endsAt: row.endsAt, status: row.status, registration: row.registration, makeModel: row.makeModel,
       odometerOut: row.odometerOut === null ? null : Number(row.odometerOut), odometerIn: row.odometerIn === null ? null : Number(row.odometerIn),
       vehicleId: row.vehicleId, driverPersonId: row.driverPersonId, driverName: row.driverName, driverPhone: row.driverPhone, departedAt: row.departedAt, returnedAt: row.returnedAt,
-      requests: requests.filter((request) => request.tripId === row.id).map(({ id, reference, requesterName, requesterPhone, destination, passengerCount }) => ({ id, reference, requesterName, requesterPhone: requesterPhone || null, destination, passengerCount: Number(passengerCount) }))
+      requests: requests.filter((request) => request.tripId === row.id).map(({ id, reference, requesterName, contactPhone, destination, passengerCount }) => ({ id, reference, requesterName, contactPhone, destination, passengerCount: Number(passengerCount) }))
     }));
   }
 }

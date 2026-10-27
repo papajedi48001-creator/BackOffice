@@ -22,7 +22,7 @@ export default async function FleetDrivingPage() {
         {trip.odometerOut !== null && <p>{t('fleetOdometerOut')} {trip.odometerOut.toLocaleString('th-TH')}{trip.odometerIn !== null ? ` · ${t('fleetOdometerIn')} ${trip.odometerIn.toLocaleString('th-TH')}` : ''}</p>}
         <ul className="fleet-drive-requests">{trip.requests.map((request) => <li key={request.id}>
           <strong>{request.destination}</strong> · {request.passengerCount} {t('fleetPeopleUnit')}<br />
-          {request.requesterName ?? '—'}{request.requesterPhone && <> · <a className="fleet-call" href={`tel:${request.requesterPhone}`}>{t('fleetCall')} {request.requesterPhone}</a></>}
+          {request.requesterName ?? '—'}{request.contactPhone && <> · <a className="fleet-call" href={`tel:${request.contactPhone}`}>{t('fleetCall')} {request.contactPhone}</a></>}
         </li>)}</ul>
         <TripLogActions tripId={trip.id} status={trip.status} label={trip.registration} />
       </article>;

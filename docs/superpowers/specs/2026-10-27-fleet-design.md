@@ -25,7 +25,7 @@ Status: draft for wasan's review. Agreed section by section in the thread "พ�
 
 - **รถราชการ**: a hospital vehicle that can be assigned to work: registration, make/model, kind, seats and status (ใช้งาน / ซ่อม / ปลดระวาง). _Avoid_: vehicle, รถ (alone, when the register is meant).
 - **พนักงานขับรถ**: a บุคลากร on the driver list who can be assigned to a เที่ยวรถ. _Avoid_: driver, คนขับ.
-- **ใบขอใช้รถ**: one request to use a hospital car for one piece of work: mission, destination, out and back times, passengers. Not itself a **คำขอ**; a normal one carries a คำขอ for the head stage. _Avoid_: booking, vehicle request, คำขอใช้รถ.
+- **ใบขอใช้รถ**: one request to use a hospital car for one piece of work: mission, destination, out and back times, passengers, and an optional contact phone for the trip (เบอร์ติดต่อระหว่างเดินทาง, never the profile phone). Not itself a **คำขอ**; a normal one carries a คำขอ for the head stage. _Avoid_: booking, vehicle request, คำขอใช้รถ.
 - **เที่ยวรถ**: one car with one พนักงานขับรถ over one time range, carrying one or more ใบขอใช้รถ. The odometer is logged per เที่ยวรถ. _Avoid_: trip (ไปราชการ already uses "trip"), job.
 - **หัวหน้าหมวดยานพาหนะ**: the role (`fleet-manager`) that keeps the car register and driver list and dispatches. _Avoid_: fleet admin, ผู้จัดการรถ.
 - **การจัดรถ**: attaching a ใบขอใช้รถ to a เที่ยวรถ, new or existing. _Avoid_: assign, dispatch (in UI text).
@@ -41,6 +41,7 @@ Status: draft for wasan's review. Agreed section by section in the thread "พ�
   - `request_id` NULL unique (foreign key to `request`; the head-stage คำขอ; NULL when filed from ไปราชการ).
   - `official_travel_id` NULL (foreign key to `official_travel`).
   - `purpose` VARCHAR(300), `destination` VARCHAR(300), `province` VARCHAR(100), `depart_at`, `return_at` (UTC DATETIME), `passenger_count` SMALLINT, `passenger_names` VARCHAR(1000) (free text; may include people outside the registry, e.g. patients).
+  - `contact_phone` VARCHAR(32) NOT NULL DEFAULT '' — an optional phone the requester enters on the ใบ (เบอร์ติดต่อระหว่างเดินทาง) for the driver and the หัวหน้าหมวด to call during the trip. The requester's profile phone (`hr_person_profile.phone`, part of **ข้อมูลติดต่อ**, which only the person and HR may see) is never read or shown by this module.
   - `dispatch_status` (`WAITING` | `ASSIGNED` | `DECLINED` | `CANCELLED`), `trip_id` NULL (foreign key to `fleet_trip`).
   - `created_at`, `updated_at`.
 - **`fleet_trip`** (เที่ยวรถ): `id`, `vehicle_id`, `driver_person_id`, `starts_at`, `ends_at` (UTC), `status` (`PLANNED` | `DEPARTED` | `RETURNED` | `CANCELLED`), `odometer_out` INT NULL, `odometer_in` INT NULL, `departed_at` NULL, `returned_at` NULL, `created_by_person_id`, `created_at`, `updated_at`. Index on (`vehicle_id`, `starts_at`) and (`driver_person_id`, `starts_at`).
@@ -93,10 +94,10 @@ Sections (shown only when visible to the viewer; the module opens on the first v
 1. **แดชบอร์ด** (`/fleet/dashboard`, `fleet.manage`): counts (รอจัดรถ, เที่ยวรถวันนี้, รถออกอยู่, รถซ่อม); the รอจัดรถ queue sorted by `depart_at`, highlighted when departure is within 24 hours, with จัดรถ and ไม่จัดรถ on each row; today's board, one row per car with เที่ยวรถ as bars over 06:00–22:00 showing driver and status; เที่ยวรถ flagged by rule 9. จัดรถ opens an `ActionDialog` with two tabs: เข้าเที่ยวที่มีอยู่ (PLANNED เที่ยวรถ that cover the times) and สร้างเที่ยวใหม่ (only free ACTIVE cars and free active drivers for those times).
 2. **ใบขอใช้รถของฉัน** (`/fleet/mine`, everyone): my ใบ, newest first, with status; button ขอใช้รถ → `/fleet/new`.
 3. **ปฏิทินรถ** (`/fleet/calendar`, everyone): week view, one row per ACTIVE/IN_REPAIR car.
-4. **งานขับของฉัน** (`/fleet/driving`, active drivers): mobile-first; today's and upcoming เที่ยวรถ with destination, passengers count, requester names and phones; large ออกเดินทาง / กลับถึง buttons opening a number field for the odometer.
+4. **งานขับของฉัน** (`/fleet/driving`, active drivers): mobile-first; today's and upcoming เที่ยวรถ with destination, passengers count, requester names and the ใบ's `contact_phone` when the requester gave one (never the profile phone); large ออกเดินทาง / กลับถึง buttons opening a number field for the odometer.
 5. **ตั้งค่า** (`/fleet/settings`, `fleet.manage`): car register and driver list (add by staff search, set phone, activate/deactivate).
 
-Other pages: **ขอใช้รถ** (`/fleet/new`, optional `?travel=<travelId>`); **รายละเอียดใบ** (`/fleet/requests/<id>`) with status, history, the car, registration, driver name and work phone once assigned, and the actions the viewer may take; **รายละเอียดเที่ยวรถ** (`/fleet/trips/<id>`, `fleet.manage` and its driver).
+Other pages: **ขอใช้รถ** (`/fleet/new`, optional `?travel=<travelId>`; includes the optional field เบอร์ติดต่อระหว่างเดินทาง); **รายละเอียดใบ** (`/fleet/requests/<id>`) with status, history, the car, registration, driver name and work phone once assigned, and the actions the viewer may take; **รายละเอียดเที่ยวรถ** (`/fleet/trips/<id>`, `fleet.manage` and its driver).
 
 Integration points: `modules.ts` entry `fleet` goes from `planned` to `live` with `sections`, a badge (รอจัดรถ count for `fleet.manage`; today's not-yet-departed เที่ยวรถ for a driver); the ไปราชการ detail page shows ขอใช้รถ under rule 2 or a link to the existing ใบ; `notificationTarget` sends `fleet` คำขอ to `/fleet/requests/by-request/<requestId>`, which redirects to `/fleet/requests/<fleetRequestId>` (as travel does); accent `[data-module="fleet"] { --accent: #a63d40; }` in `styles.css` and the DESIGN.md table.
 

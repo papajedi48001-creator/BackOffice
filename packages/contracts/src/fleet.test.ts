@@ -13,6 +13,11 @@ describe('fleetRequestInputSchema', () => {
     expect(fleetRequestInputSchema.safeParse({ ...valid, departAt: '2026-11-03 08:00' }).success).toBe(false);
     expect(fleetRequestInputSchema.safeParse({ ...valid, requestorPersonId: 'x' }).success).toBe(false);
   });
+  it('takes an optional contact phone, trimmed, up to 32 characters, defaulting to empty', () => {
+    expect(fleetRequestInputSchema.parse(valid)).toMatchObject({ contactPhone: '' });
+    expect(fleetRequestInputSchema.parse({ ...valid, contactPhone: ' 081-234-5678 ' })).toMatchObject({ contactPhone: '081-234-5678' });
+    expect(fleetRequestInputSchema.safeParse({ ...valid, contactPhone: '0'.repeat(33) }).success).toBe(false);
+  });
   it('accepts an optional official travel id', () => {
     expect(fleetRequestInputSchema.safeParse({ ...valid, officialTravelId: 'travel-1' }).success).toBe(true);
   });
