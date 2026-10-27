@@ -15,7 +15,7 @@ export default async function RoomManagePage() {
   const queries = new RoomBookingQueries(database);
   const [rooms, addons, organizations] = await Promise.all([
     queries.listRooms({ bookableOnly: false }), queries.listAddons({ activeOnly: false }),
-    database.query<{ id: string; name: string }>('SELECT id, name FROM organization ORDER BY name')
+    database.query<{ id: string; name: string }>('SELECT id, name FROM organization WHERE deleted_at IS NULL ORDER BY name')
   ]);
   const inScope = (organizationId: string) => scope === 'all' || scope.includes(organizationId);
   return <section><h2>{t('roomManageTitle')}</h2><RoomManageForms rooms={rooms.filter((room) => inScope(room.ownerOrganizationId))} addons={addons} organizations={organizations.filter((organization) => inScope(organization.id))} /></section>;

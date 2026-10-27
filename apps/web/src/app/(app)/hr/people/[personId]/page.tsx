@@ -20,16 +20,21 @@ export default async function PersonProfilePage({ params }: { params: Promise<{ 
   if (view === 'NOT_FOUND') notFound();
   if (view === 'FORBIDDEN') return <section><h2>{t('peopleTitle')}</h2><p role="alert">{t('hrNoAccess')}</p></section>;
   let employmentTypes: { id: string; name: string }[] = [];
-  let organizations: { id: string; name: string }[] = [];
+  let units: { id: string; name: string; unitType: string | null; parentId: string | null }[] = [];
   if (view.access.editProfile) {
     // Active types, plus a retired type the person still holds so the form keeps it.
     employmentTypes = (await new EmploymentTypeService(database).list()).filter((type) => type.isActive || type.id === view.work.employmentTypeId);
     const scope = new AuthorizationService().organizationScope(session, 'hr.person.manage');
-    organizations = (await new HrDirectory(database).listOrganizations()).filter((organization) => scope === 'all' || scope.includes(organization.id));
+    const all = await new HrDirectory(database).listOrganizations();
+    const inScope = all.filter((organization) => scope === 'all' || scope.includes(organization.id));
+    // A scoped manager also sees the กลุ่มงาน above their งาน, so the งาน can be found by its กลุ่มงาน; the server still checks the unit saved.
+    const parents = new Set(inScope.map((organization) => organization.parentId));
+    units = all.filter((organization) => inScope.includes(organization) || (organization.unitType === 'DIVISION' && parents.has(organization.id)))
+      .map(({ id, name, unitType, parentId }) => ({ id, name, unitType, parentId }));
   }
   return <section>
     <p><Link href="/hr/people">{t('hrBackToPeople')}</Link></p>
     <h2>{view.work.displayName ?? view.work.employeeCode ?? t('notAssigned')}</h2>
-    <HrProfileView view={view} contactEndpoint={`/api/hr/people/${personId}/contact`} employmentTypes={employmentTypes} organizations={organizations} />
+    <HrProfileView view={view} contactEndpoint={`/api/hr/people/${personId}/contact`} employmentTypes={employmentTypes} units={units} />
   </section>;
 }

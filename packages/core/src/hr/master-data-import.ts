@@ -134,7 +134,7 @@ export class MasterDataImportService {
 
 export async function loadExistingMasterData(database: Pick<Database, 'query'>, options: { forUpdate?: boolean } = {}): Promise<ExistingMasterData> {
   const lock = options.forUpdate ? ' FOR UPDATE' : '';
-  const stored = await database.query<Omit<StoredOrganization, 'headPersonId' | 'headEffectiveFrom'>>(`SELECT id, code, name, parent_id AS parentId, unit_type AS unitType FROM organization${lock}`);
+  const stored = await database.query<Omit<StoredOrganization, 'headPersonId' | 'headEffectiveFrom'>>(`SELECT id, code, name, parent_id AS parentId, unit_type AS unitType FROM organization WHERE deleted_at IS NULL${lock}`);
   // People are locked by a plain locking read first: a locking read that also runs the assignment subquery
   // takes a read view, and MariaDB then fails it with ER_CHECKREAD when a waited-for row was changed meanwhile.
   if (options.forUpdate) await database.query('SELECT id FROM person FOR UPDATE');

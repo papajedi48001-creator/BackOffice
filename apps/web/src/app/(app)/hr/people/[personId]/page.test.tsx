@@ -27,7 +27,7 @@ function ready(session: unknown, view: unknown) {
   mocks.getSharedDatabase.mockReturnValue({ query: vi.fn() });
   mocks.get.mockResolvedValue(view);
   mocks.listTypes.mockResolvedValue([{ id: 't1', code: 'CIVIL_SERVANT', name: 'ข้าราชการ', isActive: true, sortOrder: 1 }]);
-  mocks.listOrganizations.mockResolvedValue([{ id: 'nur', name: 'กลุ่มการพยาบาล' }, { id: 'pha', name: 'งานเภสัชกรรม' }]);
+  mocks.listOrganizations.mockResolvedValue([{ id: 'nur', name: 'กลุ่มการพยาบาล', unitType: 'DIVISION', parentId: 'h' }, { id: 'pha', name: 'งานเภสัชกรรม', unitType: 'SECTION', parentId: 'nur' }]);
 }
 const page = (personId = 'p1') => PersonProfilePage({ params: Promise.resolve({ personId }) });
 
@@ -80,7 +80,10 @@ describe('PersonProfilePage', () => {
     await waitFor(() => expect(mocks.refresh).toHaveBeenCalled());
     const [url, init] = fetchMock.mock.calls[0]! as unknown as [string, RequestInit];
     expect(url).toBe('/api/hr/people/p1/profile');
-    expect(JSON.parse(init.body as string)).toMatchObject({ namePrefix: 'นาย', gender: 'MALE', employmentTypeId: 't1', organizationId: 'nur', birthDate: '1990-05-17' });
+    expect(JSON.parse(init.body as string)).toMatchObject({ namePrefix: 'นาย', gender: 'MALE', employmentTypeId: 't1', birthDate: '1990-05-17' });
+    // The unit was not touched, so it is not sent.
+    expect(JSON.parse(init.body as string)).not.toHaveProperty('organizationId');
+    expect(within(form).getByRole('combobox', { name: 'กลุ่มงาน' })).toHaveValue('กลุ่มการพยาบาล');
   });
 
   it('shows a Thai message when a save is refused', async () => {

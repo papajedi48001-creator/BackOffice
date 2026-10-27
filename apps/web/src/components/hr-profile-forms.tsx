@@ -33,9 +33,36 @@ export interface ProfileFormValues {
   employmentTypeId: string | null; appointedOn: string | null; positionTitle: string | null; positionLevel: string | null; organizationId: string | null;
 }
 
-export function ProfileForm({ personId, values, employmentTypes, organizations }: { personId: string; values: ProfileFormValues; employmentTypes: { id: string; name: string }[]; organizations: { id: string; name: string }[] }) {
+export interface ProfileFormUnit { id: string; name: string; unitType: string | null; parentId: string | null; }
+
+/** The names shown in the กลุ่มงาน and งาน fields for a person's current unit. */
+function initialUnitNames(units: ProfileFormUnit[], organizationId: string | null, organizationName: string | null) {
+  const unit = units.find((candidate) => candidate.id === organizationId);
+  if (!unit) return { division: organizationId ? organizationName ?? '' : '', section: '' };
+  if (unit.unitType === 'SECTION') return { division: units.find((candidate) => candidate.id === unit.parentId)?.name ?? '', section: unit.name };
+  return { division: unit.name, section: '' };
+}
+
+export function ProfileForm({ personId, values, employmentTypes, units, organizationName = null }: { personId: string; values: ProfileFormValues; employmentTypes: { id: string; name: string }[]; units: ProfileFormUnit[]; organizationName?: string | null }) {
   const { save, feedback } = useSave(`/api/hr/people/${personId}/profile`);
   const [form, setForm] = useState(() => Object.fromEntries(Object.entries(values).map(([key, value]) => [key, value ?? ''])) as Record<keyof ProfileFormValues, string>);
+  const [initialUnit] = useState(() => initialUnitNames(units, values.organizationId, organizationName));
+  const [unitNames, setUnitNames] = useState(initialUnit);
+  const [unitError, setUnitError] = useState<string | null>(null);
+  // A unit with no type yet (from an older import) is offered alongside the กลุ่มงาน so a person can still be put in it.
+  const divisions = units.filter((unit) => unit.unitType === 'DIVISION' || unit.unitType === null);
+  const chosenDivision = divisions.find((unit) => unit.name === unitNames.division.trim());
+  const sections = chosenDivision ? units.filter((unit) => unit.unitType === 'SECTION' && unit.parentId === chosenDivision.id) : [];
+  /** The unit to save: undefined keeps the current one, null leaves the person with no unit, a MessageKey refuses the names. */
+  function chosenUnit(): string | null | undefined | { error: MessageKey } {
+    const division = unitNames.division.trim();
+    const section = unitNames.section.trim();
+    if (division === initialUnit.division.trim() && section === initialUnit.section.trim()) return undefined;
+    if (division === '' && section === '') return null;
+    if (!chosenDivision) return { error: 'hrErrorUnknownDivision' };
+    if (section === '') return chosenDivision.id;
+    return sections.find((unit) => unit.name === section)?.id ?? { error: 'hrErrorSectionNotInDivision' };
+  }
   const set = (field: keyof ProfileFormValues) => (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setForm((current) => ({ ...current, [field]: event.target.value }));
   function changePrefix(event: React.ChangeEvent<HTMLInputElement>) {
     const gender = genderForPrefix(event.target.value);
@@ -43,13 +70,16 @@ export function ProfileForm({ personId, values, employmentTypes, organizations }
   }
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    const { organizationId, gender, ...rest } = form;
-    await save({ ...Object.fromEntries(Object.entries(rest).map(([key, value]) => [key, orNull(value)])), gender: gender === '' ? null : gender, ...(organizationId ? { organizationId } : {}) });
+    const unit = chosenUnit();
+    if (unit !== null && typeof unit === 'object') { setUnitError(t(unit.error)); return; }
+    setUnitError(null);
+    const { gender, ...rest } = form;
+    await save({ ...Object.fromEntries(Object.entries(rest).filter(([key]) => key !== 'organizationId').map(([key, value]) => [key, orNull(value)])), gender: gender === '' ? null : gender, ...(unit === undefined ? {} : { organizationId: unit }) });
   }
   const text = (field: keyof ProfileFormValues, label: MessageKey, max: number) => <label>{t(label)}<input value={form[field]} onChange={set(field)} maxLength={max} /></label>;
   return <form aria-label={t('hrEditProfile')} className="profile-form" onSubmit={submit}>
     <h4>{t('hrEditProfile')}</h4>
-    {feedback}
+    {unitError ? <p role="alert" className="form-error">{unitError}</p> : feedback}
     <label>{t('hrFieldNamePrefix')}<input value={form.namePrefix} onChange={changePrefix} maxLength={32} /></label>
     {text('firstName', 'hrFieldFirstName', 120)}
     {text('lastName', 'hrFieldLastName', 120)}
@@ -69,12 +99,10 @@ export function ProfileForm({ personId, values, employmentTypes, organizations }
     <label>{t('hrFieldAppointedOn')}<input type="date" value={form.appointedOn} onChange={set('appointedOn')} /></label>
     {text('positionTitle', 'hrFieldPositionTitle', 255)}
     {text('positionLevel', 'hrFieldPositionLevel', 120)}
-    <label>{t('hrFieldOrganization')}
-      <select value={form.organizationId} onChange={set('organizationId')}>
-        {form.organizationId === '' ? <option value="">{t('notAssigned')}</option> : null}
-        {organizations.map((organization) => <option key={organization.id} value={organization.id}>{organization.name}</option>)}
-      </select>
-    </label>
+    <label>{t('hrDivision')}<input list={`divisions-${personId}`} value={unitNames.division} maxLength={255} placeholder={t('hrNoUnit')} onChange={(event) => setUnitNames({ division: event.target.value, section: '' })} /></label>
+    <datalist id={`divisions-${personId}`}>{divisions.map((unit) => <option key={unit.id} value={unit.name} />)}</datalist>
+    <label>{t('hrSection')}<input list={`sections-${personId}`} value={unitNames.section} maxLength={255} onChange={(event) => setUnitNames((current) => ({ ...current, section: event.target.value }))} /></label>
+    <datalist id={`sections-${personId}`}>{sections.map((unit) => <option key={unit.id} value={unit.name} />)}</datalist>
     <button type="submit">{t('hrSaveProfile')}</button>
   </form>;
 }

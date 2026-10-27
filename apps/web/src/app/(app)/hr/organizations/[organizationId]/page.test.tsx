@@ -1,12 +1,12 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ headers: vi.fn(), redirect: vi.fn(), notFound: vi.fn(() => { throw new Error('NEXT_NOT_FOUND'); }), refresh: vi.fn(), readSession: vi.fn(), getSharedDatabase: vi.fn(), getOrganization: vi.fn(), listPeople: vi.fn() }));
+const mocks = vi.hoisted(() => ({ headers: vi.fn(), redirect: vi.fn(), notFound: vi.fn(() => { throw new Error('NEXT_NOT_FOUND'); }), refresh: vi.fn(), readSession: vi.fn(), getSharedDatabase: vi.fn(), getOrganization: vi.fn(), listPeople: vi.fn(), listOrganizations: vi.fn(), deletionImpact: vi.fn(), push: vi.fn() }));
 vi.mock('next/headers', () => ({ headers: mocks.headers }));
-vi.mock('next/navigation', () => ({ redirect: mocks.redirect, notFound: mocks.notFound, useRouter: () => ({ refresh: mocks.refresh }) }));
+vi.mock('next/navigation', () => ({ redirect: mocks.redirect, notFound: mocks.notFound, useRouter: () => ({ refresh: mocks.refresh, push: mocks.push }) }));
 vi.mock('../../../../../lib/session', () => ({ readSession: mocks.readSession }));
 vi.mock('../../../../../lib/database', () => ({ getSharedDatabase: mocks.getSharedDatabase }));
-vi.mock('@backoffice/core', async (importOriginal) => ({ ...await importOriginal<typeof import('@backoffice/core')>(), HrDirectory: class { getOrganization = mocks.getOrganization; listPeople = mocks.listPeople; } }));
+vi.mock('@backoffice/core', async (importOriginal) => ({ ...await importOriginal<typeof import('@backoffice/core')>(), HrDirectory: class { getOrganization = mocks.getOrganization; listPeople = mocks.listPeople; listOrganizations = mocks.listOrganizations; }, OrganizationStructureService: class { deletionImpact = mocks.deletionImpact; } }));
 
 import OrganizationPage from './page';
 
@@ -29,10 +29,16 @@ function ready(session: unknown) {
     { id: 'p1', employeeCode: 'E001', displayName: 'นายสมศักดิ์ รักงาน', employmentStatus: 'ACTIVE' },
     { id: 'p9', employeeCode: 'E009', displayName: 'ลาออกแล้ว', employmentStatus: 'INACTIVE' }
   ]);
+  mocks.listOrganizations.mockResolvedValue([
+    { id: 'nur', name: 'กลุ่มการพยาบาล', parentId: 'hosp', unitType: 'DIVISION' },
+    { id: 'med', name: 'กลุ่มงานการแพทย์', parentId: 'hosp', unitType: 'DIVISION' },
+    { id: 'ipd', name: 'งานผู้ป่วยใน', parentId: 'nur', unitType: 'SECTION' }
+  ]);
+  mocks.deletionImpact.mockResolvedValue({ units: 2, people: 5 });
 }
 const page = (organizationId = 'nur') => OrganizationPage({ params: Promise.resolve({ organizationId }) });
 
-afterEach(() => vi.clearAllMocks());
+afterEach(() => { vi.clearAllMocks(); vi.unstubAllGlobals(); });
 
 describe('OrganizationPage', () => {
   it('shows the unit type, current head and head history in Bangkok dates to an hr reader without forms', async () => {
@@ -112,5 +118,42 @@ describe('OrganizationPage', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('คุณไม่มีสิทธิ์ดูข้อมูลส่วนนี้');
     expect(mocks.getOrganization).not.toHaveBeenCalled();
+  });
+
+  it('lets an HR manager rename a งาน and move it to another กลุ่มงาน', async () => {
+    ready(hrManager);
+    mocks.getOrganization.mockResolvedValue({ ...unit, id: 'ipd', name: 'งานผู้ป่วยใน', unitType: 'SECTION', parentId: 'nur' });
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(await page('ipd'));
+
+    expect(screen.getByLabelText('ชื่องาน')).toHaveValue('งานผู้ป่วยใน');
+    expect(screen.getByRole('combobox', { name: 'อยู่ในกลุ่มงาน' })).toHaveValue('nur');
+    fireEvent.change(screen.getByLabelText('ชื่องาน'), { target: { value: 'งานผู้ป่วยในชาย' } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'อยู่ในกลุ่มงาน' }), { target: { value: 'med' } });
+    fireEvent.click(screen.getByRole('button', { name: 'บันทึกชื่อ' }));
+    await waitFor(() => expect(mocks.refresh).toHaveBeenCalled());
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('/api/hr/organizations/ipd');
+    expect(init.method).toBe('PUT');
+    expect(JSON.parse(init.body as string)).toEqual({ name: 'งานผู้ป่วยในชาย', parentId: 'med' });
+  });
+
+  it('confirms a delete with what it affects, then returns to the list', async () => {
+    ready(hrManager);
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true, units: 2, people: 5 }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(await page());
+
+    expect(screen.queryByRole('combobox', { name: 'อยู่ในกลุ่มงาน' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'ลบกลุ่มงานนี้' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('ลบ 2 หน่วยงาน (รวมงานที่อยู่ใต้กลุ่มงานนี้) บุคลากร 5 คนจะไม่มีสังกัด');
+    fireEvent.click(screen.getByRole('button', { name: 'ยืนยันการลบ' }));
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith('/hr/organizations'));
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('/api/hr/organizations/nur');
+    expect(init.method).toBe('DELETE');
   });
 });
