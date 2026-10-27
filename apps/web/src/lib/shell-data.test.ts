@@ -18,7 +18,21 @@ describe('loadShellData', () => {
 
     expect(shell.navigation.find((item) => item.href === '/requests')?.badge).toBe(1);
     expect(shell.navigation.find((item) => item.href === '/notifications')?.badge).toBe(1);
-    expect(shell.bell).toEqual({ unread: 1, items: [{ id: 'n-1', moduleLabel: 'การลา', subject: 'อนุมัติ > หัวหน้ากลุ่มการพยาบาล', readAt: null, createdAt: '2026-10-26T03:00:00.000Z' }] });
+    expect(shell.bell).toEqual({ unread: 1, items: [{ id: 'n-1', moduleLabel: 'การลา', module: 'leave', subject: 'อนุมัติ > หัวหน้ากลุ่มการพยาบาล', readAt: null, createdAt: '2026-10-26T03:00:00.000Z' }] });
+  });
+
+  it('leaves the notification menu out when nothing is unread and asks the bell for unread notices only', async () => {
+    const query = vi.fn(async (sql: string) => {
+      if (sql.includes('AS found')) return [{ found: 0 }];
+      if (sql.includes('COUNT(*) AS total FROM notification')) return [{ total: 0 }];
+      return [];
+    });
+
+    const shell = await loadShellData({ query } as unknown as Database, session);
+
+    expect(shell.navigation.some((item) => item.href === '/notifications')).toBe(false);
+    expect(shell.navigation.some((item) => item.href === '/requests')).toBe(false);
+    expect(query.mock.calls.find(([sql]) => String(sql).includes('LIMIT 10'))?.[0]).toContain('read_at IS NULL');
   });
 
   it('still gives a menu and an empty bell when the database is down', async () => {

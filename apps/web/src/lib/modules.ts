@@ -39,6 +39,7 @@ export interface ModuleEntry {
 }
 
 const everyone = () => true;
+const unreadNotices = async (db: Database, subject: AccessSubject) => subject.personId ? Number((await db.query<{ total: number }>('SELECT COUNT(*) AS total FROM notification WHERE recipient_person_id = ? AND channel = ? AND read_at IS NULL', [subject.personId, 'in_app']))[0]?.total ?? 0) : 0;
 const hasRole = (...names: string[]) => (subject: AccessSubject) => subject.roles.some((role) => names.includes(role.name));
 const authorization = new AuthorizationService();
 const withSections = (entry: Omit<ModuleEntry, 'visible'>, sections: readonly ModuleSection[]): ModuleEntry => ({ ...entry, sections, visible: (subject) => sections.some((section) => section.visible(subject)) });
@@ -53,7 +54,9 @@ export const moduleRegistry: readonly ModuleEntry[] = [
   },
   {
     code: 'notifications', href: '/notifications', labelKey: 'notifications', descriptionKey: 'moduleNotificationsDescription', icon: 'bell', group: 'mine', status: 'live', visible: everyone,
-    badge: async (db, subject) => subject.personId ? Number((await db.query<{ total: number }>('SELECT COUNT(*) AS total FROM notification WHERE recipient_person_id = ? AND channel = ? AND read_at IS NULL', [subject.personId, 'in_app']))[0]?.total ?? 0) : 0
+    badge: unreadNotices,
+    // Shown only while something is unread; reading the last one takes the menu away.
+    available: async (db, subject) => (await unreadNotices(db, subject)) > 0
   },
   withSections({ code: 'hr', href: '/hr', labelKey: 'moduleHr', descriptionKey: 'moduleHrDescription', icon: 'people', group: 'people', status: 'live' }, [
     { href: '/hr/people', labelKey: 'people', visible: hasRole('hr-reader', 'hr-manager') },
