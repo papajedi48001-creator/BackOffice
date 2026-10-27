@@ -47,4 +47,16 @@ for version in "${expected_versions[@]}"; do
   applied="$(mariadb_query "SELECT COUNT(*) FROM schema_migration WHERE version = '${version}'" | tr -d '[:space:]')"
   [[ "${applied}" == "1" ]] || { echo "restore verification failed: migration ${version} is not recorded" >&2; exit 1; }
 done
+# Read the newest attachment back through the restored filer (loopback inside the container) and compare its size.
+bucket="$(sed -n 's/^S3_BUCKET=//p' "${env_file}" | tail -n 1)"
+object_key=''
+size_bytes=''
+read -r object_key size_bytes < <(mariadb_query "SELECT object_key, size_bytes FROM attachment ORDER BY created_at DESC LIMIT 1") || true
+if [[ -n "${object_key}" ]]; then
+  restored_bytes="$("${compose[@]}" exec -T seaweedfs sh -ec 'wget -q -O - "http://127.0.0.1:8888/buckets/$1/$2" | wc -c' sh "${bucket}" "${object_key}" | tr -d '[:space:]')"
+  [[ "${restored_bytes}" == "${size_bytes}" ]] || { echo "restore verification failed: the newest attachment did not read back whole" >&2; exit 1; }
+  printf 'restore verification: newest attachment read back (%s bytes)\n' "${restored_bytes}"
+else
+  printf 'restore verification: no attachments to read back\n'
+fi
 printf 'restore verification completed: %s tables, %s migrations\n' "${#required_tables[@]}" "${#expected_versions[@]}"

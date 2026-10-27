@@ -34,7 +34,7 @@ services:
       CLAMD_PORT: "3310"
       REDIS_URL: redis://redis:6379
     secrets: [database_url, session_secret, national_id_encryption_key, national_id_lookup_key, s3_access_key_id, s3_secret_access_key]
-    networks: [backplane]
+    networks: [backplane, storage, scan]
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3000/api/health"]
       interval: 30s
@@ -82,13 +82,15 @@ services:
       retries: 3
 
   # ไฟล์แนบส่วนตัว (SeaweedFS, Apache 2.0). The S3 identities file holds the same keys the web app reads.
+  # Master, volume and filer listen on loopback only (they take no credentials); only S3 is reachable,
+  # and only from the web app on the storage network.
   seaweedfs:
     image: ${SEAWEEDFS_IMAGE:?set SEAWEEDFS_IMAGE}
     restart: unless-stopped
-    command: ["server", "-dir=/data", "-volume.max=0", "-master.volumeSizeLimitMB=1024", "-s3", "-s3.port=8333", "-s3.config=/run/secrets/seaweedfs_s3_config"]
+    command: ["server", "-dir=/data", "-ip=127.0.0.1", "-ip.bind=127.0.0.1", "-s3.ip.bind=0.0.0.0", "-volume.max=0", "-master.volumeSizeLimitMB=1024", "-s3", "-s3.port=8333", "-s3.config=/run/secrets/seaweedfs_s3_config"]
     secrets: [seaweedfs_s3_config]
     volumes: [seaweedfs-data:/data]
-    networks: [backplane]
+    networks: [storage]
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8333/healthz"]
       interval: 30s
@@ -97,11 +99,12 @@ services:
       start_period: 30s
 
   # Scans every upload before it is stored. freshclam needs outbound HTTPS (or a local mirror) for signatures.
+  # It shares the scan network with the web app only, so it can never reach SeaweedFS or the database.
   clamav:
     image: ${CLAMAV_IMAGE:?set CLAMAV_IMAGE}
     restart: unless-stopped
     volumes: [clamav-data:/var/lib/clamav]
-    networks: [backplane, updates]
+    networks: [scan, updates]
     healthcheck:
       test: ["CMD", "clamdcheck.sh"]
       interval: 60s
@@ -112,6 +115,10 @@ services:
 networks:
   edge: {}
   backplane:
+    internal: true
+  storage:
+    internal: true
+  scan:
     internal: true
   updates: {}
 

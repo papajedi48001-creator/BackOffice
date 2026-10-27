@@ -31,6 +31,11 @@ assert_restore_contains "schema_migration"
 assert_restore_contains "BACKUP_ENCRYPTION_KEY_FILE"
 assert_restore_contains "attachment"
 assert_restore_contains "run --rm --no-deps -T --entrypoint tar seaweedfs"
+assert_restore_contains "http://127.0.0.1:8888/buckets/"
+if ! grep -Fq 'stop seaweedfs' "${script_dir}/backup.sh" || ! grep -Fq 'start seaweedfs' "${script_dir}/backup.sh"; then
+  echo "backup.sh must copy SeaweedFS data while SeaweedFS is stopped, then start it again" >&2
+  exit 1
+fi
 for script in "${restore_script}" "${script_dir}/backup.sh"; do
   if grep -qi minio "${script}"; then
     echo "$(basename "${script}") must back up SeaweedFS, not MinIO" >&2

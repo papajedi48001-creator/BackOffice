@@ -10,7 +10,7 @@ export async function GET(request: Request, context: { params: Promise<{ attachm
     const { attachmentId } = await context.params;
     try {
       const { attachment, bytes } = await attachmentService(database).openAttachment({ attachmentId, actorPersonId: session.personId }, new AttachmentAccess(database, session));
-      return new Response(new Blob([new Uint8Array(bytes)]), { status: 200, headers: { 'content-type': attachment.contentType, 'content-length': String(bytes.byteLength), 'content-disposition': contentDisposition(attachment.filename, attachment.contentType), 'x-content-type-options': 'nosniff', 'cache-control': 'private, no-store' } });
+      return new Response(new Blob([new Uint8Array(bytes)]), { status: 200, headers: { 'content-type': attachment.contentType, 'content-length': String(bytes.byteLength), 'content-disposition': contentDisposition(attachment.filename, attachment.contentType), 'x-content-type-options': 'nosniff', 'content-security-policy': "sandbox; default-src 'none'", 'cache-control': 'private, no-store' } });
     } catch (error) {
       if (error instanceof Error && error.message === 'NOT_FOUND') return NextResponse.json({ error: 'not_found' }, { status: 404 });
       return NextResponse.json({ error: 'download_failed' }, { status: 500 });

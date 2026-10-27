@@ -21,10 +21,12 @@ if [[ -z "${COMPOSE_PROJECT_NAME:-}" || -z "${BACKOFFICE_BACKPLANE_SUBNET:-}" ]]
   exit 1
 fi
 
-if [[ "$BACKOFFICE_BACKPLANE_SUBNET" == '172.18.0.0/16' ]]; then
-  echo 'Refusing 172.18.0.0/16: it overlaps the hospital client network observed during staging.' >&2
-  exit 1
-fi
+for subnet in "$BACKOFFICE_BACKPLANE_SUBNET" "${BACKOFFICE_STORAGE_SUBNET:-}" "${BACKOFFICE_SCAN_SUBNET:-}" "${BACKOFFICE_UPDATES_SUBNET:-}"; do
+  if [[ "$subnet" == '172.18.0.0/16' ]]; then
+    echo 'Refusing 172.18.0.0/16: it overlaps the hospital client network observed during staging.' >&2
+    exit 1
+  fi
+done
 
 compose=(
   docker compose --env-file "$environment_file"

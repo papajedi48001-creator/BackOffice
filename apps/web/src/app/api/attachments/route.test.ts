@@ -40,6 +40,15 @@ describe('POST /api/attachments', () => {
     expect(mocks.upload).toHaveBeenCalledWith({ actorPersonId: 'person-a', filename: 'ใบรับรองแพทย์.pdf', contentType: 'application/pdf', bytes: pdf });
   });
 
+  it('refuses an oversized body from its length before reading it, and stores a safe name', async () => {
+    ready();
+    const huge = new Request('http://localhost/api/attachments', { method: 'POST', headers: { 'content-length': String(50 * 1024 * 1024), 'content-type': 'multipart/form-data; boundary=x' }, body: 'x' });
+    expect((await POST(huge)).status).toBe(413);
+    mocks.upload.mockResolvedValue({ id: 'att-2', objectKey: 'attachments/y', contentType: 'application/pdf', sizeBytes: pdf.byteLength, createdByPersonId: 'person-a', filename: 'x.pdf' });
+    await POST(form(new File([pdf], 'x\u202E.hta', { type: 'application/pdf' })));
+    expect(mocks.upload.mock.calls[0]?.[0].filename).toBe('x.pdf');
+  });
+
   it('names each refusal', async () => {
     ready();
     expect((await POST(form(null))).status).toBe(400);
@@ -66,6 +75,7 @@ describe('GET /api/attachments/[id]/download', () => {
     expect(response.headers.get('content-disposition')).toBe(`attachment; filename="report.pdf"; filename*=UTF-8''report.pdf`);
     expect(response.headers.get('x-content-type-options')).toBe('nosniff');
     expect(response.headers.get('cache-control')).toBe('private, no-store');
+    expect(response.headers.get('content-security-policy')).toBe("sandbox; default-src 'none'");
     expect(new Uint8Array(await response.arrayBuffer())).toEqual(pdf);
     expect(mocks.open.mock.calls[0]?.[0]).toEqual({ attachmentId: 'att-1', actorPersonId: 'person-a' });
   });

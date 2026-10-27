@@ -40,8 +40,18 @@ node -e '
   const secrets = services.web.secrets.map((secret) => secret.source);
   for (const name of ["s3_access_key_id", "s3_secret_access_key"]) if (!secrets.includes(name)) fail(`web must mount the ${name} secret`);
   if (!services.seaweedfs.secrets.some((secret) => secret.source === "seaweedfs_s3_config")) fail("seaweedfs must read its identities from a secret");
-  if (!Object.keys(services.clamav.networks).some((name) => !networks[name].internal)) fail("clamav needs a network with outbound access for signature updates");
-  if (Object.keys(services.seaweedfs.networks).some((name) => !networks[name].internal)) fail("seaweedfs must stay on internal networks only");
+  const on = (service) => Object.keys(services[service].networks ?? {}).sort().join(",");
+  if (on("seaweedfs") !== "storage") fail("seaweedfs must sit only on the storage network");
+  if (on("clamav") !== "scan,updates") fail("clamav must sit only on the scan network and the updates network");
+  for (const name of ["storage", "scan"]) if (!networks[name].internal) fail(`${name} must be an internal network`);
+  for (const [name, service] of Object.entries(services)) {
+    const joined = Object.keys(service.networks ?? {});
+    if (joined.includes("storage") && !["web", "seaweedfs"].includes(name)) fail(`${name} must not reach SeaweedFS`);
+    if (joined.includes("scan") && !["web", "clamav"].includes(name)) fail(`${name} must not reach ClamAV`);
+  }
+  if (!on("web").includes("storage") || !on("web").includes("scan")) fail("web must reach both SeaweedFS and ClamAV");
+  const command = services.seaweedfs.command.join(" ");
+  if (!command.includes("-ip.bind=127.0.0.1") || !command.includes("-s3.ip.bind=0.0.0.0")) fail("seaweedfs must keep master, volume and filer on loopback and expose only S3");
 ' <<< "${rendered}"
 echo "web stores attachments in SeaweedFS and scans them with ClamAV"
 docker compose --env-file "${root_dir}/infra/compose/.env.staging.example" -f "${root_dir}/infra/compose/docker-compose.staging.yml" config --quiet

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { attachmentsEnabled, contentDisposition } from './attachments';
+import { attachmentsEnabled, contentDisposition, safeFilename } from './attachments';
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -19,5 +19,17 @@ describe('attachments settings', () => {
     expect(contentDisposition('ใบรับรองแพทย์ "นาย ก".pdf')).toBe(`attachment; filename="file.pdf"; filename*=UTF-8''${encodeURIComponent('ใบรับรองแพทย์ _นาย ก_.pdf')}`);
     expect(contentDisposition('report.pdf')).toBe(`attachment; filename="report.pdf"; filename*=UTF-8''report.pdf`);
     expect(contentDisposition(null, 'image/png')).toBe(`attachment; filename="file.png"; filename*=UTF-8''file.png`);
+  });
+
+  it('names a saved file by its checked type, never by the extension the uploader chose', () => {
+    expect(safeFilename('ใบรับรองแพทย์.hta', 'application/pdf')).toBe('ใบรับรองแพทย์.pdf');
+    expect(safeFilename('scan.JPEG', 'image/jpeg')).toBe('scan.JPEG');
+    expect(safeFilename('scan.jpg', 'image/png')).toBe('scan.png');
+    expect(safeFilename('รูป', 'image/png')).toBe('รูป.png');
+    expect(safeFilename('a\u202Egpj.exe\u0007', 'application/pdf')).toBe('agpj.pdf');
+    expect(safeFilename('C:\\fakepath\\สำเนา.pdf', 'application/pdf')).toBe('สำเนา.pdf');
+    expect(Array.from(safeFilename(`${'😀'.repeat(300)}.pdf`, 'application/pdf'))).toHaveLength(255);
+    expect(contentDisposition('ใบรับรอง.hta', 'application/pdf')).toBe(`attachment; filename="file.pdf"; filename*=UTF-8''${encodeURIComponent('ใบรับรอง.pdf')}`);
+    expect(contentDisposition("it's (1)*.pdf")).toBe(`attachment; filename="it's (1)*.pdf"; filename*=UTF-8''it%27s%20%281%29%2A.pdf`);
   });
 });

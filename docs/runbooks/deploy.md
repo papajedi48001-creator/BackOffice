@@ -42,6 +42,11 @@ Downloads always pass through the web app, which checks access on each request.
    ```
 
    The web app creates the `S3_BUCKET` bucket on first upload.
+   SeaweedFS sits alone with the web app on the internal `storage` network, and its master,
+   volume and filer ports listen on loopback inside the container; ClamAV shares the internal
+   `scan` network with the web app only. In staging, set `BACKOFFICE_STORAGE_SUBNET`,
+   `BACKOFFICE_SCAN_SUBNET` and `BACKOFFICE_UPDATES_SUBNET` to allocated ranges that do not
+   overlap hospital networks, as for the backplane.
 3. ClamAV joins the non-internal `updates` network so `freshclam` can download signatures
    over HTTPS. Allow outbound HTTPS to `database.clamav.net` from the server, or point
    `freshclam` at an approved local mirror. Give the host about 3 GB of free RAM for
