@@ -19,6 +19,7 @@ export interface FleetNotice { recipientPersonId: string; subject: string; targe
 
 const requestPath = (id: string | undefined) => `/fleet/requests/${id}`;
 const tripPath = (id: string | undefined) => `/fleet/trips/${id}`;
+const DRIVING_PATH = '/fleet/driving';
 const people = (ids: ReadonlyArray<string | null | undefined> | undefined) => (ids ?? []).filter((id): id is string => Boolean(id));
 
 /** Who hears of a fleet event, with what subject and link. No purpose, destination, passengers or reason ever goes in. */
@@ -31,7 +32,9 @@ export function noticesFor(event: FleetEvent, ctx: FleetNoticeContext): FleetNot
       case 'declined': return to(ctx.requesterPersonIds, 'ไม่จัดรถ', requestPath(ctx.fleetRequestId));
       case 'changed': return [
         ...(ctx.requesters ?? []).map((requester) => ({ recipientPersonId: requester.personId, subject: 'เปลี่ยนรถหรือเวลา', targetPath: requestPath(requester.fleetRequestId) })),
-        ...to([ctx.driverPersonId, ctx.previousDriverPersonId], 'เปลี่ยนรถหรือเวลา', tripPath(ctx.tripId))
+        ...to([ctx.driverPersonId], 'เปลี่ยนรถหรือเวลา', tripPath(ctx.tripId)),
+        // A driver taken off the เที่ยวรถ can no longer open it, so they land on their own driving list.
+        ...to([ctx.previousDriverPersonId], 'เปลี่ยนรถหรือเวลา', DRIVING_PATH)
       ];
       case 'requester-cancelled': return [...to(ctx.managerPersonIds, 'ผู้ขอยกเลิกใบขอใช้รถ', requestPath(ctx.fleetRequestId)), ...to([ctx.driverPersonId], 'ผู้ขอยกเลิกใบขอใช้รถ', tripPath(ctx.tripId))];
       case 'trip-cancelled': return to([ctx.driverPersonId], 'ยกเลิกงานขับ', tripPath(ctx.tripId));

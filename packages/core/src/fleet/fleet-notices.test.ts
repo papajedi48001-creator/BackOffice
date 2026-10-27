@@ -23,14 +23,14 @@ describe('noticesFor', () => {
     expect(noticesFor('declined', { fleetRequestId: 'f1', actorPersonId: 'm1', requesterPersonIds: ['req'] })).toEqual([{ recipientPersonId: 'req', subject: 'ไม่จัดรถ', targetPath: request('f1') }]);
   });
 
-  it('tells each requester on the เที่ยวรถ and the old and new driver of a change, once each', () => {
+  it('tells each requester on the เที่ยวรถ and the old and new driver of a change, once each, sending the old driver to งานขับของฉัน since the เที่ยวรถ is no longer theirs', () => {
     expect(noticesFor('changed', { tripId: 't1', actorPersonId: 'm1', requesters: [{ personId: 'r1', fleetRequestId: 'f1' }, { personId: 'r2', fleetRequestId: 'f2' }], driverPersonId: 'd2', previousDriverPersonId: 'd1' })).toEqual([
       { recipientPersonId: 'r1', subject: 'เปลี่ยนรถหรือเวลา', targetPath: request('f1') },
       { recipientPersonId: 'r2', subject: 'เปลี่ยนรถหรือเวลา', targetPath: request('f2') },
       { recipientPersonId: 'd2', subject: 'เปลี่ยนรถหรือเวลา', targetPath: trip('t1') },
-      { recipientPersonId: 'd1', subject: 'เปลี่ยนรถหรือเวลา', targetPath: trip('t1') }
+      { recipientPersonId: 'd1', subject: 'เปลี่ยนรถหรือเวลา', targetPath: '/fleet/driving' }
     ]);
-    expect(noticesFor('changed', { tripId: 't1', actorPersonId: 'm1', requesters: [], driverPersonId: 'd1', previousDriverPersonId: 'd1' })).toHaveLength(1);
+    expect(noticesFor('changed', { tripId: 't1', actorPersonId: 'm1', requesters: [], driverPersonId: 'd1', previousDriverPersonId: 'd1' })).toEqual([{ recipientPersonId: 'd1', subject: 'เปลี่ยนรถหรือเวลา', targetPath: trip('t1') }]);
   });
 
   it('tells the fleet managers and the driver when a requester cancels an assigned ใบ', () => {

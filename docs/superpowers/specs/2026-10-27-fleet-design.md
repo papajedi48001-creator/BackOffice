@@ -121,7 +121,7 @@ All through `notification.in_app` with `moduleCode: 'fleet'`, `targetPath` to th
 | Head disagrees / returns | requester | central workflow notice (unchanged) |
 | จัดรถ | requester; the driver | จัดรถแล้ว > <registration> / มีงานขับใหม่ |
 | ไม่จัดรถ | requester | ไม่จัดรถ |
-| Move / change car, driver or times | requester(s) on the เที่ยวรถ; old and new driver | เปลี่ยนรถหรือเวลา |
+| Move / change car, driver or times | requester(s) on the เที่ยวรถ; old and new driver (a driver taken off the เที่ยวรถ is linked to `/fleet/driving`, since its page is closed to them) | เปลี่ยนรถหรือเวลา |
 | Requester cancels an assigned ใบ | `fleet-manager`s; the driver | ผู้ขอยกเลิกใบขอใช้รถ |
 | เที่ยวรถ cancelled | the driver | ยกเลิกงานขับ |
 

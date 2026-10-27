@@ -239,7 +239,8 @@ describeWithDatabase('FleetDispatchService against MariaDB', () => {
     expect(new Date((await trip(tripId)).endsAt).toISOString()).toBe('2026-11-11T07:00:00.000Z');
     expect(await recipients('เปลี่ยนรถหรือเวลา', `/fleet/requests/${first.id}`)).toEqual([first.requester]);
     expect(await recipients('เปลี่ยนรถหรือเวลา', `/fleet/requests/${second.id}`)).toEqual([second.requester]);
-    expect(await recipients('เปลี่ยนรถหรือเวลา', `/fleet/trips/${tripId}`)).toEqual([newDriver, oldDriver].sort());
+    expect(await recipients('เปลี่ยนรถหรือเวลา', `/fleet/trips/${tripId}`)).toEqual([newDriver]);
+    expect((await recipients('เปลี่ยนรถหรือเวลา', '/fleet/driving')).filter((id) => id === oldDriver)).toEqual([oldDriver]);
     expect(await audits('fleet.trip.updated', tripId)).toEqual([{ actor: manager, metadata: { registration: expect.any(String), status: 'PLANNED', changedFields: ['driverPersonId', 'endsAt'] } }]);
   });
 
