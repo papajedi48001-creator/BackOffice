@@ -30,9 +30,9 @@ Status: draft for wasan's review. Agreed section by section in the thread "พ�
 - **หัวหน้าหมวดยานพาหนะ**: the role (`fleet-manager`) that keeps the car register and driver list and dispatches. _Avoid_: fleet admin, ผู้จัดการรถ.
 - **การจัดรถ**: attaching a ใบขอใช้รถ to a เที่ยวรถ, new or existing. _Avoid_: assign, dispatch (in UI text).
 
-## Data — migration `0015_fleet.sql` (additive)
+## Data — migration `0016_fleet.sql` (additive)
 
-0010 was reserved for this module but is now taken (0010–0014 are HR, leave and travel). This module takes the next free number, 0015, and adds itself to the table in `docs/integration/modules.md`.
+0010 was reserved for this module but is now taken (0010–0014 are HR, leave and travel). This module takes 0016 (0015 went to private attachments), and adds itself to the table in `docs/integration/modules.md`.
 
 - **`fleet_vehicle`**: `id`, `registration` VARCHAR(20) unique, `make_model` VARCHAR(120), `kind` (`SEDAN` | `PICKUP` | `VAN` | `AMBULANCE` | `OTHER`), `seats` SMALLINT, `status` (`ACTIVE` | `IN_REPAIR` | `RETIRED`), `note` VARCHAR(300), `created_at`, `updated_at`.
 - **`fleet_driver`**: `person_id` primary key (foreign key to `person`), `phone` VARCHAR(32) (work phone shown to requesters; not the profile phone), `is_active`, `created_at`, `updated_at`.

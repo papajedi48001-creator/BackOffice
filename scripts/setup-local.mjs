@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /* global process, console -- Node script outside the workspace packages */
 // Local development setup for other developers' machines. See docs/runbooks/local-setup.md.
-//   node scripts/setup-local.mjs          install, write .env, start MariaDB + Redis, migrate, seed demo data
+//   node scripts/setup-local.mjs          install, write .env, start MariaDB, Redis and SeaweedFS, migrate, seed demo data
+//                                         (--with-clamav also starts the virus scanner, which attachments need)
 //   node scripts/setup-local.mjs web      build and start the web app on port 3000, plus the outbox worker (--no-worker to skip)
 //   node scripts/setup-local.mjs worker   start only the outbox worker with .env loaded
 //   node scripts/setup-local.mjs lan      serve the web app over HTTPS to the LAN (port 8443)
@@ -59,13 +60,14 @@ function hostPorts() {
   return {
     dbPort: Number(source.BACKOFFICE_DB_PORT ?? 3307),
     redisPort: Number(source.BACKOFFICE_REDIS_PORT ?? 6379),
-    minioPort: Number(source.BACKOFFICE_MINIO_PORT ?? 9000)
+    s3Port: Number(source.BACKOFFICE_S3_PORT ?? 8333),
+    clamavPort: Number(source.BACKOFFICE_CLAMAV_PORT ?? 3310)
   };
 }
 
 /** Fails early with a clear fix when another program already holds a port Docker needs to publish. */
 async function checkPortsFree(ports, services, env) {
-  const wanted = { mariadb: ['BACKOFFICE_DB_PORT', ports.dbPort], redis: ['BACKOFFICE_REDIS_PORT', ports.redisPort], minio: ['BACKOFFICE_MINIO_PORT', ports.minioPort] };
+  const wanted = { mariadb: ['BACKOFFICE_DB_PORT', ports.dbPort], redis: ['BACKOFFICE_REDIS_PORT', ports.redisPort], seaweedfs: ['BACKOFFICE_S3_PORT', ports.s3Port], clamav: ['BACKOFFICE_CLAMAV_PORT', ports.clamavPort] };
   const busy = [];
   for (const service of services) {
     const running = spawnSync('docker', ['compose', '-f', composeFile, 'ps', '--status', 'running', '-q', service], { cwd: root, encoding: 'utf8', env: { ...process.env, ...env } });
@@ -117,12 +119,12 @@ async function setup() {
   checkTools();
   step('Installing dependencies');
   run('pnpm', ['install', '--frozen-lockfile']);
-  const services = process.argv.includes('--with-minio') ? ['mariadb', 'redis', 'minio'] : ['mariadb', 'redis'];
+  const services = ['mariadb', 'redis', 'seaweedfs', ...(process.argv.includes('--with-clamav') ? ['clamav'] : [])];
   const ports = hostPorts();
   await checkPortsFree(ports, services, existsSync(envFile) ? loadEnv() : {});
   writeEnvIfMissing(ports);
   const env = loadEnv();
-  step('Starting MariaDB and Redis');
+  step(`Starting ${services.join(', ')}`);
   run('docker', ['compose', '-f', composeFile, 'up', '-d', ...services], { env });
   migrateWithRetry(env);
   const seed = findSeedDemo(workspacePackages());

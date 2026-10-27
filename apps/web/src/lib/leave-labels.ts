@@ -8,7 +8,7 @@ const errorKeys: Record<string, MessageKey> = {
   NO_LEAVE_DAYS: 'leaveErrorNoLeaveDays', CROSSES_FISCAL_YEAR: 'leaveErrorCrossesFiscalYear', INACTIVE_LEAVE_TYPE: 'leaveErrorInactiveType', NO_ENTITLEMENT: 'leaveErrorNoEntitlement', NOT_ELIGIBLE: 'leaveErrorNotEligible',
   SERVICE_TOO_SHORT: 'leaveErrorServiceTooShort', APPOINTMENT_DATE_MISSING: 'leaveErrorAppointmentMissing', INSUFFICIENT_BALANCE: 'leaveErrorInsufficientBalance', OVERLAPS_EXISTING_LEAVE: 'leaveErrorOverlaps', OVERLAPS_OFFICIAL_TRAVEL: 'leaveErrorOverlapsTravel',
   NO_ORGANIZATION: 'leaveErrorNoOrganization', NO_APPROVER: 'leaveErrorNoApprover', NOT_FOUND: 'leaveErrorNotFound', NOT_APPROVED: 'leaveErrorNotApproved', NOT_RETURNED: 'leaveErrorNotReturned',
-  OUTSIDE_LEAVE: 'leaveErrorOutside', OVERLAPS_CANCELLATION: 'leaveErrorOverlapsCancellation', NOT_PENDING: 'leaveErrorNotPending', invalid_input: 'leaveErrorInvalid',
+  OUTSIDE_LEAVE: 'leaveErrorOutside', OVERLAPS_CANCELLATION: 'leaveErrorOverlapsCancellation', NOT_PENDING: 'leaveErrorNotPending', invalid_input: 'leaveErrorInvalid', INVALID_ATTACHMENT: 'attachmentErrorInvalid',
   DUPLICATE_CODE: 'leaveErrorDuplicate', DUPLICATE_NAME: 'leaveErrorDuplicate', DUPLICATE_DATE: 'leaveErrorDuplicateDate',
   CONFLICT_OF_INTEREST: 'leaveErrorConflict', APPROVER_REQUIRED: 'leaveErrorApproverRequired', REQUEST_NOT_PENDING: 'leaveErrorRequestNotPending',
   MISSING_COLUMN: 'leaveCsvMissingColumn', UNKNOWN_EMPLOYEE: 'leaveCsvUnknownEmployee', UNKNOWN_LEAVE_TYPE: 'leaveCsvUnknownLeaveType', INVALID_NUMBER: 'leaveCsvInvalidNumber', DUPLICATE_ROW: 'leaveCsvDuplicateRow',

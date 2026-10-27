@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { LeaveBalance, LeaveCounting, LeaveWarning } from '@backoffice/contracts';
 import { t } from '@backoffice/i18n';
+import { AttachmentField, type AttachedFile } from '../../../../components/attachment-field';
 import { leaveDaysLabel, leaveErrorMessage, leaveWarningText } from '../../../../lib/leave-labels';
 
 export interface LeaveFormType { id: string; code: string; name: string; counting: LeaveCounting }
@@ -12,13 +13,15 @@ interface Preview { days: number; balance: LeaveBalance | null; warnings: LeaveW
 
 const empty: LeaveFormValues = { leaveTypeId: '', startDate: '', endDate: '', startHalf: 'FULL', endHalf: 'FULL', reason: '', contactDuringLeave: null };
 
-/** Files a ใบลา, or with `requestId` edits and resubmits a returned one. The preview runs the server's checks as the dates change. */
-export function LeaveForm({ types, requestId, initial }: { types: LeaveFormType[]; requestId?: string; initial?: LeaveFormValues }) {
+/** Files a ใบลา, or with `requestId` edits and resubmits a returned one. The preview runs the server's checks as the dates change.
+ * With `attachments` on, the form carries one ไฟล์แนบส่วนตัว; off, it sends no attachment field so a resubmit keeps what is there. */
+export function LeaveForm({ types, requestId, initial, attachments = false, initialAttachment = null }: { types: LeaveFormType[]; requestId?: string; initial?: LeaveFormValues; attachments?: boolean; initialAttachment?: AttachedFile | null }) {
   const router = useRouter();
   const [form, setForm] = useState<LeaveFormValues>(initial ?? empty);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [file, setFile] = useState<AttachedFile | null>(initialAttachment);
   const counting = types.find((type) => type.id === form.leaveTypeId)?.counting ?? 'WORKING_DAYS';
   const ready = Boolean(form.leaveTypeId && form.startDate && form.endDate && form.endDate >= form.startDate);
   const body = () => ({ leaveTypeId: form.leaveTypeId, startDate: form.startDate, endDate: form.endDate, startHalf: form.startHalf, endHalf: form.endHalf, reason: form.reason.trim(), contactDuringLeave: form.contactDuringLeave?.trim() || null });
@@ -41,7 +44,8 @@ export function LeaveForm({ types, requestId, initial }: { types: LeaveFormType[
     if (!form.reason.trim()) { setError(t('leaveReasonRequired')); return; }
     setBusy(true);
     try {
-      const response = await fetch(requestId ? `/api/leave/${encodeURIComponent(requestId)}` : '/api/leave', { method: requestId ? 'PUT' : 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body()) });
+      const payload = attachments ? { ...body(), attachmentId: file?.attachmentId ?? null } : body();
+      const response = await fetch(requestId ? `/api/leave/${encodeURIComponent(requestId)}` : '/api/leave', { method: requestId ? 'PUT' : 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });
       const result = (await response.json()) as { ok?: boolean; requestId?: string; error?: string };
       if (response.ok && result.ok) {
         if (requestId) router.refresh();
@@ -82,6 +86,7 @@ export function LeaveForm({ types, requestId, initial }: { types: LeaveFormType[
     </section>}
     <div className="form-field"><label htmlFor="leave-reason">{t('leaveReason')}</label><textarea id="leave-reason" value={form.reason} maxLength={1000} rows={3} onChange={(event) => set({ reason: event.target.value })} /></div>
     <div className="form-field"><label htmlFor="leave-contact">{t('leaveContact')}</label><input id="leave-contact" value={form.contactDuringLeave ?? ''} maxLength={500} onChange={(event) => set({ contactDuringLeave: event.target.value })} /></div>
+    {attachments && <AttachmentField id="leave-attachment" label={t('attachmentLeave')} value={file} onChange={setFile} />}
     {error && <p role="alert" className="form-error">{error}</p>}
     <div className="form-actions"><button type="submit" disabled={busy}>{requestId ? t('leaveResubmit') : t('leaveSubmit')}</button></div>
   </form>;

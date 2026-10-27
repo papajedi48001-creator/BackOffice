@@ -1,5 +1,5 @@
 import type { AccessSubject } from '@backoffice/contracts';
-import { AuthorizationService, FleetQueries, LeaveQueries, OfficialTravelQueries, RoomBookingQueries, canManageFleet, canManageLeave, canManageTravel, hasRequestActivity, listPendingApprovals } from '@backoffice/core';
+import { AuthorizationService, FleetQueries, LeaveQueries, OfficialTravelQueries, RoomBookingQueries, canManageFleet, canManageLeave, canManageTravel, hasOpenRequestWork, listPendingApprovals } from '@backoffice/core';
 import type { Database } from '@backoffice/db';
 import { t, type MessageKey } from '@backoffice/i18n';
 import type { NavigationItem } from '../components/app-shell';
@@ -39,6 +39,7 @@ export interface ModuleEntry {
 }
 
 const everyone = () => true;
+const unreadNotices = async (db: Database, subject: AccessSubject) => subject.personId ? Number((await db.query<{ total: number }>('SELECT COUNT(*) AS total FROM notification WHERE recipient_person_id = ? AND channel = ? AND read_at IS NULL', [subject.personId, 'in_app']))[0]?.total ?? 0) : 0;
 const hasRole = (...names: string[]) => (subject: AccessSubject) => subject.roles.some((role) => names.includes(role.name));
 const authorization = new AuthorizationService();
 const withSections = (entry: Omit<ModuleEntry, 'visible'>, sections: readonly ModuleSection[]): ModuleEntry => ({ ...entry, sections, visible: (subject) => sections.some((section) => section.visible(subject)) });
@@ -54,11 +55,13 @@ export const moduleRegistry: readonly ModuleEntry[] = [
     code: 'requests', href: '/requests', labelKey: 'requests', descriptionKey: 'moduleRequestsDescription', icon: 'requests', group: 'mine', status: 'live', visible: everyone,
     // Every module's approvals wait here, so a ใบลา for the director counts on both คำขอ and การลา.
     badge: async (db, subject) => subject.personId ? (await listPendingApprovals(db, subject.personId)).length : 0,
-    available: async (db, subject) => subject.personId ? hasRequestActivity(db, subject.personId) : false
+    available: async (db, subject) => subject.personId ? hasOpenRequestWork(db, subject.personId) : false
   },
   {
     code: 'notifications', href: '/notifications', labelKey: 'notifications', descriptionKey: 'moduleNotificationsDescription', icon: 'bell', group: 'mine', status: 'live', visible: everyone,
-    badge: async (db, subject) => subject.personId ? Number((await db.query<{ total: number }>('SELECT COUNT(*) AS total FROM notification WHERE recipient_person_id = ? AND channel = ? AND read_at IS NULL', [subject.personId, 'in_app']))[0]?.total ?? 0) : 0
+    badge: unreadNotices,
+    // Shown only while something is unread; reading the last one takes the menu away.
+    available: async (db, subject) => (await unreadNotices(db, subject)) > 0
   },
   withSections({ code: 'hr', href: '/hr', labelKey: 'moduleHr', descriptionKey: 'moduleHrDescription', icon: 'people', group: 'people', status: 'live' }, [
     { href: '/hr/people', labelKey: 'people', visible: hasRole('hr-reader', 'hr-manager') },

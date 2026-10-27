@@ -59,4 +59,31 @@ describe('LeaveForm', () => {
     expect(url).toBe('/api/leave/r9');
     expect(init.method).toBe('PUT');
   });
+
+  it('keeps the file on a resubmit unless the person removes it', async () => {
+    const fetchMock = vi.fn(async (url: string) => url === '/api/leave/preview' ? json({ days: 1, balance: null, warnings: [], medicalCertificateRequired: false, error: null }) : json({ ok: true, warnings: [], medicalCertificateRequired: false }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<LeaveForm types={types} requestId="r9" attachments initialAttachment={{ attachmentId: 'att-1', filename: 'ใบรับรองแพทย์.pdf' }} initial={{ leaveTypeId: 'lt-1', startDate: '2026-11-02', endDate: '2026-11-02', startHalf: 'FULL', endHalf: 'FULL', reason: 'ป่วย', contactDuringLeave: null }} />);
+    expect(screen.getByRole('link', { name: 'ใบรับรองแพทย์.pdf' })).toHaveAttribute('href', '/api/attachments/att-1/download');
+    fireEvent.click(screen.getByRole('button', { name: 'แก้ไขและส่งใหม่' }));
+    await waitFor(() => expect(mocks.refresh).toHaveBeenCalledTimes(1));
+    let [, init] = fetchMock.mock.calls.at(-1)! as unknown as [string, RequestInit];
+    expect(JSON.parse(init.body as string).attachmentId).toBe('att-1');
+    fireEvent.click(screen.getByRole('button', { name: 'นำไฟล์ออก' }));
+    fireEvent.click(screen.getByRole('button', { name: 'แก้ไขและส่งใหม่' }));
+    await waitFor(() => expect(mocks.refresh).toHaveBeenCalledTimes(2));
+    [, init] = fetchMock.mock.calls.at(-1)! as unknown as [string, RequestInit];
+    expect(JSON.parse(init.body as string).attachmentId).toBeNull();
+  });
+
+  it('sends no attachment field while attachments are off', async () => {
+    const fetchMock = vi.fn(async (url: string) => url === '/api/leave/preview' ? json({ days: 1, balance: null, warnings: [], medicalCertificateRequired: false, error: null }) : json({ ok: true, warnings: [], medicalCertificateRequired: false }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<LeaveForm types={types} requestId="r9" initial={{ leaveTypeId: 'lt-1', startDate: '2026-11-02', endDate: '2026-11-02', startHalf: 'FULL', endHalf: 'FULL', reason: 'ป่วย', contactDuringLeave: null }} />);
+    expect(screen.queryByLabelText('ไฟล์แนบ เช่น ใบรับรองแพทย์')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'แก้ไขและส่งใหม่' }));
+    await waitFor(() => expect(mocks.refresh).toHaveBeenCalled());
+    const [, init] = fetchMock.mock.calls.at(-1)! as unknown as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).not.toHaveProperty('attachmentId');
+  });
 });

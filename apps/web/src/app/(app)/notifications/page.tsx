@@ -16,7 +16,7 @@ export default async function NotificationsPage() {
   if (!databaseUrl) return <section><h2>{t('notificationsTitle')}</h2><p role="alert">{t('notificationLoadError')}</p></section>;
   const database = createDatabase(databaseUrl);
   try {
-    const notifications = await database.query<NotificationRow>('SELECT id, request_id AS requestId, module_code AS moduleCode, subject, read_at AS readAt, created_at AS createdAt FROM notification WHERE recipient_person_id = ? AND channel = ? ORDER BY created_at DESC', [session.personId, 'in_app']);
-    return <section><h2>{t('notificationsTitle')}</h2><NotificationList notifications={notifications.map(({ moduleCode, ...notification }) => ({ ...notification, moduleLabel: moduleLabel(moduleCode) }))} /></section>;
+    const notifications = await database.query<NotificationRow>('SELECT id, request_id AS requestId, module_code AS moduleCode, subject, read_at AS readAt, created_at AS createdAt FROM notification WHERE recipient_person_id = ? AND channel = ? AND read_at IS NULL ORDER BY created_at DESC', [session.personId, 'in_app']);
+    return <section><h2>{t('notificationsTitle')}</h2><NotificationList notifications={notifications.map(({ moduleCode, ...notification }) => ({ ...notification, moduleLabel: moduleLabel(moduleCode), ...(moduleCode ? { module: moduleCode } : {}) }))} /></section>;
   } finally { await database.close(); }
 }

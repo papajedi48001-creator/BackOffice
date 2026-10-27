@@ -1,0 +1,1 @@
+ALTER TABLE attachment ADD COLUMN IF NOT EXISTS original_filename VARCHAR(255) NULL;

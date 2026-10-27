@@ -1,9 +1,12 @@
+import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDatabase, runMigrations } from '@backoffice/db';
 import { LeaveService } from '../leave/leave-service';
 import { commandChainResolver, createLeaveOrganization, createLeavePerson, LEAVE_TYPE_IDS } from '../leave/leave-fixtures';
 import { ApprovalService } from '../workflow/approval-service';
 import { DatabaseWorkflowRepository } from '../workflow/database-workflow-repository';
+import { DatabaseAttachmentRepository } from '../files/database-attachment-repository';
+import { OfficialTravelQueries } from './travel-queries';
 import { OfficialTravelService } from './travel-service';
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -71,6 +74,25 @@ describeWithDatabase('OfficialTravelService against MariaDB', () => {
     const leader = await createLeavePerson(database, org.section);
     expect((await service.submit(leader, trip('2027-05-03', '2027-05-03'))).ok).toBe(true);
     expect(await leave.submit(leader, { leaveTypeId: LEAVE_TYPE_IDS.VACATION, startDate: '2027-05-03', endDate: '2027-06-30', reason: 'ธุระ' })).toEqual({ ok: false, code: 'OVERLAPS_OFFICIAL_TRAVEL' });
+  });
+
+  it('attaches the หนังสือเชิญ the หัวหน้าคณะ uploaded, keeps it when an edit leaves it out, and removes it on null', async () => {
+    const leader = await createLeavePerson(database, org.section);
+    const upload = async (owner: string) => { const id = randomUUID(); await new DatabaseAttachmentRepository(database).save({ id, objectKey: `attachments/${randomUUID()}`, contentType: 'application/pdf', sizeBytes: 10, createdByPersonId: owner, filename: 'หนังสือเชิญ.pdf' }, 'CLEAN'); return id; };
+    const mine = await upload(leader);
+    const theirs = await upload(org.sectionHead);
+    expect(await service.submit(leader, trip('2027-06-07', '2027-06-07', [], { attachmentId: theirs }))).toEqual({ ok: false, code: 'INVALID_ATTACHMENT' });
+    const filed = await service.submit(leader, trip('2027-06-07', '2027-06-07', [], { attachmentId: mine }));
+    if (!filed.ok) throw new Error(filed.code);
+    const viewer = { authenticated: true as const, personId: leader, roles: [], dataOwnerModules: [] };
+    expect((await new OfficialTravelQueries(database).detail(filed.travelId, viewer))?.attachment).toEqual({ attachmentId: mine, filename: 'หนังสือเชิญ.pdf' });
+    const [requestRow] = await database.query<{ requestId: string }>('SELECT request_id AS requestId FROM official_travel_member WHERE travel_id = ?', [filed.travelId]);
+    await new ApprovalService(new DatabaseWorkflowRepository(database), noDelegations).decideRequest({ requestId: requestRow!.requestId, actorPersonId: org.sectionHead, decision: 'RETURN', reason: 'แก้ไข' });
+    expect(await service.resubmit(leader, filed.travelId, trip('2027-06-08', '2027-06-08'))).toEqual({ ok: true });
+    expect((await new OfficialTravelQueries(database).detail(filed.travelId, viewer))?.attachment?.attachmentId).toBe(mine);
+    await new ApprovalService(new DatabaseWorkflowRepository(database), noDelegations).decideRequest({ requestId: requestRow!.requestId, actorPersonId: org.sectionHead, decision: 'RETURN', reason: 'แก้ไข' });
+    expect(await service.resubmit(leader, filed.travelId, trip('2027-06-08', '2027-06-08', [], { attachmentId: null }))).toEqual({ ok: true });
+    expect((await new OfficialTravelQueries(database).detail(filed.travelId, viewer))?.attachment).toBeNull();
   });
 
   it('names a person with no unit or no record', async () => {

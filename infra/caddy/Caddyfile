@@ -9,6 +9,11 @@
     Referrer-Policy "strict-origin-when-cross-origin"
   }
 
+  # The largest upload is one 10 MB attachment; anything bigger is refused before it reaches the web app.
+  request_body {
+    max_size 12MB
+  }
+
   reverse_proxy web:3000 {
     health_uri /api/health
   }

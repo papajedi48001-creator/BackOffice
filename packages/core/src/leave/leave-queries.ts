@@ -1,5 +1,6 @@
 import type { AccessSubject, LeaveBalance, LeaveEndHalf, LeaveStartHalf, LeaveWarning, RequestStatus } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
+import { linkedAttachment, type LinkedAttachment } from '../files/attachment-link';
 import { travelUnits } from '../official-travel/travel-store';
 import { canManageLeave } from './leave-access';
 import { leaveUnits, monthWarnings } from './leave-days';
@@ -11,7 +12,7 @@ const LIST_LIMIT = 1000;
 
 export interface LeaveListItem { requestId: string; reference: string; kind: 'LEAVE' | 'CANCEL_DAYS'; leaveTypeName: string; startDate: string; endDate: string; startHalf: LeaveStartHalf; endHalf: LeaveEndHalf; days: number; status: RequestStatus; submittedAt: string | null; personDisplayName: string | null; organizationName: string | null }
 export interface LeaveStepView { sequence: number; assigneeDisplayName: string | null; status: string; decidedAt: string | null; decisionReason: string | null }
-export interface LeaveDetail extends LeaveListItem { leaveTypeId: string; reason: string; contactDuringLeave: string | null; medicalCertificateRequired: boolean; warnings: LeaveWarning[]; steps: LeaveStepView[]; cancellations: LeaveListItem[]; canDecide: boolean; canCancel: boolean; canRequestCancelDays: boolean }
+export interface LeaveDetail extends LeaveListItem { leaveTypeId: string; reason: string; contactDuringLeave: string | null; medicalCertificateRequired: boolean; warnings: LeaveWarning[]; steps: LeaveStepView[]; cancellations: LeaveListItem[]; canDecide: boolean; canCancel: boolean; canRequestCancelDays: boolean; attachment: LinkedAttachment | null }
 /** A day away: on leave (never which type) or on official travel (only the place). */
 export interface TeamCalendarDay { date: string; part: 'FULL' | 'MORNING' | 'AFTERNOON'; kind: 'LEAVE' | 'TRAVEL'; place?: string }
 export interface TeamCalendarRow { personId: string; displayName: string | null; organizationName: string | null; days: TeamCalendarDay[] }
@@ -81,7 +82,8 @@ export class LeaveQueries {
       cancellations: leave ? (await this.items("kind = 'CANCEL_DAYS' AND leaveRequestId = ?", [requestId])).map(toItem) : [],
       canDecide: !self && current !== undefined && (current.assigneeId === viewer.personId || delegators.has(current.assigneeId)),
       canCancel: self && (row.status === 'IN_REVIEW' || row.status === 'RETURNED'),
-      canRequestCancelDays: self && leave && row.status === 'APPROVED'
+      canRequestCancelDays: self && leave && row.status === 'APPROVED',
+      attachment: leave ? await linkedAttachment(this.database, 'leave_request', 'request_id', requestId) : null
     };
   }
 

@@ -46,9 +46,9 @@ describeWithDatabase('fleet schema (migration 0015)', () => {
   });
 
   it('is a no-op when migrations run again', async () => {
-    const [before] = await db.query<{ count: number }>("SELECT COUNT(*) AS count FROM schema_migration WHERE version = '0015_fleet.sql'");
+    const [before] = await db.query<{ count: number }>("SELECT COUNT(*) AS count FROM schema_migration WHERE version = '0016_fleet.sql'");
     await runMigrations(db);
-    const [after] = await db.query<{ count: number }>("SELECT COUNT(*) AS count FROM schema_migration WHERE version = '0015_fleet.sql'");
+    const [after] = await db.query<{ count: number }>("SELECT COUNT(*) AS count FROM schema_migration WHERE version = '0016_fleet.sql'");
     expect(Number(before?.count)).toBe(1);
     expect(Number(after?.count)).toBe(1);
   });

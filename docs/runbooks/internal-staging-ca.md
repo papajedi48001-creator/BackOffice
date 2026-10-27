@@ -12,7 +12,7 @@ hospital's future enterprise PKI or a public certificate authority.
 - The script prompts for the root-CA passphrase. Do not send or record that
   passphrase in chat, tickets, source control, or shell history.
 - `root-ca.key.pem` must remain on that workstation. Never copy it to the
-  Linux server, Docker, MinIO, or a user device.
+  Linux server, Docker, SeaweedFS, or a user device.
 - Limit trust installation to the designated pilot clients. Remove that trust
   when the pilot ends or when a hospital PKI supersedes it.
 
