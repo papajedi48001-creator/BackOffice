@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { createDatabase, runMigrations } from '@backoffice/db';
 import { createLeaveOrganization, createLeavePerson, insertPerson } from '../leave/leave-fixtures';
+import { FleetCatalogService } from './fleet-catalog-service';
 import { FleetDispatchService } from './fleet-dispatch-service';
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -247,6 +248,22 @@ describeWithDatabase('FleetDispatchService against MariaDB', () => {
     expect(await service.depart(manager, nextTrip, 1100, true)).toEqual({ ok: true });
     clock = new Date('2026-10-27T03:00:00Z');
     expect(await service.unassign(manager, later.id)).toEqual({ ok: false, code: 'NOT_PENDING' });
+  });
+
+  it('edits a เที่ยวรถ while its driver is being deactivated without deadlocking', async () => {
+    const catalog = new FleetCatalogService(database);
+    // The race cannot be forced, so it is run a number of times; each round either order must finish cleanly.
+    for (let round = 0; round < 15; round += 1) {
+      const driverId = await driver();
+      const { id } = await waiting();
+      const tripId = await assigned(id, newTrip((await vehicle()).id, driverId));
+      const [edited, deactivated] = await Promise.all([
+        service.updateTrip(manager, tripId, { endsAt: '2026-11-10T10:00:00.000Z' }),
+        catalog.upsertDriver(manager, { personId: driverId, phone: '0800000000', isActive: false })
+      ]);
+      expect(edited).toEqual({ ok: true });
+      expect(deactivated).toEqual({ ok: false, code: 'DRIVER_HAS_TRIPS' });
+    }
   });
 
   it('refuses ออกเดินทาง more than two hours before the start', async () => {

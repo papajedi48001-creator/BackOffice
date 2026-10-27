@@ -52,7 +52,9 @@ export class FleetCatalogService {
       if (!person) return { ok: false as const, code: 'NOT_FOUND' as const };
       const [existing] = await database.query<{ person_id: string }>('SELECT person_id FROM fleet_driver WHERE person_id = ? FOR UPDATE', [driver.personId]);
       if (!driver.isActive) {
-        const [busy] = await database.query<{ id: string }>("SELECT id FROM fleet_trip WHERE driver_person_id = ? AND status IN ('PLANNED', 'DEPARTED') LIMIT 1 FOR UPDATE", [driver.personId]);
+        // A plain read: dispatch locks trip → car → driver, so locking the เที่ยวรถ here, after the driver, would deadlock.
+        // It is still authoritative: every write that puts this driver on a เที่ยวรถ locks the driver's row first, which we hold.
+        const [busy] = await database.query<{ id: string }>("SELECT id FROM fleet_trip WHERE driver_person_id = ? AND status IN ('PLANNED', 'DEPARTED') LIMIT 1", [driver.personId]);
         if (busy) return { ok: false as const, code: 'DRIVER_HAS_TRIPS' as const };
       }
       const isActive = driver.isActive ? 1 : 0;
@@ -60,7 +62,7 @@ export class FleetCatalogService {
       else await database.execute('INSERT INTO fleet_driver (person_id, phone, is_active, created_at, updated_at) VALUES (?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())', [driver.personId, driver.phone, isActive]);
       await this.audit(database, actorPersonId, existing ? 'fleet.driver.update' : 'fleet.driver.create', 'fleet_driver', driver.personId, { isActive: driver.isActive });
       return { ok: true as const };
-    });
+    }, { isolationLevel: 'READ COMMITTED' });
   }
 
   private audit(database: Database, actorPersonId: string, action: string, targetType: string, targetId: string, metadata: Record<string, unknown>): Promise<void> {
