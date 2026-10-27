@@ -129,6 +129,70 @@ describeWithDatabase('FleetRequestService against MariaDB', () => {
     expect((await service.submit(leader, draft({ officialTravelId: travelId }))).ok).toBe(true);
   });
 
+  describe('fileFromTravelDecision', () => {
+    const memberRequest = async (travelId: string, personId: string) => (await database.query<{ requestId: string }>('SELECT request_id AS requestId FROM official_travel_member WHERE travel_id = ? AND person_id = ?', [travelId, personId]))[0]!.requestId;
+    const setStatus = (travelId: string, personId: string, status: string) => database.execute('UPDATE request r JOIN official_travel_member m ON m.request_id = r.id SET r.status = ? WHERE m.travel_id = ? AND m.person_id = ?', [status, travelId, personId]);
+    const ofTravel = (travelId: string) => database.query<{ id: string; requester: string; requestId: string | null; dispatchStatus: string; purpose: string; destination: string; province: string; departAt: Date; returnAt: Date; passengerCount: number; passengerNames: string; contactPhone: string; organizationId: string }>(
+      'SELECT id, requester_person_id AS requester, request_id AS requestId, dispatch_status AS dispatchStatus, purpose, destination, province, depart_at AS departAt, return_at AS returnAt, passenger_count AS passengerCount, passenger_names AS passengerNames, contact_phone AS contactPhone, organization_id AS organizationId FROM fleet_request WHERE official_travel_id = ?', [travelId]);
+    const named = async (personId: string, name: string) => { await database.execute('UPDATE person SET display_name = ? WHERE id = ?', [name, personId]); };
+
+    it('files a ใบ for the หัวหน้าคณะ straight to the fleet team once the trip by รถราชการ is approved, recorded under the approver', async () => {
+      const leader = await createLeavePerson(database, org.section);
+      const member = await createLeavePerson(database, org.section);
+      await named(leader, 'นางสาวหัวหน้า คณะ');
+      await named(member, 'นายสมาชิก ร่วมทาง');
+      const travelId = await approvedTrip(leader, [member], 'GOVERNMENT_CAR');
+      const result = await service.fileFromTravelDecision(await memberRequest(travelId, member), org.sectionHead);
+      expect(result.fleetRequestId).not.toBeNull();
+      const [filedRow] = await ofTravel(travelId);
+      expect(filedRow).toMatchObject({ id: result.fleetRequestId, requester: leader, requestId: null, dispatchStatus: 'WAITING', purpose: 'ประชุมวิชาการ', destination: 'โรงแรม', province: 'ขอนแก่น', passengerCount: 2, contactPhone: '', organizationId: org.section });
+      expect(filedRow!.passengerNames.split(', ').sort()).toEqual(['นางสาวหัวหน้า คณะ', 'นายสมาชิก ร่วมทาง'].sort());
+      // 08:00 on the start date and 17:00 on the end date, Bangkok time.
+      expect(filedRow!.departAt.toISOString()).toBe('2026-11-10T01:00:00.000Z');
+      expect(filedRow!.returnAt.toISOString()).toBe('2026-11-11T10:00:00.000Z');
+      const history = await database.query<{ action: string; actor: string }>('SELECT action, actor_person_id AS actor FROM fleet_request_history WHERE fleet_request_id = ?', [filedRow!.id]);
+      expect(history).toEqual([{ action: 'FILED_FROM_TRAVEL', actor: org.sectionHead }]);
+      const [audit] = await audits('fleet.request.submitted', filedRow!.id);
+      expect(audit!.actor).toBe(org.sectionHead);
+      expect(JSON.parse(audit!.metadata)).toMatchObject({ status: 'WAITING', travelId });
+      const sent = await notices('มีใบขอใช้รถรอจัดรถ', `/fleet/requests/${filedRow!.id}`);
+      expect(sent.map((notice) => notice.recipientPersonId)).toContain(manager);
+      // A second decision on the same trip, or a press of ขอใช้รถ, finds the ใบ already there.
+      expect(await service.fileFromTravelDecision(await memberRequest(travelId, leader), org.sectionHead)).toEqual({ fleetRequestId: null });
+      expect(await service.submit(member, draft({ officialTravelId: travelId }))).toEqual({ ok: false, code: 'TRAVEL_ALREADY_HAS_CAR' });
+      expect(await ofTravel(travelId)).toHaveLength(1);
+    });
+
+    it('uses the half-day times and falls back to an approved member when the หัวหน้าคณะ was not approved', async () => {
+      const leader = await createLeavePerson(database, org.section);
+      const member = await createLeavePerson(database, org.section);
+      const travelId = await approvedTrip(leader, [member], 'GOVERNMENT_CAR');
+      await database.execute("UPDATE official_travel SET start_half = 'AFTERNOON', end_half = 'MORNING' WHERE id = ?", [travelId]);
+      await setStatus(travelId, leader, 'REJECTED');
+      await service.fileFromTravelDecision(await memberRequest(travelId, leader), org.sectionHead);
+      const [filedRow] = await ofTravel(travelId);
+      expect(filedRow).toMatchObject({ requester: member, passengerCount: 1 });
+      expect(filedRow!.departAt.toISOString()).toBe('2026-11-10T06:00:00.000Z');
+      expect(filedRow!.returnAt.toISOString()).toBe('2026-11-11T05:00:00.000Z');
+    });
+
+    it('files nothing while someone is still in review, for a private car, after the trip ended, or for a คำขอ that is not ไปราชการ', async () => {
+      const leader = await createLeavePerson(database, org.section);
+      const member = await createLeavePerson(database, org.section);
+      const waiting = await approvedTrip(leader, [member], 'GOVERNMENT_CAR');
+      await setStatus(waiting, member, 'IN_REVIEW');
+      const privateCar = await approvedTrip(leader, [], 'PRIVATE_CAR', '2026-11-12', '2026-11-12');
+      const ended = await approvedTrip(leader, [], 'GOVERNMENT_CAR', '2026-10-20', '2026-10-21');
+      for (const travelId of [waiting, privateCar, ended]) {
+        expect(await service.fileFromTravelDecision(await memberRequest(travelId, leader), org.sectionHead)).toEqual({ fleetRequestId: null });
+        expect(await ofTravel(travelId)).toHaveLength(0);
+      }
+      const { id } = await approvedFiling();
+      expect(await service.fileFromTravelDecision((await row(id)).requestId!, org.sectionHead)).toEqual({ fleetRequestId: null });
+      expect(await service.fileFromTravelDecision(randomUUID(), org.sectionHead)).toEqual({ fleetRequestId: null });
+    });
+  });
+
   it('refuses a ใบ from ไปราชการ by private car, for a non-member, after the trip ended, or for an unknown trip', async () => {
     const leader = await createLeavePerson(database, org.section);
     const outsider = await createLeavePerson(database, org.section);

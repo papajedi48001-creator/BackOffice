@@ -3,6 +3,7 @@ import { fleetRequestInputSchema, reasonInputSchema, type FleetErrorCode, type F
 import type { Database } from '@backoffice/db';
 import { lockPerson } from '../leave/leave-service';
 import { loadPersonContext } from '../leave/leave-store';
+import { OFFICIAL_TRAVEL_MODULE } from '../official-travel/travel-module';
 import { tripStatus } from '../official-travel/travel-status';
 import { bangkokToday } from '../official-travel/travel-store';
 import { DatabaseWorkflowRepository } from '../workflow/database-workflow-repository';
@@ -22,6 +23,7 @@ const fail = <Code extends FleetErrorCode>(code: Code): Failure<Code> => ({ ok: 
 const toDatetime = (iso: string) => new Date(iso).toISOString().slice(0, 19).replace('T', ' ');
 /** Statuses that hold the one car a ไปราชการ trip may have. */
 const CLOSED = new Set(['DECLINED', 'CANCELLED', 'HEAD_REJECTED']);
+type TravelRow = { id: string; leaderPersonId: string; subject: string; place: string; province: string; vehicle: string; startDate: string; endDate: string; startHalf: string; endHalf: string };
 
 /** Files, resubmits and cancels a ใบขอใช้รถ for its requester. Each call is one READ COMMITTED transaction. */
 export class FleetRequestService {
@@ -100,6 +102,46 @@ export class FleetRequestService {
     }, { isolationLevel: 'READ COMMITTED' });
   }
 
+  /**
+   * After a decision on a ไปราชการ คำขอ commits: once the trip by รถราชการ is approved, its ใบ goes straight to the fleet team.
+   * Its own READ COMMITTED transaction, locking the trip first as a manual filing does; anything that does not fit files nothing,
+   * and the ขอใช้รถ button stays as the fallback.
+   */
+  async fileFromTravelDecision(requestId: string, actorPersonId: string): Promise<{ fleetRequestId: string | null }> {
+    const none = { fleetRequestId: null };
+    const now = this.now();
+    return this.database.transaction(async (database) => {
+      const [member] = await database.query<{ travelId: string }>('SELECT m.travel_id AS travelId FROM official_travel_member m JOIN request r ON r.id = m.request_id WHERE m.request_id = ? AND r.module_code = ?', [requestId, OFFICIAL_TRAVEL_MODULE]);
+      if (!member) return none;
+      // Only the trip row is locked, as a manual filing and ไปราชการ's own cancel and resubmit lock it first.
+      const [travel] = await database.query<TravelRow>(
+        "SELECT id, leader_person_id AS leaderPersonId, subject, place, province, vehicle, DATE_FORMAT(start_date, '%Y-%m-%d') AS startDate, DATE_FORMAT(end_date, '%Y-%m-%d') AS endDate, start_half AS startHalf, end_half AS endHalf FROM official_travel WHERE id = ? FOR UPDATE",
+        [member.travelId]
+      );
+      if (!travel || travel.vehicle !== 'GOVERNMENT_CAR' || travel.endDate < bangkokToday(now)) return none;
+      const members = await database.query<{ personId: string; status: RequestStatus; displayName: string | null }>('SELECT m.person_id AS personId, r.status, p.display_name AS displayName FROM official_travel_member m JOIN request r ON r.id = m.request_id JOIN person p ON p.id = m.person_id WHERE m.travel_id = ? ORDER BY m.person_id', [travel.id]);
+      if (tripStatus(members.map((member) => member.status)) !== 'APPROVED' || await this.hasLiveRequest(database, travel.id)) return none;
+      const going = members.filter((member) => member.status === 'APPROVED');
+      const requesterPersonId = going.find((member) => member.personId === travel.leaderPersonId)?.personId ?? going[0]!.personId;
+      await lockPerson(database, requesterPersonId);
+      const organizationId = (await loadPersonContext(database, requesterPersonId))?.organizationId;
+      if (!organizationId) return none;
+      const fleetRequestId = this.createId();
+      const reference = await nextFleetReference(database, now);
+      // The form's own defaults: a full day runs 08:00–17:00 Bangkok, a half day starts at 13:00 or ends at 12:00.
+      const departAt = `${travel.startDate} ${travel.startHalf === 'AFTERNOON' ? '06' : '01'}:00:00`;
+      const returnAt = `${travel.endDate} ${travel.endHalf === 'MORNING' ? '05' : '10'}:00:00`;
+      await database.execute(
+        "INSERT INTO fleet_request (id, reference, requester_person_id, organization_id, request_id, official_travel_id, purpose, destination, province, depart_at, return_at, passenger_count, passenger_names, contact_phone, dispatch_status, trip_id, created_at, updated_at) VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, '', 'WAITING', NULL, UTC_TIMESTAMP(), UTC_TIMESTAMP())",
+        [fleetRequestId, reference, requesterPersonId, organizationId, travel.id, travel.subject.slice(0, 300), travel.place.slice(0, 300), travel.province.slice(0, 100), departAt, returnAt, going.length, going.map((member) => member.displayName ?? '').filter(Boolean).join(', ').slice(0, 1000)]
+      );
+      await insertHistory(database, { fleetRequestId, action: 'FILED_FROM_TRAVEL', actorPersonId });
+      await auditFleet(database, { action: 'fleet.request.submitted', targetType: 'fleet_request', targetId: fleetRequestId, actorPersonId, metadata: { reference, status: 'WAITING', travelId: travel.id } });
+      await writeFleetNotices(database, 'waiting', fleetRequestId, { actorPersonId, fleetRequestId, managerPersonIds: await fleetManagerPersonIds(database) });
+      return { fleetRequestId };
+    }, { isolationLevel: 'READ COMMITTED' });
+  }
+
   /** Rule 2, with the trip row locked: the requester goes on an approved trip by รถราชการ that has not ended, and the trip has no other live ใบ. */
   private async checkTravel(database: Database, travelId: string, requesterPersonId: string, now: Date): Promise<Failure | null> {
     const [travel] = await database.query<{ vehicle: string; endDate: string }>("SELECT vehicle, DATE_FORMAT(end_date, '%Y-%m-%d') AS endDate FROM official_travel WHERE id = ? FOR UPDATE", [travelId]);
@@ -107,11 +149,16 @@ export class FleetRequestService {
     const members = await database.query<{ personId: string; status: RequestStatus }>('SELECT m.person_id AS personId, r.status FROM official_travel_member m JOIN request r ON r.id = m.request_id WHERE m.travel_id = ?', [travelId]);
     const own = members.find((member) => member.personId === requesterPersonId);
     if (!own || own.status !== 'APPROVED' || tripStatus(members.map((member) => member.status)) !== 'APPROVED') return fail('TRAVEL_NOT_ELIGIBLE');
+    return (await this.hasLiveRequest(database, travelId)) ? fail('TRAVEL_ALREADY_HAS_CAR') : null;
+  }
+
+  /** Whether the trip already has a ใบ that still holds its one car. */
+  private async hasLiveRequest(database: Database, travelId: string): Promise<boolean> {
     const existing = await database.query<{ headStatus: RequestStatus | null; dispatchStatus: 'WAITING' | 'ASSIGNED' | 'DECLINED' | 'CANCELLED'; tripStatus: 'PLANNED' | 'DEPARTED' | 'RETURNED' | 'CANCELLED' | null }>(
       'SELECT r.status AS headStatus, f.dispatch_status AS dispatchStatus, t.status AS tripStatus FROM fleet_request f LEFT JOIN request r ON r.id = f.request_id LEFT JOIN fleet_trip t ON t.id = f.trip_id WHERE f.official_travel_id = ?',
       [travelId]
     );
-    return existing.some((row) => !CLOSED.has(fleetRequestStatus(row))) ? fail('TRAVEL_ALREADY_HAS_CAR') : null;
+    return existing.some((row) => !CLOSED.has(fleetRequestStatus(row)));
   }
 
   private async update(database: Database, fleetRequestId: string, input: FleetRequestInput): Promise<void> {
