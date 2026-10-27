@@ -16,10 +16,13 @@ export const withRangeChecks = <T extends z.ZodType<RangeLike>>(schema: T) => sc
   .refine((range) => range.endDate >= range.startDate, { message: 'END_BEFORE_START', path: ['endDate'] })
   .refine((range) => !(range.startDate === range.endDate && range.startHalf === 'AFTERNOON' && range.endHalf === 'MORNING'), { message: 'EMPTY_DAY', path: ['endHalf'] });
 
+/** A ไฟล์แนบส่วนตัว the same person uploaded; null on an edit removes the file, left out keeps it. */
+export const attachmentIdSchema = z.string().uuid();
+
 export const leaveRangeSchema = withRangeChecks(z.object(rangeShape).strict());
 const reasonSchema = z.string().trim().min(1).max(1000);
 /** The person filing always comes from the session, never from the body. Reasons never leave the leave tables. */
-export const leaveRequestInputSchema = withRangeChecks(z.object({ ...rangeShape, leaveTypeId: z.string().min(1), reason: reasonSchema, contactDuringLeave: z.string().trim().max(500).nullable().optional() }).strict());
+export const leaveRequestInputSchema = withRangeChecks(z.object({ ...rangeShape, leaveTypeId: z.string().min(1), reason: reasonSchema, contactDuringLeave: z.string().trim().max(500).nullable().optional(), attachmentId: attachmentIdSchema.nullable().optional() }).strict());
 export type LeaveRequestInput = z.infer<typeof leaveRequestInputSchema>;
 export const leaveCancelDaysInputSchema = withRangeChecks(z.object({ ...rangeShape, reason: reasonSchema }).strict());
 export type LeaveCancelDaysInput = z.infer<typeof leaveCancelDaysInputSchema>;

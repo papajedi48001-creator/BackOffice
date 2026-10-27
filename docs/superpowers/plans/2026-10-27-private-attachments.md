@@ -1,6 +1,6 @@
 # Private attachments Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Upload, scan, store and download ไฟล์แนบส่วนตัว, and use them on ใบลา and คำขอไปราชการ.
 
@@ -27,9 +27,9 @@
 ---
 
 ### Task 1: Schema and contracts
-- [ ] Failing tests: migrate test lists 0015; contracts accept `attachmentId` (uuid, nullable, optional) on leave and travel input.
-- [ ] Migration `0015_attachment_filename.sql`, Drizzle, migrate.ts, modules.md; contracts.
-- [ ] Commit `feat(db): keep the original name of an attachment`.
+- [x] Failing tests: migrate test lists 0015; contracts accept `attachmentId` (uuid, nullable, optional) on leave and travel input.
+- [x] Migration `0015_attachment_filename.sql`, Drizzle, migrate.ts, modules.md; contracts.
+- [x] Commit `feat(db): keep the original name of an attachment`.
 
 ### Task 2: Core files
 - [ ] Failing tests: clamd scanner (fake TCP server: OK, FOUND, no answer, refused); AttachmentService stores after CLEAN, names FILE_INFECTED / SCAN_UNAVAILABLE, opens bytes only when authorized; S3 adapter and repository against SeaweedFS + MariaDB (integration, skipped without `S3_ENDPOINT`); access check for uploader, ใบลา viewer, trip viewer, outsider.

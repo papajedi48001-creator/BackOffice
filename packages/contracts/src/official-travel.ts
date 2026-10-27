@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { commandChainTargetSchema } from './hr.ts';
-import { rangeShape, withRangeChecks } from './leave.ts';
+import { attachmentIdSchema, rangeShape, withRangeChecks } from './leave.ts';
 
 export const travelTypeCodeSchema = z.enum(['IN_PROVINCE', 'OUT_OF_PROVINCE', 'ABROAD']);
 export type TravelTypeCode = z.infer<typeof travelTypeCodeSchema>;
@@ -17,6 +17,7 @@ export const officialTravelInputSchema = withRangeChecks(z.object({
   subject: text(300), organiser: text(300), place: text(300), province: text(100),
   travelType: travelTypeCodeSchema, vehicle: travelVehicleSchema, fundingSource: travelFundingSchema,
   costAllowance: cost, costLodging: cost, costTransport: cost, costRegistration: cost,
+  attachmentId: attachmentIdSchema.nullable().optional(),
   memberPersonIds: z.array(z.string().min(1)).max(29).refine((ids) => new Set(ids).size === ids.length, { message: 'DUPLICATE_MEMBER' }).default([])
 }).strict()).refine((trip) => Date.parse(`${trip.endDate}T00:00:00Z`) - Date.parse(`${trip.startDate}T00:00:00Z`) <= 365 * 86_400_000, { message: 'TOO_LONG', path: ['endDate'] });
 export type OfficialTravelInput = z.infer<typeof officialTravelInputSchema>;
