@@ -49,7 +49,8 @@ export function ProfileForm({ personId, values, employmentTypes, units, organiza
   const [initialUnit] = useState(() => initialUnitNames(units, values.organizationId, organizationName));
   const [unitNames, setUnitNames] = useState(initialUnit);
   const [unitError, setUnitError] = useState<string | null>(null);
-  const divisions = units.filter((unit) => unit.unitType === 'DIVISION');
+  // A unit with no type yet (from an older import) is offered alongside the กลุ่มงาน so a person can still be put in it.
+  const divisions = units.filter((unit) => unit.unitType === 'DIVISION' || unit.unitType === null);
   const chosenDivision = divisions.find((unit) => unit.name === unitNames.division.trim());
   const sections = chosenDivision ? units.filter((unit) => unit.unitType === 'SECTION' && unit.parentId === chosenDivision.id) : [];
   /** The unit to save: undefined keeps the current one, null leaves the person with no unit, a MessageKey refuses the names. */

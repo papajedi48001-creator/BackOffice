@@ -150,6 +150,9 @@ export async function applyProfileUpdate(database: QueryDatabase, subject: Profi
     positionTitle: valid.positionTitle, positionLevel: valid.positionLevel, organization: valid.organizationId === undefined ? undefined : organizationName
   };
   const changes = diffProfile(before, after, workFields);
+  // Two units can share a name (งาน under different กลุ่มงาน), so a move is decided by id, not by the name diff.
+  const moved = valid.organizationId !== undefined && valid.organizationId !== subject.organizationId;
+  if (moved && !changes.changedFields.includes('organization')) changes.changedFields.push('organization');
   if (changes.changedFields.length === 0) return { ok: true };
   const merged: StoredProfile = { ...stored, ...defined(pick(valid, ['namePrefix', 'firstName', 'lastName', 'birthDate', 'employmentTypeId', 'appointedOn', 'positionLevel'])), gender };
   await writeProfile(database, subject.personId, merged);
@@ -157,9 +160,9 @@ export async function applyProfileUpdate(database: QueryDatabase, subject: Profi
     await database.execute('UPDATE person SET display_name = ? WHERE id = ?', [`${merged.namePrefix ?? ''}${merged.firstName ?? ''} ${merged.lastName ?? ''}`.trim(), subject.personId]);
   }
   if (changes.changedFields.includes('positionTitle')) await database.execute('UPDATE person SET position_title = ? WHERE id = ?', [valid.positionTitle ?? null, subject.personId]);
-  if (changes.changedFields.includes('organization') && valid.organizationId) await moveAssignment(database, subject, valid.organizationId, createId);
+  if (moved && valid.organizationId) await moveAssignment(database, subject, valid.organizationId, createId);
   // No unit (ไม่มีสังกัด): the open assignment is closed and none replaces it.
-  if (changes.changedFields.includes('organization') && valid.organizationId === null) await database.execute('UPDATE employment_assignment SET effective_until = UTC_TIMESTAMP() WHERE person_id = ? AND effective_until IS NULL', [subject.personId]);
+  if (moved && valid.organizationId === null) await database.execute('UPDATE employment_assignment SET effective_until = UTC_TIMESTAMP() WHERE person_id = ? AND effective_until IS NULL', [subject.personId]);
   await recordProfileAudit(database, 'hr.person.profile.update', subject.personId, actorPersonId, changes, createId);
   return { ok: true };
 }

@@ -18,6 +18,7 @@ export class OrganizationStructureService {
   async create(input: CreateOrganizationUnitInput, actorPersonId: string): Promise<CreateUnitResult> {
     const valid = createOrganizationUnitInputSchema.parse(input);
     return this.database.transaction(async (database): Promise<CreateUnitResult> => {
+      await lockAllUnits(database);
       let parentId: string | null;
       if (valid.unitType === 'SECTION') {
         const parent = valid.parentId ? await lockUnit(database, valid.parentId) : null;
@@ -39,6 +40,7 @@ export class OrganizationStructureService {
   async update(id: string, input: UpdateOrganizationUnitInput, actorPersonId: string): Promise<UpdateUnitResult> {
     const valid = updateOrganizationUnitInputSchema.parse(input);
     return this.database.transaction(async (database): Promise<UpdateUnitResult> => {
+      await lockAllUnits(database);
       const unit = await lockUnit(database, id);
       if (!unit) return { ok: false, code: 'ORGANIZATION_NOT_FOUND' };
       let parentId = unit.parentId;
@@ -64,7 +66,7 @@ export class OrganizationStructureService {
 
   async delete(id: string, actorPersonId: string): Promise<DeleteUnitResult> {
     return this.database.transaction(async (database): Promise<DeleteUnitResult> => {
-      // Units are locked before assignments, the same order a profile save uses, so the two cannot deadlock.
+      await lockAllUnits(database);
       const ids = await subtree(database, id, true);
       if (ids.length === 0) return { ok: false, code: 'ORGANIZATION_NOT_FOUND' };
       const marks = ids.map(() => '?').join(', ');
@@ -82,6 +84,15 @@ export class OrganizationStructureService {
   private audit(database: QueryDatabase, actorPersonId: string, action: string, targetId: string, metadata: Record<string, unknown>): Promise<void> {
     return new AuditService(new DatabaseAuditRepository(database), this.createId).recordAudit({ actorPersonId, action, targetType: 'organization', targetId, result: 'SUCCESS', metadata });
   }
+}
+
+/**
+ * Every unit row is locked in primary key order before anything else, the order a master data import uses and the
+ * order a profile save takes its shared locks in, so a structure change cannot deadlock with either. It also
+ * serialises structure changes, which keeps กลุ่มงาน names unique without a unique key.
+ */
+async function lockAllUnits(database: QueryDatabase): Promise<void> {
+  await database.query('SELECT id FROM organization FORCE INDEX (PRIMARY) FOR UPDATE');
 }
 
 async function lockUnit(database: QueryDatabase, id: string): Promise<Unit | null> {

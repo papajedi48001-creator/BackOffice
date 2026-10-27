@@ -80,4 +80,16 @@ describe('ProfileForm กลุ่มงาน and งาน', () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     expect(sent(fetchMock)).not.toHaveProperty('organizationId');
   });
+
+  it('offers a unit with no type yet among the กลุ่มงาน and saves it when chosen', async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<ProfileForm personId="p1" values={values} employmentTypes={[]} units={[...units, { id: 'old', name: 'หน่วยเดิม', unitType: null, parentId: null }, { id: 'hosp', name: 'โรงพยาบาลวาริชภูมิ', unitType: 'HOSPITAL', parentId: null }]} />);
+    const division = screen.getByRole('combobox', { name: 'กลุ่มงาน' });
+    expect(options(division.getAttribute('list')!)).toEqual(['กลุ่มการพยาบาล', 'กลุ่มงานการแพทย์', 'หน่วยเดิม']);
+    fireEvent.change(division, { target: { value: 'หน่วยเดิม' } });
+    fireEvent.click(screen.getByRole('button', { name: 'บันทึกข้อมูล' }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(sent(fetchMock).organizationId).toBe('old');
+  });
 });

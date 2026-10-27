@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDatabase, runMigrations } from '@backoffice/db';
 import { HrDirectory } from './hr-directory';
+import { OrganizationHeadService } from './organization-head-service';
 import { OrganizationStructureService } from './organization-structure-service';
 import { HrProfileService } from './profile-service';
 
@@ -91,5 +92,43 @@ describeWithDatabase('OrganizationStructureService against MariaDB', () => {
     await expect(profiles.updateProfile(someone, { organizationId: divisionId }, hrManager)).resolves.toEqual({ ok: false, code: 'UNKNOWN_ORGANIZATION' });
     await expect(profiles.updateProfile(someone, { organizationId: null }, hrManager)).resolves.toEqual({ ok: true });
     expect(await openAssignments(someone)).toEqual([]);
+  });
+
+  it('moves a person between two งาน that share a name', async () => {
+    const first = created(await service.create({ name: unique('กลุ่มงาน ค'), unitType: 'DIVISION' }, actor));
+    const second = created(await service.create({ name: unique('กลุ่มงาน ง'), unitType: 'DIVISION' }, actor));
+    const fromId = created(await service.create({ name: 'งานธุรการ', unitType: 'SECTION', parentId: first }, actor));
+    const toId = created(await service.create({ name: 'งานธุรการ', unitType: 'SECTION', parentId: second }, actor));
+    const someone = await person(fromId);
+    await expect(new HrProfileService(database).updateProfile(someone, { organizationId: toId }, hrManager)).resolves.toEqual({ ok: true });
+    expect(await database.query('SELECT organization_id AS organizationId FROM employment_assignment WHERE person_id = ? AND effective_until IS NULL', [someone])).toEqual([{ organizationId: toId }]);
+  });
+
+  it('refuses a head or a unit type for a deleted unit', async () => {
+    const divisionId = created(await service.create({ name: unique('กลุ่มงานลบหัวหน้า'), unitType: 'DIVISION' }, actor));
+    const head = await person(divisionId);
+    await service.delete(divisionId, actor);
+    const heads = new OrganizationHeadService(database);
+    await expect(heads.assign({ organizationId: divisionId, personId: head, effectiveFrom: new Date() }, actor)).resolves.toEqual({ kind: 'error', code: 'ORGANIZATION_NOT_FOUND' });
+    await expect(heads.setUnitType({ organizationId: divisionId, unitType: 'SECTION' }, actor)).resolves.toEqual({ ok: false, code: 'ORGANIZATION_NOT_FOUND' });
+  });
+
+  it('deletes units while profiles are saved at the same time without a deadlock', async () => {
+    const work = [];
+    for (let round = 0; round < 6; round += 1) {
+      const divisionId = created(await service.create({ name: unique('กลุ่มงานพร้อมกัน'), unitType: 'DIVISION' }, actor));
+      const sectionId = created(await service.create({ name: 'งานพร้อมกัน', unitType: 'SECTION', parentId: divisionId }, actor));
+      const keepId = created(await service.create({ name: unique('กลุ่มงานปลายทาง'), unitType: 'DIVISION' }, actor));
+      const someone = await person(sectionId);
+      work.push(service.delete(divisionId, actor), new HrProfileService(database).updateProfile(someone, { organizationId: keepId }, hrManager));
+    }
+    const results = await Promise.allSettled(work);
+    expect(results.filter((result) => result.status === 'rejected').map((result) => String((result as PromiseRejectedResult).reason))).toEqual([]);
+  });
+
+  it('keeps กลุ่มงาน names unique when two are added at once', async () => {
+    const name = unique('กลุ่มงานซ้ำพร้อมกัน');
+    const results = await Promise.all([service.create({ name, unitType: 'DIVISION' }, actor), service.create({ name, unitType: 'DIVISION' }, actor)]);
+    expect(results.filter((result) => result.ok)).toHaveLength(1);
   });
 });
