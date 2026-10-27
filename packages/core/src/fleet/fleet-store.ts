@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { notificationEventPayloadSchema, type DispatchStatus, type RequestStatus, type TripStatus } from '@backoffice/contracts';
+import { notificationEventPayloadSchema, type DispatchStatus, type RequestStatus, type TripStatus, type VehicleStatus } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { AuditService } from '../audit/audit-service';
 import { DatabaseAuditRepository } from '../audit/database-audit-repository';
@@ -43,12 +43,44 @@ export async function lockFleetRequest(db: Writer, id: string): Promise<LockedFl
   return row ?? null;
 }
 
-export interface LockedFleetTrip { id: string; status: TripStatus; driverPersonId: string; vehicleId: string }
+export interface LockedFleetTrip { id: string; status: TripStatus; driverPersonId: string; vehicleId: string; startsAt: Date; endsAt: Date; odometerOut: number | null }
 
 export async function lockFleetTrip(db: Writer, id: string): Promise<LockedFleetTrip | null> {
-  const [row] = await db.query<LockedFleetTrip>('SELECT id, status, driver_person_id AS driverPersonId, vehicle_id AS vehicleId FROM fleet_trip WHERE id = ? FOR UPDATE', [id]);
+  const [row] = await db.query<LockedFleetTrip>('SELECT id, status, driver_person_id AS driverPersonId, vehicle_id AS vehicleId, starts_at AS startsAt, ends_at AS endsAt, odometer_out AS odometerOut FROM fleet_trip WHERE id = ? FOR UPDATE', [id]);
   return row ?? null;
 }
+
+/** A UTC instant as a MariaDB DATETIME literal. */
+export const toSqlDatetime = (date: Date) => date.toISOString().slice(0, 19).replace('T', ' ');
+
+/** The car's row, locked. Every write that puts a car on a time range takes it before the driver's row, so two dispatchers queue here. */
+export async function lockFleetVehicle(db: Writer, id: string): Promise<{ id: string; registration: string; status: VehicleStatus } | null> {
+  const [row] = await db.query<{ id: string; registration: string; status: VehicleStatus }>('SELECT id, registration, status FROM fleet_vehicle WHERE id = ? FOR UPDATE', [id]);
+  return row ?? null;
+}
+
+/** The driver's row, locked after the car's; deactivating a driver locks it too, so a driver cannot be dropped while being put on a เที่ยวรถ. */
+export async function lockFleetDriver(db: Writer, personId: string): Promise<{ personId: string; isActive: boolean } | null> {
+  const [row] = await db.query<{ personId: string; isActive: number }>('SELECT person_id AS personId, is_active AS isActive FROM fleet_driver WHERE person_id = ? FOR UPDATE', [personId]);
+  return row ? { personId: row.personId, isActive: Number(row.isActive) === 1 } : null;
+}
+
+/** Overlap with a non-cancelled เที่ยวรถ; back-to-back (one ends when the next starts) is free. Parameters: `endsAt`, `startsAt`. */
+export const OVERLAPPING_TRIP = "status <> 'CANCELLED' AND starts_at < ? AND ends_at > ?";
+
+async function overlaps(db: Pick<Database, 'query'>, column: 'vehicle_id' | 'driver_person_id', value: string, startsAt: Date, endsAt: Date, excludeTripId?: string): Promise<boolean> {
+  const rows = await db.query<{ id: string }>(
+    `SELECT id FROM fleet_trip WHERE ${column} = ? AND ${OVERLAPPING_TRIP} AND id <> ? LIMIT 1`,
+    [value, toSqlDatetime(endsAt), toSqlDatetime(startsAt), excludeTripId ?? '']
+  );
+  return rows.length > 0;
+}
+
+/** Whether the car is on another non-cancelled เที่ยวรถ that overlaps the range. Authoritative only with the car's row locked. */
+export const busyVehicle = (db: Pick<Database, 'query'>, vehicleId: string, startsAt: Date, endsAt: Date, excludeTripId?: string) => overlaps(db, 'vehicle_id', vehicleId, startsAt, endsAt, excludeTripId);
+
+/** Whether the driver is on another non-cancelled เที่ยวรถ that overlaps the range. Authoritative only with the driver's row locked. */
+export const busyDriver = (db: Pick<Database, 'query'>, driverPersonId: string, startsAt: Date, endsAt: Date, excludeTripId?: string) => overlaps(db, 'driver_person_id', driverPersonId, startsAt, endsAt, excludeTripId);
 
 /** Records a step of a ใบ; the reason lives here and nowhere else. Returns the entry id. */
 export async function insertHistory(db: Writer, entry: { fleetRequestId: string; action: FleetHistoryAction; actorPersonId: string; reason?: string | null }): Promise<string> {

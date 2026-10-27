@@ -31,3 +31,15 @@ export function checkDeparture(trip: { startsAt: Date }, odometer: number, lastO
 export function checkReturn(odometerOut: number, odometer: number): FleetErrorCode | null {
   return odometer < odometerOut ? 'ODOMETER_BELOW_OUT' : null;
 }
+
+/** A เที่ยวรถ's own range: start before end, both on 15-minute steps. Unlike a ใบ, it may lie in the past (a late ใบ still gets a car). */
+export function checkTripRange(startsAt: Date, endsAt: Date): FleetErrorCode | null {
+  if (!(startsAt.getTime() < endsAt.getTime())) return 'INVALID_RANGE';
+  if (startsAt.getTime() % (15 * MINUTE) !== 0 || endsAt.getTime() % (15 * MINUTE) !== 0) return 'NOT_QUARTER_HOUR';
+  return null;
+}
+
+/** A เที่ยวรถ carries a ใบ only when the ใบ's times sit inside its range, edges included. */
+export function tripCovers(trip: { startsAt: Date; endsAt: Date }, request: { departAt: Date; returnAt: Date }): boolean {
+  return trip.startsAt.getTime() <= request.departAt.getTime() && trip.endsAt.getTime() >= request.returnAt.getTime();
+}

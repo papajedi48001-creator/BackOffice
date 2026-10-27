@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkDeparture, checkFleetRange, checkReturn } from './fleet-rules';
+import { checkDeparture, checkFleetRange, checkReturn, checkTripRange, tripCovers } from './fleet-rules';
 
 const now = new Date('2026-10-27T03:00:00Z');
 const at = (iso: string) => new Date(iso);
@@ -48,5 +48,20 @@ describe('checkDeparture and checkReturn', () => {
   it('refuses a return odometer below the departure one', () => {
     expect(checkReturn(1000, 999)).toBe('ODOMETER_BELOW_OUT');
     expect(checkReturn(1000, 1000)).toBeNull();
+  });
+});
+
+describe('checkTripRange and tripCovers', () => {
+  it('wants a start before the end, both on 15 minute steps, and nothing else', () => {
+    expect(checkTripRange(at('2026-11-03T01:00:00Z'), at('2026-11-03T01:00:00Z'))).toBe('INVALID_RANGE');
+    expect(checkTripRange(at('2026-11-03T02:00:00Z'), at('2026-11-03T01:00:00Z'))).toBe('INVALID_RANGE');
+    expect(checkTripRange(at('2026-11-03T01:05:00Z'), at('2026-11-03T02:00:00Z'))).toBe('NOT_QUARTER_HOUR');
+    expect(checkTripRange(at('2026-10-01T01:00:00Z'), at('2026-10-01T01:15:00Z'))).toBeNull();
+  });
+  it('covers a ใบ whose times sit inside the เที่ยวรถ, edges included', () => {
+    const trip = { startsAt: at('2026-11-03T01:00:00Z'), endsAt: at('2026-11-03T09:00:00Z') };
+    expect(tripCovers(trip, { departAt: trip.startsAt, returnAt: trip.endsAt })).toBe(true);
+    expect(tripCovers(trip, { departAt: at('2026-11-03T00:45:00Z'), returnAt: trip.endsAt })).toBe(false);
+    expect(tripCovers(trip, { departAt: trip.startsAt, returnAt: at('2026-11-03T09:15:00Z') })).toBe(false);
   });
 });
