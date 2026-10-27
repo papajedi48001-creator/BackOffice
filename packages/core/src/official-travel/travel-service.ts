@@ -3,6 +3,7 @@ import { officialTravelInputSchema, type OfficialTravelErrorCode, type OfficialT
 import type { Database } from '@backoffice/db';
 import { AuditService } from '../audit/audit-service';
 import { DatabaseAuditRepository } from '../audit/database-audit-repository';
+import { ownsAttachment } from '../files/attachment-link';
 import { lockPerson } from '../leave/leave-service';
 import { activeUnitsOfPerson, loadPersonContext } from '../leave/leave-store';
 import { DatabaseWorkflowRepository } from '../workflow/database-workflow-repository';
@@ -33,10 +34,11 @@ export class OfficialTravelService {
     return this.withPersonFailures(() => this.database.transaction(async (database) => {
       const checked = await this.check(database, people, input);
       if (!('days' in checked)) return checked;
+      if (input.attachmentId && !await ownsAttachment(database, input.attachmentId, leaderPersonId)) return { ok: false as const, code: 'INVALID_ATTACHMENT' as const };
       const travelId = this.createId();
       await database.execute(
-        'INSERT INTO official_travel (id, leader_person_id, subject, organiser, place, province, travel_type, vehicle, start_date, end_date, start_half, end_half, days, funding_source, cost_allowance, cost_lodging, cost_transport, cost_registration, attachment_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, UTC_TIMESTAMP(), UTC_TIMESTAMP())',
-        [travelId, leaderPersonId, input.subject, input.organiser, input.place, input.province, input.travelType, input.vehicle, input.startDate, input.endDate, input.startHalf, input.endHalf, checked.days, input.fundingSource, input.costAllowance, input.costLodging, input.costTransport, input.costRegistration]
+        'INSERT INTO official_travel (id, leader_person_id, subject, organiser, place, province, travel_type, vehicle, start_date, end_date, start_half, end_half, days, funding_source, cost_allowance, cost_lodging, cost_transport, cost_registration, attachment_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())',
+        [travelId, leaderPersonId, input.subject, input.organiser, input.place, input.province, input.travelType, input.vehicle, input.startDate, input.endDate, input.startHalf, input.endHalf, checked.days, input.fundingSource, input.costAllowance, input.costLodging, input.costTransport, input.costRegistration, input.attachmentId ?? null]
       );
       const requests = new RequestService(new DatabaseWorkflowRepository(database), this.approvers, this.createId);
       for (const personId of people) {
@@ -59,6 +61,9 @@ export class OfficialTravelService {
       const going = members.filter((member) => member.status !== 'REJECTED' && member.status !== 'CANCELLED').map((member) => member.personId);
       const checked = await this.check(database, going, input, travelId);
       if (!('days' in checked)) return checked;
+      if (input.attachmentId && !await ownsAttachment(database, input.attachmentId, leaderPersonId)) return { ok: false as const, code: 'INVALID_ATTACHMENT' as const };
+      // Left out keeps the file; null removes it.
+      if (input.attachmentId !== undefined) await database.execute('UPDATE official_travel SET attachment_id = ? WHERE id = ?', [input.attachmentId, travelId]);
       await database.execute(
         'UPDATE official_travel SET subject = ?, organiser = ?, place = ?, province = ?, travel_type = ?, vehicle = ?, start_date = ?, end_date = ?, start_half = ?, end_half = ?, days = ?, funding_source = ?, cost_allowance = ?, cost_lodging = ?, cost_transport = ?, cost_registration = ?, updated_at = UTC_TIMESTAMP() WHERE id = ?',
         [input.subject, input.organiser, input.place, input.province, input.travelType, input.vehicle, input.startDate, input.endDate, input.startHalf, input.endHalf, checked.days, input.fundingSource, input.costAllowance, input.costLodging, input.costTransport, input.costRegistration, travelId]

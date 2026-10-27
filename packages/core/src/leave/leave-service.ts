@@ -11,6 +11,7 @@ import { fiscalYearOf, leaveUnits, monthWarnings, subtractUnits } from './leave-
 import { LEAVE_MODULE } from './leave-module';
 import { LeaveSettingsService, type LeaveType } from './leave-settings-service';
 import { activeTravelUnitsOfPerson } from '../official-travel/travel-store';
+import { ownsAttachment } from '../files/attachment-link';
 import { activeUnitsOfPerson, genderAllows, loadBalance, loadHolidaySet, loadPersonContext, type PersonContext } from './leave-store';
 
 /** A ใบลา as filed; half days default to FULL. */
@@ -45,9 +46,10 @@ export class LeaveService {
       await lockPerson(database, personId);
       const evaluation = await this.evaluate(database, personId, input);
       if (evaluation.error) return { ok: false as const, code: evaluation.error };
+      if (input.attachmentId && !await ownsAttachment(database, input.attachmentId, personId)) return { ok: false as const, code: 'INVALID_ATTACHMENT' as const };
       const { leaveType, person } = evaluation as Evaluation & { leaveType: LeaveType; person: PersonContext & { organizationId: string } };
       const request = await new RequestService(new DatabaseWorkflowRepository(database), this.approvers, this.createId).submitRequest({ moduleCode: LEAVE_MODULE, requestorPersonId: personId, organizationSnapshot: { organizationId: person.organizationId }, target: leaveType.approvalTarget });
-      await database.execute('INSERT INTO leave_request (request_id, person_id, leave_type_id, fiscal_year, start_date, end_date, start_half, end_half, days, reason, contact_during_leave, attachment_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, UTC_TIMESTAMP(), UTC_TIMESTAMP())', [request.id, personId, leaveType.id, evaluation.fiscalYear, input.startDate, input.endDate, input.startHalf, input.endHalf, evaluation.days, input.reason, input.contactDuringLeave ?? null]);
+      await database.execute('INSERT INTO leave_request (request_id, person_id, leave_type_id, fiscal_year, start_date, end_date, start_half, end_half, days, reason, contact_during_leave, attachment_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())', [request.id, personId, leaveType.id, evaluation.fiscalYear, input.startDate, input.endDate, input.startHalf, input.endHalf, evaluation.days, input.reason, input.contactDuringLeave ?? null, input.attachmentId ?? null]);
       await this.audit(database, 'leave.request.submitted', request.id, personId, { leaveTypeCode: leaveType.code, days: evaluation.days, fiscalYear: evaluation.fiscalYear, startDate: input.startDate, endDate: input.endDate });
       return { ok: true as const, requestId: request.id, reference: request.reference, warnings: evaluation.warnings, medicalCertificateRequired: evaluation.medicalCertificateRequired };
     }, { isolationLevel: 'READ COMMITTED' }));
@@ -64,8 +66,11 @@ export class LeaveService {
       await lockPerson(database, personId);
       const evaluation = await this.evaluate(database, personId, input, requestId);
       if (evaluation.error) return { ok: false as const, code: evaluation.error };
+      if (input.attachmentId && !await ownsAttachment(database, input.attachmentId, personId)) return { ok: false as const, code: 'INVALID_ATTACHMENT' as const };
       const leaveType = evaluation.leaveType!;
       await database.execute('UPDATE leave_request SET leave_type_id = ?, fiscal_year = ?, start_date = ?, end_date = ?, start_half = ?, end_half = ?, days = ?, reason = ?, contact_during_leave = ?, updated_at = UTC_TIMESTAMP() WHERE request_id = ?', [leaveType.id, evaluation.fiscalYear, input.startDate, input.endDate, input.startHalf, input.endHalf, evaluation.days, input.reason, input.contactDuringLeave ?? null, requestId]);
+      // Left out keeps the file; null removes it.
+      if (input.attachmentId !== undefined) await database.execute('UPDATE leave_request SET attachment_id = ? WHERE request_id = ?', [input.attachmentId, requestId]);
       await new RequestService(repository, this.approvers, this.createId).resubmitRequest({ requestId, actorPersonId: personId, target: leaveType.approvalTarget });
       await this.audit(database, 'leave.request.resubmitted', requestId, personId, { leaveTypeCode: leaveType.code, days: evaluation.days, fiscalYear: evaluation.fiscalYear, startDate: input.startDate, endDate: input.endDate });
       return { ok: true as const, warnings: evaluation.warnings, medicalCertificateRequired: evaluation.medicalCertificateRequired };

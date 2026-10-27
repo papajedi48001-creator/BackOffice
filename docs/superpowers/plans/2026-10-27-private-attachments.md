@@ -37,9 +37,9 @@
 - [x] Commit `feat(files): scan, store and open private attachments`.
 
 ### Task 3: Link to ใบลา and trips
-- [ ] Failing integration tests: submit/resubmit with own attachment, someone else's (INVALID_ATTACHMENT), keep on omit, remove on null; detail returns `{ attachmentId, filename }`.
-- [ ] Implement in LeaveService, OfficialTravelService, queries.
-- [ ] Commit `feat(leave,travel): attach a file to a ใบลา or trip`.
+- [x] Failing integration tests: submit/resubmit with own attachment, someone else's (INVALID_ATTACHMENT), keep on omit, remove on null; detail returns `{ attachmentId, filename }`.
+- [x] Implement in LeaveService, OfficialTravelService, queries.
+- [x] Commit `feat(leave,travel): attach a file to a ใบลา or trip`.
 
 ### Task 4: Web
 - [ ] Failing tests: upload route codes (401, 503, 413, 415, 422, 201); download route headers and 404; AttachmentField uploads and reports the id; leave and travel forms send it; detail pages link it.

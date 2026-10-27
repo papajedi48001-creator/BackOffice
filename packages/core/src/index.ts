@@ -47,6 +47,7 @@ export * from './files/clamd-scanner';
 export * from './files/s3-object-storage';
 export * from './files/database-attachment-repository';
 export * from './files/attachment-access';
+export * from './files/attachment-link';
 export * from './exports/export-service';
 export * from './outbox/outbox-service';
 export * from './notifications/notification-service';

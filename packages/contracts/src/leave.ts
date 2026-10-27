@@ -50,4 +50,4 @@ export type LeaveSettingInput = z.infer<typeof leaveSettingInputSchema>;
 
 export interface LeaveBalance { entitled: number; carried: number; used: number; pending: number; remaining: number }
 export interface LeaveWarning { month: string; workingDays: number; minimum: number }
-export type LeaveErrorCode = 'NO_LEAVE_DAYS' | 'CROSSES_FISCAL_YEAR' | 'INACTIVE_LEAVE_TYPE' | 'NO_ENTITLEMENT' | 'NOT_ELIGIBLE' | 'SERVICE_TOO_SHORT' | 'APPOINTMENT_DATE_MISSING' | 'INSUFFICIENT_BALANCE' | 'OVERLAPS_EXISTING_LEAVE' | 'NO_ORGANIZATION' | 'NO_APPROVER' | 'NOT_FOUND' | 'NOT_APPROVED' | 'NOT_RETURNED' | 'OUTSIDE_LEAVE' | 'OVERLAPS_CANCELLATION' | 'OVERLAPS_OFFICIAL_TRAVEL';
+export type LeaveErrorCode = 'INVALID_ATTACHMENT' | 'NO_LEAVE_DAYS' | 'CROSSES_FISCAL_YEAR' | 'INACTIVE_LEAVE_TYPE' | 'NO_ENTITLEMENT' | 'NOT_ELIGIBLE' | 'SERVICE_TOO_SHORT' | 'APPOINTMENT_DATE_MISSING' | 'INSUFFICIENT_BALANCE' | 'OVERLAPS_EXISTING_LEAVE' | 'NO_ORGANIZATION' | 'NO_APPROVER' | 'NOT_FOUND' | 'NOT_APPROVED' | 'NOT_RETURNED' | 'OUTSIDE_LEAVE' | 'OVERLAPS_CANCELLATION' | 'OVERLAPS_OFFICIAL_TRAVEL';

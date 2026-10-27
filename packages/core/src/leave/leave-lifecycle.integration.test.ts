@@ -3,6 +3,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDatabase, runMigrations } from '@backoffice/db';
 import { ApprovalService } from '../workflow/approval-service';
 import { DatabaseWorkflowRepository } from '../workflow/database-workflow-repository';
+import { DatabaseAttachmentRepository } from '../files/database-attachment-repository';
+import { LeaveQueries } from './leave-queries';
 import { LeaveService } from './leave-service';
 import { loadBalance } from './leave-store';
 import { commandChainResolver, createLeaveOrganization, createLeavePerson, insertPerson, LEAVE_TYPE_IDS } from './leave-fixtures';
@@ -116,6 +118,26 @@ describeWithDatabase('LeaveService lifecycle against MariaDB', () => {
     expect(audits[0]!.metadata).not.toMatch(/กลับมาวันศุกร์/);
     await decide(cancellation.requestId, org.director, 'APPROVE');
     expect((await loadBalance(database, person, vacationType, 2570))?.used).toBe(4);
+  });
+
+  it('links a file the person uploaded, keeps it on an edit that leaves it out, and removes it on null', async () => {
+    const person = await createLeavePerson(database, org.section);
+    const upload = async (owner: string) => { const id = randomUUID(); await new DatabaseAttachmentRepository(database).save({ id, objectKey: `attachments/${randomUUID()}`, contentType: 'application/pdf', sizeBytes: 10, createdByPersonId: owner, filename: 'ใบรับรองแพทย์.pdf' }, 'CLEAN'); return id; };
+    const mine = await upload(person);
+    const theirs = await upload(org.sectionHead);
+    expect(await service.submit(person, { ...vacation('2026-12-07', '2026-12-07'), attachmentId: theirs })).toEqual({ ok: false, code: 'INVALID_ATTACHMENT' });
+    expect(await service.submit(person, { ...vacation('2026-12-07', '2026-12-07'), attachmentId: randomUUID() })).toEqual({ ok: false, code: 'INVALID_ATTACHMENT' });
+    const filed = await service.submit(person, { ...vacation('2026-12-07', '2026-12-07'), attachmentId: mine });
+    if (!filed.ok) throw new Error(filed.code);
+    const viewer = { authenticated: true, personId: person, roles: [], dataOwnerModules: [] };
+    expect((await new LeaveQueries(database).detail(filed.requestId, viewer))?.attachment).toEqual({ attachmentId: mine, filename: 'ใบรับรองแพทย์.pdf' });
+    await decide(filed.requestId, org.sectionHead, 'RETURN');
+    expect(await service.resubmit(person, filed.requestId, vacation('2026-12-08', '2026-12-08'))).toMatchObject({ ok: true });
+    expect((await new LeaveQueries(database).detail(filed.requestId, viewer))?.attachment?.attachmentId).toBe(mine);
+    await decide(filed.requestId, org.sectionHead, 'RETURN');
+    expect(await service.resubmit(person, filed.requestId, { ...vacation('2026-12-08', '2026-12-08'), attachmentId: theirs })).toEqual({ ok: false, code: 'INVALID_ATTACHMENT' });
+    expect(await service.resubmit(person, filed.requestId, { ...vacation('2026-12-08', '2026-12-08'), attachmentId: null })).toMatchObject({ ok: true });
+    expect((await new LeaveQueries(database).detail(filed.requestId, viewer))?.attachment).toBeNull();
   });
 
   it('refuses ขอยกเลิกวันลา on a pending ใบลา', async () => {
