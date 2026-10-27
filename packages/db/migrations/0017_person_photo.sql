@@ -1,0 +1,1 @@
+ALTER TABLE hr_person_profile ADD COLUMN IF NOT EXISTS photo_attachment_id CHAR(36) NULL, ADD CONSTRAINT hr_person_profile_photo_fk FOREIGN KEY IF NOT EXISTS (photo_attachment_id) REFERENCES attachment(id);
