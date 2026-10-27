@@ -1,6 +1,6 @@
 # HR: create users, กลุ่มงาน/งาน, position catalogue — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task by task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task by task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Ship the 9 HR requests from 2026-10-27 as three PRs.
 
@@ -34,7 +34,7 @@ Each service sits behind Next.js route handlers guarded by `canActHospitalWide`.
 ---
 
 ### Task A1: Unit structure service and migration 0017
-- [ ] Failing integration tests in `packages/core/src/hr/organization-structure-service.integration.test.ts`:
+- [x] Failing integration tests in `packages/core/src/hr/organization-structure-service.integration.test.ts`:
   - create a กลุ่มงาน, and a งาน under it;
   - refuse a duplicate sibling name (`DUPLICATE_NAME`);
   - refuse a งาน whose parent is not a กลุ่มงาน (`PARENT_NOT_DIVISION`);
@@ -42,29 +42,29 @@ Each service sits behind Next.js route handlers guarded by `canActHospitalWide`.
   - delete a กลุ่มงาน: its งาน are deleted too, their assignments and head terms are closed, and the audit counts are right;
   - `HrDirectory.listOrganizations` hides deleted units;
   - a profile save to a deleted unit gives `UNKNOWN_ORGANIZATION`.
-- [ ] Migration `0017_organization_soft_delete.sql`, the Drizzle `deletedAt` field, and the service.
-- [ ] Commit `feat(hr): add, rename, move and delete กลุ่มงาน and งาน`.
+- [x] Migration `0017_organization_soft_delete.sql`, the Drizzle `deletedAt` field, and the service.
+- [x] Commit `feat(hr): add, rename, move and delete กลุ่มงาน and งาน`.
 
 ### Task A2: Routes and organizations UI
-- [ ] Failing route tests for:
+- [x] Failing route tests for:
   - `POST /api/hr/organizations`;
   - `PUT` and `DELETE /api/hr/organizations/[id]`;
   - the 401, 403 and 400 answers;
   - mapping each error code to its status.
-- [ ] Failing page tests:
+- [x] Failing page tests:
   - the list page has the add-กลุ่มงาน and add-งาน forms;
   - the detail page has rename, move and delete, and the delete confirmation shows the counts.
-- [ ] Commit `feat(web): manage กลุ่มงาน and งาน`.
+- [x] Commit `feat(web): manage กลุ่มงาน and งาน`.
 
 ### Task A3: กลุ่มงาน and งาน fields on the person form
-- [ ] Failing tests:
+- [x] Failing tests:
   - `updatePersonProfileInputSchema` accepts `organizationId: null`;
   - saving `null` closes the assignment;
   - the form suggests กลุ่มงาน names, and suggests only the งาน of the chosen กลุ่มงาน;
   - it saves the งาน id when one is chosen, and otherwise the กลุ่มงาน id;
   - it refuses an unknown name.
-- [ ] Commit `feat(hr): pick กลุ่มงาน and งาน on a person`.
-- [ ] PR A.
+- [x] Commit `feat(hr): pick กลุ่มงาน and งาน on a person`.
+- [x] PR A.
 
 ### Task B1: Position catalogue
 - [ ] Failing tests:
