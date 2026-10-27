@@ -9,7 +9,7 @@ import { noticesFor, type FleetEvent, type FleetNoticeContext } from './fleet-no
 
 type Writer = Pick<Database, 'query' | 'execute'>;
 
-export type FleetHistoryAction = 'SUBMITTED' | 'RESUBMITTED' | 'CANCELLED' | 'ASSIGNED' | 'UNASSIGNED' | 'DECLINED';
+export type FleetHistoryAction = 'SUBMITTED' | 'FILED_FROM_TRAVEL' | 'RESUBMITTED' | 'CANCELLED' | 'ASSIGNED' | 'UNASSIGNED' | 'DECLINED';
 
 /** The Thai fiscal year, in พ.ศ., of a Bangkok date: it starts on 1 October. */
 export function fleetFiscalYear(now: Date): number {

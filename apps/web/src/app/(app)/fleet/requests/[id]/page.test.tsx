@@ -56,6 +56,12 @@ describe('FleetRequestPage', () => {
     expect(JSON.parse(init.body as string)).toEqual({ reason: 'ไม่ไปแล้ว' });
   });
 
+  it('names a ใบ the system filed from an approved ไปราชการ in its history', async () => {
+    ready({ ...base, requestId: null, officialTravelId: 'travel-1', history: [{ action: 'FILED_FROM_TRAVEL', actorName: 'นายแพทย์ธนพล สมมติชื่อ', reason: null, createdAt: '2026-10-27T03:00:00.000Z' }] });
+    render(await FleetRequestPage(params()));
+    expect(screen.getByText(/สร้างจากคำขอไปราชการที่อนุมัติแล้ว/)).toBeInTheDocument();
+  });
+
   it('is not found for someone who may not see it', async () => {
     ready(null);
     await FleetRequestPage(params());
