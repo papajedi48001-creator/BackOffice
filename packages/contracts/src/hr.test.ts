@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assignOrganizationHeadInputSchema, calendarDateSchema, commandChainTargetSchema, employmentTypeInputSchema, genderForPrefix, organizationUnitTypeSchema, setOrganizationUnitTypeInputSchema, updatePersonContactInputSchema, updatePersonProfileInputSchema } from './hr';
+import { assignOrganizationHeadInputSchema, calendarDateSchema, commandChainTargetSchema, employmentTypeInputSchema, genderForPrefix, organizationUnitTypeSchema, setOrganizationUnitTypeInputSchema, updateOwnPersonalInputSchema, updatePersonContactInputSchema, updatePersonProfileInputSchema } from './hr';
 
 describe('organization unit type and command chain contracts', () => {
   it('accepts the three unit types only', () => {
@@ -46,6 +46,13 @@ describe('staff profile contracts', () => {
     expect(updatePersonProfileInputSchema.safeParse({ appointedOn: '2026-02-30' }).success).toBe(false);
     expect(updatePersonProfileInputSchema.safeParse({ organizationId: null }).success).toBe(false);
     expect(updatePersonProfileInputSchema.safeParse({ firstName: 'ก'.repeat(121) }).success).toBe(false);
+  });
+
+  it('lets a person change only their own personal fields', () => {
+    expect(updateOwnPersonalInputSchema.parse({ namePrefix: 'นาย', firstName: 'สมชาย', lastName: 'ใจดี', gender: 'MALE', birthDate: '1988-01-02' })).toMatchObject({ firstName: 'สมชาย' });
+    for (const field of ['positionTitle', 'positionLevel', 'organizationId', 'employmentTypeId', 'appointedOn', 'personId']) {
+      expect(updateOwnPersonalInputSchema.safeParse({ [field]: 'x' }).success).toBe(false);
+    }
   });
 
   it('checks contact phone numbers and lengths', () => {

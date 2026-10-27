@@ -11,7 +11,7 @@ it('colours the shell and menu by module', () => {
   expect(screen.getByText('เนื้อหา')).toBeInTheDocument();
 });
 
-it('puts the notification bell at the top of every page', () => {
-  render(<AppShell navigation={[{ href: '/dashboard', label: 'dashboard', module: 'home' }]} bell={{ unread: 2, items: [] }}><p>เนื้อหา</p></AppShell>);
-  expect(screen.getByRole('button', { name: 'การแจ้งเตือนล่าสุด 2 การแจ้งเตือนที่ยังไม่อ่าน' })).toBeInTheDocument();
+it('puts the profile chip, with the unread count, at the top of every page', () => {
+  render(<AppShell navigation={[{ href: '/dashboard', label: 'dashboard', module: 'home' }]} profile={{ displayName: 'นายสมชาย ใจดี', positionTitle: null, photoUrl: null }} bell={{ unread: 2, items: [] }}><p>เนื้อหา</p></AppShell>);
+  expect(screen.getByRole('button', { name: 'นายสมชาย ใจดี 2 การแจ้งเตือนที่ยังไม่อ่าน' })).toBeInTheDocument();
 });

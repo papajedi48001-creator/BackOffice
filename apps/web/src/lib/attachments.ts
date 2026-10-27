@@ -16,7 +16,7 @@ export function attachmentService(database: Database): AttachmentService {
   return new AttachmentService(storage, new DatabaseAttachmentRepository(database), scanner);
 }
 
-const extensionsByType: Record<string, readonly string[]> = { 'application/pdf': ['pdf'], 'image/jpeg': ['jpg', 'jpeg'], 'image/png': ['png'] };
+const extensionsByType: Record<string, readonly string[]> = { 'application/pdf': ['pdf'], 'image/jpeg': ['jpg', 'jpeg'], 'image/png': ['png'], 'image/webp': ['webp'] };
 // C0 and C1 controls, and the bidi marks that can disguise an extension (U+202E shows "exe.pdf" as "fdp.exe").
 // eslint-disable-next-line no-control-regex -- matching control characters is the point: they are stripped.
 const hiddenCharacters = /[\u0000-\u001f\u007f-\u009f\u200e\u200f\u202a-\u202e\u2066-\u2069]/g;

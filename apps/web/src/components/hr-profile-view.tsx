@@ -2,14 +2,15 @@ import type { ProfileView } from '@backoffice/core';
 import { t } from '@backoffice/i18n';
 import { bangkokToday, formatBangkokDate, formatBangkokTime } from '../lib/bangkok-time';
 import { dateFields, genderLabelKeys, profileFieldLabelKeys } from '../lib/hr-profile-labels';
-import { ContactForm, ProfileForm } from './hr-profile-forms';
+import { ContactForm, PersonalForm, PhotoForm, ProfileForm } from './hr-profile-forms';
+import { initialsOf } from '../lib/initials';
 
 const day = (value: string | null) => value ? formatBangkokDate(value) : t('notAssigned');
 const text = (value: string | null) => value ?? t('notAssigned');
 const historyValue = (field: string, value: string | null) => value === null ? t('notAssigned') : dateFields.has(field) ? formatBangkokDate(value) : value;
 
 /** One person's profile boxes. Private boxes render only when the server returned private details. */
-export function HrProfileView({ view, contactEndpoint, employmentTypes = [], organizations = [] }: { view: ProfileView; contactEndpoint: string; employmentTypes?: { id: string; name: string }[]; organizations?: { id: string; name: string }[] }) {
+export function HrProfileView({ view, contactEndpoint, personalEndpoint, photo, employmentTypes = [], organizations = [] }: { view: ProfileView; contactEndpoint: string; personalEndpoint?: string; photo?: { url: string | null; uploadsEnabled: boolean }; employmentTypes?: { id: string; name: string }[]; organizations?: { id: string; name: string }[] }) {
   const { work, private: personal, access, history } = view;
   const rows = (entries: [string, React.ReactNode][]) => <dl className="profile-summary">{entries.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>;
   return <div className="profile">
@@ -41,6 +42,8 @@ export function HrProfileView({ view, contactEndpoint, employmentTypes = [], org
       namePrefix: personal.namePrefix, firstName: personal.firstName, lastName: personal.lastName, gender: personal.gender, birthDate: personal.birthDate,
       employmentTypeId: work.employmentTypeId, appointedOn: work.appointedOn, positionTitle: work.positionTitle, positionLevel: work.positionLevel, organizationId: work.organizationId
     }} /> : null}
+    {photo ? <PhotoForm photoUrl={photo.url} initials={initialsOf(work.displayName)} uploadsEnabled={photo.uploadsEnabled} /> : null}
+    {personalEndpoint && !access.editProfile && personal ? <PersonalForm endpoint={personalEndpoint} values={{ namePrefix: personal.namePrefix, firstName: personal.firstName, lastName: personal.lastName, gender: personal.gender, birthDate: personal.birthDate }} /> : null}
     {access.editContact && personal ? <ContactForm endpoint={contactEndpoint} values={{ phone: personal.phone, address: personal.address, emergencyContactName: personal.emergencyContactName, emergencyContactRelationship: personal.emergencyContactRelationship, emergencyContactPhone: personal.emergencyContactPhone }} /> : null}
     <section className="profile-box">
       <h3>{t('hrProfileHistory')}</h3>
