@@ -50,6 +50,15 @@ export const setOrganizationUnitTypeInputSchema = z.object({
 });
 export type SetOrganizationUnitTypeInput = z.infer<typeof setOrganizationUnitTypeInputSchema>;
 
+/** A กลุ่มงาน sits under the hospital; a งาน sits under a กลุ่มงาน. */
+export const createOrganizationUnitInputSchema = z.object({
+  name: z.string().trim().min(1).max(255), unitType: z.enum(['DIVISION', 'SECTION']), parentId: z.string().min(1).nullable().optional()
+}).strict();
+export type CreateOrganizationUnitInput = z.infer<typeof createOrganizationUnitInputSchema>;
+/** Renames a unit; a งาน may also move to another กลุ่มงาน. */
+export const updateOrganizationUnitInputSchema = z.object({ name: z.string().trim().min(1).max(255), parentId: z.string().min(1).optional() }).strict();
+export type UpdateOrganizationUnitInput = z.infer<typeof updateOrganizationUnitInputSchema>;
+
 export const genderSchema = z.enum(['MALE', 'FEMALE']);
 export type Gender = z.infer<typeof genderSchema>;
 
@@ -77,7 +86,7 @@ export const updatePersonProfileInputSchema = z.object({
   namePrefix: optionalText(32), firstName: optionalText(120), lastName: optionalText(120),
   gender: genderSchema.nullable().optional(), birthDate: birthDateSchema.nullable().optional(),
   employmentTypeId: z.string().min(1).nullable().optional(), appointedOn: calendarDateSchema.nullable().optional(),
-  positionTitle: optionalText(255), positionLevel: optionalText(120), organizationId: z.string().min(1).optional()
+  positionTitle: optionalText(255), positionLevel: optionalText(120), organizationId: z.string().min(1).nullable().optional()
 }).strict();
 export type UpdatePersonProfileInput = z.infer<typeof updatePersonProfileInputSchema>;
 

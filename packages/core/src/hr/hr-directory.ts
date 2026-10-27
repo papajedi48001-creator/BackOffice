@@ -35,13 +35,14 @@ export class HrDirectory {
        LEFT JOIN person hp ON hp.id = h.person_id
        LEFT JOIN employment_assignment a ON a.organization_id = o.id AND a.effective_until IS NULL
        LEFT JOIN person p ON p.id = a.person_id AND p.employment_status = 'ACTIVE'
+       WHERE o.deleted_at IS NULL
        GROUP BY o.id, o.code, o.name, o.parent_id, o.unit_type, h.person_id, hp.display_name, hp.employment_status
        ORDER BY o.name`
     );
     return rows.map(({ headStatus, ...row }) => ({ ...row, activePeople: Number(row.activePeople), headActive: headStatus === 'ACTIVE' }));
   }
   async getOrganization(id: string): Promise<OrganizationDetail | null> {
-    const [organization] = await this.database.query<Omit<OrganizationDetail, 'headPersonId' | 'headHistory'>>('SELECT id, code, name, unit_type AS unitType FROM organization WHERE id = ?', [id]);
+    const [organization] = await this.database.query<Omit<OrganizationDetail, 'headPersonId' | 'headHistory'>>('SELECT id, code, name, unit_type AS unitType FROM organization WHERE id = ? AND deleted_at IS NULL', [id]);
     if (!organization) return null;
     // Timestamps are formatted in SQL so the driver's local time zone never shifts them.
     const terms = await this.database.query<OrganizationHeadTerm & { employmentStatus: string | null }>(

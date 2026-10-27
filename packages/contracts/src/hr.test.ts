@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assignOrganizationHeadInputSchema, calendarDateSchema, commandChainTargetSchema, employmentTypeInputSchema, genderForPrefix, organizationUnitTypeSchema, setOrganizationUnitTypeInputSchema, updatePersonContactInputSchema, updatePersonProfileInputSchema } from './hr';
+import { assignOrganizationHeadInputSchema, createOrganizationUnitInputSchema, updateOrganizationUnitInputSchema, calendarDateSchema, commandChainTargetSchema, employmentTypeInputSchema, genderForPrefix, organizationUnitTypeSchema, setOrganizationUnitTypeInputSchema, updatePersonContactInputSchema, updatePersonProfileInputSchema } from './hr';
 
 describe('organization unit type and command chain contracts', () => {
   it('accepts the three unit types only', () => {
@@ -44,7 +44,7 @@ describe('staff profile contracts', () => {
     expect(updatePersonProfileInputSchema.safeParse({ appointedOn: '2999-01-01' }).success).toBe(true);
     expect(updatePersonProfileInputSchema.safeParse({ gender: 'OTHER' }).success).toBe(false);
     expect(updatePersonProfileInputSchema.safeParse({ appointedOn: '2026-02-30' }).success).toBe(false);
-    expect(updatePersonProfileInputSchema.safeParse({ organizationId: null }).success).toBe(false);
+    expect(updatePersonProfileInputSchema.parse({ organizationId: null }).organizationId).toBeNull();
     expect(updatePersonProfileInputSchema.safeParse({ firstName: 'ก'.repeat(121) }).success).toBe(false);
   });
 
@@ -59,5 +59,14 @@ describe('staff profile contracts', () => {
     expect(employmentTypeInputSchema.parse({ code: 'DAILY_EMPLOYEE', name: 'ลูกจ้างรายวัน', isActive: true, sortOrder: 6 }).code).toBe('DAILY_EMPLOYEE');
     expect(employmentTypeInputSchema.safeParse({ code: 'daily', name: 'x', isActive: true, sortOrder: 1 }).success).toBe(false);
     expect(employmentTypeInputSchema.safeParse({ code: 'DAILY', name: '', isActive: true, sortOrder: 1 }).success).toBe(false);
+  });
+});
+
+describe('กลุ่มงาน and งาน contracts', () => {
+  it('takes a trimmed name and a กลุ่มงาน or งาน type only', () => {
+    expect(createOrganizationUnitInputSchema.parse({ name: ' งานผู้ป่วยใน ', unitType: 'SECTION', parentId: 'div-1' }).name).toBe('งานผู้ป่วยใน');
+    expect(createOrganizationUnitInputSchema.safeParse({ name: 'x', unitType: 'HOSPITAL' }).success).toBe(false);
+    expect(createOrganizationUnitInputSchema.safeParse({ name: '  ', unitType: 'DIVISION' }).success).toBe(false);
+    expect(updateOrganizationUnitInputSchema.safeParse({ name: 'x', unitType: 'DIVISION' }).success).toBe(false);
   });
 });

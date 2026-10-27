@@ -135,8 +135,9 @@ export async function applyProfileUpdate(database: QueryDatabase, subject: Profi
     }
   }
   let organizationName = subject.organizationName;
-  if (valid.organizationId !== undefined && valid.organizationId !== subject.organizationId) {
-    const [target] = await database.query<{ name: string }>('SELECT name FROM organization WHERE id = ?', [valid.organizationId]);
+  if (valid.organizationId === null) organizationName = null;
+  else if (valid.organizationId !== undefined && valid.organizationId !== subject.organizationId) {
+    const [target] = await database.query<{ name: string }>('SELECT name FROM organization WHERE id = ? AND deleted_at IS NULL', [valid.organizationId]);
     if (!target) return { ok: false, code: 'UNKNOWN_ORGANIZATION' };
     if (!options.canEditOrganization(valid.organizationId)) return { ok: false, code: 'FORBIDDEN' };
     organizationName = target.name;
@@ -157,6 +158,8 @@ export async function applyProfileUpdate(database: QueryDatabase, subject: Profi
   }
   if (changes.changedFields.includes('positionTitle')) await database.execute('UPDATE person SET position_title = ? WHERE id = ?', [valid.positionTitle ?? null, subject.personId]);
   if (changes.changedFields.includes('organization') && valid.organizationId) await moveAssignment(database, subject, valid.organizationId, createId);
+  // No unit (ไม่มีสังกัด): the open assignment is closed and none replaces it.
+  if (changes.changedFields.includes('organization') && valid.organizationId === null) await database.execute('UPDATE employment_assignment SET effective_until = UTC_TIMESTAMP() WHERE person_id = ? AND effective_until IS NULL', [subject.personId]);
   await recordProfileAudit(database, 'hr.person.profile.update', subject.personId, actorPersonId, changes, createId);
   return { ok: true };
 }

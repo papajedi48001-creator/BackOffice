@@ -8,6 +8,7 @@ export * from './hr/hr-directory';
 export * from './hr/command-chain';
 export * from './hr/command-chain-service';
 export * from './hr/organization-head-service';
+export * from './hr/organization-structure-service';
 export * from './hr/profile-access';
 export * from './hr/employment-type-service';
 export * from './hr/profile-service';
