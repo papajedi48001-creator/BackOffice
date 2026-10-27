@@ -34,6 +34,15 @@ describe('POST /api/requests/[requestId]/cancellation', () => {
     expect(mocks.cancelRequest).not.toHaveBeenCalled();
   });
 
+  it('sends a fleet คำขอ to the fleet routes', async () => {
+    ready();
+    mocks.getSharedDatabase.mockReturnValue({ query: vi.fn().mockResolvedValue([{ moduleCode: 'fleet' }]), execute: vi.fn(), transaction: vi.fn() });
+    const response = await cancel();
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'fleet_request_route' });
+    expect(mocks.cancelRequest).not.toHaveBeenCalled();
+  });
+
   it('rejects a signed-out user', async () => {
     ready();
     mocks.requireAuthorized.mockRejectedValue(Object.assign(new Error('Unauthenticated'), { status: 401 }));

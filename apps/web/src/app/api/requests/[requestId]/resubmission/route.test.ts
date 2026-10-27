@@ -49,6 +49,15 @@ describe('POST /api/requests/[requestId]/resubmission', () => {
     expect(mocks.resubmitRequest).not.toHaveBeenCalled();
   });
 
+  it('sends a returned fleet คำขอ to the fleet routes, whoever asks', async () => {
+    ready();
+    mocks.getSharedDatabase.mockReturnValue({ query: vi.fn().mockResolvedValue([{ moduleCode: 'fleet', requestorPersonId: 'person-b' }]), execute: vi.fn(), transaction: vi.fn() });
+    const response = await resubmit();
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'fleet_request_route' });
+    expect(mocks.resubmitRequest).not.toHaveBeenCalled();
+  });
+
   it('sends a returned leave request to the leave routes', async () => {
     ready();
     mocks.getSharedDatabase.mockReturnValue({ query: vi.fn().mockResolvedValue([{ moduleCode: 'leave', requestorPersonId: 'person-a' }]), execute: vi.fn(), transaction: vi.fn() });

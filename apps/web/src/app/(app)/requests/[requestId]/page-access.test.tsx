@@ -7,7 +7,7 @@ vi.mock('next/navigation', () => ({ redirect: mocks.redirect, notFound: mocks.no
 vi.mock('@backoffice/db', () => ({ createDatabase: mocks.createDatabase }));
 vi.mock('../../../../lib/runtime-env', () => ({ readRuntimeValue: mocks.readRuntimeValue }));
 vi.mock('../../../../lib/session', () => ({ readSession: mocks.readSession }));
-vi.mock('@backoffice/core', () => ({ LEAVE_MODULE: 'leave', OFFICIAL_TRAVEL_MODULE: 'official-travel', RequestHistory: class { load = mocks.load; } }));
+vi.mock('@backoffice/core', () => ({ FLEET_MODULE: 'fleet', LEAVE_MODULE: 'leave', OFFICIAL_TRAVEL_MODULE: 'official-travel', RequestHistory: class { load = mocks.load; } }));
 vi.mock('./request-detail-panel', () => ({ RequestDetailPanel: () => null }));
 
 import RequestDetailPage from './page';
@@ -39,5 +39,17 @@ describe('RequestDetailPage access', () => {
     expect(mocks.redirect).toHaveBeenCalledWith('/leave/requests/request-1');
     expect(mocks.load).not.toHaveBeenCalled();
     expect(mocks.close).toHaveBeenCalledOnce();
+  });
+
+  it('sends a ใบขอใช้รถ to its fleet page', async () => {
+    mocks.headers.mockResolvedValue(new Headers());
+    mocks.readSession.mockReturnValue({ authenticated: true, personId: 'person-requestor', roles: [] });
+    mocks.readRuntimeValue.mockReturnValue('mysql://test');
+    mocks.query.mockResolvedValueOnce([{ id: 'request-1', reference: 'REQ-1', requestorPersonId: 'person-requestor', moduleCode: 'fleet', status: 'IN_REVIEW' }]);
+    mocks.createDatabase.mockReturnValue({ query: mocks.query, close: mocks.close });
+
+    await RequestDetailPage({ params: Promise.resolve({ requestId: 'request-1' }) });
+    expect(mocks.redirect).toHaveBeenCalledWith('/fleet/requests/by-request/request-1');
+    expect(mocks.load).not.toHaveBeenCalled();
   });
 });
