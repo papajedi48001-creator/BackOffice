@@ -1,7 +1,8 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { OfficialTravelQueries } from '@backoffice/core';
+import { FleetQueries, OfficialTravelQueries } from '@backoffice/core';
 import { t, type MessageKey } from '@backoffice/i18n';
-import { formatBangkokDate, formatBangkokTime } from '../../../../lib/bangkok-time';
+import { bangkokToday, formatBangkokDate, formatBangkokTime } from '../../../../lib/bangkok-time';
 import { getSharedDatabase } from '../../../../lib/database';
 import { formatLeaveRange, leaveStepLabel } from '../../../../lib/leave-labels';
 import { formatBaht, travelFundingLabel, travelTypeLabel, travelVehicleLabel } from '../../../../lib/travel-labels';
@@ -24,6 +25,10 @@ export default async function TravelPage({ params }: { params: Promise<{ travelI
   const view = await new OfficialTravelQueries(database).detail(travelId, session);
   if (!view) { notFound(); return null; }
   const leader = view.members.find((member) => member.personId === view.leaderPersonId);
+  // ขอใช้รถ (fleet rule 2): an approved person going on an approved trip by รถราชการ. A ใบ already filed for the trip is linked instead; the fleet route checks again on submit.
+  const going = view.members.find((member) => member.personId === session.personId)?.status === 'APPROVED' && view.status === 'APPROVED' && view.vehicle === 'GOVERNMENT_CAR';
+  const carRequestId = going ? await new FleetQueries(database).activeRequestForTravel(view.travelId) : null;
+  const canRequestCar = going && !carRequestId && view.endDate >= bangkokToday();
   return <section className="leave-detail travel-detail">
     <div className="page-heading"><h2>{t('travelRequest')}: {view.subject}</h2><LeaveStatus status={view.status} /></div>
     <div className="detail-list">
@@ -53,6 +58,9 @@ export default async function TravelPage({ params }: { params: Promise<{ travelI
       <div><strong>{t('travelReportSubmittedAt')}</strong><span>{instant(view.report.submittedAt)}</span></div>
       {view.report.updatedAt !== view.report.submittedAt && <div><strong>{t('travelReportUpdatedAt')}</strong><span>{instant(view.report.updatedAt)}</span></div>}
     </div></>}
+    {(carRequestId || canRequestCar) && <div className="request-actions">{carRequestId
+      ? <Link className="button-link" href={`/fleet/requests/${carRequestId}`}>{t('travelSeeCarRequest')}</Link>
+      : <Link className="button-link" href={`/fleet/new?travel=${view.travelId}`}>{t('travelRequestCar')}</Link>}</div>}
     {view.canReport && <TravelReportForm travelId={view.travelId} initial={{ summary: view.report?.summary ?? '', application: view.report?.application ?? '' }} />}
     {view.canCancel && <TravelCancel travelId={view.travelId} />}
     {view.canEdit && <><h3>{t('travelEditReturned')}</h3><TravelForm
