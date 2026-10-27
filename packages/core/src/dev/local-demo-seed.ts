@@ -17,7 +17,7 @@ const people: Array<[code: string, nationalId: string, name: string, position: s
   ['LAB002', syntheticNationalId('110000000107'), 'นายอรรถพล ตัวอย่างชัย', 'นักเทคนิคการแพทย์', 'LAB', 'DIR001'],
   ['PHA005', syntheticNationalId('110000000108'), 'เภสัชกรหญิงศิริพร สมมุติ', 'เภสัชกรชำนาญการ', 'PHA', 'DIR001']
 ];
-const roles: Array<[code: string, role: string]> = [['HR001', 'hr-manager'], ['ADM003', 'room-manager'], ['ADM003', 'room-booking-approver'], ['ADM003', 'inventory-officer'], ['DIR001', 'inventory-supervisor']];
+const roles: Array<[code: string, role: string]> = [['HR001', 'hr-manager'], ['ADM003', 'room-manager'], ['ADM003', 'room-booking-approver'], ['ADM003', 'inventory-officer'], ['ADM003', 'fleet-manager'], ['DIR001', 'inventory-supervisor']];
 
 export interface LocalDemoSeedResult { accountsCreated: number; usernames: string[]; }
 
@@ -58,6 +58,13 @@ export async function seedLocalDemo(database: Database, protector: NationalIdPro
     await database.execute('UPDATE hr_person_profile profile JOIN person ON person.id = profile.person_id SET profile.gender = ? WHERE person.employee_code = ? AND profile.gender IS NULL', [gender, code]);
   }
   await database.execute("INSERT INTO data_owner_assignment (id, module_code, organization_id, person_id, created_at) SELECT ?, 'hr', NULL, person.id, UTC_TIMESTAMP() FROM person WHERE person.employee_code = 'HR001' AND NOT EXISTS (SELECT 1 FROM data_owner_assignment existing WHERE existing.person_id = person.id AND existing.module_code = 'hr' AND existing.organization_id IS NULL)", [randomUUID()]);
+  // ยานพาหนะ: two drivers (with a work phone) and three cars, one in the shop; existing rows are left as they are.
+  for (const [code, phone] of [['LAB002', '0-4400-0001'], ['PHA005', '0-4400-0002']] as const) {
+    await database.execute('INSERT IGNORE INTO fleet_driver (person_id, phone, is_active, created_at, updated_at) SELECT person.id, ?, 1, UTC_TIMESTAMP(), UTC_TIMESTAMP() FROM person WHERE person.employee_code = ?', [phone, code]);
+  }
+  for (const [registration, makeModel, kind, seats, status] of [['กข 1234', 'Toyota Commuter', 'VAN', 12, 'ACTIVE'], ['นข 5678', 'Toyota Hilux Revo', 'PICKUP', 4, 'ACTIVE'], ['ฮฮ 9012', 'Honda City', 'SEDAN', 4, 'IN_REPAIR']] as const) {
+    await database.execute('INSERT IGNORE INTO fleet_vehicle (id, registration, make_model, kind, seats, status, note, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, \'\', UTC_TIMESTAMP(), UTC_TIMESTAMP())', [randomUUID(), registration, makeModel, kind, seats, status]);
+  }
   return { accountsCreated: usernames.length, usernames };
 }
 
