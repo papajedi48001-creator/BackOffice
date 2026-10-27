@@ -98,7 +98,7 @@ Sections (shown only when visible to the viewer; the module opens on the first v
 
 Other pages: **ขอใช้รถ** (`/fleet/new`, optional `?travel=<travelId>`); **รายละเอียดใบ** (`/fleet/requests/<id>`) with status, history, the car, registration, driver name and work phone once assigned, and the actions the viewer may take; **รายละเอียดเที่ยวรถ** (`/fleet/trips/<id>`, `fleet.manage` and its driver).
 
-Integration points: `modules.ts` entry `fleet` goes from `planned` to `live` with `sections`, a badge (รอจัดรถ count for `fleet.manage`; today's not-yet-departed เที่ยวรถ for a driver); the ไปราชการ detail page shows ขอใช้รถ under rule 2 or a link to the existing ใบ; `notificationTarget` sends `fleet` คำขอ to `/fleet/requests/<fleetRequestId>`; accent `[data-module="fleet"] { --accent: #a63d40; }` in `styles.css` and the DESIGN.md table.
+Integration points: `modules.ts` entry `fleet` goes from `planned` to `live` with `sections`, a badge (รอจัดรถ count for `fleet.manage`; today's not-yet-departed เที่ยวรถ for a driver); the ไปราชการ detail page shows ขอใช้รถ under rule 2 or a link to the existing ใบ; `notificationTarget` sends `fleet` คำขอ to `/fleet/requests/by-request/<requestId>`, which redirects to `/fleet/requests/<fleetRequestId>` (as travel does); accent `[data-module="fleet"] { --accent: #a63d40; }` in `styles.css` and the DESIGN.md table.
 
 ## API
 
