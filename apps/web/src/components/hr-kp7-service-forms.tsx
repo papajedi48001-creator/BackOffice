@@ -92,3 +92,40 @@ export function EducationForm({ endpoint, entries }: { endpoint: string; entries
     <button type="submit" disabled={busy}>{t('hrSaveEducation')}</button>
   </form>;
 }
+
+export interface PositionHistoryRow { effectiveOn: string; description: string; positionNumber: string | null; positionType: string | null; level: string | null; salary: number | null; positionAllowance: number | null; reference: string | null }
+type HistoryField = keyof PositionHistoryRow;
+const blankHistoryRow: Record<HistoryField, string> = { effectiveOn: '', description: '', positionNumber: '', positionType: '', level: '', salary: '', positionAllowance: '', reference: '' };
+const money = (value: string) => value.trim() === '' ? null : Number(value);
+
+/** ตำแหน่งและอัตราเงินเดือน (ก.พ.7): only HR edits the whole list; the server keeps it in date order. Rows with no date or description are left out. */
+export function PositionHistoryForm({ endpoint, entries }: { endpoint: string; entries: PositionHistoryRow[] }) {
+  const { save, feedback, busy } = useSave(endpoint);
+  const [rows, setRows] = useState(() => entries.map((entry) => Object.fromEntries(Object.entries(entry).map(([key, value]) => [key, value === null ? '' : String(value)])) as Record<HistoryField, string>));
+  const change = (index: number, field: HistoryField, value: string) => setRows((current) => current.map((row, at) => at === index ? { ...row, [field]: value } : row));
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    await save({ entries: rows.filter((row) => row.effectiveOn !== '' && row.description.trim() !== '').map((row) => ({
+      effectiveOn: row.effectiveOn, description: row.description.trim(), positionNumber: orNull(row.positionNumber), positionType: orNull(row.positionType), level: orNull(row.level),
+      salary: money(row.salary), positionAllowance: money(row.positionAllowance), reference: orNull(row.reference)
+    })) });
+  }
+  const cell = (index: number, field: HistoryField, label: MessageKey, max: number, type = 'text') => <label>{t(label)}<input type={type} value={rows[index]![field]} maxLength={type === 'text' ? max : undefined} step={type === 'number' ? '0.01' : undefined} min={type === 'number' ? 0 : undefined} onChange={(event) => change(index, field, event.target.value)} /></label>;
+  return <form aria-label={t('hrEditPositionHistory')} className="profile-form" onSubmit={submit}>
+    <h4>{t('hrEditPositionHistory')}</h4>
+    {feedback}
+    {rows.map((_, index) => <fieldset key={index} className="education-row">
+      {cell(index, 'effectiveOn', 'hrFieldEffectiveOn', 10, 'date')}
+      {cell(index, 'description', 'hrFieldHistoryDescription', 500)}
+      {cell(index, 'positionNumber', 'hrFieldPositionNumber', 32)}
+      {cell(index, 'positionType', 'hrFieldPositionType', 120)}
+      {cell(index, 'level', 'hrFieldHistoryLevel', 120)}
+      {cell(index, 'salary', 'hrFieldHistorySalary', 12, 'number')}
+      {cell(index, 'positionAllowance', 'hrFieldPositionAllowance', 12, 'number')}
+      {cell(index, 'reference', 'hrFieldReference', 255)}
+      <button type="button" className="button-secondary" onClick={() => setRows((current) => current.filter((__, at) => at !== index))}>{t('hrRemoveRow')}</button>
+    </fieldset>)}
+    {rows.length < 200 ? <button type="button" className="button-secondary" onClick={() => setRows((current) => [...current, { ...blankHistoryRow }])}>{t('hrAddPositionHistory')}</button> : null}
+    <button type="submit" disabled={busy}>{t('hrSavePositionHistory')}</button>
+  </form>;
+}

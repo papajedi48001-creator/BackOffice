@@ -3,12 +3,13 @@ import { t } from '@backoffice/i18n';
 import { bangkokToday, formatBangkokDate, formatBangkokTime } from '../lib/bangkok-time';
 import { dateFields, genderLabelKeys, maritalStatusLabelKeys, profileFieldLabelKeys } from '../lib/hr-profile-labels';
 import { FamilyForm, Kp7FileForm } from './hr-kp7-forms';
-import { CivilServiceForm, EducationForm } from './hr-kp7-service-forms';
+import { CivilServiceForm, EducationForm, PositionHistoryForm } from './hr-kp7-service-forms';
 import { ContactForm, PersonalForm, PhotoForm, ProfileForm, type ProfileFormPosition, type ProfileFormUnit } from './hr-profile-forms';
 import { initialsOf } from '../lib/initials';
 
 const day = (value: string | null) => value ? formatBangkokDate(value) : t('notAssigned');
 const text = (value: string | null) => value ?? t('notAssigned');
+const baht = (value: number | null) => value === null ? t('notAssigned') : value.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const historyValue = (field: string, value: string | null) => value === null ? t('notAssigned') : dateFields.has(field) ? formatBangkokDate(value) : value;
 
 /** One person's profile boxes. Private boxes render only when the server returned private details. */
@@ -68,6 +69,13 @@ export function HrProfileView({ view, contactEndpoint, personalEndpoint, photo, 
           <tbody>{personal.education.map((entry, index) => <tr key={index}><td>{day(entry.graduatedOn)}</td><td>{entry.degree}</td><td>{text(entry.major)}</td><td>{text(entry.institution)}</td><td>{text(entry.country)}</td></tr>)}</tbody>
         </table>}
       </section>
+      <section className="profile-box" aria-label={t('hrProfilePositionHistory')}>
+        <h3>{t('hrProfilePositionHistory')}</h3>
+        {personal.positionHistory.length === 0 ? <p>{t('hrNoPositionHistory')}</p> : <table>
+          <thead><tr><th>{t('hrFieldEffectiveOn')}</th><th>{t('hrFieldHistoryDescription')}</th><th>{t('hrFieldPositionNumber')}</th><th>{t('hrFieldPositionType')}</th><th>{t('hrFieldHistoryLevel')}</th><th>{t('hrFieldHistorySalary')}</th><th>{t('hrFieldPositionAllowance')}</th><th>{t('hrFieldReference')}</th></tr></thead>
+          <tbody>{personal.positionHistory.map((entry, index) => <tr key={index}><td>{day(entry.effectiveOn)}</td><td>{entry.description}</td><td>{text(entry.positionNumber)}</td><td>{text(entry.positionType)}</td><td>{text(entry.level)}</td><td>{baht(entry.salary)}</td><td>{baht(entry.positionAllowance)}</td><td>{text(entry.reference)}</td></tr>)}</tbody>
+        </table>}
+      </section>
       <Kp7FileForm endpoint={access.editContact ? `/api/hr/people/${work.personId}/kp7` : undefined} file={personal.kp7File} uploadsEnabled={uploadsEnabled} />
     </> : null}
     {access.editProfile && personal ? <ProfileForm personId={work.personId} employmentTypes={employmentTypes} units={units} positions={positions} organizationName={work.organizationName} values={{
@@ -77,6 +85,7 @@ export function HrProfileView({ view, contactEndpoint, personalEndpoint, photo, 
     {photo ? <PhotoForm photoUrl={photo.url} initials={initialsOf(work.displayName)} uploadsEnabled={photo.uploadsEnabled} /> : null}
     {personalEndpoint && !access.editProfile && personal ? <PersonalForm endpoint={personalEndpoint} values={{ namePrefix: personal.namePrefix, firstName: personal.firstName, lastName: personal.lastName, gender: personal.gender, birthDate: personal.birthDate }} /> : null}
     {access.editProfile && personal ? <CivilServiceForm endpoint={`/api/hr/people/${work.personId}/civil-service`} values={personal.civilService} /> : null}
+    {access.editProfile && personal ? <PositionHistoryForm endpoint={`/api/hr/people/${work.personId}/position-history`} entries={personal.positionHistory} /> : null}
     {access.editContact && personal ? <EducationForm endpoint={`/api/hr/people/${work.personId}/education`} entries={personal.education} /> : null}
     {access.editContact && personal ? <FamilyForm endpoint={`/api/hr/people/${work.personId}/family`} values={{
       maritalStatus: personal.maritalStatus, religion: personal.religion, birthplace: personal.birthplace, fatherName: personal.fatherName, motherName: personal.motherName,

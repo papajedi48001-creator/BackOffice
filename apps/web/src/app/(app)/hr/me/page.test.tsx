@@ -13,7 +13,7 @@ import MyProfilePage from './page';
 
 const staff = { authenticated: true, personId: 'me', roles: [], dataOwnerModules: [] };
 const work = { personId: 'me', employeeCode: 'E010', displayName: 'นายสมชาย ใจดี', employmentStatus: 'ACTIVE', organizationId: 'pha', organizationName: 'งานเภสัชกรรม', positionTitle: 'เภสัชกร', positionLevel: null, employmentTypeId: null, employmentTypeName: null, appointedOn: null, photoAttachmentId: null };
-const personal = { namePrefix: 'นาย', firstName: 'สมชาย', lastName: 'ใจดี', gender: 'MALE', birthDate: null, phone: null, address: null, emergencyContactName: null, emergencyContactRelationship: null, emergencyContactPhone: null, civilService: { positionNumber: null, salary: null, parentAgency: null, gpfStatus: null, firstAppointedOn: null, reappointedOn: null, transferredInOn: null, transferredOutOn: null, joinedUnitOn: null, currentLevelSince: null, qualification: null, qualificationMajor: null, specialAllowance: null, retirementDate: null }, education: [] };
+const personal = { namePrefix: 'นาย', firstName: 'สมชาย', lastName: 'ใจดี', gender: 'MALE', birthDate: null, phone: null, address: null, emergencyContactName: null, emergencyContactRelationship: null, emergencyContactPhone: null, civilService: { positionNumber: null, salary: null, parentAgency: null, gpfStatus: null, firstAppointedOn: null, reappointedOn: null, transferredInOn: null, transferredOutOn: null, joinedUnitOn: null, currentLevelSince: null, qualification: null, qualificationMajor: null, specialAllowance: null, retirementDate: null }, education: [], positionHistory: [] };
 
 afterEach(() => { vi.clearAllMocks(); vi.unstubAllGlobals(); });
 

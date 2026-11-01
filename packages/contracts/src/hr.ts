@@ -143,6 +143,16 @@ export type EducationEntry = z.infer<typeof educationEntrySchema>;
 export const updateEducationInputSchema = z.object({ entries: z.array(educationEntrySchema).max(20) }).strict();
 export type UpdateEducationInput = z.infer<typeof updateEducationInputSchema>;
 
+/** One row of ตำแหน่งและอัตราเงินเดือน: one order (คำสั่ง). Only HR edits these rows. */
+export const positionHistoryEntrySchema = z.object({
+  effectiveOn: calendarDateSchema, description: z.string().trim().min(1).max(500), positionNumber: optionalText(32), positionType: optionalText(120), level: optionalText(120),
+  salary: z.number().min(0).max(9_999_999).multipleOf(0.01).nullable().optional(), positionAllowance: z.number().min(0).max(9_999_999).multipleOf(0.01).nullable().optional(), reference: optionalText(255)
+}).strict();
+export type PositionHistoryEntry = z.infer<typeof positionHistoryEntrySchema>;
+/** The whole list; saving replaces it and rows are kept in date order. */
+export const updatePositionHistoryInputSchema = z.object({ entries: z.array(positionHistoryEntrySchema).max(200) }).strict();
+export type UpdatePositionHistoryInput = z.infer<typeof updatePositionHistoryInputSchema>;
+
 /** The ก.พ.7 file: a PDF printed from the ministry system, up to 10 MB. */
 export const MAX_KP7_FILE_BYTES = 10 * 1024 * 1024;
 

@@ -10,7 +10,7 @@ export const profileFieldLabelKeys: Record<string, MessageKey> = {
   spouseName: 'hrFieldSpouseName', spouseMaidenName: 'hrFieldSpouseMaidenName', childrenCount: 'hrFieldChildrenCount', kp7File: 'hrKp7File',
   positionNumber: 'hrFieldPositionNumber', salary: 'hrFieldSalary', parentAgency: 'hrFieldParentAgency', gpfStatus: 'hrFieldGpf', firstAppointedOn: 'hrFieldFirstAppointedOn', reappointedOn: 'hrFieldReappointedOn',
   transferredInOn: 'hrFieldTransferredInOn', transferredOutOn: 'hrFieldTransferredOutOn', joinedUnitOn: 'hrFieldJoinedUnitOn', currentLevelSince: 'hrFieldCurrentLevelSince', qualification: 'hrFieldQualification',
-  qualificationMajor: 'hrFieldQualificationMajor', specialAllowance: 'hrFieldSpecialAllowance', education: 'hrFieldEducation'
+  qualificationMajor: 'hrFieldQualificationMajor', specialAllowance: 'hrFieldSpecialAllowance', education: 'hrFieldEducation', positionHistory: 'hrFieldPositionHistory'
 };
 
 export const maritalStatusLabelKeys: Record<MaritalStatus, MessageKey> = { SINGLE: 'hrMaritalSingle', MARRIED: 'hrMaritalMarried', DIVORCED: 'hrMaritalDivorced', SEPARATED: 'hrMaritalSeparated', WIDOWED: 'hrMaritalWidowed' };
