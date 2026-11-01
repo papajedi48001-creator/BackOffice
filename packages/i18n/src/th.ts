@@ -69,7 +69,7 @@ export const th = {
   adminSearchPerson: 'ค้นหาบุคลากร (ชื่อหรือรหัส)', adminNoPeopleFound: 'ไม่พบบุคลากร', adminChoose: 'เลือก', adminChangePerson: 'เปลี่ยน', adminConfirmDeleteGrantMessage: 'ลบสิทธิผู้ดูแลระบบและผู้จัดการโมดูลทั้งหมดของบุคลากรนี้',
   adminRoleAdmin: 'ผู้ดูแลระบบ', adminRoleHrManager: 'ผู้จัดการงานบุคคล', adminRoleLeaveManager: 'ผู้จัดการการลา', adminRoleTravelManager: 'ผู้จัดการไปราชการ', adminRoleRoomManager: 'ผู้จัดการห้องประชุม', adminRoleInventoryOfficer: 'ผู้จัดการคลังพัสดุ', adminRoleFleetManager: 'ผู้จัดการยานพาหนะ',
   adminErrorLAST_ADMIN: 'ต้องมีผู้ดูแลระบบอย่างน้อย 1 คน ลบผู้ดูแลระบบคนสุดท้ายไม่ได้', adminErrorMODULE_LOCKED: 'ปิดโมดูลนี้ไม่ได้', adminErrorPERSON_NOT_ACTIVE: 'บุคลากรนี้ไม่ได้อยู่ในสถานะปฏิบัติงาน', adminErrorNOT_FOUND: 'ไม่พบรายการนี้', adminErrorFORBIDDEN: 'เฉพาะผู้ดูแลระบบเท่านั้น', adminErrorGENERIC: 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง',
-  adminAuditTitle: 'บันทึกของผู้ดูแล', adminAuditCopy: 'การเปิด/ปิดโมดูลและการให้/ถอนสิทธิทั้งหมด', adminAuditActor: 'ผู้ดำเนินการ', adminAuditTarget: 'รายการ', adminNoAudit: 'ยังไม่มีบันทึก',
+  adminAuditTitle: 'บันทึกของผู้ดูแล', adminAuditCopy: 'การเปิด/ปิดโมดูลและการให้/ถอนสิทธิทั้งหมด', adminAuditActor: 'ผู้ดำเนินการ', adminAuditTarget: 'รายการ', adminNoAudit: 'ยังไม่มีบันทึก', adminYou: '(คุณ)',
   auditAdminModuleEnabled: 'เปิดการใช้งานโมดูล', auditAdminModuleDisabled: 'ปิดการใช้งานโมดูล', auditAdminRoleGranted: 'ให้สิทธิ', auditAdminRoleRevoked: 'ถอนสิทธิ',
 } as const;
 
