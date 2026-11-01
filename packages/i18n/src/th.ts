@@ -62,6 +62,7 @@ export const th = {
   hrImportPositions: 'นำเข้าตำแหน่งจากไฟล์ CSV', hrCsvFile: 'ไฟล์ CSV', hrImportButton: 'นำเข้า', hrImportAdded: 'เพิ่ม', hrImportUpdated: 'ปรับปรุง', hrPositionUnit: 'ตำแหน่ง', hrImportLine: 'บรรทัด', hrImportNoFile: 'กรุณาเลือกไฟล์ CSV',
   hrPositionImportInvalidCsv: 'ไฟล์ CSV ไม่ถูกต้อง', hrPositionImportInvalidHeader: 'หัวตารางต้องเป็น name,category,levels,active', hrPositionImportNameRequired: 'ไม่มีชื่อตำแหน่ง', hrPositionImportUnknownCategory: 'ไม่รู้จักประเภทตำแหน่ง', hrPositionImportLevels: 'ระดับไม่ตรงกับประเภทตำแหน่ง', hrPositionImportActive: 'สถานะต้องเป็น 1 หรือ 0', hrPositionImportDuplicate: 'ชื่อตำแหน่งซ้ำในไฟล์',
   hrErrorUnknownPosition: 'ไม่พบตำแหน่งนี้ กรุณาเลือกจากรายการ', hrErrorInactivePosition: 'ตำแหน่งนี้ปิดใช้งานแล้ว', hrErrorLevelNotAllowed: 'ระดับนี้ใช้กับตำแหน่งนี้ไม่ได้ตามโครงสร้าง ก.พ.',
+  formEdit: 'แก้ไข', leaveEditHolidayName: 'แก้ไขชื่อ', leaveNotSet: 'ไม่กำหนด', hrPhotoChange: 'เปลี่ยนรูป', hrPhotoUpload: 'อัปโหลดรูป', hrEditUnitType: 'แก้ไขชนิดหน่วยงาน', hrEditUnit: 'แก้ไขหน่วยงาน',
 } as const;
 
 export type MessageKey = keyof typeof th;

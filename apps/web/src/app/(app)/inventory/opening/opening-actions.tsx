@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { ScanItem } from '@backoffice/core';
 import { t } from '@backoffice/i18n';
+import { ActionDialog } from '../../../../components/action-dialog';
 import { ReceiptLinesEditor, toLineInputs, type EditorLine } from '../receipt-lines-editor';
 import { useInventorySave } from '../use-inventory-save';
 
@@ -41,15 +42,18 @@ export function OpeningDecision() {
     if (!decision || !ready) return;
     if (await save('/api/inventory/opening/decision', 'POST', decision === 'RETURN' ? { decision, reason: reason.trim() } : { decision })) { setDecision(null); setReason(''); }
   }
+  const close = () => { setDecision(null); setReason(''); };
   return (
     <div className="inventory-form">
       <div className="form-actions">
-        <button type="button" aria-pressed={decision === 'CERTIFY'} onClick={() => setDecision('CERTIFY')}>{t('inventoryCertify')}</button>
-        <button type="button" aria-pressed={decision === 'RETURN'} onClick={() => setDecision('RETURN')}>{t('inventoryReturn')}</button>
+        <button type="button" onClick={() => setDecision('CERTIFY')}>{t('inventoryCertify')}</button>
+        <button type="button" onClick={() => setDecision('RETURN')}>{t('inventoryReturn')}</button>
       </div>
-      {decision === 'RETURN' ? <label>{t('inventoryReturnReason')}<textarea required maxLength={1000} value={reason} onChange={(event) => setReason(event.target.value)} /></label> : null}
-      {decision ? <div className="form-actions"><button type="button" disabled={pending || !ready} onClick={() => void confirm()}>{t('inventoryConfirm')}</button><button type="button" className="button-secondary" onClick={() => { setDecision(null); setReason(''); }}>{t('inventoryCancel')}</button></div> : null}
-      {error ? <p role="alert">{error}</p> : null}
+      {decision ? (
+        <ActionDialog title={decision === 'RETURN' ? t('inventoryReturn') : t('inventoryCertify')} confirmLabel={t('inventoryConfirm')} tone={decision === 'RETURN' ? 'danger' : 'primary'} ready={ready} isSubmitting={pending} error={error} onConfirm={() => void confirm()} onClose={close}>
+          {decision === 'RETURN' ? <div className="action-dialog-field"><label htmlFor="opening-return-reason">{t('inventoryReturnReason')}</label><textarea id="opening-return-reason" rows={4} required maxLength={1000} value={reason} onChange={(event) => setReason(event.target.value)} /></div> : null}
+        </ActionDialog>
+      ) : null}
     </div>
   );
 }

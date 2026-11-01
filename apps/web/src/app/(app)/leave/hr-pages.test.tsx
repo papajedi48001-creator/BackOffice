@@ -69,22 +69,24 @@ describe('HR leave pages', () => {
       ['ข้าราชการ', '/leave/settings?tab=et-1'], ['พนักงานราชการ', '/leave/settings?tab=et-2'], ['ประเภทการลาและวันทำการ', '/leave/settings?tab=types']
     ]);
     expect(within(tabs).getByRole('link', { name: 'ข้าราชการ' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('form', { name: 'สิทธิ์การลา ข้าราชการ ลาพักผ่อน' })).toBeInTheDocument();
-    expect(screen.queryByRole('form', { name: 'สิทธิ์การลา พนักงานราชการ ลาพักผ่อน' })).toBeNull();
-    expect(screen.queryByRole('form', { name: 'แก้ไขประเภทการลา ลาพักผ่อน' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'สิทธิ์การลา ข้าราชการ ลาพักผ่อน' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'สิทธิ์การลา พนักงานราชการ ลาพักผ่อน' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'แก้ไขประเภทการลา ลาพักผ่อน' })).toBeNull();
   });
 
   it('opens another ประเภทการจ้าง, or the leave types tab, from the query', async () => {
     as(manager);
     const { unmount } = render(await LeaveSettingsPage(query({ tab: 'et-2' })));
     expect(screen.getByRole('link', { name: 'พนักงานราชการ' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('form', { name: 'สิทธิ์การลา พนักงานราชการ ลาพักผ่อน' })).toBeInTheDocument();
-    expect(screen.queryByRole('form', { name: 'สิทธิ์การลา ข้าราชการ ลาพักผ่อน' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'สิทธิ์การลา พนักงานราชการ ลาพักผ่อน' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'สิทธิ์การลา ข้าราชการ ลาพักผ่อน' })).toBeNull();
     unmount();
     render(await LeaveSettingsPage(query({ tab: 'types', type: 'lt-3' })));
-    expect(screen.getByRole('form', { name: 'แก้ไขประเภทการลา ลาพักผ่อน' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'แก้ไขประเภทการลา ลาพักผ่อน' })).toBeInTheDocument();
+    expect(screen.getByText('15', { selector: 'strong' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'วันทำการขั้นต่ำต่อเดือน' }));
     expect(screen.getByRole('spinbutton', { name: 'วันทำการขั้นต่ำต่อเดือน' })).toHaveValue(15);
-    expect(screen.queryByRole('form', { name: 'สิทธิ์การลา ข้าราชการ ลาพักผ่อน' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'สิทธิ์การลา ข้าราชการ ลาพักผ่อน' })).toBeNull();
   });
 
   it('shows one ประเภทการลา at a time from its own tabs, with a tab to add one', async () => {
@@ -96,13 +98,13 @@ describe('HR leave pages', () => {
       ['ลาป่วย', '/leave/settings?tab=types&type=lt-1'], ['ลาพักผ่อน', '/leave/settings?tab=types&type=lt-3'], ['เพิ่มประเภทการลา', '/leave/settings?tab=types&type=new']
     ]);
     expect(within(typeTabs).getByRole('link', { name: 'ลาป่วย' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('form', { name: 'แก้ไขประเภทการลา ลาป่วย' })).toBeInTheDocument();
-    expect(screen.queryByRole('form', { name: 'แก้ไขประเภทการลา ลาพักผ่อน' })).toBeNull();
-    expect(screen.queryByRole('form', { name: 'เพิ่มประเภทการลา' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'แก้ไขประเภทการลา ลาป่วย' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'แก้ไขประเภทการลา ลาพักผ่อน' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'เพิ่มประเภทการลา' })).toBeNull();
     unmount();
     render(await LeaveSettingsPage(query({ tab: 'types', type: 'new' })));
-    expect(screen.getByRole('form', { name: 'เพิ่มประเภทการลา' })).toBeInTheDocument();
-    expect(screen.queryByRole('form', { name: 'แก้ไขประเภทการลา ลาป่วย' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'เพิ่มประเภทการลา' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'แก้ไขประเภทการลา ลาป่วย' })).toBeNull();
   });
 
   it('sets which gender a leave type is for', async () => {
@@ -111,6 +113,7 @@ describe('HR leave pages', () => {
     vi.stubGlobal('fetch', fetchMock);
     mocks.listTypes.mockResolvedValue([{ ...vacation, id: 'lt-4', code: 'MATERNITY', name: 'ลาคลอดบุตร', eligibleGender: 'FEMALE' }]);
     render(await LeaveSettingsPage(query({ tab: 'types' })));
+    fireEvent.click(screen.getByRole('button', { name: 'แก้ไขประเภทการลา ลาคลอดบุตร' }));
     const form = screen.getByRole('form', { name: 'แก้ไขประเภทการลา ลาคลอดบุตร' });
     const gender = within(form).getByLabelText('เฉพาะเพศ');
     expect(gender).toHaveValue('FEMALE');
@@ -133,11 +136,13 @@ describe('HR leave pages', () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
     render(await LeaveSettingsPage(query()));
+    fireEvent.click(screen.getByRole('button', { name: 'สิทธิ์การลา ข้าราชการ ลาพักผ่อน' }));
     const entitlement = screen.getByRole('form', { name: 'สิทธิ์การลา ข้าราชการ ลาพักผ่อน' });
     expect(within(entitlement).getByLabelText('วันต่อปี')).toHaveValue(10);
     fireEvent.change(within(entitlement).getByLabelText('วันต่อปี'), { target: { value: '12' } });
     fireEvent.click(within(entitlement).getByRole('button', { name: 'บันทึกสิทธิ์' }));
     await waitFor(() => expect(mocks.refresh).toHaveBeenCalled());
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     const [url, init] = fetchMock.mock.calls[0]! as unknown as [string, RequestInit];
     expect(url).toBe('/api/leave/entitlements');
     expect(JSON.parse(init.body as string)).toEqual({ employmentTypeId: 'et-1', leaveTypeId: 'lt-3', daysPerYear: 12, firstYearDays: null, maxAccumulatedDays: 20, maxAccumulatedDaysAfter10Years: 30, minServiceMonths: 6 });
@@ -149,7 +154,8 @@ describe('HR leave pages', () => {
     vi.stubGlobal('fetch', fetchMock);
     render(await LeaveHolidaysPage(query({ year: '2026' })));
     expect(mocks.listHolidays).toHaveBeenCalledWith(2026);
-    expect(screen.getByDisplayValue('วันพ่อแห่งชาติ')).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'วันพ่อแห่งชาติ' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'เพิ่มวันหยุด' }));
     const add = screen.getByRole('form', { name: 'เพิ่มวันหยุด' });
     fireEvent.change(within(add).getByLabelText('วันที่'), { target: { value: '2026-12-05' } });
     fireEvent.change(within(add).getByLabelText('ชื่อวันหยุด'), { target: { value: 'ซ้ำ' } });
@@ -164,6 +170,7 @@ describe('HR leave pages', () => {
     render(await LeaveBalancesPage());
     expect(screen.getByRole('form', { name: 'ดาวน์โหลดไฟล์ยอดวันลา' })).toHaveAttribute('action', '/api/leave/balances/export');
     expect(screen.getByRole('form', { name: 'ดาวน์โหลดไฟล์ยอดวันลา' })).toHaveAttribute('method', 'post');
+    fireEvent.click(screen.getByRole('button', { name: 'นำเข้าไฟล์ยอดวันลา' }));
     const upload = screen.getByRole('form', { name: 'นำเข้าไฟล์ยอดวันลา' });
     const fileInput = within(upload).getByLabelText('ไฟล์ CSV');
     Object.defineProperty(fileInput, 'files', { value: [new File(['employee_code'], 'b.csv', { type: 'text/csv' })] });
@@ -172,5 +179,33 @@ describe('HR leave pages', () => {
     fireEvent.submit(upload);
     expect(await within(upload).findByText(/แถว 3 · leave_type: ไม่พบประเภทการลานี้/)).toBeInTheDocument();
     expect((fetchMock.mock.calls[0]! as unknown as [string])[0]).toBe('/api/leave/balances');
+  });
+
+  it('renames a holiday in a popup and confirms a delete in ActionDialog', async () => {
+    as(manager);
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(await LeaveHolidaysPage(query({ year: '2026' })));
+    fireEvent.click(screen.getByRole('button', { name: 'ลบ 5 ธ.ค. 2569' }));
+    expect(fetchMock).not.toHaveBeenCalled();
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'ลบ' }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/leave/holidays/2026-12-05', expect.objectContaining({ method: 'DELETE' })));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    fireEvent.click(screen.getByRole('button', { name: 'แก้ไขชื่อ 5 ธ.ค. 2569' }));
+    fireEvent.change(screen.getByLabelText('ชื่อวันหยุด'), { target: { value: 'วันชาติ' } });
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'บันทึกชื่อ' }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(JSON.parse((fetchMock.mock.calls[1]! as unknown as [string, RequestInit])[1].body as string)).toEqual({ name: 'วันชาติ' });
+  });
+
+  it('confirms before removing an entitlement', async () => {
+    as(manager);
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(await LeaveSettingsPage(query()));
+    fireEvent.click(screen.getByRole('button', { name: 'ลบสิทธิ์ ข้าราชการ ลาพักผ่อน' }));
+    expect(fetchMock).not.toHaveBeenCalled();
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'ลบสิทธิ์' }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/leave/entitlements', expect.objectContaining({ method: 'DELETE' })));
   });
 });

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { t } from '@backoffice/i18n';
 import { ActionDialog } from '../../../../components/action-dialog';
+import { FormDialog } from '../../../../components/form-dialog';
 import { travelErrorMessage } from '../../../../lib/travel-labels';
 
 type Decision = 'APPROVE' | 'RETURN' | 'REJECT';
@@ -75,19 +76,17 @@ export function TravelReportForm({ travelId, initial }: { travelId: string; init
     setBusy(true); setError(null);
     try {
       const response = await fetch(`/api/travel/${encodeURIComponent(travelId)}/report`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ summary: draft.summary.trim(), application: draft.application.trim() }) });
-      if (response.ok) { router.refresh(); return; }
+      if (response.ok) { router.refresh(); return true; }
       setError(travelErrorMessage(((await response.json()) as { error?: string }).error));
     } catch { setError(travelErrorMessage(null)); } finally { setBusy(false); }
+    return false;
   }
 
-  return <form aria-label={t('travelReport')} className="reason-form" onSubmit={submit}>
-    <h3>{t('travelReport')}</h3>
+  return <div className="request-actions"><FormDialog title={t('travelReport')} triggerLabel={t('travelReport')} submitLabel={t('travelReportSave')} wide isSubmitting={busy} error={error} onOpenChange={(open) => { if (open) setError(null); }} onSubmit={submit}>
     <p className="permission-notice">{t('travelReportHelp')}</p>
     <label htmlFor="report-summary">{t('travelReportSummary')}</label>
     <textarea id="report-summary" value={draft.summary} maxLength={5000} rows={4} required onChange={(event) => setDraft({ ...draft, summary: event.target.value })} />
     <label htmlFor="report-application">{t('travelReportApplication')}</label>
     <textarea id="report-application" value={draft.application} maxLength={5000} rows={3} required onChange={(event) => setDraft({ ...draft, application: event.target.value })} />
-    <div className="form-actions"><button type="submit" disabled={busy}>{t('travelReportSave')}</button></div>
-    {error && <p role="alert" className="form-error">{error}</p>}
-  </form>;
+  </FormDialog></div>;
 }

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { positionCategoryLevels, positionCategorySchema, type PositionCategory, type PositionInput } from '@backoffice/contracts';
 import { t, type MessageKey } from '@backoffice/i18n';
 import { ActionDialog } from '../../../../components/action-dialog';
+import { FormDialog } from '../../../../components/form-dialog';
 import { categoryLabelKeys } from '../../../../lib/position-labels';
 
 const errorKeys: Record<string, MessageKey> = { DUPLICATE_NAME: 'hrPositionDuplicate', NOT_FOUND: 'hrPositionNotFound', POSITION_IN_USE: 'hrPositionInUse', invalid_input: 'hrPositionLevelsInvalid' };
@@ -29,6 +30,8 @@ export function PositionForm({ position }: { position: PositionInput & { id?: st
   const [form, setForm] = useState({ name: position.name, category: position.category, levels: [...position.allowedLevels], isActive: position.isActive, sortOrder: String(position.sortOrder) });
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState(false);
   const title = adding ? t('hrAddPosition') : `${t('hrEditPosition')} ${position.name}`;
   const held = (position.holders ?? 0) > 0;
 
@@ -44,20 +47,24 @@ export function PositionForm({ position }: { position: PositionInput & { id?: st
     // Levels go in the category's order, whatever order they were ticked in.
     const allowedLevels = positionCategoryLevels[form.category].filter((level) => form.levels.includes(level));
     const failure = await send(adding ? '/api/hr/positions' : `/api/hr/positions/${position.id}`, adding ? 'POST' : 'PUT', { name: form.name.trim(), category: form.category, allowedLevels, isActive: form.isActive, sortOrder: Number(form.sortOrder) });
-    if (failure) { setError(failure); return; }
+    if (failure) { setError(failure); return false; }
     if (adding) setForm({ ...form, name: '', sortOrder: String(Math.min(9999, Number(form.sortOrder) + 10)) });
     router.refresh();
+    return true;
   }
   async function remove() {
+    setBusy(true);
     const failure = await send(`/api/hr/positions/${position.id}`, 'DELETE');
-    setConfirming(false);
+    setBusy(false);
     if (failure) { setError(failure); return; }
+    setConfirming(false);
     router.refresh();
   }
 
-  return <><form aria-label={title} className="profile-form" onSubmit={submit}>
-    <h4>{title}</h4>
-    {error && <p role="alert" className="form-error">{error}</p>}
+  return <div className="row-actions">
+    {error && !editing && !confirming && <p role="alert" className="form-error">{error}</p>}
+    <FormDialog title={title} triggerLabel={adding ? t('hrAddPosition') : t('hrEdit')} triggerAriaLabel={adding ? undefined : title} triggerClassName={adding ? undefined : 'button-secondary'} submitLabel={adding ? t('hrAddPosition') : t('hrSavePosition')}
+      open={editing} onOpenChange={(next) => { setError(null); setEditing(next); }} error={error} onSubmit={submit}>
     <label>{t('hrPositionName')}<input value={form.name} maxLength={255} required onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
     <label>{t('hrPositionCategory')}
       <select value={form.category} onChange={(event) => changeCategory(event.target.value as PositionCategory)}>
@@ -69,14 +76,13 @@ export function PositionForm({ position }: { position: PositionInput & { id?: st
     </fieldset>}
     <label>{t('hrPositionOrder')}<input type="number" min={0} max={9999} value={form.sortOrder} onChange={(event) => setForm({ ...form, sortOrder: event.target.value })} /></label>
     <label className="profile-check"><input type="checkbox" checked={form.isActive} onChange={(event) => setForm({ ...form, isActive: event.target.checked })} />{t('hrPositionActive')}</label>
-    <button type="submit">{adding ? t('hrAddPosition') : t('hrSavePosition')}</button>
+    </FormDialog>
     {!adding && <>
-      <button type="button" className="danger" disabled={held} onClick={() => setConfirming(true)}>{t('hrDeletePosition')}</button>
-      {held && <p>{t('hrPositionHeldHint')}</p>}
+      <button type="button" className="button-danger" aria-label={`${t('hrDeletePosition')} ${position.name}`} disabled={held} onClick={() => { setError(null); setConfirming(true); }}>{t('hrDeletePosition')}</button>
+      {held && <p className="form-hint">{t('hrPositionHeldHint')}</p>}
     </>}
-  </form>
-  {confirming && <ActionDialog title={`${t('hrDeletePosition')} ${position.name}`} confirmLabel={t('hrConfirmDelete')} tone="danger" onConfirm={() => void remove()} onClose={() => setConfirming(false)} />}
-  </>;
+    {confirming && <ActionDialog title={`${t('hrDeletePosition')} ${position.name}`} confirmLabel={t('hrConfirmDelete')} tone="danger" isSubmitting={busy} error={error} onConfirm={() => void remove()} onClose={() => setConfirming(false)} />}
+  </div>;
 }
 
 function readText(file: File): Promise<string> {
@@ -94,27 +100,30 @@ export function PositionImportForm() {
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<{ kind: 'done' | 'error'; text: string } | null>(null);
 
-  async function submit(event: React.FormEvent) {
+  async function submit(event: React.FormEvent): Promise<boolean> {
     event.preventDefault();
-    if (!file) { setResult({ kind: 'error', text: t('hrImportNoFile') }); return; }
+    if (!file) { setResult({ kind: 'error', text: t('hrImportNoFile') }); return false; }
     setResult(null);
     try {
       const response = await fetch('/api/hr/positions/import', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ csv: await readText(file) }) });
       const body = await response.json() as { created?: number; updated?: number; errors?: { line: number; code: string }[] };
       if (response.ok) {
         setResult({ kind: 'done', text: `${t('hrImportAdded')} ${body.created} ${t('hrPositionUnit')} ${t('hrImportUpdated')} ${body.updated} ${t('hrPositionUnit')}` });
+        setFile(null);
         router.refresh();
-        return;
+        return true;
       }
       const lines = (body.errors ?? []).map((error) => `${t('hrImportLine')} ${error.line}: ${t(importErrorKeys[error.code] ?? 'hrPositionActionFailed')}`);
       setResult({ kind: 'error', text: lines.length > 0 ? lines.join(' · ') : t('hrPositionActionFailed') });
     } catch { setResult({ kind: 'error', text: t('hrPositionActionFailed') }); }
+    return false;
   }
 
-  return <form aria-label={t('hrImportPositions')} className="profile-form" onSubmit={submit}>
-    <h4>{t('hrImportPositions')}</h4>
-    {result && (result.kind === 'error' ? <p role="alert" className="form-error">{result.text}</p> : <p role="status">{result.text}</p>)}
-    <label>{t('hrCsvFile')}<input type="file" accept=".csv,text/csv" onChange={(event) => setFile(event.target.files?.[0] ?? null)} /></label>
-    <button type="submit">{t('hrImportButton')}</button>
-  </form>;
+  return <div className="row-actions">
+    {result?.kind === 'done' && <p role="status">{result.text}</p>}
+    <FormDialog title={t('hrImportPositions')} triggerLabel={t('hrImportPositions')} triggerClassName="button-secondary" submitLabel={t('hrImportButton')} error={result?.kind === 'error' ? result.text : null}
+      onOpenChange={(open) => { if (open) { setResult(null); setFile(null); } }} onSubmit={submit}>
+      <label>{t('hrCsvFile')}<input type="file" accept=".csv,text/csv" onChange={(event) => setFile(event.target.files?.[0] ?? null)} /></label>
+    </FormDialog>
+  </div>;
 }
