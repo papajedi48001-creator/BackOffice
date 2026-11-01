@@ -3,13 +3,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   readSession: vi.fn(), getSharedDatabase: vi.fn(),
-  setModuleEnabled: vi.fn(), grantRole: vi.fn(), revokeRole: vi.fn(), setPersonRoles: vi.fn(), people: vi.fn()
+  setModuleMode: vi.fn(), grantRole: vi.fn(), revokeRole: vi.fn(), setPersonRoles: vi.fn(), people: vi.fn()
 }));
 vi.mock('../../../lib/session', () => ({ readSession: mocks.readSession }));
 vi.mock('../../../lib/database', () => ({ getSharedDatabase: mocks.getSharedDatabase }));
 vi.mock('@backoffice/core', async (importOriginal) => ({
   ...await importOriginal<typeof import('@backoffice/core')>(),
-  AdminService: class { setModuleEnabled = mocks.setModuleEnabled; grantRole = mocks.grantRole; revokeRole = mocks.revokeRole; setPersonRoles = mocks.setPersonRoles; },
+  AdminService: class { setModuleMode = mocks.setModuleMode; grantRole = mocks.grantRole; revokeRole = mocks.revokeRole; setPersonRoles = mocks.setPersonRoles; },
   AdminQueries: class { people = mocks.people; }
 }));
 
@@ -30,14 +30,14 @@ afterEach(() => vi.resetAllMocks());
 describe('admin API access', () => {
   it('refuses anyone signed out with 401 and anyone who is not ผู้ดูแลระบบ with 403, before touching data', async () => {
     mocks.readSession.mockResolvedValue(null);
-    expect((await TOGGLE(json('PUT', { enabled: false }), params({ code: 'fleet' }))).status).toBe(401);
+    expect((await TOGGLE(json('PUT', { mode: 'OFF' }), params({ code: 'fleet' }))).status).toBe(401);
     ready(hrManager);
-    expect((await TOGGLE(json('PUT', { enabled: false }), params({ code: 'fleet' }))).status).toBe(403);
+    expect((await TOGGLE(json('PUT', { mode: 'OFF' }), params({ code: 'fleet' }))).status).toBe(403);
     expect((await GRANT(json('POST', { roleName: 'admin' }), params({ personId: 'person-hr' }))).status).toBe(403);
     expect((await SET_ROLES(json('PUT', { roleNames: ['admin'] }), params({ personId }))).status).toBe(403);
     expect((await REVOKE(json('DELETE'), params({ personId, roleName: 'admin' }))).status).toBe(403);
     expect((await PEOPLE(new Request('http://localhost/api/admin/people?q=a'))).status).toBe(403);
-    expect(mocks.setModuleEnabled).not.toHaveBeenCalled();
+    expect(mocks.setModuleMode).not.toHaveBeenCalled();
     expect(mocks.grantRole).not.toHaveBeenCalled();
   });
 });
@@ -45,12 +45,16 @@ describe('admin API access', () => {
 describe('ตั้งค่าโปรแกรม', () => {
   it('switches a live module and refuses an unknown or locked one', async () => {
     ready();
-    mocks.setModuleEnabled.mockResolvedValue({ ok: true });
-    expect((await TOGGLE(json('PUT', { enabled: false }), params({ code: 'fleet' }))).status).toBe(200);
-    expect(mocks.setModuleEnabled).toHaveBeenCalledWith('person-admin', 'fleet', false);
-    expect((await TOGGLE(json('PUT', { enabled: false }), params({ code: 'maintenance' }))).status).toBe(404);
-    mocks.setModuleEnabled.mockResolvedValue({ ok: false, code: 'MODULE_LOCKED' });
-    const locked = await TOGGLE(json('PUT', { enabled: false }), params({ code: 'admin' }));
+    mocks.setModuleMode.mockResolvedValue({ ok: true, changed: true });
+    expect((await TOGGLE(json('PUT', { mode: 'OFF' }), params({ code: 'fleet' }))).status).toBe(200);
+    expect((await TOGGLE(json('PUT', { mode: 'DEVELOPMENT' }), params({ code: 'leave' }))).status).toBe(200);
+    expect(mocks.setModuleMode).toHaveBeenCalledWith('person-admin', 'leave', 'DEVELOPMENT');
+    expect((await TOGGLE(json('PUT', { mode: 'TESTING' }), params({ code: 'fleet' }))).status).toBe(400);
+    expect((await TOGGLE(json('PUT', { enabled: false }), params({ code: 'fleet' }))).status).toBe(400);
+    expect(mocks.setModuleMode).toHaveBeenCalledWith('person-admin', 'fleet', 'OFF');
+    expect((await TOGGLE(json('PUT', { mode: 'OFF' }), params({ code: 'maintenance' }))).status).toBe(404);
+    mocks.setModuleMode.mockResolvedValue({ ok: false, code: 'MODULE_LOCKED' });
+    const locked = await TOGGLE(json('PUT', { mode: 'OFF' }), params({ code: 'admin' }));
     expect(locked.status).toBe(409);
     await expect(locked.json()).resolves.toEqual({ error: 'MODULE_LOCKED' });
   });

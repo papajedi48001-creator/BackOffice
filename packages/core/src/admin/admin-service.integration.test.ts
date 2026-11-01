@@ -70,14 +70,29 @@ describeWithDatabase('AdminService against MariaDB', () => {
     }
   });
 
-  it('switches a module off and on with an audit each time, and never the admin module', async () => {
-    await expect(service.setModuleEnabled(actor, 'fleet', false)).resolves.toEqual({ ok: true });
-    expect(await queries.disabledModules()).toContain('fleet');
-    await expect(service.setModuleEnabled(actor, 'fleet', true)).resolves.toEqual({ ok: true });
+  it('sets a module\'s mode with the from/to mode audited in the same change, and never the admin module', async () => {
+    await database.execute("DELETE FROM admin_module_setting WHERE module_code = 'fleet'");
+    await expect(service.setModuleMode(actor, 'fleet', 'DEVELOPMENT')).resolves.toEqual({ ok: true, changed: true });
+    expect((await queries.moduleModes()).fleet).toBe('DEVELOPMENT');
     expect(await queries.disabledModules()).not.toContain('fleet');
-    expect(await auditsFor('admin.module.disabled', 'fleet')).not.toHaveLength(0);
-    expect(JSON.parse((await auditsFor('admin.module.enabled', 'fleet')).at(-1)!.metadata)).toEqual({ moduleCode: 'fleet' });
-    await expect(service.setModuleEnabled(actor, 'admin', false)).resolves.toEqual({ ok: false, code: 'MODULE_LOCKED' });
+    await expect(service.setModuleMode(actor, 'fleet', 'OFF')).resolves.toEqual({ ok: true, changed: true });
+    expect(await queries.disabledModules()).toContain('fleet');
+    const [row] = await database.query<{ enabled: number }>("SELECT enabled FROM admin_module_setting WHERE module_code = 'fleet'");
+    expect(Number(row!.enabled)).toBe(0);
+    await expect(service.setModuleMode(actor, 'fleet', 'OFF')).resolves.toEqual({ ok: true, changed: false });
+    await expect(service.setModuleMode(actor, 'fleet', 'ON')).resolves.toEqual({ ok: true, changed: true });
+    expect((await queries.moduleModes()).fleet ?? 'ON').toBe('ON');
+    const audits = (await auditsFor('admin.module.mode_changed', 'fleet')).map((audit) => JSON.parse(audit.metadata) as unknown);
+    // created_at has second precision, so the three rows can tie; compare without order.
+    expect(audits).toEqual(expect.arrayContaining([{ moduleCode: 'fleet', fromMode: 'ON', toMode: 'DEVELOPMENT' }, { moduleCode: 'fleet', fromMode: 'DEVELOPMENT', toMode: 'OFF' }, { moduleCode: 'fleet', fromMode: 'OFF', toMode: 'ON' }]));
+    await expect(service.setModuleMode(actor, 'admin', 'DEVELOPMENT')).resolves.toEqual({ ok: false, code: 'MODULE_LOCKED' });
+  });
+
+  it('grants a tester role alongside a manager role to the same person', async () => {
+    await expect(service.setPersonRoles(actor, retired, [])).resolves.toMatchObject({ ok: true });
+    await expect(service.grantRole(actor, person, 'fleet-tester')).resolves.toEqual({ ok: true, changed: true });
+    expect(await rolesOf(person)).toContain('fleet-tester');
+    expect((await queries.grants()).find((grant) => grant.personId === person)!.roleNames).toContain('fleet-tester');
   });
 
   it('finds active people by name or employee code for the picker', async () => {

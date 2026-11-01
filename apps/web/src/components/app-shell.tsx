@@ -4,7 +4,8 @@ import { ShellFrame } from './shell-frame';
 import { SidebarNav } from './sidebar-nav';
 import { SignOutButton } from './sign-out-button';
 
-export interface NavigationItem { href: string; label: MessageKey; badge?: number; module?: string; }
+/** `development`: the module is in DEVELOPMENT mode (ตั้งค่าโปรแกรม), shown with a กำลังพัฒนา marker. */
+export interface NavigationItem { href: string; label: MessageKey; badge?: number; module?: string; development?: boolean; }
 const noProfile: ShellProfile = { displayName: null, positionTitle: null, photoUrl: null };
 export function AppShell({ navigation, profile = noProfile, bell = { unread: 0, items: [] }, children }: { navigation: NavigationItem[]; profile?: ShellProfile; bell?: { unread: number; items: BellItem[] }; children: React.ReactNode }) {
   return <ShellFrame navigation={navigation}>

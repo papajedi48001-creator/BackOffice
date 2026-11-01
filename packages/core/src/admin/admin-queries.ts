@@ -1,4 +1,4 @@
-import { grantableRoleSchema, type GrantableRole } from '@backoffice/contracts';
+import { grantableRoleSchema, moduleModeSchema, type GrantableRole, type ModuleMode } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 
 export interface AdminGrantRow {
@@ -14,7 +14,7 @@ export interface AdminGrantRow {
 
 export interface AdminPersonOption { personId: string; displayName: string | null; employeeCode: string | null; organizationName: string | null }
 
-export interface AdminAuditRow { id: string; createdAt: string; action: string; actorName: string | null; targetType: string; targetId: string; targetName: string | null; roleName: string | null; moduleCode: string | null }
+export interface AdminAuditRow { id: string; createdAt: string; action: string; actorName: string | null; targetType: string; targetId: string; targetName: string | null; roleName: string | null; moduleCode: string | null; fromMode: string | null; toMode: string | null }
 
 const grantable = grantableRoleSchema.options;
 const placeholders = grantable.map(() => '?').join(', ');
@@ -24,7 +24,13 @@ export class AdminQueries {
   constructor(private readonly database: Pick<Database, 'query'>) {}
 
   async disabledModules(): Promise<string[]> {
-    return (await this.database.query<{ code: string }>('SELECT module_code AS code FROM admin_module_setting WHERE enabled = 0 ORDER BY module_code')).map((row) => row.code);
+    return Object.entries(await this.moduleModes()).filter(([, mode]) => mode === 'OFF').map(([code]) => code);
+  }
+
+  /** Every module whose mode was set; a module missing here is ON. An unknown stored value counts as OFF, the safe side. */
+  async moduleModes(): Promise<Record<string, ModuleMode>> {
+    const rows = await this.database.query<{ code: string; mode: string }>('SELECT module_code AS code, mode FROM admin_module_setting ORDER BY module_code');
+    return Object.fromEntries(rows.map((row) => [row.code, moduleModeSchema.safeParse(row.mode).data ?? 'OFF']));
   }
 
   /** Every hospital-wide admin and manager grant, one row per person, sorted by name. */
@@ -59,9 +65,9 @@ export class AdminQueries {
     const rows = await this.database.query<{ id: string; createdAt: Date | string; action: string; actorName: string | null; targetType: string; targetId: string; targetName: string | null; metadata: string }>(
       "SELECT e.id, e.created_at AS createdAt, e.action, actor.display_name AS actorName, e.target_type AS targetType, e.target_id AS targetId, target.display_name AS targetName, e.metadata FROM audit_event e LEFT JOIN person actor ON actor.id = e.actor_person_id LEFT JOIN person target ON e.target_type = 'person' AND target.id = e.target_id WHERE e.action LIKE 'admin.%' ORDER BY e.created_at DESC, e.id DESC LIMIT ?", [limit]);
     return rows.map(({ metadata, createdAt, ...row }) => {
-      let parsed: { roleName?: unknown; moduleCode?: unknown } = {};
+      let parsed: { roleName?: unknown; moduleCode?: unknown; fromMode?: unknown; toMode?: unknown } = {};
       try { parsed = JSON.parse(metadata) as typeof parsed; } catch { parsed = {}; }
-      return { ...row, createdAt: createdAt instanceof Date ? createdAt.toISOString() : String(createdAt), roleName: typeof parsed.roleName === 'string' ? parsed.roleName : null, moduleCode: typeof parsed.moduleCode === 'string' ? parsed.moduleCode : null };
+      return { ...row, createdAt: createdAt instanceof Date ? createdAt.toISOString() : String(createdAt), roleName: typeof parsed.roleName === 'string' ? parsed.roleName : null, moduleCode: typeof parsed.moduleCode === 'string' ? parsed.moduleCode : null, fromMode: typeof parsed.fromMode === 'string' ? parsed.fromMode : null, toMode: typeof parsed.toMode === 'string' ? parsed.toMode : null };
     });
   }
 }

@@ -541,3 +541,23 @@ video.inventory-camera { display: block; flex-basis: 100%; width: 100%; max-widt
 .admin-role-options { display: grid; gap: 8px; margin: 0; padding: 12px; border: 1px solid var(--line); border-radius: 8px; }
 .admin-role-options label { display: flex; align-items: center; gap: 8px; }
 .admin-picked small { color: var(--muted); }
+
+/* โหมดพัฒนา (ตั้งค่าโปรแกรม): amber dashed border, diagonal stripes and a text ribbon, so the state never relies on colour alone. */
+:root { --dev-amber: #b45309; --dev-amber-soft: #fef3c7; --dev-amber-ink: #78350f; }
+.module-tile.is-development { border: 2px dashed var(--dev-amber); border-top: 2px dashed var(--dev-amber); background: repeating-linear-gradient(135deg, var(--surface) 0 14px, var(--dev-amber-soft) 14px 22px); }
+.module-tile.is-development .module-go, .module-tile.is-development .module-badge { top: 44px; }
+.dev-ribbon { position: absolute; top: 12px; right: 12px; display: inline-flex; align-items: center; gap: 4px; border-radius: 6px; background: var(--dev-amber); color: #fff; font-size: .8rem; font-weight: 700; padding: 2px 8px; white-space: nowrap; }
+.dev-ribbon::before { content: "⚠"; }
+.app-sidebar a.is-development, nav a.is-development { outline: 1px dashed var(--dev-amber); outline-offset: -3px; }
+.nav-dev-tag { display: inline-block; margin-left: 6px; border: 1px solid var(--dev-amber); border-radius: 6px; background: var(--dev-amber-soft); color: var(--dev-amber-ink); font-size: .75rem; font-weight: 700; padding: 0 6px; }
+.mode-switch { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.mode-switch button { border: 0; border-radius: 0; background: var(--surface); color: var(--ink); padding: 6px 12px; min-height: 36px; }
+.mode-switch button + button { border-left: 1px solid var(--line); }
+.mode-switch button[aria-pressed="true"] { background: var(--brand-deep); color: #fff; font-weight: 700; }
+.mode-switch button[aria-pressed="true"][data-mode="DEVELOPMENT"] { background: var(--dev-amber); }
+.mode-switch button[aria-pressed="true"][data-mode="OFF"] { background: #6b7280; }
+.mode-switch button:disabled { cursor: default; }
+.admin-role-chips li.is-tester { border-style: dashed; border-color: var(--dev-amber); background: var(--dev-amber-soft); color: var(--dev-amber-ink); }
+.admin-subheading { margin: 12px 0 6px; font-size: .95rem; }
+.admin-role-options.is-testers { margin-top: 12px; }
+.launcher-grid { margin-top: 24px; }

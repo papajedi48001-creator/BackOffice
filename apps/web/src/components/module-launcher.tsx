@@ -1,12 +1,13 @@
 import Link from 'next/link';
-import { t, type MessageKey } from '@backoffice/i18n';
+import type { ModuleMode } from '@backoffice/contracts';
+import { t } from '@backoffice/i18n';
 import type { DashboardSummary } from '@backoffice/core';
-import type { ModuleEntry, ModuleGroup } from '../lib/modules';
+import { moduleRegistry, type ModuleEntry } from '../lib/modules';
 import { ModuleIcon } from './module-icon';
 
 export interface LauncherSummary extends Pick<DashboardSummary, 'displayName' | 'greetingName' | 'organizationName'> { pendingApprovals: number | null; unreadNotifications: number | null; }
 
-const groups: Array<[ModuleGroup, MessageKey]> = [['mine', 'launcherGroupMine'], ['people', 'launcherGroupPeople'], ['services', 'launcherGroupServices'], ['governance', 'launcherGroupGovernance']];
+const registryOrder = (entry: ModuleEntry) => moduleRegistry.findIndex((candidate) => candidate.code === entry.code);
 const thaiDate = new Intl.DateTimeFormat('th-TH-u-ca-buddhist', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Bangkok' });
 
 function Badge({ count }: { count: number | null | undefined }) {
@@ -14,20 +15,19 @@ function Badge({ count }: { count: number | null | undefined }) {
   return <span className="module-badge" aria-label={`${count} ${t('launcherBadgeSuffix')}`}>{count}</span>;
 }
 
-function Tile({ entry, count }: { entry: ModuleEntry; count: number | null | undefined }) {
+function Tile({ entry, count, development }: { entry: ModuleEntry; count: number | null | undefined; development: boolean }) {
   const body = <><span className="module-icon" data-group={entry.status === 'planned' ? 'planned' : entry.group}><ModuleIcon name={entry.icon} /></span><span className="module-text"><strong>{t(entry.labelKey)}</strong><span>{t(entry.descriptionKey)}</span></span></>;
   if (entry.status === 'planned') return <div className="module-tile is-planned" aria-disabled="true">{body}<span className="soon-tag">{t('launcherComingSoon')}</span></div>;
-  return <Link className="module-tile" data-module={entry.code} href={entry.href}>{body}{count ? <Badge count={count} /> : <span className="module-go" aria-hidden="true">→</span>}</Link>;
+  // A module in development (ตั้งค่าโปรแกรม) carries a text ribbon as well as the amber striped border, so it never relies on colour.
+  return <Link className={`module-tile${development ? ' is-development' : ''}`} data-module={entry.code} href={entry.href}>{body}{development ? <span className="dev-ribbon">{t('moduleInDevelopment')}</span> : null}{count ? <Badge count={count} /> : <span className="module-go" aria-hidden="true">→</span>}</Link>;
 }
 
-function Section({ id, title, entries, countFor }: { id: string; title: string; entries: ModuleEntry[]; countFor: (entry: ModuleEntry) => number | null | undefined }) {
-  if (!entries.length) return null;
-  return <section className="module-group" aria-labelledby={id}><h3 id={id}>{title}</h3><ul className="module-grid">{entries.map((entry) => <li key={entry.code}><Tile entry={entry} count={countFor(entry)} /></li>)}</ul></section>;
-}
-
-export function ModuleLauncher({ modules, badges, summary, today }: { modules: ModuleEntry[]; badges: Record<string, number | undefined>; summary: LauncherSummary; today: Date }) {
+export function ModuleLauncher({ modules, modes = {}, badges, summary, today }: { modules: ModuleEntry[]; modes?: Readonly<Record<string, ModuleMode>>; badges: Record<string, number | undefined>; summary: LauncherSummary; today: Date }) {
   const countFor = (entry: ModuleEntry) => entry.code === 'requests' ? summary.pendingApprovals : entry.code === 'notifications' ? summary.unreadNotifications : badges[entry.code];
-  const live = modules.filter((entry) => entry.status === 'live');
+  // One flat grid of what the person can open, in registry order; no grouping by type.
+  const live = modules.filter((entry) => entry.status === 'live').sort((a, b) => registryOrder(a) - registryOrder(b));
+  // Only ผู้ดูแลระบบ are given planned modules (visibleModules), so the strip shows for them alone.
+  const planned = modules.filter((entry) => entry.status === 'planned');
   const greeting = summary.displayName ? `${t('launcherGreeting')} ${summary.displayName}` : t('launcherGreeting');
   const stat = (value: number | null) => value === null ? '–' : String(value);
   return <div className="launcher">
@@ -39,8 +39,8 @@ export function ModuleLauncher({ modules, badges, summary, today }: { modules: M
       </div>
     </section>
     <nav aria-label={t('launcherModulesLabel')}>
-      {groups.map(([group, title]) => <Section key={group} id={`launcher-${group}`} title={group === 'mine' && summary.greetingName ? `${t('launcherGroupMineOf')}${summary.greetingName}` : t(title)} entries={live.filter((entry) => entry.group === group)} countFor={countFor} />)}
-      <Section id="launcher-planned" title={t('launcherGroupPlanned')} entries={modules.filter((entry) => entry.status === 'planned')} countFor={() => undefined} />
+      {live.length > 0 && <ul className="module-grid launcher-grid">{live.map((entry) => <li key={entry.code}><Tile entry={entry} count={countFor(entry)} development={modes[entry.code] === 'DEVELOPMENT'} /></li>)}</ul>}
+      {planned.length > 0 && <section className="module-group" aria-labelledby="launcher-planned"><h3 id="launcher-planned">{t('launcherGroupPlanned')}</h3><ul className="module-grid">{planned.map((entry) => <li key={entry.code}><Tile entry={entry} count={undefined} development={false} /></li>)}</ul></section>}
     </nav>
   </div>;
 }

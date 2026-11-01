@@ -1,4 +1,4 @@
-import { t } from '@backoffice/i18n';
+import { t, type MessageKey } from '@backoffice/i18n';
 import { adminPage } from '../../../../lib/admin-page';
 import { roleLabel } from '../../../../lib/admin-labels';
 import { formatBangkokDateTime } from '../../../../lib/bangkok-time';
@@ -7,7 +7,9 @@ import { AdminMessage } from '../admin-message';
 
 export const dynamic = 'force-dynamic';
 
-const actionKeys = { 'admin.module.enabled': 'auditAdminModuleEnabled', 'admin.module.disabled': 'auditAdminModuleDisabled', 'admin.role.granted': 'auditAdminRoleGranted', 'admin.role.revoked': 'auditAdminRoleRevoked' } as const;
+const modeKeys: Record<string, MessageKey> = { ON: 'adminModeOn', DEVELOPMENT: 'adminModeDevelopment', OFF: 'adminModeOff' };
+const modeName = (mode: string) => (modeKeys[mode] ? t(modeKeys[mode]) : mode);
+const actionKeys = { 'admin.module.enabled': 'auditAdminModuleEnabled', 'admin.module.disabled': 'auditAdminModuleDisabled', 'admin.module.mode_changed': 'auditAdminModuleModeChanged', 'admin.role.granted': 'auditAdminRoleGranted', 'admin.role.revoked': 'auditAdminRoleRevoked' } as const;
 
 /** บันทึกของผู้ดูแล: every admin.* audit event by anyone, newest first, shown in Bangkok time. */
 export default async function AdminAuditPage() {
@@ -23,7 +25,7 @@ export default async function AdminAuditPage() {
         <td>{formatBangkokDateTime(row.createdAt)}</td>
         <td>{row.actorName ?? '—'}</td>
         <td>{row.action in actionKeys ? t(actionKeys[row.action as keyof typeof actionKeys]) : row.action}</td>
-        <td>{row.moduleCode ? moduleLabel(row.moduleCode) : `${row.targetName ?? '—'}${row.roleName ? ` · ${roleLabel(row.roleName)}` : ''}`}</td>
+        <td>{row.moduleCode ? `${moduleLabel(row.moduleCode)}${row.fromMode && row.toMode ? ` · ${modeName(row.fromMode)} → ${modeName(row.toMode)}` : ''}` : `${row.targetName ?? '—'}${row.roleName ? ` · ${roleLabel(row.roleName)}` : ''}`}</td>
       </tr>)}</tbody>
     </table></div>}
   </section>;

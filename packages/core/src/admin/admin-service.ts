@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { grantableRoleSchema, type GrantableRole } from '@backoffice/contracts';
+import { grantableRoleSchema, moduleModeSchema, type GrantableRole, type ModuleMode } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { ADMIN_ROLE } from '../access/authorization-service';
 import { AuditService } from '../audit/audit-service';
@@ -16,12 +16,17 @@ export type AdminFailure = 'NOT_FOUND' | 'PERSON_NOT_ACTIVE' | 'LAST_ADMIN' | 'M
 export class AdminService {
   constructor(private readonly database: Database, private readonly createId: () => string = randomUUID) {}
 
-  async setModuleEnabled(actorPersonId: string, moduleCode: string, enabled: boolean): Promise<{ ok: true } | { ok: false; code: 'MODULE_LOCKED' }> {
+  /** ตั้งค่าโปรแกรม: ON, OFF or DEVELOPMENT. `enabled` is kept in step for readers of the old column. Setting the current mode changes nothing. */
+  async setModuleMode(actorPersonId: string, moduleCode: string, mode: ModuleMode): Promise<{ ok: true; changed: boolean } | { ok: false; code: 'MODULE_LOCKED' }> {
+    const toMode = moduleModeSchema.parse(mode);
     if (lockedModules.includes(moduleCode)) return { ok: false, code: 'MODULE_LOCKED' };
     return this.database.transaction(async (tx) => {
-      await tx.execute('INSERT INTO admin_module_setting (module_code, enabled, updated_by_person_id, updated_at) VALUES (?, ?, ?, UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE enabled = VALUES(enabled), updated_by_person_id = VALUES(updated_by_person_id), updated_at = VALUES(updated_at)', [moduleCode, enabled ? 1 : 0, actorPersonId]);
-      await this.audit(tx, actorPersonId, enabled ? 'admin.module.enabled' : 'admin.module.disabled', 'module', moduleCode, { moduleCode });
-      return { ok: true as const };
+      const [current] = await tx.query<{ mode: string }>('SELECT mode FROM admin_module_setting WHERE module_code = ? FOR UPDATE', [moduleCode]);
+      const fromMode = current ? (moduleModeSchema.safeParse(current.mode).data ?? 'OFF') : 'ON';
+      if (fromMode === toMode) return { ok: true as const, changed: false };
+      await tx.execute('INSERT INTO admin_module_setting (module_code, enabled, mode, updated_by_person_id, updated_at) VALUES (?, ?, ?, ?, UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE enabled = VALUES(enabled), mode = VALUES(mode), updated_by_person_id = VALUES(updated_by_person_id), updated_at = VALUES(updated_at)', [moduleCode, toMode === 'OFF' ? 0 : 1, toMode, actorPersonId]);
+      await this.audit(tx, actorPersonId, 'admin.module.mode_changed', 'module', moduleCode, { moduleCode, fromMode, toMode });
+      return { ok: true as const, changed: true };
     });
   }
 

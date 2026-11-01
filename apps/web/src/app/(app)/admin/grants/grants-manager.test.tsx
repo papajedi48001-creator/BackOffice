@@ -62,4 +62,18 @@ describe('GrantsManager', () => {
     const call = fetchMock.mock.calls.find(([url]) => url === '/api/admin/people/p-nur/roles') as unknown as [string, RequestInit];
     expect(JSON.parse(call[1].body as string)).toEqual({ roleNames: ['room-manager'] });
   });
+
+  it('grants a ผู้ทดสอบ role next to a manager role, from its own group in the popup', async () => {
+    const fetchMock = vi.fn(async () => json({ ok: true }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<GrantsManager grants={grants} currentPersonId="p-it" />);
+    fireEvent.click(screen.getByRole('button', { name: 'แก้ไขสิทธิ นางมาลัย ข้อมูลจำลอง' }));
+    const dialog = screen.getByRole('dialog');
+    const testers = within(dialog).getByRole('group', { name: 'ผู้ทดสอบโมดูล (เห็นโมดูลที่อยู่ในโหมดพัฒนา)' });
+    fireEvent.click(within(testers).getByLabelText('ผู้ทดสอบยานพาหนะ'));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'บันทึก' }));
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+    const [, init] = fetchMock.mock.calls[0]! as unknown as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toEqual({ roleNames: ['fleet-manager', 'leave-manager', 'fleet-tester'] });
+  });
 });

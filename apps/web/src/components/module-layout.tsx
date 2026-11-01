@@ -4,7 +4,8 @@ import { t } from '@backoffice/i18n';
 import { ModuleSubnav } from './module-subnav';
 import { collectSectionBadges } from '../lib/dashboard-badges';
 import { getSharedDatabase } from '../lib/database';
-import { readDisabledModules } from '../lib/module-gate';
+import { canUseModule } from '@backoffice/core';
+import { modeOf, readModuleModes } from '../lib/module-gate';
 import { availableSections, moduleSections, type ModuleSection } from '../lib/modules';
 import { readSession } from '../lib/session';
 
@@ -25,8 +26,8 @@ export async function ModuleLayout({ code, children }: { code: string; children:
   const session = await readSignedIn();
   const sections = await visibleSections(code, session);
   const database = getSharedDatabase();
-  // The proxy already refuses a switched-off module; this keeps its pages closed if a path ever slips past the matcher.
-  if (database && code !== 'admin' && (await readDisabledModules(database)).includes(code)) return <ModuleDisabledNotice />;
+  // The proxy already refuses an OFF module, and a DEVELOPMENT one to people outside it; this keeps its pages closed if a path ever slips past the matcher.
+  if (database && !canUseModule(session, code, modeOf(await readModuleModes(database), code))) return <ModuleDisabledNotice />;
   const badges = database && session.personId ? await collectSectionBadges(sections, database, session) : {};
   return <><ModuleSubnav sections={sections.map(({ href, labelKey }) => ({ href, labelKey, ...(badges[href] === undefined ? {} : { badge: badges[href] }) }))} />{children}</>;
 }
