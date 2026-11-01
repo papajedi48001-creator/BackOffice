@@ -8,7 +8,7 @@ import { genderLabelKeys } from '../lib/hr-profile-labels';
 
 const errorKeys: Record<string, MessageKey> = {
   GENDER_REQUIRED: 'hrProfileGenderRequired', INACTIVE_EMPLOYMENT_TYPE: 'hrProfileInactiveType', UNKNOWN_EMPLOYMENT_TYPE: 'hrProfileUnknownType',
-  UNKNOWN_ORGANIZATION: 'hrProfileUnknownOrganization', FORBIDDEN: 'hrProfileForbidden', NOT_FOUND: 'hrPersonNotFound', invalid_input: 'hrProfileInvalid'
+  UNKNOWN_ORGANIZATION: 'hrProfileUnknownOrganization', UNKNOWN_POSITION: 'hrErrorUnknownPosition', INACTIVE_POSITION: 'hrErrorInactivePosition', LEVEL_NOT_ALLOWED: 'hrErrorLevelNotAllowed', FORBIDDEN: 'hrProfileForbidden', NOT_FOUND: 'hrPersonNotFound', invalid_input: 'hrProfileInvalid'
 };
 const orNull = (value: string) => value.trim() === '' ? null : value.trim();
 
@@ -43,12 +43,15 @@ function initialUnitNames(units: ProfileFormUnit[], organizationId: string | nul
   return { division: unit.name, section: '' };
 }
 
-export function ProfileForm({ personId, values, employmentTypes, units, organizationName = null }: { personId: string; values: ProfileFormValues; employmentTypes: { id: string; name: string }[]; units: ProfileFormUnit[]; organizationName?: string | null }) {
+export interface ProfileFormPosition { name: string; allowedLevels: readonly string[]; }
+
+export function ProfileForm({ personId, values, employmentTypes, units, positions = [], organizationName = null }: { personId: string; values: ProfileFormValues; employmentTypes: { id: string; name: string }[]; units: ProfileFormUnit[]; positions?: ProfileFormPosition[]; organizationName?: string | null }) {
   const { save, feedback } = useSave(`/api/hr/people/${personId}/profile`);
   const [form, setForm] = useState(() => Object.fromEntries(Object.entries(values).map(([key, value]) => [key, value ?? ''])) as Record<keyof ProfileFormValues, string>);
   const [initialUnit] = useState(() => initialUnitNames(units, values.organizationId, organizationName));
   const [unitNames, setUnitNames] = useState(initialUnit);
-  const [unitError, setUnitError] = useState<string | null>(null);
+  const [clientError, setClientError] = useState<string | null>(null);
+  const chosenPosition = positions.find((position) => position.name === form.positionTitle.trim());
   // A unit with no type yet (from an older import) is offered alongside the กลุ่มงาน so a person can still be put in it.
   const divisions = units.filter((unit) => unit.unitType === 'DIVISION' || unit.unitType === null);
   const chosenDivision = divisions.find((unit) => unit.name === unitNames.division.trim());
@@ -68,18 +71,36 @@ export function ProfileForm({ personId, values, employmentTypes, units, organiza
     const gender = genderForPrefix(event.target.value);
     setForm((current) => ({ ...current, namePrefix: event.target.value, gender: gender ?? current.gender }));
   }
+  /** An older title or level that is left untouched is kept; anything changed must match the catalogue (ก.พ. structure). */
+  function checkPosition(): MessageKey | null {
+    const title = form.positionTitle.trim();
+    const level = form.positionLevel.trim();
+    const titleChanged = title !== (values.positionTitle ?? '');
+    const levelChanged = level !== (values.positionLevel ?? '');
+    if (titleChanged && title !== '' && !chosenPosition) return 'hrErrorUnknownPosition';
+    if ((titleChanged || levelChanged) && chosenPosition && level !== '' && !chosenPosition.allowedLevels.includes(level)) return 'hrErrorLevelNotAllowed';
+    return null;
+  }
+  function changePosition(event: React.ChangeEvent<HTMLInputElement>) {
+    const next = positions.find((position) => position.name === event.target.value.trim());
+    // Back on the person's own position, their level comes back; a level the new position does not allow is cleared.
+    const back = event.target.value.trim() === (values.positionTitle ?? '');
+    setForm((current) => ({ ...current, positionTitle: event.target.value, positionLevel: back ? values.positionLevel ?? '' : next && !next.allowedLevels.includes(current.positionLevel) ? '' : current.positionLevel }));
+  }
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    const positionError = checkPosition();
+    if (positionError) { setClientError(t(positionError)); return; }
     const unit = chosenUnit();
-    if (unit !== null && typeof unit === 'object') { setUnitError(t(unit.error)); return; }
-    setUnitError(null);
+    if (unit !== null && typeof unit === 'object') { setClientError(t(unit.error)); return; }
+    setClientError(null);
     const { gender, ...rest } = form;
     await save({ ...Object.fromEntries(Object.entries(rest).filter(([key]) => key !== 'organizationId').map(([key, value]) => [key, orNull(value)])), gender: gender === '' ? null : gender, ...(unit === undefined ? {} : { organizationId: unit }) });
   }
   const text = (field: keyof ProfileFormValues, label: MessageKey, max: number) => <label>{t(label)}<input value={form[field]} onChange={set(field)} maxLength={max} /></label>;
   return <form aria-label={t('hrEditProfile')} className="profile-form" onSubmit={submit}>
     <h4>{t('hrEditProfile')}</h4>
-    {unitError ? <p role="alert" className="form-error">{unitError}</p> : feedback}
+    {clientError ? <p role="alert" className="form-error">{clientError}</p> : feedback}
     <label>{t('hrFieldNamePrefix')}<input value={form.namePrefix} onChange={changePrefix} maxLength={32} /></label>
     {text('firstName', 'hrFieldFirstName', 120)}
     {text('lastName', 'hrFieldLastName', 120)}
@@ -97,8 +118,10 @@ export function ProfileForm({ personId, values, employmentTypes, units, organiza
       </select>
     </label>
     <label>{t('hrFieldAppointedOn')}<input type="date" value={form.appointedOn} onChange={set('appointedOn')} /></label>
-    {text('positionTitle', 'hrFieldPositionTitle', 255)}
-    {text('positionLevel', 'hrFieldPositionLevel', 120)}
+    <label>{t('hrFieldPositionTitle')}<input list={`positions-${personId}`} value={form.positionTitle} maxLength={255} onChange={changePosition} /></label>
+    <datalist id={`positions-${personId}`}>{positions.map((position) => <option key={position.name} value={position.name} />)}</datalist>
+    <label>{t('hrFieldPositionLevel')}<input list={`levels-${personId}`} value={form.positionLevel} maxLength={120} onChange={set('positionLevel')} /></label>
+    <datalist id={`levels-${personId}`}>{(chosenPosition?.allowedLevels ?? []).map((level) => <option key={level} value={level} />)}</datalist>
     <label>{t('hrDivision')}<input list={`divisions-${personId}`} value={unitNames.division} maxLength={255} placeholder={t('hrNoUnit')} onChange={(event) => setUnitNames({ division: event.target.value, section: '' })} /></label>
     <datalist id={`divisions-${personId}`}>{divisions.map((unit) => <option key={unit.id} value={unit.name} />)}</datalist>
     <label>{t('hrSection')}<input list={`sections-${personId}`} value={unitNames.section} maxLength={255} onChange={(event) => setUnitNames((current) => ({ ...current, section: event.target.value }))} /></label>

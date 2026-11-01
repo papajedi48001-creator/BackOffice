@@ -114,15 +114,15 @@ describeWithDatabase('HrProfileService writes against MariaDB', () => {
 
   it('saves personal and work details, the display name and one audit event together', async () => {
     const id = await person(await organization());
-    expect(await service.updateProfile(id, { namePrefix: 'นาย', firstName: 'สมชาย', lastName: 'ใจดี', birthDate: '1988-01-31', employmentTypeId: civilServant, positionLevel: 'ชำนาญการ', positionTitle: 'นักวิชาการ' }, manager)).toEqual({ ok: true });
+    expect(await service.updateProfile(id, { namePrefix: 'นาย', firstName: 'สมชาย', lastName: 'ใจดี', birthDate: '1988-01-31', employmentTypeId: civilServant, positionLevel: 'ชำนาญการ', positionTitle: 'นักวิชาการสาธารณสุข' }, manager)).toEqual({ ok: true });
     expect(await profileRow(id)).toMatchObject({ namePrefix: 'นาย', gender: 'MALE', employmentTypeId: civilServant, positionLevel: 'ชำนาญการ', birthDate: '1988-01-31' });
     const [stored] = await database.query<{ displayName: string; positionTitle: string }>('SELECT display_name AS displayName, position_title AS positionTitle FROM person WHERE id = ?', [id]);
-    expect(stored).toEqual({ displayName: 'นายสมชาย ใจดี', positionTitle: 'นักวิชาการ' });
+    expect(stored).toEqual({ displayName: 'นายสมชาย ใจดี', positionTitle: 'นักวิชาการสาธารณสุข' });
     const events = await audits(id);
     expect(events.map((event) => event.action)).toEqual(['hr.person.profile.update']);
     const metadata = JSON.parse(events[0]!.metadata);
     expect(metadata.changedFields.sort()).toEqual(['birthDate', 'employmentType', 'firstName', 'gender', 'lastName', 'namePrefix', 'positionLevel', 'positionTitle']);
-    expect(metadata.workChanges).toEqual({ employmentType: { from: null, to: 'ข้าราชการ' }, positionLevel: { from: null, to: 'ชำนาญการ' }, positionTitle: { from: 'พยาบาลวิชาชีพ', to: 'นักวิชาการ' } });
+    expect(metadata.workChanges).toEqual({ employmentType: { from: null, to: 'ข้าราชการ' }, positionLevel: { from: null, to: 'ชำนาญการ' }, positionTitle: { from: 'พยาบาลวิชาชีพ', to: 'นักวิชาการสาธารณสุข' } });
     expect(events[0]!.metadata).not.toContain('1988-01-31');
     expect(events[0]!.metadata).not.toContain('สมชาย');
   });

@@ -1,5 +1,9 @@
 const blockedKeys = new Set(['nationalid', 'national_id', 'citizenid', 'password', 'passwordhash', 'token', 'authorization']);
+<<<<<<< HEAD
 const allowedKeys = new Set(['personId', 'unitType', 'workChanges', 'moduleCode', 'requestReference', 'reason', 'changedFields', 'status', 'organizationId', 'counts', 'bookingReference', 'roomId', 'dayCount', 'reference', 'itemId', 'vendorId', 'lineCount', 'leaveTypeCode', 'days', 'fiscalYear', 'rowsChanged', 'startDate', 'endDate', 'employmentTypeId', 'travelType', 'memberCount', 'travelId', 'firstSave', 'attachmentId', 'contentType', 'sizeBytes', 'registration', 'isActive', 'tripId', 'odometer', 'units', 'people', 'parentId', 'roleName']);
+=======
+const allowedKeys = new Set(['personId', 'unitType', 'workChanges', 'moduleCode', 'requestReference', 'reason', 'changedFields', 'status', 'organizationId', 'counts', 'bookingReference', 'roomId', 'dayCount', 'reference', 'itemId', 'vendorId', 'lineCount', 'leaveTypeCode', 'days', 'fiscalYear', 'rowsChanged', 'startDate', 'endDate', 'employmentTypeId', 'travelType', 'memberCount', 'travelId', 'firstSave', 'attachmentId', 'contentType', 'sizeBytes', 'registration', 'isActive', 'tripId', 'odometer', 'units', 'people', 'parentId', 'positionId', 'created', 'updated']);
+>>>>>>> origin/main
 
 export function redactAuditMetadata(metadata: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(metadata)

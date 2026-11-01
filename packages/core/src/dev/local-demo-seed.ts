@@ -53,9 +53,15 @@ export async function seedLocalDemo(database: Database, protector: NationalIdPro
   for (const [unit, code] of [['HOSP', 'DIR001'], ['NUR', 'NUR001']] as const) {
     await database.execute('INSERT INTO hr_organization_head (id, organization_id, person_id, effective_from, effective_until, created_at) SELECT ?, organization.id, person.id, UTC_TIMESTAMP(), NULL, UTC_TIMESTAMP() FROM organization JOIN person ON person.employee_code = ? WHERE organization.code = ? AND NOT EXISTS (SELECT 1 FROM hr_organization_head existing WHERE existing.organization_id = organization.id AND existing.effective_until IS NULL)', [randomUUID(), code, unit]);
   }
+<<<<<<< HEAD
   // Leave needs an ประเภทการจ้าง and วันบรรจุ; an existing profile keeps whatever HR already set.
   await database.execute("INSERT IGNORE INTO hr_person_profile (person_id, employment_type_id, appointed_on, updated_at) SELECT person.id, type.id, '2015-06-01', UTC_TIMESTAMP() FROM person JOIN hr_employment_type type ON type.code = 'CIVIL_SERVANT' WHERE person.employee_code IN (" + people.map(() => '?').join(', ') + ')', people.map(([code]) => code));
   const genders: Array<[code: string, gender: 'MALE' | 'FEMALE']> = [['DIR001', 'MALE'], ['HR001', 'FEMALE'], ['NUR001', 'FEMALE'], ['NUR014', 'FEMALE'], ['NUR022', 'MALE'], ['ADM003', 'FEMALE'], ['LAB002', 'MALE'], ['PHA005', 'FEMALE'], ['IT001', 'MALE']];
+=======
+  // Leave needs an ประเภทการจ้าง and วันบรรจุ. The import may already have made a profile row (to link the position), so empty fields are filled; whatever HR set is kept.
+  await database.execute("INSERT INTO hr_person_profile (person_id, employment_type_id, appointed_on, updated_at) SELECT person.id, type.id, '2015-06-01', UTC_TIMESTAMP() FROM person JOIN hr_employment_type type ON type.code = 'CIVIL_SERVANT' WHERE person.employee_code IN (" + people.map(() => '?').join(', ') + ') ON DUPLICATE KEY UPDATE employment_type_id = COALESCE(hr_person_profile.employment_type_id, VALUES(employment_type_id)), appointed_on = COALESCE(hr_person_profile.appointed_on, VALUES(appointed_on))', people.map(([code]) => code));
+  const genders: Array<[code: string, gender: 'MALE' | 'FEMALE']> = [['DIR001', 'MALE'], ['HR001', 'FEMALE'], ['NUR001', 'FEMALE'], ['NUR014', 'FEMALE'], ['NUR022', 'MALE'], ['ADM003', 'FEMALE'], ['LAB002', 'MALE'], ['PHA005', 'FEMALE']];
+>>>>>>> origin/main
   for (const [code, gender] of genders) {
     await database.execute('UPDATE hr_person_profile profile JOIN person ON person.id = profile.person_id SET profile.gender = ? WHERE person.employee_code = ? AND profile.gender IS NULL', [gender, code]);
   }

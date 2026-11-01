@@ -11,6 +11,7 @@ export * from './hr/organization-head-service';
 export * from './hr/organization-structure-service';
 export * from './hr/profile-access';
 export * from './hr/employment-type-service';
+export * from './hr/position-catalog-service';
 export * from './hr/profile-service';
 export * from './hr/profile-changes';
 export * from './identity/auth-service';

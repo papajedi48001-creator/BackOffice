@@ -12,7 +12,7 @@ Verification for every task: `pnpm lint && pnpm typecheck && pnpm test`; integra
 - [ ] test fails → implement → passes
 
 ## Task 2 — module settings and grants (DB)
-- Files: `packages/db/migrations/0019_admin_module.sql`, `packages/db/src/migrate.ts`, `packages/db/src/schema/admin.ts` (+ index export), `packages/core/src/admin/{module-managers,admin-service,admin-queries}.ts`, contracts `admin.ts`, redact allowlist `roleName`.
+- Files: `packages/db/migrations/0020_admin_module.sql`, `packages/db/src/migrate.ts`, `packages/db/src/schema/admin.ts` (+ index export), `packages/core/src/admin/{module-managers,admin-service,admin-queries}.ts`, contracts `admin.ts`, redact allowlist `roleName`.
 - Interface: `AdminService.setModuleEnabled(actor, code, enabled)`, `grantRole(actor, personId, roleName)`, `revokeRole(actor, personId, roleName)`, `setPersonRoles(actor, personId, roleNames[])`; `AdminQueries.disabledModules()`, `grants()`, `managersOf(code)`, `activePeople()`.
 - Failing integration test first: grant/revoke writes role_assignment + audit in one transaction; last admin refused; admin module cannot be disabled; disable writes setting + audit.
 - [ ] test fails → implement → passes
@@ -33,5 +33,5 @@ Verification for every task: `pnpm lint && pnpm typecheck && pnpm test`; integra
 - [ ] test fails → implement → passes
 
 ## Task 6 — docs and verification
-- DESIGN.md colour row, modules.md migration row 0019, CONTEXT.md ผู้จัดการโมดูล / ผู้ดูแลระบบ, restore-verify table.
+- DESIGN.md colour row, modules.md migration row 0020 (renumbered: 0019 went to hr_position on main), CONTEXT.md ผู้จัดการโมดูล / ผู้ดูแลระบบ, restore-verify table.
 - [ ] lint, typecheck, unit, integration, migrate, next build, `git diff --check`, screenshots

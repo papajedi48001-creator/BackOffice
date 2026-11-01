@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
-import { AuthorizationService, EmploymentTypeService, HrDirectory, HrProfileService } from '@backoffice/core';
+import { AuthorizationService, EmploymentTypeService, HrDirectory, HrProfileService, PositionCatalogService } from '@backoffice/core';
 import { t } from '@backoffice/i18n';
 import { HrProfileView } from '../../../../../components/hr-profile-view';
 import { getSharedDatabase } from '../../../../../lib/database';
@@ -20,11 +20,14 @@ export default async function PersonProfilePage({ params }: { params: Promise<{ 
   if (view === 'NOT_FOUND') notFound();
   if (view === 'FORBIDDEN') return <section><h2>{t('peopleTitle')}</h2><p role="alert">{t('hrNoAccess')}</p></section>;
   let employmentTypes: { id: string; name: string }[] = [];
+  let positions: { name: string; allowedLevels: string[] }[] = [];
   let units: { id: string; name: string; unitType: string | null; parentId: string | null }[] = [];
   if (view.access.editProfile) {
     // Active types, plus a retired type the person still holds so the form keeps it.
     employmentTypes = (await new EmploymentTypeService(database).list()).filter((type) => type.isActive || type.id === view.work.employmentTypeId);
     const scope = new AuthorizationService().organizationScope(session, 'hr.person.manage');
+    // Open positions, plus a closed one the person still holds so its levels are still offered.
+    positions = (await new PositionCatalogService(database).list()).filter((position) => position.isActive || position.name === view.work.positionTitle).map(({ name, allowedLevels }) => ({ name, allowedLevels }));
     const all = await new HrDirectory(database).listOrganizations();
     const inScope = all.filter((organization) => scope === 'all' || scope.includes(organization.id));
     // A scoped manager also sees the กลุ่มงาน above their งาน, so the งาน can be found by its กลุ่มงาน; the server still checks the unit saved.
@@ -35,6 +38,6 @@ export default async function PersonProfilePage({ params }: { params: Promise<{ 
   return <section>
     <p><Link href="/hr/people">{t('hrBackToPeople')}</Link></p>
     <h2>{view.work.displayName ?? view.work.employeeCode ?? t('notAssigned')}</h2>
-    <HrProfileView view={view} contactEndpoint={`/api/hr/people/${personId}/contact`} employmentTypes={employmentTypes} units={units} />
+    <HrProfileView view={view} contactEndpoint={`/api/hr/people/${personId}/contact`} employmentTypes={employmentTypes} units={units} positions={positions} />
   </section>;
 }

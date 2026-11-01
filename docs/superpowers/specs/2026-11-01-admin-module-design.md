@@ -44,7 +44,7 @@ section ใหม่เพิ่มได้โดยเพิ่มหนึ่
 
 ## เปิด/ปิดโมดูล
 
-- ตารางใหม่ `admin_module_setting (module_code PK, enabled, updated_at, updated_by_person_id)` migration `0019_admin_module.sql`; ไม่มีแถว = เปิด
+- ตารางใหม่ `admin_module_setting (module_code PK, enabled, updated_at, updated_by_person_id)` migration `0020_admin_module.sql`; ไม่มีแถว = เปิด
 - โมดูลที่ปิด: ซ่อนจากเมนูและหน้าหลัก และ **หน้าและ API ปฏิเสธที่ server** ผ่าน `apps/web/src/proxy.ts` (Next proxy, ทำงานก่อนทุก request) ที่จับ path ของโมดูล (`/leave/...`, `/api/leave/...`) — หน้าได้หน้า "โมดูลนี้ปิดใช้งาน" (403) API ได้ `{ error: 'module_disabled' }` 403 ใช้กับทุกคนรวม admin (admin เปิดกลับได้จากหน้าตั้งค่าโปรแกรม)
 - ปิด `admin` ไม่ได้ (`MODULE_LOCKED`); หน้าหลัก `/dashboard` ไม่ใช่โมดูลจึงปิดไม่ได้
 - โมดูล planned ไม่แสดงในรายการ (ยังไม่มีอะไรให้ปิด)

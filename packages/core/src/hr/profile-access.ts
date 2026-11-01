@@ -26,3 +26,6 @@ export function profileAccess(subject: AccessSubject, target: { personId: string
 export function canManageEmploymentTypes(subject: AccessSubject): boolean {
   return authorization.canActHospitalWide(subject, 'hr.person.manage', 'hr');
 }
+
+/** Positions are a hospital-wide list, managed by the same people as employment types. */
+export const canManagePositions = canManageEmploymentTypes;
