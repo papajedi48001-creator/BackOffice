@@ -1,20 +1,12 @@
-import { readFileSync } from 'node:fs';
 import { createDatabase } from '@backoffice/db';
 import { NotificationConsumer } from './consumers/notification-consumer.ts';
 import { OutboxConsumer, toFailureCode } from './consumers/outbox-consumer.ts';
 import { DatabaseNotificationStore } from './database-notification-store.ts';
 import { DatabaseOutboxRepository } from './database-outbox-repository.ts';
 import { createWorkerRuntime } from './worker-runtime.ts';
+import { waitForDatabaseUrl } from './database-config.ts';
 
-function runtimeValue(name: string): string | undefined {
-  const direct = process.env[name]?.trim();
-  if (direct) return direct;
-  const file = process.env[`${name}_FILE`]?.trim();
-  return file ? readFileSync(file, 'utf8').trim() : undefined;
-}
-
-const databaseUrl = runtimeValue('DATABASE_URL');
-if (!databaseUrl) throw new Error('DATABASE_URL is required');
+const databaseUrl = await waitForDatabaseUrl();
 
 const database = createDatabase(databaseUrl);
 const notifications = new NotificationConsumer(

@@ -6,29 +6,30 @@ import { describe, expect, it } from 'vitest';
 const spawnTimeoutMs = 30_000;
 
 describe('worker Node ESM runtime', () => {
-  it('resolves worker modules before validating its required database configuration', () => {
+  it('resolves worker modules and waits for the database configuration', () => {
     let output = '';
 
     try {
       execFileSync(
-        process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm',
-        ['start'],
+        // node itself, as `pnpm start` runs it: a timeout kills pnpm but not the waiting node child.
+        process.execPath,
+        ['--experimental-transform-types', 'src/main.ts'],
         {
           cwd: fileURLToPath(new URL('..', import.meta.url)),
-          env: { ...process.env, DATABASE_URL: '' },
-          stdio: 'pipe',
-          shell: process.platform === 'win32'
+          env: { ...process.env, DATABASE_URL: '', DATABASE_URL_FILE: '', BACKOFFICE_CONFIG_DIR: '/nonexistent-backoffice-config' },
+          timeout: 8_000,
+          stdio: 'pipe'
         }
       );
     } catch (error) {
-      const failure = error as { stderr?: Buffer; output?: Array<Buffer | string | null> };
-      output = [failure.stderr, ...(failure.output ?? [])]
+      const failure = error as { stdout?: Buffer; stderr?: Buffer; output?: Array<Buffer | string | null> };
+      output = [failure.stdout, failure.stderr, ...(failure.output ?? [])]
         .filter((value): value is Buffer | string => value !== null && value !== undefined)
         .map((value) => value.toString())
         .join('');
     }
 
-    expect(output).toContain('DATABASE_URL is required');
+    expect(output).toContain('backoffice.worker.waiting_for_database_config');
     expect(output).not.toContain('ERR_MODULE_NOT_FOUND');
   }, spawnTimeoutMs);
 });
