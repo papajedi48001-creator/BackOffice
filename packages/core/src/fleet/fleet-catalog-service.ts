@@ -16,6 +16,16 @@ function isReferenced(error: unknown): boolean {
   return code === 'ER_ROW_IS_REFERENCED_2' || code === 'ER_ROW_IS_REFERENCED' || errno === 1451;
 }
 
+/**
+ * The foreign-key check takes locks on fleet_trip after this delete holds the car or driver, the reverse of dispatch's
+ * trip → car → driver order; a deadlock there means a เที่ยวรถ is using it, which is history too.
+ */
+function isDeadlock(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) return false;
+  const { code, errno } = error as { code?: string; errno?: number };
+  return code === 'ER_LOCK_DEADLOCK' || errno === 1213;
+}
+
 /** The car register and the driver list. Callers check `canManageFleet` first. */
 export class FleetCatalogService {
   constructor(private readonly database: Database, private readonly createId: () => string = randomUUID) {}
@@ -78,7 +88,7 @@ export class FleetCatalogService {
       if (!vehicle) return { ok: false as const, code: 'NOT_FOUND' as const };
       // The foreign key from fleet_trip is the authority: no read of trips can race a new assignment.
       try { await database.execute('DELETE FROM fleet_vehicle WHERE id = ?', [vehicleId]); } catch (error) {
-        if (isReferenced(error)) return { ok: false as const, code: 'HAS_HISTORY' as const };
+        if (isReferenced(error) || isDeadlock(error)) return { ok: false as const, code: 'HAS_HISTORY' as const };
         throw error;
       }
       await this.audit(database, actorPersonId, 'fleet.vehicle.delete', 'fleet_vehicle', vehicleId, { registration: vehicle.registration });
@@ -92,7 +102,7 @@ export class FleetCatalogService {
       const [driver] = await database.query<{ personId: string }>('SELECT person_id AS personId FROM fleet_driver WHERE person_id = ? FOR UPDATE', [personId]);
       if (!driver) return { ok: false as const, code: 'NOT_FOUND' as const };
       try { await database.execute('DELETE FROM fleet_driver WHERE person_id = ?', [personId]); } catch (error) {
-        if (isReferenced(error)) return { ok: false as const, code: 'HAS_HISTORY' as const };
+        if (isReferenced(error) || isDeadlock(error)) return { ok: false as const, code: 'HAS_HISTORY' as const };
         throw error;
       }
       await this.audit(database, actorPersonId, 'fleet.driver.delete', 'fleet_driver', personId, {});

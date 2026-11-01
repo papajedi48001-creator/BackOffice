@@ -79,7 +79,7 @@ export function DriverRow({ driver }: { driver: DriverView }) {
     <td className="request-actions">
       <button type="button" disabled={busy || phone.trim() === ''} onClick={() => void save(driver.isActive)}>{t('fleetSave')}</button>
       <button type="button" className="button-secondary" disabled={busy || phone.trim() === ''} onClick={() => void save(!driver.isActive)}>{t(driver.isActive ? 'fleetDeactivate' : 'fleetActivate')}</button>
-      <DeleteButton url={`/api/fleet/drivers/${encodeURIComponent(driver.personId)}`} name={driver.displayName ?? ''} />
+      <DeleteButton url={`/api/fleet/drivers/${encodeURIComponent(driver.personId)}`} name={driver.displayName ?? '—'} />
       {error && <p role="alert" className="form-error">{error}</p>}
     </td>
   </tr>;

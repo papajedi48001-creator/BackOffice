@@ -142,13 +142,13 @@ export function moduleSections(code: string, subject: AccessSubject): ModuleSect
   return (moduleRegistry.find((entry) => entry.code === code)?.sections ?? []).filter((section) => section.visible(subject));
 }
 
-/** Drops modules whose availability check says there is nothing to show; a check that fails keeps the module. */
 /** Drops the sections whose own database check says they are not for this person; a check that fails keeps the link. */
 export async function availableSections(sections: readonly ModuleSection[], db: Database, subject: AccessSubject): Promise<ModuleSection[]> {
   const shown = await Promise.all(sections.map((section) => section.available ? section.available(db, subject).catch(() => true) : true));
   return sections.filter((_, index) => shown[index]);
 }
 
+/** Drops modules whose availability check says there is nothing to show; a check that fails keeps the module. */
 export async function availableModules(modules: ModuleEntry[], db: Database, subject: AccessSubject): Promise<ModuleEntry[]> {
   const shown = await Promise.all(modules.map((entry) => entry.available ? entry.available(db, subject).catch(() => true) : true));
   return modules.filter((_, index) => shown[index]);

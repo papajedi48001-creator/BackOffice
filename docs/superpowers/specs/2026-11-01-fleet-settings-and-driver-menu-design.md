@@ -22,6 +22,6 @@ Each delete asks for confirmation in a dialog first, then removes the car or dri
 - `fleet.vehicle.delete`, with metadata `{ registration }`.
 - `fleet.driver.delete`, with empty metadata.
 
-A car or driver that was ever put on a เที่ยวรถ cannot be deleted. The request answers `409 HAS_HISTORY`, with a message telling the manager to set the car to ปลดระวาง, or press หยุดขับ for the driver, instead. Past trips keep their car and driver this way.
+A car or driver that was ever put on a เที่ยวรถ cannot be deleted. The request answers `409 HAS_HISTORY`, with a message telling the manager to set the car to ปลดระวาง, or press พักการขับ for the driver, instead. Past trips keep their car and driver this way.
 
 The foreign key from `fleet_trip` decides whether a car or driver has history. Because of that, no separate read can race a new assignment.
