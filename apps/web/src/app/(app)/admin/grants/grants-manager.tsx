@@ -6,7 +6,7 @@ import type { GrantableRole } from '@backoffice/contracts';
 import type { AdminGrantRow } from '@backoffice/core';
 import { t } from '@backoffice/i18n';
 import { ActionDialog } from '../../../../components/action-dialog';
-import { AdminFormDialog } from '../../../../components/admin-form-dialog';
+import { FormDialog } from '../../../../components/form-dialog';
 import { grantableRoles, roleLabel, roleNeedsHrDataOwner, sendAdmin } from '../../../../lib/admin-labels';
 import { PersonPicker, type PickedPerson } from '../person-picker';
 
@@ -60,7 +60,7 @@ function GrantDialog({ editing, grants, onClose }: { editing: Editing; grants: A
     router.refresh();
   }
 
-  return <AdminFormDialog title={t(editing.mode === 'add' ? 'adminAddGrant' : 'adminEditGrant')} submitLabel={t('adminSave')} ready={Boolean(person) && (editing.mode === 'edit' || roles.length > 0)} isSubmitting={busy} error={error} onSubmit={() => void save()} onClose={onClose}>
+  return <FormDialog open onOpenChange={(open) => { if (!open) onClose(); }} title={t(editing.mode === 'add' ? 'adminAddGrant' : 'adminEditGrant')} submitLabel={t('adminSave')} ready={Boolean(person) && (editing.mode === 'edit' || roles.length > 0)} isSubmitting={busy} error={error} onSubmit={() => save()}>
     {editing.mode === 'add' ? <PersonPicker person={person} onPick={pick} /> : <p className="admin-picked"><strong>{person?.displayName ?? '—'}</strong>{person?.employeeCode ? <small> · {person.employeeCode}</small> : null}</p>}
     <fieldset className="admin-role-options" disabled={!person}>
       <legend>{t('adminChooseRoles')}</legend>
@@ -69,7 +69,7 @@ function GrantDialog({ editing, grants, onClose }: { editing: Editing; grants: A
         {roleLabel(role)}
       </label>)}
     </fieldset>
-  </AdminFormDialog>;
+  </FormDialog>;
 }
 
 function DeleteGrantDialog({ grant, onClose }: { grant: AdminGrantRow; onClose: () => void }) {

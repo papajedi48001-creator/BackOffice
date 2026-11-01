@@ -64,7 +64,7 @@ section ใหม่เพิ่มได้โดยเพิ่มหนึ่
 
 ## UI
 
-- popup ทุกฟอร์มใช้ `components/admin-form-dialog.tsx` ซึ่งห่อ `ActionDialog` (native `<dialog>`) ไว้ในที่เดียว เพื่อสลับเป็น FormDialog กลางได้ภายหลัง
+- popup เพิ่ม/แก้ไขใช้ `FormDialog` กลาง (`components/form-dialog.tsx`) ส่วนการยืนยันและลบใช้ `ActionDialog`
 - สีประจำโมดูล `[data-module="admin"] { --accent: #374151; }`
 
 ## นอกขอบเขต

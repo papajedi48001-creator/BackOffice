@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { t } from '@backoffice/i18n';
 import { ActionDialog } from '../../../../components/action-dialog';
-import { AdminFormDialog } from '../../../../components/admin-form-dialog';
+import { FormDialog } from '../../../../components/form-dialog';
 import { roleLabel, roleNeedsHrDataOwner, sendAdmin } from '../../../../lib/admin-labels';
 import { PersonPicker, type PickedPerson } from '../person-picker';
 
@@ -78,7 +78,7 @@ function ManagersDialog({ row, admins, onClose }: { row: ModuleSettingRow; admin
   }
 
   return <>
-    <AdminFormDialog title={`${t('adminManagersOf')}: ${row.label}`} submitLabel={t('adminAddManager')} ready={Boolean(role && person)} isSubmitting={busy} error={removing ? null : error} onSubmit={() => void add()} onClose={onClose}>
+    <FormDialog open onOpenChange={(open) => { if (!open) onClose(); }} title={`${t('adminManagersOf')}: ${row.label}`} submitLabel={t('adminAddManager')} ready={Boolean(role && person)} isSubmitting={busy} error={removing ? null : error} onSubmit={() => add()}>
       {role ? <>
         <p className="admin-muted">{t('adminManagerRole')}: {roleLabel(role)}</p>
         {row.managers.length === 0 ? <p>{t('adminNoManagers')}</p> : <ul className="admin-person-list">{row.managers.map((manager) => <li key={manager.personId}>
@@ -89,7 +89,7 @@ function ManagersDialog({ row, admins, onClose }: { row: ModuleSettingRow; admin
         <PersonPicker person={person} onPick={setPerson} />
       </> : <p>{t('adminNoManagerRole')}</p>}
       <p className="admin-muted">{t('adminAdminsManageAll')}{admins.length > 0 ? `: ${admins.map((admin) => admin.displayName ?? '—').join(', ')}` : ''}</p>
-    </AdminFormDialog>
+    </FormDialog>
     {removing && role && <ActionDialog title={`${t('adminConfirmRemoveTitle')}: ${roleLabel(role)}`} message={`${removing.displayName ?? '—'} — ${t('adminConfirmRemoveMessage')}`} confirmLabel={t('adminRemove')} tone="danger" isSubmitting={busy} error={error} onConfirm={() => void remove()} onClose={() => setRemoving(null)} />}
   </>;
 }

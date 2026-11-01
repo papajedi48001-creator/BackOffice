@@ -535,7 +535,6 @@ video.inventory-camera { display: block; flex-basis: 100%; width: 100%; max-widt
 .admin-role-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .admin-role-chips li { padding: 2px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--accent-tint); color: var(--ink); font-size: 0.875rem; }
 .admin-role-chips li.is-admin { border-color: var(--accent); background: var(--accent-soft); font-weight: 600; }
-.admin-dialog-body { display: grid; gap: 12px; }
 .admin-person-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .admin-person-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; }
 .admin-person-list small { color: var(--muted); }

@@ -28,7 +28,7 @@ Verification for every task: `pnpm lint && pnpm typecheck && pnpm test`; integra
 - [x] test fails → implement → passes
 
 ## Task 5 — admin APIs and pages
-- Files: `apps/web/src/app/api/admin/**/route.ts` (+ route test), `app/(app)/admin/**`, `components/admin-form-dialog.tsx`, i18n keys `admin*`, audit labels.
+- Files: `apps/web/src/app/api/admin/**/route.ts` (+ route test), `app/(app)/admin/**`, `components/form-dialog.tsx` (FormDialog), i18n keys `admin*`, audit labels.
 - Failing test first: API refuses non-admin with 403 and maps `LAST_ADMIN` to 409; page tests render lists.
 - [x] test fails → implement → passes
 
