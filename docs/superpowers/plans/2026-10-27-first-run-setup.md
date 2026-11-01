@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** เว็บที่ยังไม่มีค่าเชื่อมฐานข้อมูลเปิดหน้า `/setup` ให้ผู้ติดตั้งกรอกค่าเชื่อม MariaDB สร้าง super admin คนแรก แล้วปิดหน้า setup ถาวร
+**Goal:** เว็บที่ยังไม่มีค่าเชื่อมฐานข้อมูลเปิดหน้า `/setup` ให้ผู้ติดตั้งกรอกค่าเชื่อม MariaDB สร้างผู้ดูแลระบบ (role `admin`) คนแรก แล้วปิดหน้า setup ถาวร
 
-**Architecture:** `packages/db` ได้ตัวหาค่า `DATABASE_URL` แบบ 3 แหล่ง (env, `_FILE`, ไฟล์ใน config dir) ที่เว็บและ worker ใช้ร่วมกัน `packages/core` ได้ `FirstRunSetup` (ทดสอบการเชื่อมต่อ, รัน migration, สร้างบัญชีใน transaction เดียว) และ `expandSuperAdmin` ที่ `SessionService` เรียกจุดเดียว เว็บมีที่เก็บรหัส setup บน `globalThis`, route `/api/setup/*`, หน้า `/setup` และเขียนไฟล์ config แบบ atomic
+**Architecture:** (แก้ 2026-11-01: ใช้บทบาท `admin` ที่มีแล้วแทน `super-admin`) `packages/db` ได้ตัวหาค่า `DATABASE_URL` แบบ 3 แหล่ง (env, `_FILE`, ไฟล์ใน config dir) ที่เว็บและ worker ใช้ร่วมกัน `packages/core` ได้ `FirstRunSetup` (ทดสอบการเชื่อมต่อ, รัน migration, สร้างบัญชีใน transaction เดียว) เว็บมีที่เก็บรหัส setup บน `globalThis`, route `/api/setup/*`, หน้า `/setup` และเขียนไฟล์ config แบบ atomic
 
 **Tech Stack:** TypeScript, Next.js 16 (App Router, standalone), zod, mysql2, Vitest, Playwright, MariaDB 11.8, Docker Compose
 
@@ -16,7 +16,7 @@
 - รหัส setup: 12 ตัวจาก `ABCDEFGHJKLMNPQRSTUVWXYZ23456789` แสดง `XXXX-XXXX-XXXX`; log บรรทัด `backoffice.setup.code XXXX-XXXX-XXXX`; ผิด 5 ครั้งสุ่มใหม่; เก็บแค่ SHA-256
 - รหัสผ่าน admin อย่างน้อย 12 ตัว; port 1–65535 ค่าเริ่มต้น 3306; ชื่อฐานเริ่มต้น `backoffice`; MariaDB ≥ 10.6
 - ไฟล์ config mode `0600` เขียนแบบ temp + `rename`
-- บทบาท `super-admin`; โมดูลเจ้าของข้อมูล `hr`, `leave`, `official-travel`, `room-booking`, `inventory`, `requests`
+- บัญชีแรกได้ role `admin` (`ADMIN_ROLE`) แบบ `organization_id = NULL`
 - audit action `system.setup.completed` metadata มีแค่ `{ serverVersion, migrationsApplied }`
 - รหัส error: `invalid_code`, `connection_failed`, `access_denied`, `migration_privilege_missing`, `unsupported_server`, `accounts_exist`, `keys_missing`, `invalid_input`, `already_configured`, `config_write_failed`
 - ห้ามรหัสผ่านฐาน, รหัสผ่าน admin, เลขบัตร, รหัส setup, URL ฐาน อยู่ใน URL, log, audit metadata, response
@@ -60,7 +60,7 @@ it('defaults the config path', () => expect(databaseConfigFilePath({})).toBe('/v
 it('reads migrations from the given directory', async () => { /* fake db records executes */ expect(await runMigrations(fakeDb, { migrationsDir: tmpDirWith('0000_r0_foundation.sql', 'CREATE TABLE IF NOT EXISTS t (id INT)') })).toContain('0000_r0_foundation.sql'); });
 ```
 
-Integration (`describe.skip` ถ้าไม่มี `DATABASE_URL`, ใช้ฐานชั่วคราวชื่อสุ่ม): ฐานว่าง `pendingMigrations` คืน 16 รายการ; หลัง `runMigrations` คืน `[]`
+Integration (`describe.skip` ถ้าไม่มี `DATABASE_URL`, ใช้ฐานชั่วคราวชื่อสุ่ม): ฐานว่าง `pendingMigrations` คืน `migrationVersions` ทั้งหมด; หลัง `runMigrations` คืน `[]`
 
 - [ ] **Step 2: รัน `pnpm --filter @backoffice/db test` — คาดว่า FAIL (`readDatabaseUrl` ไม่มี)**
 - [ ] **Step 3: implement** ไฟล์ที่ไม่มีอยู่ (ENOENT) ถือว่าไม่มีค่า; error อื่นโยนต่อ
@@ -75,50 +75,21 @@ Integration (`describe.skip` ถ้าไม่มี `DATABASE_URL`, ใช้�
 
 **Interfaces:**
 - Produces:
-  - `isValidThaiNationalId(value: string): boolean` (13 หลัก, หลักสุดท้าย = `(11 - (Σ d[i]*(13-i), i=0..11) % 11) % 10`)
   - `setupDatabaseSchema` → `{ host: string(1..255, trim), port: int 1..65535 default 3306, database: /^[A-Za-z0-9_]{1,64}$/ default 'backoffice', username: string(1..80), password: string(0..1024) }`
-  - `setupAdminSchema` → `{ displayName: string(1..255), employeeCode: string(1..32), nationalId: refine isValidThaiNationalId, username: /^[a-z0-9._-]{3,64}$/, password: string(12..1024) }`
+  - `setupAdminSchema` → `{ firstName: string trim(1..120), lastName: string trim(1..120), employeeCode: string trim(1..32), nationalId: thaiNationalIdSchema (เดิมใน hr-account.ts), username: usernameSchema (เดิม), password: string(12..128) }`
   - `setupTestConnectionSchema = { code: string, database }`, `setupCompleteSchema = { code: string, database, admin }`
   - `setupErrorCodes` (tuple ของรหัส error ใน Global Constraints) และ `type SetupErrorCode`
   - types `SetupDatabaseInput`, `SetupAdminInput`
 
-- [ ] **Step 1: เขียน test ที่ล้ม** — `isValidThaiNationalId('1101700230703')` true, `'1101700230704'` false, `'110170023070'` false; admin password 11 ตัว reject; port `0` และ `70000` reject; database `'back-office'` reject; defaults port 3306 / database `backoffice`
+- [ ] **Step 1: เขียน test ที่ล้ม** — admin nationalId `'1101700230703'` ผ่าน, `'1101700230704'` reject; admin password 11 ตัว reject; port `0` และ `70000` reject; database `'back-office'` reject; defaults port 3306 / database `backoffice`
 - [ ] **Step 2: รัน `pnpm --filter @backoffice/contracts test` — FAIL**
 - [ ] **Step 3: implement**
 - [ ] **Step 4: รันอีกครั้ง — PASS**
 - [ ] **Step 5: Commit** `feat(contracts): validate first-run setup input`
 
-### Task 3: super admin (`packages/core/src/access`, `identity`)
+### Task 3: (ตัดออก 2026-11-01)
 
-**Files:**
-- Create: `packages/core/src/access/super-admin.ts`, `packages/core/src/access/super-admin.test.ts`
-- Modify: `packages/core/src/access/policy.ts`, `packages/core/src/identity/session-service.ts`, `packages/core/src/identity/session-service.test.ts`, `packages/core/src/index.ts`, `CONTEXT.md`
-
-**Interfaces:**
-- Produces:
-  - `superAdminRoleName = 'super-admin'`
-  - `knownRoleNames(): string[]` (keys ของ `permissionsByRole`) และ `dataOwnerModuleCodes: readonly string[]` ใน `policy.ts`
-  - `expandSuperAdmin<T extends Pick<AccessSubject,'roles'|'dataOwnerModules'|'hospitalWideDataOwnerModules'>>(access: T): T`
-
-- [ ] **Step 1: เขียน test ที่ล้ม**
-
-```ts
-it('leaves other people unchanged', () => expect(expandSuperAdmin(hrManagerAccess)).toEqual(hrManagerAccess));
-it('grants every role hospital-wide and every data-owner module', () => {
-  const access = expandSuperAdmin({ roles: [{ name: 'super-admin', organizationId: null }], dataOwnerModules: [], hospitalWideDataOwnerModules: [] });
-  for (const name of knownRoleNames()) expect(access.roles).toContainEqual({ name, organizationId: null });
-  expect(access.hospitalWideDataOwnerModules).toEqual([...dataOwnerModuleCodes]);
-});
-it('passes every permission in AuthorizationService', async () => { /* for each permissionSchema option: canAccess(...) allowed for moduleCode 'hr' and 'room-booking' */ });
-it('does not duplicate a role the person already holds hospital-wide', ...);
-```
-
-session-service test: loader คืน super-admin → `resolve()` ได้ `roles` ที่มี `hr-manager`
-
-- [ ] **Step 2: รัน `pnpm --filter @backoffice/core test -- super-admin session-service` — FAIL**
-- [ ] **Step 3: implement** และเรียก `expandSuperAdmin` ใน `SessionService.resolve` หลัง `this.access.load`; เพิ่มคำ **ผู้ดูแลระบบสูงสุด** ใน `CONTEXT.md` ตาม spec ข้อ 6
-- [ ] **Step 4: รันอีกครั้ง — PASS**
-- [ ] **Step 5: Commit** `feat(access): super-admin role holds every role and data-owner module`
+main มีบทบาท `admin` (ผู้ดูแลระบบ, PR #43) ที่ผ่านทุก permission แล้ว setup ใช้บทบาทนั้นแทน `super-admin` (ดู spec ข้อ 6) งานที่เหลือ: เพิ่มประโยค "ผู้ดูแลระบบคนแรกตั้งจากหน้า setup ครั้งแรก" ใน `CONTEXT.md` ทำใน Task 9
 
 ### Task 4: บริการ FirstRunSetup (`packages/core/src/setup`)
 
@@ -127,7 +98,7 @@ session-service test: loader คืน super-admin → `resolve()` ได้ `ro
 - Modify: `packages/core/src/index.ts`
 
 **Interfaces:**
-- Consumes: Task 1 `runMigrations`, `pendingMigrations`; Task 2 schemas/types; Task 3 `superAdminRoleName`; `hashPassword`, `NationalIdProtector`, `AuditService`, `DatabaseAuditRepository`
+- Consumes: Task 1 `runMigrations`, `pendingMigrations`; Task 2 schemas/types; `ADMIN_ROLE`; `hashPassword`, `lockProfileSubject`/`applyProfileUpdate` (profile-service), `NationalIdProtector`, `AuditService`, `DatabaseAuditRepository`
 - Produces:
   - `buildDatabaseUrl(input: SetupDatabaseInput): string` — `mysql://${enc(user)}:${enc(pw)}@${host}:${port}/${database}` (host ที่เป็น IPv6 ใส่ `[ ]`)
   - `class SetupError extends Error { constructor(readonly code: SetupErrorCode) }`
@@ -137,21 +108,21 @@ session-service test: loader คืน super-admin → `resolve()` ได้ `ro
 
 - [ ] **Step 1: เขียน unit test ที่ล้ม** (fake `Database`): `buildDatabaseUrl({ password: 'p@ss/w:rd#%1', ... })` แล้ว `new URL(...)` ได้ `decodeURIComponent(password)` เท่าเดิม; version `'10.5.9-MariaDB'` → `unsupported_server`; `'8.0.36'` → `unsupported_server`; protector null → `keys_missing` ก่อนเชื่อมต่อ; มีบัญชี → `accounts_exist`; pool ถูก `close()` ทุกกรณี
 - [ ] **Step 2: เขียน integration test ที่ล้ม** (ข้ามเมื่อไม่มี `DATABASE_URL`; สร้างฐาน/ผู้ใช้ชั่วคราวด้วย root):
-  - ฐานว่าง + ผู้ใช้รหัสผ่าน `p@ss/w:rd#%1` ที่มีสิทธิ์ DDL: `complete` ได้ `migrationsApplied === 16`; มีแถว person (`employee_code`, `display_name`, `national_id_masked`), `local_account` ที่ `LocalAuthService` ล็อกอินได้, `role_assignment` super-admin `organization_id IS NULL`, `audit_event` `system.setup.completed` ที่ metadata ไม่มีเลขบัตร/รหัสผ่าน
+  - ฐานว่าง + ผู้ใช้รหัสผ่าน `p@ss/w:rd#%1` ที่มีสิทธิ์ DDL: `complete` ได้ `migrationsApplied === migrationVersions.length`; มีแถว person (`employee_code`, `display_name` = ชื่อ นามสกุล, `national_id_masked`, ACTIVE), `local_account` ที่ `LocalAuthService` ล็อกอินได้, `role_assignment` admin `organization_id IS NULL`, `audit_event` `system.setup.completed` ที่ metadata ไม่มีเลขบัตร/รหัสผ่าน
   - ฐานที่ migrate แล้ว + ผู้ใช้ DML อย่างเดียว: ผ่าน `migrationsApplied === 0`
   - ฐานว่าง + ผู้ใช้ DML อย่างเดียว: `migration_privilege_missing`
   - ฐานที่มีบัญชี: `accounts_exist` และจำนวนแถว `person` ไม่เปลี่ยน
   - `employeeCode` ซ้ำกับที่มีใน person (ไม่มีบัญชี): transaction rollback ไม่มีแถว `local_account`/`role_assignment` ค้าง
 - [ ] **Step 3: รัน `pnpm --filter @backoffice/core test -- first-run-setup` — FAIL**
-- [ ] **Step 4: implement** — insert ทั้งหมดใน `db.transaction`; `role` ใช้ `INSERT IGNORE` แล้ว `SELECT id`
+- [ ] **Step 4: implement** — insert ทั้งหมดใน `db.transaction(..., { isolationLevel: 'READ COMMITTED' })`; person → `lockProfileSubject` + `applyProfileUpdate(..., actor = คนใหม่, { syncDisplayName: true, auditAction: 'hr.person.create' })` → `local_account` → role `admin` (`INSERT IGNORE` แล้ว `SELECT id`) → `role_assignment` → audit `system.setup.completed`
 - [ ] **Step 5: รัน unit — PASS; รัน `DATABASE_URL=... pnpm --filter @backoffice/core test:integration -- first-run-setup` — PASS**
-- [ ] **Step 6: Commit** `feat(setup): connect, migrate and create the first super admin`
+- [ ] **Step 6: Commit** `feat(setup): connect, migrate and create the first ผู้ดูแลระบบ`
 
 ### Task 5: โหมด setup ฝั่งเว็บ (รหัส, ไฟล์ config, redirect, health)
 
 **Files:**
 - Create: `apps/web/src/lib/setup-code.ts`, `apps/web/src/lib/setup-config.ts`, `apps/web/src/lib/setup-mode.ts`, `apps/web/src/instrumentation.ts` และ test คู่กัน
-- Modify: `apps/web/src/lib/runtime-env.ts`, `apps/web/src/lib/database.ts`, `apps/web/src/app/page.tsx`, `apps/web/src/app/(app)/layout.tsx`, `apps/web/src/app/api/health/route.ts`
+- Modify: `apps/web/src/lib/runtime-env.ts`, `apps/web/src/lib/database.ts`, `apps/web/src/proxy.ts` (+ test), `apps/web/src/app/api/health/route.ts`
 
 **Interfaces:**
 - Consumes: Task 1 `readDatabaseUrl`, `databaseConfigFilePath`
@@ -168,7 +139,7 @@ session-service test: loader คืน super-admin → `resolve()` ได้ `ro
   - รหัสที่ log ตรง `/^backoffice\.setup\.code [A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/`; `verifySetupCode` รับรหัสนั้นแบบตัวเล็กไม่มีขีด; ผิด 5 ครั้งแล้วรหัสเดิมใช้ไม่ได้และ log บรรทัดใหม่
   - `writeDatabaseConfig` ได้ไฟล์ mode `0o600` เนื้อหาตรง, ไม่มี `.tmp-` ค้าง; dir read-only (`chmod 0o500`) โยน `config_write_failed` (ข้ามเมื่อ `process.getuid?.() === 0` เพราะ root เขียนได้เสมอ; ใช้ path ใต้ไฟล์ปกติแทน เช่น `<file>/database_url` ซึ่งได้ ENOTDIR ทุกผู้ใช้)
   - `/api/health` ในโหมด setup ตอบ 200 `{ status: 'setup-required' }`, ปกติ `{ status: 'ok' }`
-  - `HomePage` ในโหมด setup เรียก `redirect('/setup')` (mock `next/navigation` แบบ test เดิมใน `page.test.tsx`)
+  - `proxy` ในโหมด setup: หน้าอื่น redirect `/setup`; `/api/*` (ยกเว้น `/api/setup/*`, `/api/health`) ตอบ 503 `{ error: 'setup_required' }`; `/setup`, `/api/setup/*`, `/api/health` ผ่าน; นอกโหมด setup พฤติกรรมเดิม
 - [ ] **Step 2: รัน `pnpm --filter @backoffice/web test -- setup health page` — FAIL**
 - [ ] **Step 3: implement**; `instrumentation.ts`: `export async function register() { if (process.env.NEXT_RUNTIME === 'nodejs' && isSetupMode()) issueSetupCode(); }`
 - [ ] **Step 4: รันอีกครั้ง — PASS**
@@ -208,7 +179,7 @@ session-service test: loader คืน super-admin → `resolve()` ได้ `ro
 - [ ] **Step 2: รัน `pnpm --filter @backoffice/web test -- setup` — FAIL**
 - [ ] **Step 3: implement** ตาม `DESIGN.md` (ใช้คลาสฟอร์มที่มีอยู่, label ทุกช่อง, `role="alert"` สำหรับ error)
 - [ ] **Step 4: รันอีกครั้ง — PASS**
-- [ ] **Step 5: เขียน e2e** `first-run-setup.spec.ts`: เปิด `/` → อยู่ `/setup`; อ่านรหัสจาก env `E2E_SETUP_CODE`; กรอก → สำเร็จ → ล็อกอิน → เปิด `/hr` ได้ → `/setup` ตอบ 404 (ข้ามเมื่อไม่มี `E2E_SETUP_CODE`)
+- [ ] **Step 5: เขียน e2e** `first-run-setup.spec.ts`: เปิด `/` → อยู่ `/setup`; อ่านรหัสจาก env `E2E_SETUP_CODE`; กรอก → สำเร็จ → ล็อกอิน → เปิด `/admin/grants` ได้ → `/setup` ตอบ 404 (ข้ามเมื่อไม่มี `E2E_SETUP_CODE`)
 - [ ] **Step 6: Commit** `feat(web): first-run setup page`
 
 ### Task 8: worker รอค่าเชื่อมฐาน

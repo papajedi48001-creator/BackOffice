@@ -5,7 +5,7 @@ Status: Draft for review
 
 ## Goal
 
-ผู้ติดตั้งเปิดเว็บที่ยังไม่มีค่าเชื่อมฐานข้อมูล แล้วตั้งค่าการเชื่อมต่อ MariaDB และสร้างบัญชี **super admin** คนแรกจากหน้าเว็บได้ โดยไม่ต้องแก้ไฟล์ secret หรือเขียน SQL เอง เมื่อตั้งค่าเสร็จ หน้า setup ต้องปิดถาวร
+ผู้ติดตั้งเปิดเว็บที่ยังไม่มีค่าเชื่อมฐานข้อมูล แล้วตั้งค่าการเชื่อมต่อ MariaDB และสร้างบัญชี **super admin** (บทบาท `admin` ผู้ดูแลระบบ) คนแรกจากหน้าเว็บได้ โดยไม่ต้องแก้ไฟล์ secret หรือเขียน SQL เอง เมื่อตั้งค่าเสร็จ หน้า setup ต้องปิดถาวร
 
 ผู้ใช้หลัก: ผู้ติดตั้งระบบของโรงพยาบาล ซึ่งเข้าเครื่องเซิร์ฟเวอร์ได้ (อ่าน `docker compose logs web` ได้)
 
@@ -63,7 +63,7 @@ Status: Draft for review
 
 **ข. ฐานข้อมูล** — host, port (ค่าเริ่มต้น 3306), ชื่อฐาน (ค่าเริ่มต้น `backoffice`), ชื่อผู้ใช้, รหัสผ่าน ปุ่ม "ทดสอบการเชื่อมต่อ" แสดงผลรุ่น MariaDB และจำนวน migration ที่ยังไม่ได้รัน
 
-**ค. บัญชี super admin** — ชื่อที่แสดง, รหัสพนักงาน, เลขบัตรประชาชน (ตรวจ checksum 13 หลัก), ชื่อผู้ใช้, รหัสผ่าน + ยืนยันรหัสผ่าน (อย่างน้อย 12 ตัว)
+**ค. บัญชีผู้ดูแลระบบ** — ชื่อ, นามสกุล, รหัสพนักงาน, เลขบัตรประชาชน (ตรวจ checksum ด้วย `thaiNationalIdSchema` เดิม), ชื่อผู้ใช้, รหัสผ่าน + ยืนยันรหัสผ่าน (อย่างน้อย 12 ตัว)
 
 ก่อนแสดงฟอร์ม หน้า setup ตรวจว่ามีคีย์ที่ต้องใช้ครบ ถ้าขาด แสดงชื่อตัวแปรที่ขาด (ไม่แสดงค่า) และปิดปุ่มบันทึก:
 `BACKOFFICE_SESSION_SECRET`, `NATIONAL_ID_ENCRYPTION_KEY`, `NATIONAL_ID_LOOKUP_KEY`
@@ -87,26 +87,23 @@ Status: Draft for review
 4. หา migration ที่ยังไม่ได้รัน (อ่าน `schema_migration` ถ้ามี) ถ้ามี ให้รัน `runMigrations` ถ้าถูกปฏิเสธเพราะสิทธิ์ (`1142`, `1044`) ตอบ `migration_privilege_missing` พร้อมคำแนะนำให้รันสคริปต์ SQL ด้วย root หรือให้สิทธิ์ `CREATE, ALTER, INDEX, REFERENCES`
 5. ถ้ามีแถวใน `local_account` อยู่แล้ว ตอบ `accounts_exist` (กันการเอาหน้า setup ไปยัดบัญชีลงฐานที่ใช้งานอยู่) operator ที่ต้องการต่อเว็บเข้ากับฐานเดิมให้เขียนไฟล์ `database_url` เอง
 6. ใน **transaction เดียว**:
-   - `person` (เลขบัตรเข้ารหัสด้วย `NationalIdProtector`, `employee_code`, `display_name`)
+   - `person` (เลขบัตรเข้ารหัสด้วย `NationalIdProtector`, `employee_code`, สถานะ ACTIVE) และโปรไฟล์ชื่อ-นามสกุลผ่าน `applyProfileUpdate` เดิม (sync `display_name`)
    - `local_account` (รหัสผ่าน hash ด้วย `hashPassword` เดิม แบบ scrypt)
-   - `role` ชื่อ `super-admin` (สร้างถ้ายังไม่มี)
-   - `role_assignment` ของ super admin โดย `organization_id = NULL`
-   - `audit_event` action `system.setup.completed`, actor = super admin, target = person, metadata มีแค่ `{ serverVersion, migrationsApplied }`
+   - `role` ชื่อ `admin` (สร้างถ้ายังไม่มี)
+   - `role_assignment` ของผู้ดูแลระบบคนแรก โดย `organization_id = NULL`
+   - `audit_event` action `system.setup.completed`, actor = ผู้ดูแลระบบคนแรก, target = person, metadata มีแค่ `{ serverVersion, migrationsApplied }`
 7. เขียนไฟล์ `${BACKOFFICE_CONFIG_DIR}/database_url` แบบ atomic (เขียนไฟล์ชั่วคราว mode `0600` ในไดเรกทอรีเดียวกัน แล้ว `rename`) ถ้าเขียนไม่ได้ ข้อมูลในฐานยังอยู่ ตอบ error `config_write_failed` และ log สาเหตุ (ไม่ log ค่า) รอบถัดไปจะติด `accounts_exist` ซึ่ง operator แก้ได้ด้วยการเขียนไฟล์เอง ถือว่ายอมรับได้เพราะเกิดได้ยาก (volume เขียนไม่ได้)
 8. ล้างรหัส setup ออกจากหน่วยความจำ ปิด pool ชั่วคราว `getSharedDatabase()` จะอ่านไฟล์ใหม่ในคำขอถัดไป
 
 URL ที่เขียนลงไฟล์สร้างจาก field ทีละตัวด้วย `encodeURIComponent` ไม่รับ URL ดิบจากผู้ใช้
 
-### 6. Super admin
+### 6. ผู้ดูแลระบบคนแรก (super admin)
 
-- เพิ่มบทบาท `super-admin` ใน `packages/core/src/access/policy.ts`
-- เพิ่มฟังก์ชันบริสุทธิ์ `expandSuperAdmin(access)` ใน `packages/core/src/access` ถ้ามีบทบาท `super-admin` ให้คืน:
-  - `roles`: ทุกบทบาทใน `permissionsByRole` แบบ `organizationId: null` รวมกับบทบาทเดิม
-  - `dataOwnerModules` และ `hospitalWideDataOwnerModules`: ทุกโมดูลใน `dataOwnerModuleCodes` (รายการใหม่ใน policy: `hr`, `leave`, `official-travel`, `room-booking`, `inventory`, `requests`)
-- `SessionService.resolve` เรียก `expandSuperAdmin` หลัง `AccessSubjectLoader.load` จุดเดียว ทุก policy เดิม (`AuthorizationService`, การเช็ก `roles`/`dataOwnerModules` ใน web) จึงเห็นสิทธิ์ครบโดยไม่ต้องแก้
-- super admin **ไม่** กลายเป็นผู้อนุมัติแทนหัวหน้าในสายบังคับบัญชา (ผู้อนุมัติมาจาก `hr_organization_head` ไม่ใช่บทบาท) — เป็นพฤติกรรมที่ตั้งใจ
-- ทุกการกระทำของ super admin ลงบันทึกการตรวจสอบเหมือนผู้ใช้อื่น
-- เพิ่มคำ **ผู้ดูแลระบบสูงสุด (super admin)** ใน `CONTEXT.md`: บทบาทที่ได้สิทธิ์ทุกบทบาทและเป็นเจ้าของข้อมูลทุกโมดูลทั้งโรงพยาบาล ตั้งได้จากหน้า setup ครั้งแรกเท่านั้น
+แก้ไข 2026-11-01: ระหว่างรอแผน main ได้โมดูลผู้ดูแลระบบ (PR #43) ซึ่งมีบทบาท `admin` (**ผู้ดูแลระบบ**) ที่ผ่านทุก permission ทั้งโรงพยาบาลรวมถึงด่านเจ้าของข้อมูล และให้/ถอนสิทธิผู้อื่นได้จากหน้า `/admin/grants` ตรงกับ "super admin ทำได้ทุกอย่าง" ที่ผู้ใช้ขอ จึง **ไม่สร้างบทบาท `super-admin` ใหม่** และไม่แก้ `SessionService`
+
+- บัญชีที่หน้า setup สร้างได้ role `admin` (`ADMIN_ROLE` ใน `packages/core/src/access/authorization-service.ts`) แบบ `organization_id = NULL`
+- ไม่มีคำศัพท์ใหม่ใน `CONTEXT.md` ใช้ **ผู้ดูแลระบบ** เดิม; เพิ่มประโยคว่าคนแรกตั้งจากหน้า setup ครั้งแรก
+- ผู้ดูแลระบบไม่กลายเป็นผู้อนุมัติแทนหัวหน้าในสายบังคับบัญชา (พฤติกรรมเดิม)
 
 ### 7. Worker
 
@@ -136,19 +133,18 @@ Unit (Vitest):
 - ลำดับการหาค่า `DATABASE_URL` (env > file > config dir > none)
 - รหัส setup: รูปแบบ, เทียบถูก/ผิด, ครบ 5 ครั้งแล้วเปลี่ยนรหัส, ไม่เคยคืนรหัสจริง
 - zod schema ของฟอร์ม: เลขบัตร checksum, รหัสผ่านสั้น, port นอกช่วง, host ว่าง
-- `expandSuperAdmin`: มี/ไม่มี super-admin, ไม่ซ้ำบทบาท, ได้ทุก permission ใน `AuthorizationService`
 - สร้าง URL: อักขระพิเศษในรหัสผ่านถูก encode
 - route handler: นอกโหมด setup ตอบ 404, รหัสผิดตอบ `invalid_code`, error ของ driver ไม่หลุดไปใน response
 - worker: ไม่มีค่าแล้วรอ ไม่ throw
 
 Integration (MariaDB, ข้ามเมื่อไม่มี `DATABASE_URL`):
-- ฐานว่าง: complete แล้วได้ migration ครบ 16, person/account/role/assignment/audit ครบ, ล็อกอินด้วยบัญชีใหม่ได้ และ session มีทุกบทบาท
+- ฐานว่าง: complete แล้วได้ migration ครบทุกไฟล์ใน `migrationVersions`, person/account/role/assignment/audit ครบ, ล็อกอินด้วยบัญชีใหม่ได้ และ session มี role `admin`
 - ฐานที่เตรียมด้วยสคริปต์ SQL + ผู้ใช้ DML อย่างเดียว: complete ผ่านโดยไม่รัน migration
 - ฐานว่าง + ผู้ใช้ DML อย่างเดียว: ได้ `migration_privilege_missing`
 - ฐานที่มีบัญชีแล้ว: ได้ `accounts_exist` และไม่มีแถวใหม่
 - transaction ล้มกลางทาง: ไม่มีแถวค้าง
 
-E2E (Playwright): เปิดเว็บโหมด setup → ไป `/setup` → กรอก → ล็อกอินด้วย super admin → เข้า `/hr` ได้ → `/setup` ตอบ 404
+E2E (Playwright): เปิดเว็บโหมด setup → ไป `/setup` → กรอก → ล็อกอินด้วยผู้ดูแลระบบ → เข้า `/admin/grants` ได้ → `/setup` ตอบ 404
 
 ## Open questions
 
