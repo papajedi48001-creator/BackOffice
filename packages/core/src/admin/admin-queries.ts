@@ -1,4 +1,4 @@
-import { grantableRoleSchema, type GrantableRole } from '@backoffice/contracts';
+import { grantableRoleSchema, moduleModeSchema, type GrantableRole, type ModuleMode } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 
 export interface AdminGrantRow {
@@ -24,7 +24,13 @@ export class AdminQueries {
   constructor(private readonly database: Pick<Database, 'query'>) {}
 
   async disabledModules(): Promise<string[]> {
-    return (await this.database.query<{ code: string }>('SELECT module_code AS code FROM admin_module_setting WHERE enabled = 0 ORDER BY module_code')).map((row) => row.code);
+    return Object.entries(await this.moduleModes()).filter(([, mode]) => mode === 'OFF').map(([code]) => code);
+  }
+
+  /** Every module whose mode was set; a module missing here is ON. An unknown stored value counts as OFF, the safe side. */
+  async moduleModes(): Promise<Record<string, ModuleMode>> {
+    const rows = await this.database.query<{ code: string; mode: string }>('SELECT module_code AS code, mode FROM admin_module_setting ORDER BY module_code');
+    return Object.fromEntries(rows.map((row) => [row.code, moduleModeSchema.safeParse(row.mode).data ?? 'OFF']));
   }
 
   /** Every hospital-wide admin and manager grant, one row per person, sorted by name. */

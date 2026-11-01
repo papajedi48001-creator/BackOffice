@@ -1,16 +1,31 @@
-import type { GrantableRole } from '@backoffice/contracts';
+import { testerModuleCodes, type GrantableRole, type TesterModuleCode, type TesterRole } from '@backoffice/contracts';
 import { t, type MessageKey } from '@backoffice/i18n';
 
-const roleKeys: Record<GrantableRole, MessageKey> = {
+type ManagerRole = Exclude<GrantableRole, TesterRole>;
+const roleKeys: Record<ManagerRole, MessageKey> = {
   admin: 'adminRoleAdmin', 'hr-manager': 'adminRoleHrManager', 'leave-manager': 'adminRoleLeaveManager', 'travel-manager': 'adminRoleTravelManager',
   'room-manager': 'adminRoleRoomManager', 'inventory-officer': 'adminRoleInventoryOfficer', 'fleet-manager': 'adminRoleFleetManager'
 };
 
-/** Grantable roles in the order the forms list them: ผู้ดูแลระบบ first, then each module's ผู้จัดการ. */
-export const grantableRoles = Object.keys(roleKeys) as GrantableRole[];
+/** Module names for the ผู้ทดสอบ labels; the same keys as the module registry. */
+const testedModuleKeys: Record<TesterModuleCode, MessageKey> = {
+  requests: 'requests', notifications: 'notifications', hr: 'moduleHr', access: 'moduleAccess', 'room-booking': 'moduleRoomBooking',
+  leave: 'moduleLeave', 'official-travel': 'moduleTravel', inventory: 'moduleInventory', fleet: 'moduleFleet'
+};
+
+/** ผู้ดูแลระบบ and each module's ผู้จัดการ, in the order the forms list them. */
+export const managerRoles = Object.keys(roleKeys) as ManagerRole[];
+/** Each module's ผู้ทดสอบ role (`<module>-tester`), in registry order, listed after the managers. */
+export const testerRoles = testerModuleCodes.map((code) => `${code}-tester` as TesterRole);
+export const grantableRoles: GrantableRole[] = [...managerRoles, ...testerRoles];
+
+export function isTesterRole(role: string): role is TesterRole {
+  return (testerRoles as string[]).includes(role);
+}
 
 export function roleLabel(role: string): string {
-  return role in roleKeys ? t(roleKeys[role as GrantableRole]) : role;
+  if (isTesterRole(role)) return `${t('adminRoleTester')}${t(testedModuleKeys[role.slice(0, -'-tester'.length) as TesterModuleCode])}`;
+  return role in roleKeys ? t(roleKeys[role as ManagerRole]) : role;
 }
 
 /** HR, leave and travel manager roles only take effect for a hospital-wide HR เจ้าของข้อมูล. Mirrors `needsHrDataOwner` in core. */
