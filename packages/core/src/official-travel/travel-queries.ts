@@ -147,6 +147,17 @@ export class OfficialTravelQueries {
     );
   }
 
+  /** Whether this person approves trips at all: a current head of a live unit, an active ผู้แทน for ไปราชการ, or the approver of a trip waiting now. */
+  async canApprove(personId: string): Promise<boolean> {
+    const [row] = await this.database.query<{ allowed: number | string }>(
+      `SELECT (EXISTS (SELECT 1 FROM hr_organization_head h JOIN organization o ON o.id = h.organization_id
+                 WHERE h.person_id = ? AND o.deleted_at IS NULL AND h.effective_from <= UTC_TIMESTAMP() AND (h.effective_until IS NULL OR h.effective_until > UTC_TIMESTAMP()))
+               OR EXISTS (${ACTIVE_DELEGATORS})) AS allowed`,
+      [personId, personId]
+    );
+    return Number(row?.allowed) === 1 || (await this.pendingIds(personId)).length > 0;
+  }
+
   private async pendingIds(personId: string): Promise<string[]> {
     const rows = await this.database.query<{ requestId: string }>(
       `SELECT s.request_id AS requestId FROM approval_step s JOIN request r ON r.id = s.request_id
