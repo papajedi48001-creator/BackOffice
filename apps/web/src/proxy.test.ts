@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const disabled = vi.hoisted(() => ({ codes: [] as string[], development: [] as string[], roles: [] as string[], readSession: 0 }));
+const setup = vi.hoisted(() => ({ on: false }));
+vi.mock('./lib/setup-mode', () => ({ isSetupMode: () => setup.on }));
 vi.mock('./lib/database', () => ({ getSharedDatabase: () => ({ query: vi.fn() }) }));
 vi.mock('./lib/module-gate', async (importOriginal) => ({ ...(await importOriginal<typeof import('./lib/module-gate')>()), readModuleModes: async () => Object.fromEntries([...disabled.codes.map((code) => [code, 'OFF']), ...disabled.development.map((code) => [code, 'DEVELOPMENT'])]) }));
 vi.mock('./lib/session', () => ({ readSession: async () => { disabled.readSession += 1; return { authenticated: true, personId: 'p-1', roles: disabled.roles.map((name) => ({ name, organizationId: null })), dataOwnerModules: [] }; } }));
@@ -9,7 +11,7 @@ vi.mock('./lib/session', () => ({ readSession: async () => { disabled.readSessio
 import { proxy } from './proxy';
 
 describe('proxy', () => {
-  beforeEach(() => { disabled.codes = ['fleet']; disabled.development = []; disabled.roles = []; disabled.readSession = 0; });
+  beforeEach(() => { disabled.codes = ['fleet']; disabled.development = []; disabled.roles = []; disabled.readSession = 0; setup.on = false; });
 
   it('refuses an API of a switched-off module with 403 and module_disabled', async () => {
     const response = await proxy(new NextRequest('http://localhost/api/fleet/drivers', { method: 'POST' }));
@@ -49,5 +51,29 @@ describe('proxy', () => {
     await proxy(new NextRequest('http://localhost/rooms'));
     await proxy(new NextRequest('http://localhost/fleet/mine'));
     expect(disabled.readSession).toBe(0);
+  });
+
+  describe('while no database is configured', () => {
+    beforeEach(() => { setup.on = true; });
+
+    it('sends every page to /setup', async () => {
+      for (const path of ['/', '/dashboard', '/leave/mine']) {
+        const response = await proxy(new NextRequest(`http://localhost${path}`));
+        expect(response.status).toBe(307);
+        expect(new URL(response.headers.get('location')!).pathname).toBe('/setup');
+      }
+    });
+
+    it('answers other APIs with 503 setup_required', async () => {
+      const response = await proxy(new NextRequest('http://localhost/api/leave/requests'));
+      expect(response.status).toBe(503);
+      await expect(response.json()).resolves.toEqual({ error: 'setup_required' });
+    });
+
+    it('lets the setup page, its API and the health check through', async () => {
+      for (const path of ['/setup', '/api/setup/test-connection', '/api/health']) {
+        expect((await proxy(new NextRequest(`http://localhost${path}`))).headers.get('x-middleware-next')).toBe('1');
+      }
+    });
   });
 });
