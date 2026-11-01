@@ -21,13 +21,12 @@ describe('setup code', () => {
     expect(verifySetupCode(lastCode().toLowerCase().replace(/-/g, ''), log)).toBe(true);
   });
 
-  it('replaces the code after five wrong tries', () => {
+  it('keeps the logged code and logs nothing more when wrong codes are tried', () => {
     issueSetupCode(log);
     const first = lastCode();
-    for (let attempt = 0; attempt < 5; attempt += 1) expect(verifySetupCode('WRONG-CODE-0000', log)).toBe(false);
-    expect(lines).toHaveLength(2);
-    expect(verifySetupCode(first, log)).toBe(false);
-    expect(verifySetupCode(lastCode(), log)).toBe(true);
+    for (let attempt = 0; attempt < 50; attempt += 1) expect(verifySetupCode('WRONG-CODE-0000', log)).toBe(false);
+    expect(lines).toHaveLength(1);
+    expect(verifySetupCode(first, log)).toBe(true);
   });
 
   it('issues a code on first use when none was issued at start', () => {
