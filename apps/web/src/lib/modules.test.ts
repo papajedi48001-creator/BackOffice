@@ -1,7 +1,7 @@
 import type { AccessSubject } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { describe, expect, it, vi } from 'vitest';
-import { availableModules, moduleCodeForPath, moduleLabel, moduleRegistry, moduleSections, navigationFor, navigationFrom, visibleModules } from './modules';
+import { availableModules, enabledModules, moduleCodeForPath, moduleLabel, moduleRegistry, moduleSections, navigationFor, navigationFrom, visibleModules } from './modules';
 
 const subject = (overrides: Partial<AccessSubject> = {}): AccessSubject => ({ authenticated: true, personId: 'p', roles: [], dataOwnerModules: [], ...overrides });
 const hrefs = (value: AccessSubject) => navigationFor(value).map((item) => item.href);
@@ -194,5 +194,31 @@ describe('moduleCodeForPath', () => {
     const items = navigationFor(subject());
     expect(items[0]).toMatchObject({ href: '/dashboard', module: 'home' });
     expect(items.find((item) => item.href === '/rooms')).toMatchObject({ module: 'room-booking' });
+  });
+});
+
+describe('admin module', () => {
+  const admin = subject({ roles: [{ name: 'admin', organizationId: null }] });
+
+  it('is shown only to ผู้ดูแลระบบ, with its sections in order', () => {
+    expect(hrefs(subject())).not.toContain('/admin');
+    expect(hrefs(subject({ roles: [{ name: 'hr-manager', organizationId: null }] }))).not.toContain('/admin');
+    expect(hrefs(admin)).toContain('/admin');
+    expect(sectionHrefs('admin', admin)).toEqual(['/admin/connections', '/admin/modules', '/admin/grants', '/admin/audit']);
+  });
+
+  it('gives an admin every manager section of other modules', () => {
+    expect(sectionHrefs('hr', admin)).toContain('/hr/imports');
+    expect(sectionHrefs('access', admin)).toContain('/access/roles');
+    expect(sectionHrefs('leave', admin)).toContain('/leave/settings');
+    expect(sectionHrefs('fleet', admin)).toContain('/fleet/settings');
+    expect(sectionHrefs('inventory', admin)).toContain('/inventory/items');
+  });
+
+  it('drops switched-off modules from the menu but never the admin module', () => {
+    const shown = enabledModules(visibleModules(admin), ['fleet', 'leave', 'admin']).map((entry) => entry.code);
+    expect(shown).not.toContain('fleet');
+    expect(shown).not.toContain('leave');
+    expect(shown).toContain('admin');
   });
 });

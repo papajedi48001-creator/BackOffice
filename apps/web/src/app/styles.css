@@ -39,6 +39,7 @@
 [data-module="inventory"] { --accent: #8a4f12; }
 [data-module="access"] { --accent: #475569; }
 [data-module="fleet"] { --accent: #a63d40; }
+[data-module="admin"] { --accent: #374151; }
 
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; }

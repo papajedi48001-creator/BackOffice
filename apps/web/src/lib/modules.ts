@@ -1,5 +1,5 @@
 import type { AccessSubject } from '@backoffice/contracts';
-import { AuthorizationService, FleetQueries, LeaveQueries, OfficialTravelQueries, RoomBookingQueries, canManageFleet, canManageLeave, canManageTravel, hasOpenRequestWork, listPendingApprovals } from '@backoffice/core';
+import { AuthorizationService, FleetQueries, isAdmin, lockedModules, LeaveQueries, OfficialTravelQueries, RoomBookingQueries, canManageFleet, canManageLeave, canManageTravel, hasOpenRequestWork, listPendingApprovals } from '@backoffice/core';
 import type { Database } from '@backoffice/db';
 import { t, type MessageKey } from '@backoffice/i18n';
 import type { NavigationItem } from '../components/app-shell';
@@ -7,7 +7,7 @@ import { matchModule } from './module-theme';
 import { canInventory } from './inventory-access';
 
 export type ModuleGroup = 'mine' | 'people' | 'services' | 'governance';
-export type ModuleIconName = 'requests' | 'bell' | 'people' | 'org' | 'upload' | 'shield' | 'delegate' | 'audit' | 'wrench' | 'package' | 'room' | 'car' | 'clock' | 'leave' | 'travel' | 'asset' | 'monitor' | 'target' | 'heart';
+export type ModuleIconName = 'requests' | 'bell' | 'people' | 'org' | 'upload' | 'shield' | 'delegate' | 'audit' | 'wrench' | 'package' | 'room' | 'car' | 'clock' | 'leave' | 'travel' | 'asset' | 'monitor' | 'target' | 'heart' | 'settings';
 
 /** One page inside a module, shown in the module's section bar rather than on the main page. */
 export interface ModuleSection {
@@ -40,7 +40,8 @@ export interface ModuleEntry {
 
 const everyone = () => true;
 const unreadNotices = async (db: Database, subject: AccessSubject) => subject.personId ? Number((await db.query<{ total: number }>('SELECT COUNT(*) AS total FROM notification WHERE recipient_person_id = ? AND channel = ? AND read_at IS NULL', [subject.personId, 'in_app']))[0]?.total ?? 0) : 0;
-const hasRole = (...names: string[]) => (subject: AccessSubject) => subject.roles.some((role) => names.includes(role.name));
+// A ผู้ดูแลระบบ is ผู้จัดการ of every module, so role-gated sections show for them too.
+const hasRole = (...names: string[]) => (subject: AccessSubject) => isAdmin(subject) || subject.roles.some((role) => names.includes(role.name));
 const authorization = new AuthorizationService();
 const withSections = (entry: Omit<ModuleEntry, 'visible'>, sections: readonly ModuleSection[]): ModuleEntry => ({ ...entry, sections, visible: (subject) => sections.some((section) => section.visible(subject)) });
 const planned = (code: string, href: string, labelKey: MessageKey, descriptionKey: MessageKey, icon: ModuleIconName): ModuleEntry => ({ code, href, labelKey, descriptionKey, icon, group: 'services', status: 'planned', visible: everyone });
@@ -125,6 +126,13 @@ export const moduleRegistry: readonly ModuleEntry[] = [
     ]),
     badge: async (db, subject) => (await fleetWaiting(db, subject)) + (await fleetDriverToday(db, subject))
   },
+  // ผู้ดูแลระบบ only. A new admin page is one more section here and one page under app/(app)/admin.
+  withSections({ code: 'admin', href: '/admin', labelKey: 'moduleAdmin', descriptionKey: 'moduleAdminDescription', icon: 'settings', group: 'governance', status: 'live' }, [
+    { href: '/admin/connections', labelKey: 'adminConnections', visible: isAdmin },
+    { href: '/admin/modules', labelKey: 'adminModules', visible: isAdmin },
+    { href: '/admin/grants', labelKey: 'adminGrants', visible: isAdmin },
+    { href: '/admin/audit', labelKey: 'adminAudit', visible: isAdmin }
+  ]),
   planned('attendance', '/attendance', 'moduleAttendance', 'moduleAttendanceDescription', 'clock'),
   planned('asset-register', '/assets', 'moduleAssetRegister', 'moduleAssetRegisterDescription', 'asset'),
   planned('computer-center', '/it', 'moduleComputerCenter', 'moduleComputerCenterDescription', 'monitor'),
@@ -134,6 +142,11 @@ export const moduleRegistry: readonly ModuleEntry[] = [
 
 export function visibleModules(subject: AccessSubject): ModuleEntry[] {
   return moduleRegistry.filter((entry) => entry.status === 'planned' || entry.visible(subject));
+}
+
+/** Drops modules a ผู้ดูแลระบบ switched off (ตั้งค่าโปรแกรม); the admin module always stays. Pages and APIs are refused by the proxy. */
+export function enabledModules(modules: ModuleEntry[], disabled: readonly string[]): ModuleEntry[] {
+  return modules.filter((entry) => lockedModules.includes(entry.code) || !disabled.includes(entry.code));
 }
 
 export function moduleSections(code: string, subject: AccessSubject): ModuleSection[] {
