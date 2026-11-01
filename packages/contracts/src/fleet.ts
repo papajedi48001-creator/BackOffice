@@ -18,7 +18,7 @@ export type FleetErrorCode =
   | 'NOT_FOUND' | 'NOT_PENDING' | 'NOT_RETURNED'
   | 'VEHICLE_BUSY' | 'DRIVER_BUSY' | 'VEHICLE_UNAVAILABLE' | 'DRIVER_INACTIVE' | 'TRIP_DOES_NOT_COVER'
   | 'DEPARTURE_TOO_EARLY' | 'ODOMETER_BELOW_LAST' | 'ODOMETER_BELOW_OUT'
-  | 'DRIVER_HAS_TRIPS' | 'DUPLICATE_REGISTRATION';
+  | 'DRIVER_HAS_TRIPS' | 'DUPLICATE_REGISTRATION' | 'HAS_HISTORY';
 
 const text = (max: number) => z.string().trim().min(1).max(max);
 /** An instant as an ISO 8601 UTC string, such as `2026-11-03T01:00:00.000Z`. */

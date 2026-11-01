@@ -94,4 +94,32 @@ describeWithDatabase('FleetCatalogService against MariaDB', () => {
     const [row] = await database.query<{ is_active: number }>('SELECT is_active FROM fleet_driver WHERE person_id = ?', [driver]);
     expect(row!.is_active).toBe(0);
   });
+  it('deletes a car or a driver never put on a เที่ยวรถ, audited; refuses one with history, which stays', async () => {
+    const unused = await service.createVehicle(actor, input(`T4${run}-D1`));
+    const used = await service.createVehicle(actor, input(`T4${run}-D2`));
+    if (!unused.ok || !used.ok) throw new Error('setup');
+    const spare = randomUUID();
+    const busy = randomUUID();
+    await insertPerson(database, spare);
+    await insertPerson(database, busy);
+    await service.upsertDriver(actor, { personId: spare, phone: '0811111111', isActive: true });
+    await service.upsertDriver(actor, { personId: busy, phone: '0822222222', isActive: true });
+    await database.execute("INSERT INTO fleet_trip (id, vehicle_id, driver_person_id, starts_at, ends_at, status, created_by_person_id, created_at, updated_at) VALUES (?, ?, ?, '2026-10-01 01:00:00', '2026-10-01 09:00:00', 'RETURNED', ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())", [randomUUID(), used.vehicleId, busy, actor]);
+
+    expect(await service.deleteVehicle(actor, unused.vehicleId)).toEqual({ ok: true });
+    expect(await database.query('SELECT id FROM fleet_vehicle WHERE id = ?', [unused.vehicleId])).toHaveLength(0);
+    expect(JSON.parse((await auditsFor('fleet.vehicle.delete', unused.vehicleId))[0]!.metadata)).toEqual({ registration: `T4${run}-D1` });
+    expect(await service.deleteVehicle(actor, used.vehicleId)).toEqual({ ok: false, code: 'HAS_HISTORY' });
+    expect(await database.query('SELECT id FROM fleet_vehicle WHERE id = ?', [used.vehicleId])).toHaveLength(1);
+    expect(await service.deleteVehicle(actor, randomUUID())).toEqual({ ok: false, code: 'NOT_FOUND' });
+
+    expect(await service.deleteDriver(actor, spare)).toEqual({ ok: true });
+    expect(await database.query('SELECT person_id FROM fleet_driver WHERE person_id = ?', [spare])).toHaveLength(0);
+    expect(await database.query('SELECT id FROM person WHERE id = ?', [spare])).toHaveLength(1);
+    expect(await auditsFor('fleet.driver.delete', spare)).toHaveLength(1);
+    expect(await service.deleteDriver(actor, busy)).toEqual({ ok: false, code: 'HAS_HISTORY' });
+    expect(await service.deleteDriver(actor, randomUUID())).toEqual({ ok: false, code: 'NOT_FOUND' });
+    await database.execute('DELETE FROM fleet_trip WHERE driver_person_id = ?', [busy]);
+    await database.execute('DELETE FROM fleet_driver WHERE person_id = ?', [busy]);
+  });
 });

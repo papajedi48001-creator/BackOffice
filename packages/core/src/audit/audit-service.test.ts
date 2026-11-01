@@ -56,3 +56,12 @@ describe('AuditService', () => {
     expect(recorded).toEqual(['{"travelType":"ABROAD","memberCount":3,"days":2}']);
   });
 });
+
+describe('AuditService admin events', () => {
+  it('keeps the granted role and module code', async () => {
+    const recorded: string[] = [];
+    const service = new AuditService({ append: async (event) => { recorded.push(event.metadata); } }, () => 'audit-admin');
+    await service.recordAudit({ actorPersonId: 'person-a', action: 'admin.role.granted', targetType: 'person', targetId: 'person-b', result: 'SUCCESS', metadata: { personId: 'person-b', roleName: 'fleet-manager', password: 'x' } });
+    expect(recorded).toEqual(['{"personId":"person-b","roleName":"fleet-manager"}']);
+  });
+});

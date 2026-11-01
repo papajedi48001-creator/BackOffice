@@ -40,6 +40,20 @@ it('shows only the sections the person can see above the page', async () => {
   expect(screen.getByText('เนื้อหา')).toBeInTheDocument();
 });
 
+it('shows งานขับของฉัน only to a person on the driver list', async () => {
+  mocks.headers.mockResolvedValue(new Headers());
+  mocks.readSession.mockResolvedValue(session([]));
+  const isDriver = (found: boolean) => ({ query: vi.fn(async (sql: string) => (sql.includes('FROM fleet_driver') ? (found ? [{ found: 1 }] : []) : [{ count: 0 }])) });
+  mocks.database.mockReturnValue(isDriver(false));
+  const { unmount } = render(await ModuleLayout({ code: 'fleet', children: <p>เนื้อหา</p> }));
+  expect(screen.getByRole('link', { name: 'ใบขอใช้รถของฉัน' })).toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: /งานขับของฉัน/ })).toBeNull();
+  unmount();
+  mocks.database.mockReturnValue(isDriver(true));
+  render(await ModuleLayout({ code: 'fleet', children: <p>เนื้อหา</p> }));
+  expect(screen.getByRole('link', { name: /งานขับของฉัน/ })).toHaveAttribute('href', '/fleet/driving');
+});
+
 it('leaves อนุมัติไปราชการ out of the section bar for someone who approves no trips', async () => {
   mocks.headers.mockResolvedValue(new Headers());
   mocks.readSession.mockResolvedValue(session([]));

@@ -1,7 +1,7 @@
 import type { AccessSubject } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { describe, expect, it, vi } from 'vitest';
-import { availableModules, availableSections, moduleCodeForPath, moduleLabel, moduleRegistry, moduleSections, navigationFor, navigationFrom, visibleModules } from './modules';
+import { availableModules, availableSections, usableModules, moduleCodeForPath, moduleLabel, moduleRegistry, moduleSections, navigationFor, navigationFrom, visibleModules } from './modules';
 
 const subject = (overrides: Partial<AccessSubject> = {}): AccessSubject => ({ authenticated: true, personId: 'p', roles: [], dataOwnerModules: [], ...overrides });
 const hrefs = (value: AccessSubject) => navigationFor(value).map((item) => item.href);
@@ -42,9 +42,11 @@ describe('module registry', () => {
     for (const entry of moduleRegistry) for (const section of entry.sections ?? []) expect(section.href.startsWith(`${entry.href}/`)).toBe(true);
   });
 
-  it('never puts planned modules in navigation but lists them in visibleModules', () => {
+  it('never puts planned modules in navigation, and lists them in visibleModules for ผู้ดูแลระบบ only', () => {
     expect(hrefs(subject())).not.toContain('/maintenance');
-    expect(visibleModules(subject()).find((entry) => entry.code === 'maintenance')?.status).toBe('planned');
+    expect(visibleModules(subject()).find((entry) => entry.code === 'maintenance')).toBeUndefined();
+    expect(visibleModules(subject({ roles: [{ name: 'hr-manager', organizationId: null }] })).some((entry) => entry.status === 'planned')).toBe(false);
+    expect(visibleModules(subject({ roles: [{ name: 'admin', organizationId: null }] })).find((entry) => entry.code === 'maintenance')?.status).toBe('planned');
   });
 
   it('puts room booking in everyone\'s navigation', () => {
@@ -109,11 +111,22 @@ describe('fleet module', () => {
 
   it('is live in the services group, opening on my ใบ for everyone and on the dashboard for the หัวหน้าหมวด', () => {
     expect(moduleRegistry.find((entry) => entry.code === 'fleet')).toMatchObject({ status: 'live', group: 'services', href: '/fleet', labelKey: 'moduleFleet', icon: 'car' });
-    // Whether someone drives comes from fleet_driver, which the synchronous section check cannot read: the link shows to everyone and the page says who it is for.
+    // Whether someone drives comes from fleet_driver, so งานขับของฉัน passes this check for everyone and is narrowed by availableSections.
     expect(sectionHrefs('fleet', subject())).toEqual(['/fleet/mine', '/fleet/calendar', '/fleet/driving']);
     expect(sectionHrefs('fleet', manager)).toEqual(['/fleet/dashboard', '/fleet/mine', '/fleet/calendar', '/fleet/driving', '/fleet/settings']);
     expect(sectionHrefs('fleet', subject({ roles: [{ name: 'fleet-manager', organizationId: 'unit-1' }] }))).not.toContain('/fleet/dashboard');
     expect(moduleCodeForPath('/fleet/requests/1')).toBe('fleet');
+  });
+
+  it('lists งานขับของฉัน only for a person on the driver list', async () => {
+    const driving = moduleRegistry.find((entry) => entry.code === 'fleet')!.sections!.find((entry) => entry.href === '/fleet/driving')!;
+    const drivers = (found: boolean) => ({ query: vi.fn(async () => (found ? [{ found: 1 }] : [])) }) as unknown as Database;
+    expect(await availableSections([driving], drivers(true), subject())).toEqual([driving]);
+    expect(await availableSections([driving], drivers(false), subject())).toEqual([]);
+    expect(await availableSections([driving], drivers(true), subject({ personId: null }))).toEqual([]);
+    // Sections with no check of their own stay, and a failed check leaves the link in place, as for modules.
+    const mine = moduleRegistry.find((entry) => entry.code === 'fleet')!.sections!.find((entry) => entry.href === '/fleet/mine')!;
+    expect(await availableSections([mine, driving], { query: vi.fn(async () => { throw new Error('down'); }) } as unknown as Database, subject())).toEqual([mine, driving]);
   });
 
   it('badges รอจัดรถ for the หัวหน้าหมวด and today\'s เที่ยวรถ for a driver, summed on the module', async () => {
@@ -217,5 +230,49 @@ describe('ไปราชการ approvals tab', () => {
 
   it('keeps the tab when the check fails, since the page still guards itself', async () => {
     expect(await hrefs({ query: vi.fn().mockRejectedValue(new Error('down')) } as unknown as Database)).toContain('/travel/approvals');
+  });
+});
+
+describe('admin module', () => {
+  const admin = subject({ roles: [{ name: 'admin', organizationId: null }] });
+
+  it('is shown only to ผู้ดูแลระบบ, with its sections in order', () => {
+    expect(hrefs(subject())).not.toContain('/admin');
+    expect(hrefs(subject({ roles: [{ name: 'hr-manager', organizationId: null }] }))).not.toContain('/admin');
+    expect(hrefs(admin)).toContain('/admin');
+    expect(sectionHrefs('admin', admin)).toEqual(['/admin/connections', '/admin/modules', '/admin/grants', '/admin/audit']);
+  });
+
+  it('gives an admin every manager section of other modules', () => {
+    expect(sectionHrefs('hr', admin)).toContain('/hr/imports');
+    expect(sectionHrefs('access', admin)).toContain('/access/roles');
+    expect(sectionHrefs('leave', admin)).toContain('/leave/settings');
+    expect(sectionHrefs('fleet', admin)).toContain('/fleet/settings');
+    expect(sectionHrefs('inventory', admin)).toContain('/inventory/items');
+  });
+
+  it('drops switched-off modules from the menu but never the admin module', () => {
+    const shown = usableModules(visibleModules(admin), { fleet: 'OFF', leave: 'OFF', admin: 'OFF' }, admin).map((entry) => entry.code);
+    expect(shown).not.toContain('fleet');
+    expect(shown).not.toContain('leave');
+    expect(shown).toContain('admin');
+  });
+
+  it('shows a module in development only to ผู้ดูแลระบบ, its ผู้จัดการ and its ผู้ทดสอบ, marked as such', () => {
+    const modes = { fleet: 'DEVELOPMENT', leave: 'ON' } as const;
+    const codes = (value: AccessSubject) => usableModules(visibleModules(value), modes, value).map((entry) => entry.code);
+    expect(codes(subject())).not.toContain('fleet');
+    expect(codes(subject())).toContain('leave');
+    expect(codes(subject({ roles: [{ name: 'fleet-tester', organizationId: null }] }))).toContain('fleet');
+    expect(codes(subject({ roles: [{ name: 'fleet-manager', organizationId: null }] }))).toContain('fleet');
+    expect(codes(subject({ roles: [{ name: 'leave-tester', organizationId: null }] }))).not.toContain('fleet');
+    expect(codes(admin)).toContain('fleet');
+    const navigation = navigationFrom(usableModules(visibleModules(admin), modes, admin), {}, modes);
+    expect(navigation.find((item) => item.module === 'fleet')).toMatchObject({ development: true });
+    expect(navigation.find((item) => item.module === 'leave')?.development).toBeUndefined();
+  });
+
+  it('labels the home page หน้าหลัก', () => {
+    expect(navigationFor(subject())[0]).toMatchObject({ href: '/dashboard', label: 'dashboard' });
   });
 });

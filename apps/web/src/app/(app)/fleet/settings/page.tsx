@@ -1,6 +1,7 @@
 import { t } from '@backoffice/i18n';
 import { vehicleKindLabel, vehicleStatusLabel } from '../../../../lib/fleet-labels';
 import { fleetContext, FleetPageMessage } from '../fleet-page';
+import { DeleteButton } from './delete-button';
 import { AddDriverForm, DriverRow } from './driver-form';
 import { VehicleForm } from './vehicle-form';
 
@@ -16,7 +17,7 @@ export default async function FleetSettingsPage() {
       <thead><tr><th>{t('fleetRegistration')}</th><th>{t('fleetMakeModel')}</th><th>{t('fleetKind')}</th><th>{t('fleetSeats')}</th><th>{t('status')}</th><th>{t('fleetNote')}</th><th></th></tr></thead>
       <tbody>{vehicles.map((vehicle) => <tr key={vehicle.id}>
         <td>{vehicle.registration}</td><td>{vehicle.makeModel}</td><td>{vehicleKindLabel(vehicle.kind)}</td><td>{vehicle.seats}</td><td>{vehicleStatusLabel(vehicle.status)}</td><td>{vehicle.note || '—'}</td>
-        <td><VehicleForm vehicle={vehicle} /></td>
+        <td className="request-actions"><VehicleForm vehicle={vehicle} /><DeleteButton url={`/api/fleet/vehicles/${encodeURIComponent(vehicle.id)}`} name={vehicle.registration} /></td>
       </tr>)}</tbody>
     </table></div>}
     <div className="fleet-add"><VehicleForm /></div>

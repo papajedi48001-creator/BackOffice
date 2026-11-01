@@ -13,14 +13,14 @@
   labelKey: 'moduleRoomBooking',   // คีย์ใน packages/i18n/src/th.ts
   descriptionKey: 'moduleRoomBookingDescription',
   icon: 'room',                    // ชื่อใน components/module-icon.tsx
-  group: 'services',               // mine | people | services | governance
-  status: 'live',                  // planned ระหว่างพัฒนา, live เมื่อ PR ของโมดูล merge
+  group: 'services',               // mine | people | services | governance — ใช้แค่สีกรอบไอคอน หน้าหลักไม่แยกกลุ่มแล้ว
+  status: 'live',                  // planned ระหว่างพัฒนา (แสดงเฉพาะผู้ดูแลระบบ), live เมื่อ PR ของโมดูล merge
   visible: () => true,             // ตัดสินจาก AccessSubject; หน้าและ API ต้องตรวจสิทธิ์เองอีกครั้ง
   badge: async (db, subject) => 0  // ไม่บังคับ; จำนวนงานรอผู้ใช้
 }
 ```
 
-หน้าหลักและเมนูด้านข้างมีหนึ่งปุ่มต่อหนึ่งโมดูลเท่านั้น ห้ามเพิ่มหน้าย่อยเป็นรายการแยกในระดับนี้ โมดูลที่มีหน้าย่อยใต้ `href` ของตัวเองให้ใส่ `sections` แล้วเพิ่ม `layout.tsx` กับ `page.tsx` ที่ route ของโมดูลซึ่งใช้ `ModuleLayout` และ `ModuleIndex` จาก `components/module-layout.tsx` (ดู `(app)/hr`) ระบบจะแสดงแถบเมนูย่อยเฉพาะเมนูที่ผู้ใช้เห็น และเปิด route ของโมดูลไปที่เมนูย่อยแรกให้เอง ปุ่มโมดูลจะแสดงเมื่อผู้ใช้เห็นเมนูย่อยอย่างน้อยหนึ่งเมนู
+หน้าหลักเป็นตารางปุ่มเดียวเรียงตามลำดับใน `moduleRegistry` (ไม่แยกประเภท) ตำแหน่งของ entry ในรายการจึงเป็นลำดับบนหน้าหลักและเมนู หน้าหลักและเมนูด้านข้างมีหนึ่งปุ่มต่อหนึ่งโมดูลเท่านั้น ห้ามเพิ่มหน้าย่อยเป็นรายการแยกในระดับนี้ โมดูลที่มีหน้าย่อยใต้ `href` ของตัวเองให้ใส่ `sections` แล้วเพิ่ม `layout.tsx` กับ `page.tsx` ที่ route ของโมดูลซึ่งใช้ `ModuleLayout` และ `ModuleIndex` จาก `components/module-layout.tsx` (ดู `(app)/hr`) ระบบจะแสดงแถบเมนูย่อยเฉพาะเมนูที่ผู้ใช้เห็น และเปิด route ของโมดูลไปที่เมนูย่อยแรกให้เอง ปุ่มโมดูลจะแสดงเมื่อผู้ใช้เห็นเมนูย่อยอย่างน้อยหนึ่งเมนู
 
 ```ts
 sections: [
@@ -54,6 +54,8 @@ sections: [
 | 0017 | `0017_person_photo.sql` | รูปประจำตัวของบุคลากร (`hr_person_profile.photo_attachment_id`) | กำลังพัฒนา |
 | 0018 | `0018_organization_soft_delete.sql` | ลบกลุ่มงานและงานแบบเก็บประวัติ | กำลังพัฒนา |
 | 0019 | `0019_hr_position.sql` | ทะเบียนตำแหน่งงานและระดับตาม ก.พ. (รายการตั้งต้นของโรงพยาบาลชุมชน ให้ HR ตรวจและนำเข้ารายการของกระทรวงทับได้) | กำลังพัฒนา |
+| 0020 | `0020_admin_module.sql` | โมดูลผู้ดูแลระบบ (`admin_module_setting` เปิด/ปิดโมดูล) | merged |
+| 0021 | `0021_module_mode.sql` | โหมดโมดูล เปิด/ปิด/พัฒนา (`admin_module_setting.mode`) | กำลังพัฒนา |
 
 - ตารางของโมดูลใช้ prefix ของโมดูล (`room_*`) และอ้างอิงบุคลากรด้วย `person.id` เท่านั้น
 - เก็บเวลาเป็น UTC แสดงเป็น Asia/Bangkok
@@ -62,6 +64,10 @@ sections: [
 
 - permission ใหม่เพิ่มใน `permissionSchema` (`packages/contracts/src/access.ts`) ชื่อ `<module>.<entity>.<verb>` และผูกบทบาทใน `packages/core/src/access/policy.ts`
 - ทุก API และหน้า server ตรวจด้วย `AuthorizationService` เสมอ การซ่อนปุ่มไม่ใช่การกันสิทธิ์
+- **ผู้ดูแลระบบ** (role `admin`) ผ่านทุกการตรวจของ `AuthorizationService` และ `canManage*` โดยอัตโนมัติ โมดูลไม่ต้องเพิ่มอะไร แต่ห้ามตรวจชื่อ role ตรง ๆ (`roles.some(...)`) โดยไม่ผ่าน `isAdmin`
+- **ผู้จัดการโมดูล**: ถ้าโมดูลมี role ผู้จัดการ ให้เพิ่มคู่ `code → role` ใน `moduleManagerRoles` (`packages/core/src/admin/module-managers.ts`) และใน `grantableRoleSchema` (`packages/contracts/src/admin.ts`) เพื่อให้ผู้ดูแลระบบกำหนดได้จากหน้า ตั้งค่าโปรแกรม
+- **ผู้ทดสอบโมดูล**: ทุกโมดูล live (ยกเว้น `admin`) มี role `<code>-tester` อัตโนมัติจาก `testerModuleCodes` (`packages/contracts/src/admin.ts`) และ `moduleTesterRoles` ใน core โมดูลใหม่เพิ่มรหัสของตัวเองใน `testerModuleCodes` และชื่อโมดูลใน `testedModuleKeys` (`apps/web/src/lib/admin-labels.ts`) role ผู้ทดสอบไม่ให้ permission ใด ๆ ห้ามผูกใน `policy.ts`
+- **โหมดโมดูล** (`ON` / `DEVELOPMENT` / `OFF`): `apps/web/src/proxy.ts` ปฏิเสธทุกหน้าใต้ `href` และทุก API ใต้ `/api<href>` ให้เอง (403, `module_disabled`) — `OFF` ปฏิเสธทุกคน, `DEVELOPMENT` ปฏิเสธทุกคนยกเว้นผู้ดูแลระบบ ผู้จัดการ และผู้ทดสอบของโมดูล (`canUseModule` ใน core) จึงควรวาง API ของโมดูลไว้ใต้ `/api<href>` เดียวกับหน้า เมนูและหน้าหลักใช้ `usableModules` ซ่อนให้ โมดูลไม่ต้องตรวจโหมดเอง
 
 ## 4. การแจ้งเตือน, audit และ outbox
 

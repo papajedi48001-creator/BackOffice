@@ -17,11 +17,26 @@ it('links live modules and does not link planned ones', () => {
   expect(screen.getAllByText('เร็ว ๆ นี้')).toHaveLength(planned.length);
 });
 
-it('hides headings of empty groups', () => {
+it('shows one flat grid in registry order, without type headings', () => {
+  const { container } = render(<ModuleLauncher modules={byCode('fleet', 'requests', 'hr', 'access', 'leave')} badges={{}} summary={summary} today={today} />);
+  for (const heading of ['งานของฉัน', 'บุคลากรและองค์กร', 'งานบริการ', 'ความปลอดภัยและการตรวจสอบ']) expect(screen.queryByRole('heading', { name: heading })).toBeNull();
+  expect(container.querySelectorAll('ul.module-grid')).toHaveLength(1);
+  expect([...container.querySelectorAll('a.module-tile')].map((tile) => tile.getAttribute('data-module'))).toEqual(['requests', 'hr', 'access', 'leave', 'fleet']);
+});
+
+it('shows the planned strip only when planned modules were passed (ผู้ดูแลระบบ only)', () => {
   render(<ModuleLauncher modules={[...byCode('requests'), ...planned]} badges={{}} summary={summary} today={today} />);
-  expect(screen.getByRole('heading', { name: 'งานของฉัน' })).toBeInTheDocument();
-  expect(screen.queryByRole('heading', { name: 'บุคลากรและองค์กร' })).toBeNull();
   expect(screen.getByRole('heading', { name: 'โมดูลที่กำลังพัฒนา' })).toBeInTheDocument();
+  render(<ModuleLauncher modules={byCode('requests')} badges={{}} summary={summary} today={today} />);
+  expect(screen.getAllByRole('heading', { name: 'โมดูลที่กำลังพัฒนา' })).toHaveLength(1);
+});
+
+it('marks a module in development with text, not colour only', () => {
+  render(<ModuleLauncher modules={byCode('fleet', 'leave')} modes={{ fleet: 'DEVELOPMENT' }} badges={{}} summary={summary} today={today} />);
+  const fleet = screen.getByRole('link', { name: /ยานพาหนะ/ });
+  expect(fleet).toHaveClass('is-development');
+  expect(fleet).toHaveTextContent('กำลังพัฒนา');
+  expect(screen.getByRole('link', { name: /การลา/ })).not.toHaveClass('is-development');
 });
 
 it('shows a dash when counts are unavailable', () => {
@@ -48,9 +63,4 @@ it('greets by name and shows the Buddhist-era date', () => {
 it('greets without a name when none is recorded', () => {
   render(<ModuleLauncher modules={[]} badges={{}} summary={{ ...summary, displayName: null }} today={today} />);
   expect(screen.getByRole('heading', { name: 'สวัสดี' })).toBeInTheDocument();
-});
-
-it('names my group after me, by first name only', () => {
-  render(<ModuleLauncher modules={byCode('requests')} badges={{}} summary={{ ...summary, displayName: 'นางพรทิพย์ ตัวอย่างงาม', greetingName: 'พรทิพย์' }} today={today} />);
-  expect(screen.getByRole('heading', { name: 'งานของพรทิพย์' })).toBeInTheDocument();
 });

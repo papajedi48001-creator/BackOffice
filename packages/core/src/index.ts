@@ -80,3 +80,6 @@ export * from './inventory/inventory-repository';
 export * from './inventory/receipt-service';
 export * from './inventory/database-inventory-repository';
 export * from './inventory/inventory-queries';
+export * from './admin/module-managers';
+export * from './admin/admin-service';
+export * from './admin/admin-queries';

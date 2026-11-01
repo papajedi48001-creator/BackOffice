@@ -1,5 +1,5 @@
-import type { AccessSubject } from '@backoffice/contracts';
-import { AuthorizationService, FleetQueries, LeaveQueries, OfficialTravelQueries, RoomBookingQueries, canManageFleet, canManageLeave, canManageTravel, hasOpenRequestWork, listPendingApprovals } from '@backoffice/core';
+import type { AccessSubject, ModuleMode } from '@backoffice/contracts';
+import { AuthorizationService, FleetQueries, canUseModule, isAdmin, LeaveQueries, OfficialTravelQueries, RoomBookingQueries, canManageFleet, canManageLeave, canManageTravel, hasOpenRequestWork, listPendingApprovals } from '@backoffice/core';
 import type { Database } from '@backoffice/db';
 import { t, type MessageKey } from '@backoffice/i18n';
 import type { NavigationItem } from '../components/app-shell';
@@ -7,7 +7,7 @@ import { matchModule } from './module-theme';
 import { canInventory } from './inventory-access';
 
 export type ModuleGroup = 'mine' | 'people' | 'services' | 'governance';
-export type ModuleIconName = 'requests' | 'bell' | 'people' | 'org' | 'upload' | 'shield' | 'delegate' | 'audit' | 'wrench' | 'package' | 'room' | 'car' | 'clock' | 'leave' | 'travel' | 'asset' | 'monitor' | 'target' | 'heart';
+export type ModuleIconName = 'requests' | 'bell' | 'people' | 'org' | 'upload' | 'shield' | 'delegate' | 'audit' | 'wrench' | 'package' | 'room' | 'car' | 'clock' | 'leave' | 'travel' | 'asset' | 'monitor' | 'target' | 'heart' | 'settings';
 
 /** One page inside a module, shown in the module's section bar rather than on the main page. */
 export interface ModuleSection {
@@ -42,7 +42,8 @@ export interface ModuleEntry {
 
 const everyone = () => true;
 const unreadNotices = async (db: Database, subject: AccessSubject) => subject.personId ? Number((await db.query<{ total: number }>('SELECT COUNT(*) AS total FROM notification WHERE recipient_person_id = ? AND channel = ? AND read_at IS NULL', [subject.personId, 'in_app']))[0]?.total ?? 0) : 0;
-const hasRole = (...names: string[]) => (subject: AccessSubject) => subject.roles.some((role) => names.includes(role.name));
+// A ผู้ดูแลระบบ is ผู้จัดการ of every module, so role-gated sections show for them too.
+const hasRole = (...names: string[]) => (subject: AccessSubject) => isAdmin(subject) || subject.roles.some((role) => names.includes(role.name));
 const authorization = new AuthorizationService();
 const withSections = (entry: Omit<ModuleEntry, 'visible'>, sections: readonly ModuleSection[]): ModuleEntry => ({ ...entry, sections, visible: (subject) => sections.some((section) => section.visible(subject)) });
 const planned = (code: string, href: string, labelKey: MessageKey, descriptionKey: MessageKey, icon: ModuleIconName): ModuleEntry => ({ code, href, labelKey, descriptionKey, icon, group: 'services', status: 'planned', visible: everyone });
@@ -122,12 +123,19 @@ export const moduleRegistry: readonly ModuleEntry[] = [
       { href: '/fleet/dashboard', labelKey: 'fleetDashboard', visible: canManageFleet, badge: fleetWaiting },
       { href: '/fleet/mine', labelKey: 'fleetMine', visible: everyone },
       { href: '/fleet/calendar', labelKey: 'fleetCalendar', visible: everyone },
-      // A พนักงานขับรถ is a fleet_driver row, not a role, so the synchronous check cannot see it: the link shows to everyone and the page says who it is for.
-      { href: '/fleet/driving', labelKey: 'fleetDriving', visible: everyone, badge: fleetDriverToday },
+      // A พนักงานขับรถ is a fleet_driver row, not a role, so the database check decides; the page checks again.
+      { href: '/fleet/driving', labelKey: 'fleetDriving', visible: everyone, available: async (db, subject) => (subject.personId ? new FleetQueries(db).isActiveDriver(subject.personId) : false), badge: fleetDriverToday },
       { href: '/fleet/settings', labelKey: 'fleetSettings', visible: canManageFleet }
     ]),
     badge: async (db, subject) => (await fleetWaiting(db, subject)) + (await fleetDriverToday(db, subject))
   },
+  // ผู้ดูแลระบบ only. A new admin page is one more section here and one page under app/(app)/admin.
+  withSections({ code: 'admin', href: '/admin', labelKey: 'moduleAdmin', descriptionKey: 'moduleAdminDescription', icon: 'settings', group: 'governance', status: 'live' }, [
+    { href: '/admin/connections', labelKey: 'adminConnections', visible: isAdmin },
+    { href: '/admin/modules', labelKey: 'adminModules', visible: isAdmin },
+    { href: '/admin/grants', labelKey: 'adminGrants', visible: isAdmin },
+    { href: '/admin/audit', labelKey: 'adminAudit', visible: isAdmin }
+  ]),
   planned('attendance', '/attendance', 'moduleAttendance', 'moduleAttendanceDescription', 'clock'),
   planned('asset-register', '/assets', 'moduleAssetRegister', 'moduleAssetRegisterDescription', 'asset'),
   planned('computer-center', '/it', 'moduleComputerCenter', 'moduleComputerCenterDescription', 'monitor'),
@@ -135,8 +143,22 @@ export const moduleRegistry: readonly ModuleEntry[] = [
   planned('donor-registry', '/donors', 'moduleDonorRegistry', 'moduleDonorRegistryDescription', 'heart')
 ];
 
+/** Live modules the person can see, in registry order; planned modules (the "โมดูลที่กำลังพัฒนา" strip) for ผู้ดูแลระบบ only. */
 export function visibleModules(subject: AccessSubject): ModuleEntry[] {
-  return moduleRegistry.filter((entry) => entry.status === 'planned' || entry.visible(subject));
+  return moduleRegistry.filter((entry) => entry.status === 'planned' ? isAdmin(subject) : entry.visible(subject));
+}
+
+/**
+ * Drops modules the person may not use in their current mode (ตั้งค่าโปรแกรม): OFF for everyone, DEVELOPMENT for anyone but
+ * ผู้ดูแลระบบ, the module's ผู้จัดการ and ผู้ทดสอบ. The admin module always stays. Pages and APIs are refused by the proxy.
+ */
+export function usableModules(modules: ModuleEntry[], modes: Readonly<Record<string, ModuleMode>>, subject: AccessSubject): ModuleEntry[] {
+  return modules.filter((entry) => entry.status === 'planned' || canUseModule(subject, entry.code, modes[entry.code] ?? 'ON'));
+}
+
+/** Whether a live module is in DEVELOPMENT mode, for the กำลังพัฒนา marker on its tile and menu item. */
+export function inDevelopment(code: string, modes: Readonly<Record<string, ModuleMode>>): boolean {
+  return modes[code] === 'DEVELOPMENT';
 }
 
 export function moduleSections(code: string, subject: AccessSubject): ModuleSection[] {
@@ -155,8 +177,8 @@ export async function availableModules(modules: ModuleEntry[], db: Database, sub
   return modules.filter((_, index) => shown[index]);
 }
 
-export function navigationFrom(modules: ModuleEntry[], badges: Record<string, number | undefined> = {}): NavigationItem[] {
-  return [{ href: '/dashboard', label: 'dashboard', module: 'home' }, ...modules.filter((entry) => entry.status === 'live').map((entry) => ({ href: entry.href, label: entry.labelKey, module: entry.code, ...(badges[entry.code] === undefined ? {} : { badge: badges[entry.code] }) }))];
+export function navigationFrom(modules: ModuleEntry[], badges: Record<string, number | undefined> = {}, modes: Readonly<Record<string, ModuleMode>> = {}): NavigationItem[] {
+  return [{ href: '/dashboard', label: 'dashboard', module: 'home' }, ...modules.filter((entry) => entry.status === 'live').map((entry) => ({ href: entry.href, label: entry.labelKey, module: entry.code, ...(badges[entry.code] === undefined ? {} : { badge: badges[entry.code] }), ...(inDevelopment(entry.code, modes) ? { development: true } : {}) }))];
 }
 
 export function navigationFor(subject: AccessSubject): NavigationItem[] {

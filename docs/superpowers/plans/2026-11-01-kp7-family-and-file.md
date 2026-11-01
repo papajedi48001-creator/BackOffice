@@ -17,7 +17,7 @@
 - Audit metadata holds field names only: no relative's name, no religion, no file name.
 - The ก.พ.7 file is PDF only, up to 10 MB, through the existing scan-and-store pipeline.
 - Only viewers with `viewPrivate` read these fields or download the file.
-- Migration 0020 is additive and listed in `migrate.ts`, with the Drizzle schema kept in step.
+- Migration 0022 is additive and listed in `migrate.ts`, with the Drizzle schema kept in step.
 
 ## Review focus
 
@@ -34,7 +34,7 @@
   - `childrenCount` is an int from 0 to 30, nullable or optional.
   - The schema is strict.
   - Test: valid input parses, and a bad marital status or 31 children are refused.
-- [x] Migration `0020_hr_kp7_family.sql` adds the columns plus `kp7_attachment_id` with an FK to `attachment`. Drizzle schema and migrate.ts are updated; the migrate test count goes to 21.
+- [x] Migration `0022_hr_kp7_family.sql` adds the columns plus `kp7_attachment_id` with an FK to `attachment`. Drizzle schema and migrate.ts are updated; the migrate test count goes to 21.
 
 ### Task 2: core service
 - [x] Integration tests first:

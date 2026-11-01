@@ -17,7 +17,7 @@ export const staffSearch = (database: Database, text: string) => new OfficialTra
 const statusByCode: Record<string, number> = {
   NOT_FOUND: 404,
   NOT_PENDING: 409, NOT_RETURNED: 409, VEHICLE_BUSY: 409, DRIVER_BUSY: 409,
-  TRAVEL_ALREADY_HAS_CAR: 409, DRIVER_HAS_TRIPS: 409, DUPLICATE_REGISTRATION: 409
+  TRAVEL_ALREADY_HAS_CAR: 409, DRIVER_HAS_TRIPS: 409, DUPLICATE_REGISTRATION: 409, HAS_HISTORY: 409
 };
 
 /** A service result as JSON: `{ error: code }` with 409 for a state conflict, 404 when missing, otherwise 400. */

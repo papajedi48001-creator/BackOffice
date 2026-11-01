@@ -1,0 +1,31 @@
+import { z } from 'zod';
+
+/** Live modules that can have ผู้ทดสอบ: every live module but `admin`, in registry order. Each gets a `<code>-tester` role. */
+export const testerModuleCodes = ['requests', 'notifications', 'hr', 'access', 'room-booking', 'leave', 'official-travel', 'inventory', 'fleet'] as const;
+export type TesterModuleCode = (typeof testerModuleCodes)[number];
+export type TesterRole = `${TesterModuleCode}-tester`;
+const testerRoles = testerModuleCodes.map((code) => `${code}-tester` as TesterRole) as [TesterRole, ...TesterRole[]];
+
+/**
+ * Roles the ผู้ดูแลระบบ may grant from the admin module: `admin` itself, each module's ผู้จัดการ role and each module's ผู้ทดสอบ role.
+ * Which module each manager role belongs to lives in `@backoffice/core` (module-managers.ts).
+ */
+export const grantableRoleSchema = z.enum(['admin', 'hr-manager', 'leave-manager', 'travel-manager', 'room-manager', 'inventory-officer', 'fleet-manager', ...testerRoles]);
+export type GrantableRole = z.infer<typeof grantableRoleSchema>;
+
+export const adminGrantInputSchema = z.object({ personId: z.string().uuid(), roleName: grantableRoleSchema }).strict();
+export type AdminGrantInput = z.infer<typeof adminGrantInputSchema>;
+
+/** One role for the person named in the path. */
+export const adminRoleInputSchema = z.object({ roleName: grantableRoleSchema }).strict();
+
+/** The whole set of admin and manager roles one person should hold; roles left out are revoked. */
+export const adminPersonRolesInputSchema = z.object({ roleNames: z.array(grantableRoleSchema).max(20) }).strict();
+
+/** โหมดโมดูล: เปิด, ปิด or พัฒนา (only ผู้ดูแลระบบ, the module's ผู้จัดการ and ผู้ทดสอบ see it). */
+export const moduleModeSchema = z.enum(['ON', 'OFF', 'DEVELOPMENT']);
+export type ModuleMode = z.infer<typeof moduleModeSchema>;
+
+export const adminModuleModeInputSchema = z.object({ mode: moduleModeSchema }).strict();
+
+export const moduleCodeSchema = z.string().regex(/^[a-z][a-z-]{1,63}$/);

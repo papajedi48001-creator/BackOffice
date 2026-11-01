@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({
   readSession: vi.fn(), getSharedDatabase: vi.fn(),
   submit: vi.fn(), resubmit: vi.fn(), cancel: vi.fn(),
   assign: vi.fn(), unassign: vi.fn(), move: vi.fn(), decline: vi.fn(), updateTrip: vi.fn(), depart: vi.fn(), returnTrip: vi.fn(),
-  createVehicle: vi.fn(), updateVehicle: vi.fn(), upsertDriver: vi.fn(),
+  createVehicle: vi.fn(), updateVehicle: vi.fn(), upsertDriver: vi.fn(), deleteVehicle: vi.fn(), deleteDriver: vi.fn(),
   detail: vi.fn(), availability: vi.fn(), people: vi.fn()
 }));
 vi.mock('../../../lib/session', () => ({ readSession: mocks.readSession }));
@@ -14,7 +14,7 @@ vi.mock('@backoffice/core', async (importOriginal) => ({
   ...await importOriginal<typeof import('@backoffice/core')>(),
   FleetRequestService: class { submit = mocks.submit; resubmit = mocks.resubmit; cancel = mocks.cancel; },
   FleetDispatchService: class { assign = mocks.assign; unassign = mocks.unassign; move = mocks.move; decline = mocks.decline; updateTrip = mocks.updateTrip; depart = mocks.depart; returnTrip = mocks.returnTrip; },
-  FleetCatalogService: class { createVehicle = mocks.createVehicle; updateVehicle = mocks.updateVehicle; upsertDriver = mocks.upsertDriver; },
+  FleetCatalogService: class { createVehicle = mocks.createVehicle; updateVehicle = mocks.updateVehicle; upsertDriver = mocks.upsertDriver; deleteVehicle = mocks.deleteVehicle; deleteDriver = mocks.deleteDriver; },
   FleetQueries: class { detail = mocks.detail; availability = mocks.availability; },
   OfficialTravelQueries: class { people = mocks.people; }
 }));
@@ -29,9 +29,9 @@ import { POST as DEPART } from './trips/[id]/departure/route';
 import { POST as RETURN } from './trips/[id]/return/route';
 import { GET as AVAILABILITY } from './availability/route';
 import { POST as ADD_VEHICLE } from './vehicles/route';
-import { PUT as EDIT_VEHICLE } from './vehicles/[id]/route';
+import { DELETE as DELETE_VEHICLE, PUT as EDIT_VEHICLE } from './vehicles/[id]/route';
 import { POST as ADD_DRIVER } from './drivers/route';
-import { PUT as EDIT_DRIVER } from './drivers/[personId]/route';
+import { DELETE as DELETE_DRIVER, PUT as EDIT_DRIVER } from './drivers/[personId]/route';
 import { GET as PEOPLE } from './people/route';
 
 const staff = { authenticated: true, personId: 'person-a', roles: [{ name: 'staff', organizationId: null }], dataOwnerModules: [] };
@@ -218,6 +218,24 @@ describe('vehicles and drivers', () => {
     const blocked = await EDIT_DRIVER(json('PUT', { personId: 'someone-else', phone: '081', isActive: false }), params({ personId: 'person-d' }));
     expect(blocked.status).toBe(409);
     expect(mocks.upsertDriver).toHaveBeenLastCalledWith('person-m', { personId: 'person-d', phone: '081', isActive: false });
+  });
+
+  it('deletes a car or a driver for the หัวหน้าหมวด only, mapping HAS_HISTORY to 409', async () => {
+    ready(staff);
+    expect((await DELETE_VEHICLE(json('DELETE'), id)).status).toBe(403);
+    expect((await DELETE_DRIVER(json('DELETE'), params({ personId: 'person-d' }))).status).toBe(403);
+    expect(mocks.deleteVehicle).not.toHaveBeenCalled();
+    expect(mocks.deleteDriver).not.toHaveBeenCalled();
+    ready(manager);
+    mocks.deleteVehicle.mockResolvedValueOnce({ ok: true }).mockResolvedValueOnce({ ok: false, code: 'HAS_HISTORY' });
+    expect((await DELETE_VEHICLE(json('DELETE'), id)).status).toBe(200);
+    expect(mocks.deleteVehicle).toHaveBeenCalledWith('person-m', 'id-1');
+    const kept = await DELETE_VEHICLE(json('DELETE'), id);
+    expect(kept.status).toBe(409);
+    await expect(kept.json()).resolves.toEqual({ error: 'HAS_HISTORY' });
+    mocks.deleteDriver.mockResolvedValueOnce({ ok: true });
+    expect((await DELETE_DRIVER(json('DELETE'), params({ personId: 'person-d' }))).status).toBe(200);
+    expect(mocks.deleteDriver).toHaveBeenCalledWith('person-m', 'person-d');
   });
 
   it('searches staff for the driver form', async () => {

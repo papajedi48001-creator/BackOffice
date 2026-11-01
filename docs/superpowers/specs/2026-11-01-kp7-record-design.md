@@ -41,7 +41,7 @@ The printed form has four parts:
 
 The work ships as three PRs, in this order:
 
-1. **Part 2 and the ก.พ.7 file.** Migration 0020 adds the family columns and `kp7_attachment_id` to `hr_person_profile`. Then come `updateFamily` and `setKp7File`, the routes, the forms on the profile page, and the history labels.
+1. **Part 2 and the ก.พ.7 file.** Migration 0022 adds the family columns and `kp7_attachment_id` to `hr_person_profile`. Then come `updateFamily` and `setKp7File`, the routes, the forms on the profile page, and the history labels.
 2. **Part 1 and part 4.** Part 1 adds civil-service columns, and วันเกษียณอายุ is computed as 1 ต.ค. of the year the person turns 60 (the next year when born after 1 ต.ค.). Part 4 adds an `hr_person_education` table with the person and HR able to edit it.
 3. **Part 3.** An `hr_person_position_history` table that only HR edits. The rows are listed in date order, as on the form.
 

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { AuthorizationService } from './authorization-service';
-import { requiresDataOwner } from './policy';
+import { AuthorizationService, isAdmin } from './authorization-service';
+import { canManageFleet } from '../fleet/fleet-access';
+import { canManageLeave } from '../leave/leave-access';
+import { canManageTravel } from '../official-travel/travel-access';
+import { requiresDataOwner, roleGrantsPermission } from './policy';
 
 describe('AuthorizationService', () => {
   it('denies a role holder outside the assigned organization scope', async () => {
@@ -75,5 +78,31 @@ describe('organization scope for listings', () => {
     await expect(authorization.canAccess(manager, 'hr.person.private.read', { moduleCode: 'hr', organizationId: 'unit-a' })).resolves.toEqual({ allowed: true, reason: 'allowed' });
     await expect(authorization.canAccess({ ...manager, roles: [{ name: 'hr-reader', organizationId: null }] }, 'hr.person.private.read', { moduleCode: 'hr', organizationId: 'unit-a' })).resolves.toEqual({ allowed: false, reason: 'permission_denied' });
     expect(requiresDataOwner('hr.person.private.read')).toBe(true);
+  });
+});
+
+describe('AuthorizationService ผู้ดูแลระบบ', () => {
+  const admin = { authenticated: true, personId: 'person-admin', roles: [{ name: 'admin', organizationId: null }], dataOwnerModules: [] };
+
+  it('lets an unscoped admin pass every module-manager check without a data-owner assignment', async () => {
+    const authorization = new AuthorizationService();
+    expect(isAdmin(admin)).toBe(true);
+    await expect(authorization.canAccess(admin, 'hr.person.manage', { moduleCode: 'hr', organizationId: 'unit-a' })).resolves.toEqual({ allowed: true, reason: 'allowed' });
+    expect(authorization.organizationScope(admin, 'inventory.stock.read')).toBe('all');
+    expect(authorization.canActHospitalWide(admin, 'leave.manage', 'hr')).toBe(true);
+    expect(canManageLeave(admin)).toBe(true);
+    expect(canManageTravel(admin)).toBe(true);
+    expect(canManageFleet(admin)).toBe(true);
+  });
+
+  it('does not treat a unit-scoped admin assignment or a signed-out subject as admin', () => {
+    expect(isAdmin({ ...admin, roles: [{ name: 'admin', organizationId: 'unit-a' }] })).toBe(false);
+    expect(isAdmin({ ...admin, authenticated: false })).toBe(false);
+  });
+
+  it('gives the new leave and travel manager roles their one permission', () => {
+    expect(roleGrantsPermission('leave-manager', 'leave.manage')).toBe(true);
+    expect(roleGrantsPermission('travel-manager', 'travel.manage')).toBe(true);
+    expect(roleGrantsPermission('admin', 'fleet.manage')).toBe(false);
   });
 });
