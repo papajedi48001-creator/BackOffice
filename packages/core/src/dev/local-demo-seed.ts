@@ -6,7 +6,7 @@ import { MasterDataImportService } from '../hr/master-data-import';
 // Synthetic data for a developer's own machine. Every national ID here is made up and only passes the checksum.
 const syntheticNationalId = (prefix: string) => `${prefix}${(11 - ([...prefix].reduce((total, digit, index) => total + Number(digit) * (13 - index), 0) % 11)) % 10}`;
 
-const organizations = 'code,name,parent_code\nHOSP,โรงพยาบาลวาริชภูมิ,\nNUR,กลุ่มการพยาบาล,HOSP\nIPD,งานผู้ป่วยใน,NUR\nER,งานอุบัติเหตุและฉุกเฉิน,NUR\nADM,กลุ่มงานบริหารทั่วไป,HOSP\nHR,งานทรัพยากรบุคคล,ADM\nLAB,กลุ่มงานเทคนิคการแพทย์,HOSP\nPHA,กลุ่มงานเภสัชกรรม,HOSP\n';
+const organizations = 'code,name,parent_code\nHOSP,โรงพยาบาลวาริชภูมิ,\nNUR,กลุ่มการพยาบาล,HOSP\nIPD,งานผู้ป่วยใน,NUR\nER,งานอุบัติเหตุและฉุกเฉิน,NUR\nADM,กลุ่มงานบริหารทั่วไป,HOSP\nHR,งานทรัพยากรบุคคล,ADM\nIT,งานเทคโนโลยีสารสนเทศ,ADM\nLAB,กลุ่มงานเทคนิคการแพทย์,HOSP\nPHA,กลุ่มงานเภสัชกรรม,HOSP\n';
 const people: Array<[code: string, nationalId: string, name: string, position: string, unit: string, manager: string]> = [
   ['DIR001', syntheticNationalId('110000000102'), 'นายแพทย์ธนพล สมมติชื่อ', 'ผู้อำนวยการโรงพยาบาล', 'HOSP', ''],
   ['HR001', syntheticNationalId('110000000101'), 'นางสาวกนกวรรณ ทดสอบดี', 'นักทรัพยากรบุคคล', 'HR', 'DIR001'],
@@ -15,9 +15,11 @@ const people: Array<[code: string, nationalId: string, name: string, position: s
   ['NUR022', syntheticNationalId('110000000105'), 'นายวีรยุทธ ทดลองศรี', 'พยาบาลวิชาชีพปฏิบัติการ', 'ER', 'NUR001'],
   ['ADM003', syntheticNationalId('110000000106'), 'นางมาลัย ข้อมูลจำลอง', 'เจ้าพนักงานธุรการ', 'ADM', 'DIR001'],
   ['LAB002', syntheticNationalId('110000000107'), 'นายอรรถพล ตัวอย่างชัย', 'นักเทคนิคการแพทย์', 'LAB', 'DIR001'],
-  ['PHA005', syntheticNationalId('110000000108'), 'เภสัชกรหญิงศิริพร สมมุติ', 'เภสัชกรชำนาญการ', 'PHA', 'DIR001']
+  ['PHA005', syntheticNationalId('110000000108'), 'เภสัชกรหญิงศิริพร สมมุติ', 'เภสัชกรชำนาญการ', 'PHA', 'DIR001'],
+  // The first ผู้ดูแลระบบ; a made-up demo person like everyone else here.
+  ['IT001', syntheticNationalId('110000000109'), 'นายจีระศักดิ์ หอกคำ', 'นักวิชาการคอมพิวเตอร์', 'IT', 'DIR001']
 ];
-const roles: Array<[code: string, role: string]> = [['HR001', 'hr-manager'], ['ADM003', 'room-manager'], ['ADM003', 'room-booking-approver'], ['ADM003', 'inventory-officer'], ['ADM003', 'fleet-manager'], ['DIR001', 'inventory-supervisor']];
+const roles: Array<[code: string, role: string]> = [['HR001', 'hr-manager'], ['ADM003', 'room-manager'], ['ADM003', 'room-booking-approver'], ['ADM003', 'inventory-officer'], ['ADM003', 'fleet-manager'], ['DIR001', 'inventory-supervisor'], ['IT001', 'admin']];
 
 export interface LocalDemoSeedResult { accountsCreated: number; usernames: string[]; }
 
@@ -53,7 +55,7 @@ export async function seedLocalDemo(database: Database, protector: NationalIdPro
   }
   // Leave needs an ประเภทการจ้าง and วันบรรจุ; an existing profile keeps whatever HR already set.
   await database.execute("INSERT IGNORE INTO hr_person_profile (person_id, employment_type_id, appointed_on, updated_at) SELECT person.id, type.id, '2015-06-01', UTC_TIMESTAMP() FROM person JOIN hr_employment_type type ON type.code = 'CIVIL_SERVANT' WHERE person.employee_code IN (" + people.map(() => '?').join(', ') + ')', people.map(([code]) => code));
-  const genders: Array<[code: string, gender: 'MALE' | 'FEMALE']> = [['DIR001', 'MALE'], ['HR001', 'FEMALE'], ['NUR001', 'FEMALE'], ['NUR014', 'FEMALE'], ['NUR022', 'MALE'], ['ADM003', 'FEMALE'], ['LAB002', 'MALE'], ['PHA005', 'FEMALE']];
+  const genders: Array<[code: string, gender: 'MALE' | 'FEMALE']> = [['DIR001', 'MALE'], ['HR001', 'FEMALE'], ['NUR001', 'FEMALE'], ['NUR014', 'FEMALE'], ['NUR022', 'MALE'], ['ADM003', 'FEMALE'], ['LAB002', 'MALE'], ['PHA005', 'FEMALE'], ['IT001', 'MALE']];
   for (const [code, gender] of genders) {
     await database.execute('UPDATE hr_person_profile profile JOIN person ON person.id = profile.person_id SET profile.gender = ? WHERE person.employee_code = ? AND profile.gender IS NULL', [gender, code]);
   }
