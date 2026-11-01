@@ -4,7 +4,8 @@ import { loadDashboardSummary } from '@backoffice/core';
 import { createDatabase } from '@backoffice/db';
 import { ModuleLauncher, type LauncherSummary } from '../../../components/module-launcher';
 import { collectBadges } from '../../../lib/dashboard-badges';
-import { availableModules, visibleModules } from '../../../lib/modules';
+import { readDisabledModules } from '../../../lib/module-gate';
+import { availableModules, enabledModules, visibleModules } from '../../../lib/modules';
 import { readRuntimeValue } from '../../../lib/runtime-env';
 import { readSession } from '../../../lib/session';
 
@@ -19,7 +20,7 @@ export default async function DashboardPage() {
     let database: ReturnType<typeof createDatabase> | undefined;
     try {
       database = createDatabase(databaseUrl);
-      modules = await availableModules(modules, database, session);
+      modules = await availableModules(enabledModules(modules, await readDisabledModules(database)), database, session);
       [summary, badges] = await Promise.all([loadDashboardSummary(database, session.personId), collectBadges(modules, database, session)]);
     } catch (error) {
       console.error('dashboard_summary_failed', (error as { code?: unknown }).code ?? 'UNKNOWN');

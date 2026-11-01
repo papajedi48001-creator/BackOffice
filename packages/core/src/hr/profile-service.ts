@@ -161,7 +161,7 @@ export class HrProfileService {
  * Writes personal and work fields for a person whose row the caller already locked, with one audit event.
  * Access is the caller's job; the master data import calls this inside its own transaction.
  */
-export async function applyProfileUpdate(database: QueryDatabase, subject: ProfileSubject, valid: UpdatePersonProfileInput, actorPersonId: string, createId: () => string, options: { canEditOrganization: (organizationId: string) => boolean; syncDisplayName: boolean; auditAction?: string; checkPosition?: boolean }): Promise<UpdateProfileResult> {
+export async function applyProfileUpdate(database: QueryDatabase, subject: ProfileSubject, valid: UpdatePersonProfileInput, actorPersonId: string, createId: () => string, options: { canEditOrganization: (organizationId: string) => boolean; syncDisplayName: boolean; auditAction?: string; checkPosition?: boolean; extraChangedFields?: readonly string[] }): Promise<UpdateProfileResult> {
   const stored = await readStoredProfile(database, subject.personId);
   const position = await resolvePosition(database, subject, stored, valid, options.checkPosition ?? false);
   if (typeof position === 'string') return { ok: false, code: position };
@@ -205,6 +205,7 @@ export async function applyProfileUpdate(database: QueryDatabase, subject: Profi
   if (moved && valid.organizationId) await moveAssignment(database, subject, valid.organizationId, createId);
   // No unit (ไม่มีสังกัด): the open assignment is closed and none replaces it.
   if (moved && valid.organizationId === null) await database.execute('UPDATE employment_assignment SET effective_until = UTC_TIMESTAMP() WHERE person_id = ? AND effective_until IS NULL', [subject.personId]);
+  changes.changedFields.push(...(options.extraChangedFields ?? []).filter((field) => !changes.changedFields.includes(field)));
   await recordProfileAudit(database, options.auditAction ?? 'hr.person.profile.update', subject.personId, actorPersonId, changes, createId);
   return { ok: true };
 }

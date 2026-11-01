@@ -6,7 +6,8 @@ export type AuditEventRow = {
     | 'inventory.category.created' | 'inventory.category.updated' | 'inventory.item.created' | 'inventory.item.updated' | 'inventory.vendor.created' | 'inventory.vendor.updated'
     | 'inventory.opening.submitted' | 'inventory.opening.returned' | 'inventory.opening.certified' | 'inventory.receipt.posted' | 'inventory.receipt.voided'
     | 'fleet.request.submitted' | 'fleet.request.resubmitted' | 'fleet.request.cancelled' | 'fleet.request.assigned' | 'fleet.request.unassigned' | 'fleet.request.declined'
-    | 'fleet.trip.updated' | 'fleet.trip.departed' | 'fleet.trip.returned' | 'fleet.trip.cancelled' | 'fleet.vehicle.create' | 'fleet.vehicle.update' | 'fleet.vehicle.delete' | 'fleet.driver.create' | 'fleet.driver.update' | 'fleet.driver.delete';
+    | 'fleet.trip.updated' | 'fleet.trip.departed' | 'fleet.trip.returned' | 'fleet.trip.cancelled' | 'fleet.vehicle.create' | 'fleet.vehicle.update' | 'fleet.vehicle.delete' | 'fleet.driver.create' | 'fleet.driver.update' | 'fleet.driver.delete'
+    | 'admin.module.enabled' | 'admin.module.disabled' | 'admin.role.granted' | 'admin.role.revoked';
   result: 'SUCCESS' | 'APPROVE' | 'REJECT' | 'RETURN';
   requestReference: string | null;
 };
@@ -42,7 +43,11 @@ const actionLabels: Record<AuditEventRow['action'], string> = {
   'fleet.vehicle.delete': t('auditFleetVehicleDelete'),
   'fleet.driver.create': t('auditFleetDriverCreate'),
   'fleet.driver.update': t('auditFleetDriverUpdate'),
-  'fleet.driver.delete': t('auditFleetDriverDelete')
+  'fleet.driver.delete': t('auditFleetDriverDelete'),
+  'admin.module.enabled': t('auditAdminModuleEnabled'),
+  'admin.module.disabled': t('auditAdminModuleDisabled'),
+  'admin.role.granted': t('auditAdminRoleGranted'),
+  'admin.role.revoked': t('auditAdminRoleRevoked')
 };
 export const auditActionNames = Object.keys(actionLabels) as AuditEventRow['action'][];
 

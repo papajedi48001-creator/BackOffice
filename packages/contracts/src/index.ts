@@ -1,6 +1,7 @@
 export * from './access.ts';
 export * from './hr.ts';
 export * from './hr-position.ts';
+export * from './hr-account.ts';
 export * from './identity.ts';
 export * from './workflow.ts';
 export * from './audit.ts';
@@ -12,3 +13,4 @@ export * from './inventory.ts';
 export * from './leave.ts';
 export * from './official-travel.ts';
 export * from './fleet.ts';
+export * from './admin.ts';
