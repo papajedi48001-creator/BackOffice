@@ -24,17 +24,23 @@ const roles: Array<[code: string, role: string]> = [['HR001', 'hr-manager'], ['A
 export interface LocalDemoSeedResult { accountsCreated: number; usernames: string[]; }
 
 export async function seedLocalDemo(database: Database, protector: NationalIdProtector, options: { password: string }): Promise<LocalDemoSeedResult> {
-  const hrLookup = protector.lookup(people[1]![1]);
-  let [actor] = await database.query<{ id: string }>('SELECT id FROM person WHERE national_id_lookup = ? LIMIT 1', [hrLookup]);
-  if (!actor) {
-    actor = { id: randomUUID() };
-    // The import matches this row by its lookup and fills in the rest, so the importer exists before the import.
-    await database.execute('INSERT INTO person (id, national_id_ciphertext, national_id_lookup, created_at) VALUES (?, ?, ?, UTC_TIMESTAMP())', [actor.id, protector.encrypt(people[1]![1]), hrLookup]);
+  // Only demo rows that are missing are imported, so a rerun never overwrites what someone edited and never trips over
+  // demo people stored under another lookup key (another developer's key, or a key changed in .env).
+  const existingPeople = await database.query<{ code: string }>('SELECT employee_code AS code FROM person WHERE employee_code IN (' + people.map(() => '?').join(', ') + ')', people.map(([code]) => code));
+  const existingCodes = new Set(existingPeople.map((person) => person.code));
+  // A demo person whose national ID now belongs to someone under another employee code was renamed through the UI; leave them be.
+  const takenLookups = new Set((await database.query<{ lookup: string }>('SELECT national_id_lookup AS lookup FROM person WHERE employee_code IS NOT NULL AND national_id_lookup IN (' + people.map(() => '?').join(', ') + ')', people.map(([, nationalId]) => protector.lookup(nationalId)))).map((person) => person.lookup));
+  const missingPeople = people.filter(([code, nationalId]) => !existingCodes.has(code) && !takenLookups.has(protector.lookup(nationalId)));
+  const existingUnits = new Set((await database.query<{ code: string }>('SELECT code FROM organization WHERE code IS NOT NULL')).map((unit) => unit.code));
+  const [organizationHeader, ...organizationRows] = organizations.trim().split('\n');
+  const missingUnits = organizationRows.filter((row) => !existingUnits.has(row.split(',')[0]!));
+  if (missingPeople.length || missingUnits.length) {
+    const actor = await findOrCreateImporter(database, protector);
+    const peopleCsv = 'employee_code,national_id,display_name,position_title,organization_code,manager_employee_code,effective_from,status\n' + missingPeople.map(([code, nationalId, name, position, unit, manager]) => `${code},${nationalId},${name},${position},${unit},${manager},1/10/2569,ACTIVE`).join('\n') + '\n';
+    const importer = new MasterDataImportService(database, protector);
+    const imported = await retryOnDeadlock(() => importer.apply({ organizations: [organizationHeader, ...missingUnits].join('\n') + '\n', people: peopleCsv }, actor));
+    if (!imported.ok) throw new Error(`DEMO_IMPORT_FAILED: ${imported.errors.map((error) => error.code).join(',')}`);
   }
-  const peopleCsv = 'employee_code,national_id,display_name,position_title,organization_code,manager_employee_code,effective_from,status\n' + people.map(([code, nationalId, name, position, unit, manager]) => `${code},${nationalId},${name},${position},${unit},${manager},1/10/2569,ACTIVE`).join('\n') + '\n';
-  const importer = new MasterDataImportService(database, protector);
-  const imported = await retryOnDeadlock(() => importer.apply({ organizations, people: peopleCsv }, actor!.id));
-  if (!imported.ok) throw new Error(`DEMO_IMPORT_FAILED: ${imported.errors.map((error) => error.code).join(',')}`);
 
   const usernames: string[] = [];
   for (const [code] of people) {
@@ -68,6 +74,16 @@ export async function seedLocalDemo(database: Database, protector: NationalIdPro
     await database.execute('INSERT IGNORE INTO fleet_vehicle (id, registration, make_model, kind, seats, status, note, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, \'\', UTC_TIMESTAMP(), UTC_TIMESTAMP())', [randomUUID(), registration, makeModel, kind, seats, status]);
   }
   return { accountsCreated: usernames.length, usernames };
+}
+
+// The importer is HR001 when present; otherwise a bare row the import fills in by its national ID lookup.
+async function findOrCreateImporter(database: Database, protector: NationalIdProtector): Promise<string> {
+  const hrLookup = protector.lookup(people[1]![1]);
+  const [actor] = await database.query<{ id: string }>('SELECT id FROM person WHERE employee_code = ? OR national_id_lookup = ? ORDER BY employee_code IS NULL LIMIT 1', [people[1]![0], hrLookup]);
+  if (actor) return actor.id;
+  const id = randomUUID();
+  await database.execute('INSERT INTO person (id, national_id_ciphertext, national_id_lookup, created_at) VALUES (?, ?, ?, UTC_TIMESTAMP())', [id, protector.encrypt(people[1]![1]), hrLookup]);
+  return id;
 }
 
 // The import locks whole tables, so it can deadlock with other writers (parallel test files, a running app); MariaDB rolls it back and a retry is safe.
