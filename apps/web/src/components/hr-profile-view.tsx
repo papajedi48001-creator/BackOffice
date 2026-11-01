@@ -3,6 +3,7 @@ import { t } from '@backoffice/i18n';
 import { bangkokToday, formatBangkokDate, formatBangkokTime } from '../lib/bangkok-time';
 import { dateFields, genderLabelKeys, maritalStatusLabelKeys, profileFieldLabelKeys } from '../lib/hr-profile-labels';
 import { FamilyForm, Kp7FileForm } from './hr-kp7-forms';
+import { CivilServiceForm, EducationForm } from './hr-kp7-service-forms';
 import { ContactForm, PersonalForm, PhotoForm, ProfileForm, type ProfileFormPosition, type ProfileFormUnit } from './hr-profile-forms';
 import { initialsOf } from '../lib/initials';
 
@@ -46,6 +47,27 @@ export function HrProfileView({ view, contactEndpoint, personalEndpoint, photo, 
           [t('hrFieldSpouseName'), text(personal.spouseName)], [t('hrFieldSpouseMaidenName'), text(personal.spouseMaidenName)], [t('hrFieldChildrenCount'), personal.childrenCount === null ? t('notAssigned') : String(personal.childrenCount)]
         ])}
       </section>
+      <section className="profile-box" aria-label={t('hrProfileCivilService')}>
+        <h3>{t('hrProfileCivilService')}</h3>
+        {rows([
+          [t('hrFieldPositionNumber'), text(personal.civilService.positionNumber)],
+          [t('hrFieldSalary'), personal.civilService.salary === null ? t('notAssigned') : personal.civilService.salary.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })],
+          [t('hrFieldParentAgency'), text(personal.civilService.parentAgency)],
+          [t('hrFieldGpf'), personal.civilService.gpfStatus === null ? t('notAssigned') : t(personal.civilService.gpfStatus === 'MEMBER' ? 'hrGpfMember' : 'hrGpfNotMember')],
+          [t('hrFieldFirstAppointedOn'), day(personal.civilService.firstAppointedOn)], [t('hrFieldReappointedOn'), day(personal.civilService.reappointedOn)],
+          [t('hrFieldTransferredInOn'), day(personal.civilService.transferredInOn)], [t('hrFieldTransferredOutOn'), day(personal.civilService.transferredOutOn)],
+          [t('hrFieldJoinedUnitOn'), day(personal.civilService.joinedUnitOn)], [t('hrFieldCurrentLevelSince'), day(personal.civilService.currentLevelSince)],
+          [t('hrFieldQualification'), text(personal.civilService.qualification)], [t('hrFieldQualificationMajor'), text(personal.civilService.qualificationMajor)],
+          [t('hrFieldSpecialAllowance'), text(personal.civilService.specialAllowance)], [t('hrFieldRetirementDate'), day(personal.civilService.retirementDate)]
+        ])}
+      </section>
+      <section className="profile-box" aria-label={t('hrProfileEducation')}>
+        <h3>{t('hrProfileEducation')}</h3>
+        {personal.education.length === 0 ? <p>{t('hrNoEducation')}</p> : <table>
+          <thead><tr><th>{t('hrFieldGraduatedOn')}</th><th>{t('hrFieldDegree')}</th><th>{t('hrFieldMajor')}</th><th>{t('hrFieldInstitution')}</th><th>{t('hrFieldCountry')}</th></tr></thead>
+          <tbody>{personal.education.map((entry, index) => <tr key={index}><td>{day(entry.graduatedOn)}</td><td>{entry.degree}</td><td>{text(entry.major)}</td><td>{text(entry.institution)}</td><td>{text(entry.country)}</td></tr>)}</tbody>
+        </table>}
+      </section>
       <Kp7FileForm endpoint={access.editContact ? `/api/hr/people/${work.personId}/kp7` : undefined} file={personal.kp7File} uploadsEnabled={uploadsEnabled} />
     </> : null}
     {access.editProfile && personal ? <ProfileForm personId={work.personId} employmentTypes={employmentTypes} units={units} positions={positions} organizationName={work.organizationName} values={{
@@ -54,6 +76,8 @@ export function HrProfileView({ view, contactEndpoint, personalEndpoint, photo, 
     }} /> : null}
     {photo ? <PhotoForm photoUrl={photo.url} initials={initialsOf(work.displayName)} uploadsEnabled={photo.uploadsEnabled} /> : null}
     {personalEndpoint && !access.editProfile && personal ? <PersonalForm endpoint={personalEndpoint} values={{ namePrefix: personal.namePrefix, firstName: personal.firstName, lastName: personal.lastName, gender: personal.gender, birthDate: personal.birthDate }} /> : null}
+    {access.editProfile && personal ? <CivilServiceForm endpoint={`/api/hr/people/${work.personId}/civil-service`} values={personal.civilService} /> : null}
+    {access.editContact && personal ? <EducationForm endpoint={`/api/hr/people/${work.personId}/education`} entries={personal.education} /> : null}
     {access.editContact && personal ? <FamilyForm endpoint={`/api/hr/people/${work.personId}/family`} values={{
       maritalStatus: personal.maritalStatus, religion: personal.religion, birthplace: personal.birthplace, fatherName: personal.fatherName, motherName: personal.motherName,
       motherMaidenName: personal.motherMaidenName, spouseName: personal.spouseName, spouseMaidenName: personal.spouseMaidenName, childrenCount: personal.childrenCount
