@@ -7,7 +7,10 @@ export const profileFieldLabelKeys: Record<string, MessageKey> = {
   phone: 'hrFieldPhone', address: 'hrFieldAddress', emergencyContactName: 'hrFieldEmergencyContactName', emergencyContactRelationship: 'hrFieldEmergencyContactRelationship', emergencyContactPhone: 'hrFieldEmergencyContactPhone',
   employmentType: 'hrFieldEmploymentType', appointedOn: 'hrFieldAppointedOn', positionTitle: 'hrFieldPositionTitle', positionLevel: 'hrFieldPositionLevel', organization: 'hrFieldOrganization', photo: 'hrFieldPhoto',
   maritalStatus: 'hrFieldMaritalStatus', religion: 'hrFieldReligion', birthplace: 'hrFieldBirthplace', fatherName: 'hrFieldFatherName', motherName: 'hrFieldMotherName', motherMaidenName: 'hrFieldMotherMaidenName',
-  spouseName: 'hrFieldSpouseName', spouseMaidenName: 'hrFieldSpouseMaidenName', childrenCount: 'hrFieldChildrenCount', kp7File: 'hrKp7File'
+  spouseName: 'hrFieldSpouseName', spouseMaidenName: 'hrFieldSpouseMaidenName', childrenCount: 'hrFieldChildrenCount', kp7File: 'hrKp7File',
+  positionNumber: 'hrFieldPositionNumber', salary: 'hrFieldSalary', parentAgency: 'hrFieldParentAgency', gpfStatus: 'hrFieldGpf', firstAppointedOn: 'hrFieldFirstAppointedOn', reappointedOn: 'hrFieldReappointedOn',
+  transferredInOn: 'hrFieldTransferredInOn', transferredOutOn: 'hrFieldTransferredOutOn', joinedUnitOn: 'hrFieldJoinedUnitOn', currentLevelSince: 'hrFieldCurrentLevelSince', qualification: 'hrFieldQualification',
+  qualificationMajor: 'hrFieldQualificationMajor', specialAllowance: 'hrFieldSpecialAllowance', education: 'hrFieldEducation'
 };
 
 export const maritalStatusLabelKeys: Record<MaritalStatus, MessageKey> = { SINGLE: 'hrMaritalSingle', MARRIED: 'hrMaritalMarried', DIVORCED: 'hrMaritalDivorced', SEPARATED: 'hrMaritalSeparated', WIDOWED: 'hrMaritalWidowed' };
