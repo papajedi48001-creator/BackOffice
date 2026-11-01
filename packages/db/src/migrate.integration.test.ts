@@ -2,7 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { createDatabase } from './client';
 import { migrationVersions, pendingMigrations, runMigrations } from './migrate';
 
-const databaseUrl = process.env.DATABASE_URL;
+// Creates and drops whole databases and users, so it needs a MariaDB account allowed to (root in CI); skipped without one.
+const databaseUrl = process.env.DATABASE_ADMIN_URL;
 const describeWithDatabase = databaseUrl ? describe : describe.skip;
 
 describeWithDatabase('pendingMigrations against MariaDB', () => {

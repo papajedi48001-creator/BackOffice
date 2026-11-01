@@ -8,7 +8,8 @@ import { DatabaseLocalAccountRepository } from '../identity/database-identity-re
 import { nationalId } from '../hr/national-id-fixture';
 import { FirstRunSetup, SetupError } from './first-run-setup';
 
-const databaseUrl = process.env.DATABASE_URL;
+// Creates and drops whole databases and users, so it needs a MariaDB account allowed to (root in CI); skipped without one.
+const databaseUrl = process.env.DATABASE_ADMIN_URL;
 const describeWithDatabase = databaseUrl ? describe : describe.skip;
 const migrationsDir = resolve(import.meta.dirname, '../../../db/migrations');
 const password = 'p@ss/w:rd#%1';
