@@ -83,7 +83,8 @@ describeWithDatabase('AdminService against MariaDB', () => {
     await expect(service.setModuleMode(actor, 'fleet', 'ON')).resolves.toEqual({ ok: true, changed: true });
     expect((await queries.moduleModes()).fleet ?? 'ON').toBe('ON');
     const audits = (await auditsFor('admin.module.mode_changed', 'fleet')).map((audit) => JSON.parse(audit.metadata) as unknown);
-    expect(audits.slice(-3)).toEqual([{ moduleCode: 'fleet', fromMode: 'ON', toMode: 'DEVELOPMENT' }, { moduleCode: 'fleet', fromMode: 'DEVELOPMENT', toMode: 'OFF' }, { moduleCode: 'fleet', fromMode: 'OFF', toMode: 'ON' }]);
+    // created_at has second precision, so the three rows can tie; compare without order.
+    expect(audits).toEqual(expect.arrayContaining([{ moduleCode: 'fleet', fromMode: 'ON', toMode: 'DEVELOPMENT' }, { moduleCode: 'fleet', fromMode: 'DEVELOPMENT', toMode: 'OFF' }, { moduleCode: 'fleet', fromMode: 'OFF', toMode: 'ON' }]));
     await expect(service.setModuleMode(actor, 'admin', 'DEVELOPMENT')).resolves.toEqual({ ok: false, code: 'MODULE_LOCKED' });
   });
 
