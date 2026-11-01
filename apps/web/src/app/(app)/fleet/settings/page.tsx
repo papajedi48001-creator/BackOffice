@@ -17,16 +17,16 @@ export default async function FleetSettingsPage() {
       <thead><tr><th>{t('fleetRegistration')}</th><th>{t('fleetMakeModel')}</th><th>{t('fleetKind')}</th><th>{t('fleetSeats')}</th><th>{t('status')}</th><th>{t('fleetNote')}</th><th></th></tr></thead>
       <tbody>{vehicles.map((vehicle) => <tr key={vehicle.id}>
         <td>{vehicle.registration}</td><td>{vehicle.makeModel}</td><td>{vehicleKindLabel(vehicle.kind)}</td><td>{vehicle.seats}</td><td>{vehicleStatusLabel(vehicle.status)}</td><td>{vehicle.note || '—'}</td>
-        <td className="request-actions"><details><summary>{t('fleetEdit')}</summary><VehicleForm vehicle={vehicle} /></details><DeleteButton url={`/api/fleet/vehicles/${encodeURIComponent(vehicle.id)}`} name={vehicle.registration} /></td>
+        <td className="request-actions"><VehicleForm vehicle={vehicle} /><DeleteButton url={`/api/fleet/vehicles/${encodeURIComponent(vehicle.id)}`} name={vehicle.registration} /></td>
       </tr>)}</tbody>
     </table></div>}
-    <details className="fleet-add"><summary>{t('fleetAddVehicle')}</summary><VehicleForm /></details>
+    <div className="fleet-add"><VehicleForm /></div>
 
     <h3>{t('fleetDrivers')}</h3>
     {drivers.length === 0 ? <p>{t('fleetNoDrivers')}</p> : <div className="leave-table-scroll"><table>
       <thead><tr><th>{t('fleetDriver')}</th><th>{t('fleetWorkPhone')}</th><th>{t('status')}</th><th></th></tr></thead>
       <tbody>{drivers.map((driver) => <DriverRow key={driver.personId} driver={driver} />)}</tbody>
     </table></div>}
-    <details className="fleet-add"><summary>{t('fleetAddDriver')}</summary><AddDriverForm /></details>
+    <div className="fleet-add"><AddDriverForm /></div>
   </section>;
 }

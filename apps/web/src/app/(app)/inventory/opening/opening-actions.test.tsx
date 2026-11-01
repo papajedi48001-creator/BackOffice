@@ -13,6 +13,7 @@ describe('OpeningDecision', () => {
     fetchMock.mockResolvedValueOnce(new Response('{}', { status: 200 }));
     render(<OpeningDecision />);
     fireEvent.click(screen.getByRole('button', { name: 'ส่งกลับแก้ไข' }));
+    expect(screen.getByRole('dialog', { name: 'ส่งกลับแก้ไข' })).toHaveAttribute('open');
     const confirm = screen.getByRole('button', { name: 'ยืนยัน' });
     expect(confirm).toBeDisabled();
     fireEvent.change(screen.getByLabelText('เหตุผลที่ส่งกลับ'), { target: { value: 'ยอดถุงมือไม่ตรง' } });
@@ -29,6 +30,7 @@ describe('OpeningDecision', () => {
     fetchMock.mockResolvedValueOnce(new Response('{}', { status: 200 }));
     render(<OpeningDecision />);
     fireEvent.click(screen.getByRole('button', { name: 'รับรองยอดยกมา' }));
+    expect(screen.getByRole('dialog', { name: 'รับรองยอดยกมา' })).toHaveAttribute('open');
     fireEvent.click(screen.getByRole('button', { name: 'ยืนยัน' }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     expect(JSON.parse(fetchMock.mock.calls[0]![1].body)).toEqual({ decision: 'CERTIFY' });

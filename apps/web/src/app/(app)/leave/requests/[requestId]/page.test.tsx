@@ -61,6 +61,8 @@ describe('LeaveRequestPage', () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true, requestId: 'c1' }), { status: 201 }));
     vi.stubGlobal('fetch', fetchMock);
     render(await LeaveRequestPage(params()));
+    expect(screen.queryByRole('form', { name: 'ขอยกเลิกวันลา' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'ขอยกเลิกวันลา' }));
     const form = screen.getByRole('form', { name: 'ขอยกเลิกวันลา' });
     fireEvent.change(screen.getByLabelText('ตั้งแต่วันที่'), { target: { value: '2026-11-05' } });
     fireEvent.change(screen.getByLabelText('ถึงวันที่'), { target: { value: '2026-11-06' } });
@@ -75,12 +77,14 @@ describe('LeaveRequestPage', () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
     render(await LeaveRequestPage(params('c1')));
+    fireEvent.click(screen.getByRole('button', { name: 'แก้ไขคำขอยกเลิกวันลาที่ถูกส่งกลับ' }));
     const form = screen.getByRole('form', { name: 'แก้ไขคำขอยกเลิกวันลาที่ถูกส่งกลับ' });
     expect(screen.getByLabelText('ตั้งแต่วันที่')).toHaveValue('2026-11-05');
     expect(screen.getByLabelText('เหตุผลที่ขอยกเลิก')).toHaveValue('กลับมาทำงาน');
     fireEvent.change(screen.getByLabelText('ตั้งแต่วันที่'), { target: { value: '2026-11-06' } });
     fireEvent.submit(form);
     await waitFor(() => expect(mocks.refresh).toHaveBeenCalled());
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     const [url, init] = fetchMock.mock.calls[0]! as unknown as [string, RequestInit];
     expect(url).toBe('/api/leave/c1');
     expect(init.method).toBe('PUT');

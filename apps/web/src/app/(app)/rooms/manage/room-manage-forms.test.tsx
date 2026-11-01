@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { RoomManageForms } from './room-manage-forms';
 
@@ -22,12 +22,15 @@ it('adds a room for an organization the manager covers', async () => {
   const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 201 }));
   render(<RoomManageForms rooms={[]} addons={[]} organizations={[{ id: 'admin-unit', name: 'งานธุรการ' }]} />);
 
+  expect(screen.queryByLabelText('ชื่อห้อง')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'เพิ่มห้อง' }));
   fireEvent.change(screen.getByLabelText('ชื่อห้อง'), { target: { value: 'ห้องประชุมเล็ก' } });
   fireEvent.change(screen.getByLabelText('ที่ตั้งห้อง'), { target: { value: 'ตึกผู้ป่วยนอก ชั้น 3' } });
   fireEvent.change(screen.getByLabelText('ความจุ (คน)'), { target: { value: '12' } });
-  fireEvent.click(screen.getByRole('button', { name: 'เพิ่มห้อง' }));
+  fireEvent.click(within(screen.getByRole('dialog', { name: 'เพิ่มห้อง' })).getByRole('button', { name: 'เพิ่มห้อง' }));
 
   await waitFor(() => expect(refresh).toHaveBeenCalled());
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   expect(JSON.parse(String(fetchMock.mock.calls[0]![1]!.body))).toEqual({ name: 'ห้องประชุมเล็ก', place: 'ตึกผู้ป่วยนอก ชั้น 3', capacity: 12, equipment: '', ownerOrganizationId: 'admin-unit', isBookable: true });
 });
 
@@ -36,7 +39,7 @@ it('warns how many unfinished bookings a room has before closing it', async () =
   render(<RoomManageForms rooms={[{ ...room, upcomingBookingCount: 3 }]} addons={[]} organizations={[{ id: 'admin-unit', name: 'งานธุรการ' }]} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'ปิดการจอง ห้องประชุม 1' }));
-  expect(screen.getByRole('alertdialog')).toHaveTextContent('ห้องนี้มีการจองที่ยังไม่สิ้นสุด 3 รายการ');
+  expect(screen.getByRole('dialog')).toHaveTextContent('ห้องนี้มีการจองที่ยังไม่สิ้นสุด 3 รายการ');
   expect(fetchMock).not.toHaveBeenCalled();
 
   fireEvent.click(screen.getByRole('button', { name: 'ยืนยันปิดการจอง' }));
@@ -49,6 +52,7 @@ it('edits a room in place and keeps whether it is open for booking', async () =>
   render(<RoomManageForms rooms={[room]} addons={[]} organizations={[{ id: 'admin-unit', name: 'งานธุรการ' }]} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'แก้ไข ห้องประชุม 1' }));
+  expect(screen.getByRole('dialog', { name: 'แก้ไขห้อง ห้องประชุม 1' })).toHaveAttribute('open');
   expect(screen.getByLabelText('ชื่อห้อง')).toHaveValue('ห้องประชุม 1');
   fireEvent.change(screen.getByLabelText('ความจุ (คน)'), { target: { value: '40' } });
   fireEvent.click(screen.getByRole('button', { name: 'บันทึกห้อง' }));
@@ -62,6 +66,7 @@ it('renames an add-on in place', async () => {
   render(<RoomManageForms rooms={[]} addons={[{ id: 'mic', name: 'ไมค์', unit: 'ตัว', isActive: true }]} organizations={[]} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'แก้ไข ไมค์' }));
+  expect(screen.getByRole('dialog')).toHaveAttribute('open');
   fireEvent.change(screen.getByLabelText('ชื่อรายการเสริม'), { target: { value: 'ไมโครโฟนไร้สาย' } });
   fireEvent.click(screen.getByRole('button', { name: 'บันทึกรายการเสริม' }));
 

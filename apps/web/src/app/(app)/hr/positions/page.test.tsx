@@ -58,6 +58,8 @@ describe('PositionsPage', () => {
     const fetchMock = ok({ ok: true, id: 'p9' });
     vi.stubGlobal('fetch', fetchMock);
     render(await PositionsPage());
+    expect(screen.queryByRole('form')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'เพิ่มตำแหน่ง' }));
     const form = screen.getByRole('form', { name: 'เพิ่มตำแหน่ง' });
     fireEvent.change(within(form).getByLabelText('ชื่อตำแหน่ง'), { target: { value: 'นักกายภาพบำบัด' } });
     fireEvent.change(within(form).getByLabelText('ประเภทตำแหน่ง'), { target: { value: 'ACADEMIC' } });
@@ -65,6 +67,7 @@ describe('PositionsPage', () => {
     fireEvent.click(within(form).getByRole('checkbox', { name: 'ทรงคุณวุฒิ' }));
     fireEvent.click(within(form).getByRole('button', { name: 'เพิ่มตำแหน่ง' }));
     await waitFor(() => expect(mocks.refresh).toHaveBeenCalled());
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     const [url, init] = lastCall(fetchMock);
     expect(url).toBe('/api/hr/positions');
     expect(init.method).toBe('POST');
@@ -76,6 +79,7 @@ describe('PositionsPage', () => {
     const fetchMock = ok({ error: 'invalid_input', fields: ['allowedLevels'] }, 400);
     vi.stubGlobal('fetch', fetchMock);
     render(await PositionsPage());
+    fireEvent.click(screen.getByRole('button', { name: 'แก้ไขตำแหน่ง เจ้าพนักงานธุรการ' }));
     const form = screen.getByRole('form', { name: 'แก้ไขตำแหน่ง เจ้าพนักงานธุรการ' });
     fireEvent.click(within(form).getByRole('checkbox', { name: 'ชำนาญงาน' }));
     fireEvent.click(within(form).getByRole('checkbox', { name: 'ใช้งาน' }));
@@ -91,9 +95,11 @@ describe('PositionsPage', () => {
     const fetchMock = ok();
     vi.stubGlobal('fetch', fetchMock);
     render(await PositionsPage());
-    expect(within(screen.getByRole('form', { name: 'แก้ไขตำแหน่ง เจ้าพนักงานธุรการ' })).getByRole('button', { name: 'ลบตำแหน่งนี้' })).toBeDisabled();
-    expect(within(screen.getByRole('form', { name: 'แก้ไขตำแหน่ง เจ้าพนักงานธุรการ' })).getByText(/ปิดใช้งานแทนการลบ/)).toBeInTheDocument();
-    fireEvent.click(within(screen.getByRole('form', { name: 'แก้ไขตำแหน่ง นักวิชาการพัสดุ' })).getByRole('button', { name: 'ลบตำแหน่งนี้' }));
+    const clerk = screen.getByRole('row', { name: /เจ้าพนักงานธุรการ/ });
+    expect(within(clerk).getByRole('button', { name: 'ลบตำแหน่งนี้ เจ้าพนักงานธุรการ' })).toBeDisabled();
+    expect(within(clerk).getByText(/ปิดใช้งานแทนการลบ/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'ลบตำแหน่งนี้ นักวิชาการพัสดุ' }));
+    expect(fetchMock).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'ยืนยันการลบ' }));
     await waitFor(() => expect(mocks.refresh).toHaveBeenCalled());
     expect(lastCall(fetchMock)[0]).toBe('/api/hr/positions/p2');
@@ -107,12 +113,16 @@ describe('PositionsPage', () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ errors: [{ line: 3, code: 'LEVELS_NOT_IN_CATEGORY' }] }), { status: 422 }));
     vi.stubGlobal('fetch', fetchMock);
     render(await PositionsPage());
-    const form = screen.getByRole('form', { name: 'นำเข้าตำแหน่งจากไฟล์ CSV' });
+    const open = () => { fireEvent.click(screen.getByRole('button', { name: 'นำเข้าตำแหน่งจากไฟล์ CSV' })); return screen.getByRole('form', { name: 'นำเข้าตำแหน่งจากไฟล์ CSV' }); };
+    let form = open();
     const file = new File(['name,category,levels,active\nก,GENERAL,ปฏิบัติงาน,1\n'], 'positions.csv', { type: 'text/csv' });
     fireEvent.change(within(form).getByLabelText('ไฟล์ CSV'), { target: { files: [file] } });
     fireEvent.click(within(form).getByRole('button', { name: 'นำเข้า' }));
-    expect(await within(form).findByRole('status')).toHaveTextContent('เพิ่ม 1 ตำแหน่ง ปรับปรุง 2 ตำแหน่ง');
+    expect(await screen.findByRole('status')).toHaveTextContent('เพิ่ม 1 ตำแหน่ง ปรับปรุง 2 ตำแหน่ง');
+    expect(screen.queryByRole('dialog')).toBeNull();
     expect(JSON.parse(lastCall(fetchMock)[1].body as string)).toEqual({ csv: 'name,category,levels,active\nก,GENERAL,ปฏิบัติงาน,1\n' });
+    form = open();
+    fireEvent.change(within(form).getByLabelText('ไฟล์ CSV'), { target: { files: [file] } });
     fireEvent.click(within(form).getByRole('button', { name: 'นำเข้า' }));
     expect(await within(form).findByRole('alert')).toHaveTextContent('บรรทัด 3: ระดับไม่ตรงกับประเภทตำแหน่ง');
   });

@@ -32,7 +32,8 @@ describe('MyProfilePage', () => {
     expect(screen.getByRole('heading', { name: 'ประวัติของฉัน' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'ข้อมูลส่วนตัว' })).toBeInTheDocument();
     expect(screen.getByText('ชาย', { selector: 'dd' })).toBeInTheDocument();
-    expect(screen.queryByRole('form', { name: 'แก้ไขข้อมูลส่วนตัวและข้อมูลงาน' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'แก้ไขข้อมูลส่วนตัวและข้อมูลงาน' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'แก้ไขข้อมูลติดต่อ' }));
     const form = screen.getByRole('form', { name: 'แก้ไขข้อมูลติดต่อ' });
     fireEvent.change(within(form).getByLabelText('เบอร์โทร'), { target: { value: '0812345678' } });
     fireEvent.click(within(form).getByRole('button', { name: 'บันทึกข้อมูลติดต่อ' }));
@@ -53,6 +54,7 @@ describe('MyProfilePage', () => {
 
     render(await MyProfilePage());
 
+    fireEvent.click(screen.getByRole('button', { name: 'แก้ไขข้อมูลส่วนตัว' }));
     const form = screen.getByRole('form', { name: 'แก้ไขข้อมูลส่วนตัว' });
     expect(within(form).queryByLabelText('ตำแหน่งงาน')).toBeNull();
     fireEvent.change(within(form).getByLabelText('ชื่อ'), { target: { value: 'สมหมาย' } });
@@ -73,7 +75,7 @@ describe('MyProfilePage', () => {
     mocks.get.mockResolvedValue({ work, private: personal, access: { viewWork: true, viewPrivate: true, editProfile: false, editContact: true }, history: [] });
     const { unmount } = render(await MyProfilePage());
     expect(screen.getByText('ยังอัปโหลดรูปไม่ได้ เพราะระบบยังไม่ได้ตั้งค่าที่เก็บไฟล์')).toBeInTheDocument();
-    expect(screen.queryByLabelText('เลือกรูป')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'เปลี่ยนรูป' })).toBeNull();
     unmount();
 
     mocks.enabled.mockReturnValue(true);
@@ -81,13 +83,16 @@ describe('MyProfilePage', () => {
     vi.stubGlobal('fetch', fetchMock);
     render(await MyProfilePage());
     const file = new File([new Uint8Array([0x89, 0x50])], 'me.png', { type: 'image/png' });
+    fireEvent.click(screen.getByRole('button', { name: 'เปลี่ยนรูป' }));
     fireEvent.change(screen.getByLabelText('เลือกรูป'), { target: { files: [file] } });
+    fireEvent.click(screen.getByRole('button', { name: 'อัปโหลดรูป' }));
     await waitFor(() => expect(mocks.refresh).toHaveBeenCalled());
     const [url, init] = fetchMock.mock.calls[0]! as unknown as [string, RequestInit];
     expect(url).toBe('/api/hr/me/photo');
     expect(init.method).toBe('POST');
     expect((init.body as FormData).get('file')).toBe(file);
-    expect(screen.getByText('บันทึกรูปประจำตัวแล้ว')).toBeInTheDocument();
+    expect(await screen.findByText('บันทึกรูปประจำตัวแล้ว')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('redirects a signed-out visitor', async () => {

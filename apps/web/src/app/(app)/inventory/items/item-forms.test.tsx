@@ -12,6 +12,7 @@ const categories = [{ id: 'medical', name: 'วัสดุการแพทย
 const item = { id: 'item-1', code: 'AB-01', name: 'ถุงมือยาง', categoryId: 'medical', categoryName: 'วัสดุการแพทย์', issueUnit: 'ชิ้น', purchaseUnit: 'กล่อง', purchaseUnitFactor: 100, reorderPoint: 50, tracksExpiry: true, isActive: true, barcodes: [] };
 
 function fillNewItem() {
+  fireEvent.click(screen.getByRole('button', { name: 'เพิ่มวัสดุ' }));
   const form = screen.getByRole('form', { name: 'เพิ่มวัสดุ' });
   const field = (label: string) => form.querySelector(`[name="${label}"]`) as HTMLInputElement;
   fireEvent.change(field('code'), { target: { value: 'ab-02' } });
@@ -44,9 +45,37 @@ describe('ItemForms', () => {
   it('names the item that already owns a barcode', async () => {
     fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ error: 'DUPLICATE_BARCODE', itemCode: 'ZZ-09' }), { status: 409 }));
     render(<ItemForms items={[item]} categories={categories} />);
+    fireEvent.click(screen.getByRole('button', { name: 'เพิ่มบาร์โค้ด ถุงมือยาง' }));
     const form = screen.getByRole('form', { name: 'เพิ่มบาร์โค้ด ถุงมือยาง' });
     fireEvent.change(form.querySelector('[name="barcode"]')!, { target: { value: '8851234567890' } });
     fireEvent.submit(form);
     expect(await screen.findByText('บาร์โค้ดนี้ผูกกับวัสดุอื่นแล้ว (ZZ-09)')).toBeInTheDocument();
+  });
+
+  it('closes the item popup once saved', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('{}', { status: 201 }));
+    render(<ItemForms items={[]} categories={categories} />);
+    fillNewItem();
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('adds a category from its popup', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('{}', { status: 201 }));
+    render(<ItemForms items={[]} categories={categories} />);
+    fireEvent.click(screen.getByRole('button', { name: 'เพิ่มหมวด' }));
+    const form = screen.getByRole('form', { name: 'เพิ่มหมวด' });
+    fireEvent.change(form.querySelector('[name="categoryName"]')!, { target: { value: 'วัสดุสำนักงาน' } });
+    fireEvent.submit(form);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(JSON.parse(fetchMock.mock.calls[0]![1].body)).toEqual({ name: 'วัสดุสำนักงาน', isActive: true });
+  });
+
+  it('confirms before removing a barcode', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    render(<ItemForms items={[{ ...item, barcodes: [{ id: 'bc-1', itemId: 'item-1', barcode: '885000', unitKind: 'ISSUE' as const }] }]} categories={categories} />);
+    fireEvent.click(screen.getByRole('button', { name: 'ลบบาร์โค้ด 885000' }));
+    expect(fetchMock).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'ยืนยัน' }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/inventory/items/item-1/barcodes/bc-1', expect.objectContaining({ method: 'DELETE' })));
   });
 });
