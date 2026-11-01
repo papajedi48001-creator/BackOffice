@@ -11,3 +11,4 @@ export * from './inventory.ts';
 export * from './leave.ts';
 export * from './official-travel.ts';
 export * from './fleet.ts';
+export * from './admin.ts';
