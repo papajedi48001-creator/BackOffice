@@ -2,7 +2,7 @@ import type { ProfileView } from '@backoffice/core';
 import { t } from '@backoffice/i18n';
 import { bangkokToday, formatBangkokDate, formatBangkokTime } from '../lib/bangkok-time';
 import { dateFields, genderLabelKeys, profileFieldLabelKeys } from '../lib/hr-profile-labels';
-import { ContactForm, PersonalForm, PhotoForm, ProfileForm, type ProfileFormUnit } from './hr-profile-forms';
+import { ContactForm, PersonalForm, PhotoForm, ProfileForm, type ProfileFormPosition, type ProfileFormUnit } from './hr-profile-forms';
 import { initialsOf } from '../lib/initials';
 
 const day = (value: string | null) => value ? formatBangkokDate(value) : t('notAssigned');
@@ -10,7 +10,7 @@ const text = (value: string | null) => value ?? t('notAssigned');
 const historyValue = (field: string, value: string | null) => value === null ? t('notAssigned') : dateFields.has(field) ? formatBangkokDate(value) : value;
 
 /** One person's profile boxes. Private boxes render only when the server returned private details. */
-export function HrProfileView({ view, contactEndpoint, personalEndpoint, photo, employmentTypes = [], units = [] }: { view: ProfileView; contactEndpoint: string; personalEndpoint?: string; photo?: { url: string | null; uploadsEnabled: boolean }; employmentTypes?: { id: string; name: string }[]; units?: ProfileFormUnit[] }) {
+export function HrProfileView({ view, contactEndpoint, personalEndpoint, photo, employmentTypes = [], units = [], positions = [] }: { view: ProfileView; contactEndpoint: string; personalEndpoint?: string; photo?: { url: string | null; uploadsEnabled: boolean }; employmentTypes?: { id: string; name: string }[]; units?: ProfileFormUnit[]; positions?: ProfileFormPosition[] }) {
   const { work, private: personal, access, history } = view;
   const rows = (entries: [string, React.ReactNode][]) => <dl className="profile-summary">{entries.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>;
   return <div className="profile">
@@ -38,7 +38,7 @@ export function HrProfileView({ view, contactEndpoint, personalEndpoint, photo, 
         ])}
       </section>
     </> : null}
-    {access.editProfile && personal ? <ProfileForm personId={work.personId} employmentTypes={employmentTypes} units={units} organizationName={work.organizationName} values={{
+    {access.editProfile && personal ? <ProfileForm personId={work.personId} employmentTypes={employmentTypes} units={units} positions={positions} organizationName={work.organizationName} values={{
       namePrefix: personal.namePrefix, firstName: personal.firstName, lastName: personal.lastName, gender: personal.gender, birthDate: personal.birthDate,
       employmentTypeId: work.employmentTypeId, appointedOn: work.appointedOn, positionTitle: work.positionTitle, positionLevel: work.positionLevel, organizationId: work.organizationId
     }} /> : null}

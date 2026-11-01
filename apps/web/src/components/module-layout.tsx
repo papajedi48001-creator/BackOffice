@@ -13,8 +13,7 @@ async function readSignedIn() {
   return session;
 }
 
-/** The sections the person can see: the role check, then each section's own database check when there is a database. */
-async function sectionsFor(code: string, session: Awaited<ReturnType<typeof readSignedIn>>): Promise<ModuleSection[]> {
+async function visibleSections(code: string, session: Awaited<ReturnType<typeof readSignedIn>>): Promise<ModuleSection[]> {
   const sections = moduleSections(code, session);
   const database = getSharedDatabase();
   return database ? availableSections(sections, database, session) : sections;
@@ -23,7 +22,7 @@ async function sectionsFor(code: string, session: Awaited<ReturnType<typeof read
 /** Wraps every page of a module with its section bar. */
 export async function ModuleLayout({ code, children }: { code: string; children: React.ReactNode }) {
   const session = await readSignedIn();
-  const sections = await sectionsFor(code, session);
+  const sections = await visibleSections(code, session);
   const database = getSharedDatabase();
   const badges = database && session.personId ? await collectSectionBadges(sections, database, session) : {};
   return <><ModuleSubnav sections={sections.map(({ href, labelKey }) => ({ href, labelKey, ...(badges[href] === undefined ? {} : { badge: badges[href] }) }))} />{children}</>;
@@ -31,7 +30,7 @@ export async function ModuleLayout({ code, children }: { code: string; children:
 
 /** The module's own path opens its first section the person can see. */
 export async function ModuleIndex({ code }: { code: string }) {
-  const [first] = await sectionsFor(code, await readSignedIn());
+  const [first] = await visibleSections(code, await readSignedIn());
   if (first) redirect(first.href);
   return <section><p role="alert">{t('hrNoAccess')}</p></section>;
 }

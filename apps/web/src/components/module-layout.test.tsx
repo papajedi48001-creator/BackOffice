@@ -1,11 +1,11 @@
 import { render, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ headers: vi.fn(), redirect: vi.fn((href: string) => { throw new Error(`redirect:${href}`); }), readSession: vi.fn(), getSharedDatabase: vi.fn() }));
+const mocks = vi.hoisted(() => ({ database: vi.fn((): unknown => null), headers: vi.fn(), redirect: vi.fn((href: string) => { throw new Error(`redirect:${href}`); }), readSession: vi.fn() }));
 vi.mock('next/headers', () => ({ headers: mocks.headers }));
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect, usePathname: () => '/hr/organizations' }));
 vi.mock('../lib/session', () => ({ readSession: mocks.readSession }));
-vi.mock('../lib/database', () => ({ getSharedDatabase: mocks.getSharedDatabase }));
+vi.mock('../lib/database', () => ({ getSharedDatabase: mocks.database }));
 
 import { ModuleIndex, ModuleLayout } from './module-layout';
 
@@ -44,12 +44,21 @@ it('shows งานขับของฉัน only to a person on the driver li
   mocks.headers.mockResolvedValue(new Headers());
   mocks.readSession.mockResolvedValue(session([]));
   const isDriver = (found: boolean) => ({ query: vi.fn(async (sql: string) => (sql.includes('FROM fleet_driver') ? (found ? [{ found: 1 }] : []) : [{ count: 0 }])) });
-  mocks.getSharedDatabase.mockReturnValue(isDriver(false));
+  mocks.database.mockReturnValue(isDriver(false));
   const { unmount } = render(await ModuleLayout({ code: 'fleet', children: <p>เนื้อหา</p> }));
   expect(screen.getByRole('link', { name: 'ใบขอใช้รถของฉัน' })).toBeInTheDocument();
   expect(screen.queryByRole('link', { name: /งานขับของฉัน/ })).toBeNull();
   unmount();
-  mocks.getSharedDatabase.mockReturnValue(isDriver(true));
+  mocks.database.mockReturnValue(isDriver(true));
   render(await ModuleLayout({ code: 'fleet', children: <p>เนื้อหา</p> }));
   expect(screen.getByRole('link', { name: /งานขับของฉัน/ })).toHaveAttribute('href', '/fleet/driving');
+});
+
+it('leaves อนุมัติไปราชการ out of the section bar for someone who approves no trips', async () => {
+  mocks.headers.mockResolvedValue(new Headers());
+  mocks.readSession.mockResolvedValue(session([]));
+  mocks.database.mockReturnValue({ query: vi.fn(async (sql: string) => sql.includes('AS allowed') ? [{ allowed: 0 }] : []) });
+  render(await ModuleLayout({ code: 'official-travel', children: <p>เนื้อหา</p> }));
+  expect(screen.getByRole('link', { name: 'ไปราชการของฉัน' })).toHaveAttribute('href', '/travel/mine');
+  expect(screen.queryByRole('link', { name: 'อนุมัติไปราชการ' })).toBeNull();
 });

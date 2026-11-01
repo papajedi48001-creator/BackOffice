@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ headers: vi.fn(), redirect: vi.fn(), notFound: vi.fn(() => { throw new Error('NEXT_NOT_FOUND'); }), refresh: vi.fn(), readSession: vi.fn(), getSharedDatabase: vi.fn(), get: vi.fn(), listTypes: vi.fn(), listOrganizations: vi.fn() }));
+const mocks = vi.hoisted(() => ({ headers: vi.fn(), redirect: vi.fn(), notFound: vi.fn(() => { throw new Error('NEXT_NOT_FOUND'); }), refresh: vi.fn(), readSession: vi.fn(), getSharedDatabase: vi.fn(), get: vi.fn(), listTypes: vi.fn(), listOrganizations: vi.fn(), listPositions: vi.fn() }));
 vi.mock('next/headers', () => ({ headers: mocks.headers }));
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect, notFound: mocks.notFound, useRouter: () => ({ refresh: mocks.refresh }) }));
 vi.mock('../../../../../lib/session', () => ({ readSession: mocks.readSession }));
@@ -10,7 +10,8 @@ vi.mock('@backoffice/core', async (importOriginal) => ({
   ...await importOriginal<typeof import('@backoffice/core')>(),
   HrProfileService: class { get = mocks.get; },
   EmploymentTypeService: class { list = mocks.listTypes; },
-  HrDirectory: class { listOrganizations = mocks.listOrganizations; }
+  HrDirectory: class { listOrganizations = mocks.listOrganizations; },
+  PositionCatalogService: class { list = mocks.listPositions; }
 }));
 
 import PersonProfilePage from './page';
@@ -27,7 +28,15 @@ function ready(session: unknown, view: unknown) {
   mocks.getSharedDatabase.mockReturnValue({ query: vi.fn() });
   mocks.get.mockResolvedValue(view);
   mocks.listTypes.mockResolvedValue([{ id: 't1', code: 'CIVIL_SERVANT', name: 'ข้าราชการ', isActive: true, sortOrder: 1 }]);
+  positionsReady();
   mocks.listOrganizations.mockResolvedValue([{ id: 'nur', name: 'กลุ่มการพยาบาล', unitType: 'DIVISION', parentId: 'h' }, { id: 'pha', name: 'งานเภสัชกรรม', unitType: 'SECTION', parentId: 'nur' }]);
+}
+function positionsReady() {
+  mocks.listPositions.mockResolvedValue([
+    { id: 'a', name: 'พยาบาลวิชาชีพ', category: 'ACADEMIC', allowedLevels: ['ปฏิบัติการ', 'ชำนาญการ'], isActive: false, sortOrder: 1, holders: 1 },
+    { id: 'b', name: 'เจ้าพนักงานธุรการ', category: 'GENERAL', allowedLevels: ['ปฏิบัติงาน'], isActive: true, sortOrder: 2, holders: 0 },
+    { id: 'c', name: 'ตำแหน่งที่ปิดแล้ว', category: 'NONE', allowedLevels: [], isActive: false, sortOrder: 3, holders: 0 }
+  ]);
 }
 const page = (personId = 'p1') => PersonProfilePage({ params: Promise.resolve({ personId }) });
 
@@ -57,6 +66,10 @@ describe('PersonProfilePage', () => {
     ready(manager, { work, private: personal, access: { viewWork: true, viewPrivate: true, editProfile: true, editContact: true }, history: [] });
 
     render(await page());
+
+    // Open positions are offered, and the closed one this person holds, but no other closed one.
+    const list = screen.getByRole('combobox', { name: 'ตำแหน่งงาน' }).getAttribute('list')!;
+    expect(Array.from(document.querySelectorAll(`datalist#${list} option`)).map((option) => option.getAttribute('value'))).toEqual(['พยาบาลวิชาชีพ', 'เจ้าพนักงานธุรการ']);
 
     expect(screen.getByRole('heading', { name: 'ข้อมูลส่วนตัว' })).toBeInTheDocument();
     expect(screen.getByText('17 พ.ค. 2533')).toBeInTheDocument();
