@@ -116,4 +116,18 @@ describeWithDatabase('OfficialTravelQueries against MariaDB', () => {
     expect(await queries.people('%')).toEqual([]);
     expect(await queries.people('  ')).toEqual([]);
   });
+
+  it('says who may approve a trip: a current unit head, an active ผู้แทน, or someone a trip is waiting on', async () => {
+    const staffer = await createLeavePerson(database, org.section);
+    const delegate = await createLeavePerson(database, org.section);
+    expect(await queries.canApprove(staffer)).toBe(false);
+    expect(await queries.canApprove(org.sectionHead)).toBe(true);
+    expect(await queries.canApprove(org.director)).toBe(true);
+    await database.execute("INSERT INTO delegation (id, delegator_person_id, delegate_person_id, module_code, reason, effective_from, effective_until, created_at) VALUES (UUID(), ?, ?, 'official-travel', 'ลาพักร้อน', UTC_TIMESTAMP() - INTERVAL 1 DAY, UTC_TIMESTAMP() + INTERVAL 1 DAY, UTC_TIMESTAMP())", [org.sectionHead, delegate]);
+    expect(await queries.canApprove(delegate)).toBe(true);
+    // A leave-only ผู้แทน is not a travel approver.
+    const leaveDelegate = await createLeavePerson(database, org.section);
+    await database.execute("INSERT INTO delegation (id, delegator_person_id, delegate_person_id, module_code, reason, effective_from, effective_until, created_at) VALUES (UUID(), ?, ?, 'leave', 'ลาพักร้อน', UTC_TIMESTAMP() - INTERVAL 1 DAY, UTC_TIMESTAMP() + INTERVAL 1 DAY, UTC_TIMESTAMP())", [org.sectionHead, leaveDelegate]);
+    expect(await queries.canApprove(leaveDelegate)).toBe(false);
+  });
 });

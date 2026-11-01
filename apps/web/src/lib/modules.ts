@@ -17,6 +17,8 @@ export interface ModuleSection {
   visible(subject: AccessSubject): boolean;
   /** Work waiting for this person, shown on the section tab. */
   badge?(db: Database, subject: AccessSubject): Promise<number>;
+  /** Hides the link when the person has nothing to do there; like visible, never a security check. */
+  available?(db: Database, subject: AccessSubject): Promise<boolean>;
 }
 
 /** One tile on the main page and, when live, one sidebar item. Module threads add their entry here; see docs/integration/modules.md. */
@@ -101,7 +103,7 @@ export const moduleRegistry: readonly ModuleEntry[] = [
       { href: '/travel/mine', labelKey: 'travelMine', visible: everyone },
       { href: '/travel/new', labelKey: 'travelNew', visible: everyone },
       // Approvers are unit heads and ผู้แทน, not a role, as in leave.
-      { href: '/travel/approvals', labelKey: 'travelApprovals', visible: everyone, badge: async (db, subject) => subject.personId ? new OfficialTravelQueries(db).pendingCount(subject.personId) : 0 },
+      { href: '/travel/approvals', labelKey: 'travelApprovals', visible: everyone, badge: async (db, subject) => subject.personId ? new OfficialTravelQueries(db).pendingCount(subject.personId) : 0, available: async (db, subject) => subject.personId ? new OfficialTravelQueries(db).canApprove(subject.personId) : false },
       { href: '/travel/all', labelKey: 'travelAll', visible: canManageTravel },
       { href: '/travel/settings', labelKey: 'travelSettings', visible: canManageTravel }
     ]),
@@ -139,6 +141,12 @@ export function visibleModules(subject: AccessSubject): ModuleEntry[] {
 
 export function moduleSections(code: string, subject: AccessSubject): ModuleSection[] {
   return (moduleRegistry.find((entry) => entry.code === code)?.sections ?? []).filter((section) => section.visible(subject));
+}
+
+/** Drops section links whose availability check says the person has nothing to do there; a check that fails keeps the link. */
+export async function availableSections(sections: ModuleSection[], db: Database, subject: AccessSubject): Promise<ModuleSection[]> {
+  const shown = await Promise.all(sections.map((section) => section.available ? section.available(db, subject).catch(() => true) : true));
+  return sections.filter((_, index) => shown[index]);
 }
 
 /** Drops modules whose availability check says there is nothing to show; a check that fails keeps the module. */

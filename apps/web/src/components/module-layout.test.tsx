@@ -1,10 +1,11 @@
 import { render, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ headers: vi.fn(), redirect: vi.fn((href: string) => { throw new Error(`redirect:${href}`); }), readSession: vi.fn() }));
+const mocks = vi.hoisted(() => ({ database: vi.fn((): unknown => null), headers: vi.fn(), redirect: vi.fn((href: string) => { throw new Error(`redirect:${href}`); }), readSession: vi.fn() }));
 vi.mock('next/headers', () => ({ headers: mocks.headers }));
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect, usePathname: () => '/hr/organizations' }));
 vi.mock('../lib/session', () => ({ readSession: mocks.readSession }));
+vi.mock('../lib/database', () => ({ getSharedDatabase: mocks.database }));
 
 import { ModuleIndex, ModuleLayout } from './module-layout';
 
@@ -37,4 +38,13 @@ it('shows only the sections the person can see above the page', async () => {
   expect(screen.getByRole('link', { name: 'บุคลากร' })).toHaveAttribute('href', '/hr/people');
   expect(screen.queryByRole('link', { name: 'นำเข้าข้อมูลตั้งต้น' })).toBeNull();
   expect(screen.getByText('เนื้อหา')).toBeInTheDocument();
+});
+
+it('leaves อนุมัติไปราชการ out of the section bar for someone who approves no trips', async () => {
+  mocks.headers.mockResolvedValue(new Headers());
+  mocks.readSession.mockResolvedValue(session([]));
+  mocks.database.mockReturnValue({ query: vi.fn(async (sql: string) => sql.includes('AS allowed') ? [{ allowed: 0 }] : []) });
+  render(await ModuleLayout({ code: 'official-travel', children: <p>เนื้อหา</p> }));
+  expect(screen.getByRole('link', { name: 'ไปราชการของฉัน' })).toHaveAttribute('href', '/travel/mine');
+  expect(screen.queryByRole('link', { name: 'อนุมัติไปราชการ' })).toBeNull();
 });
