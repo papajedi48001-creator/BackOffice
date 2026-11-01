@@ -3,7 +3,8 @@ import { thaiNationalIdSchema, usernameSchema } from './hr-account.ts';
 
 /** The MariaDB connection the first-run setup page saves. Built into a URL on the server, never taken as one. */
 export const setupDatabaseSchema = z.object({
-  host: z.string().trim().min(1).max(255),
+  // Hostname, IPv4 or IPv6 characters only: the host goes into a URL, so '/', '?', '@' or '#' could add driver options.
+  host: z.string().trim().min(1).max(255).regex(/^(\[[0-9A-Fa-f:.]+\]|[A-Za-z0-9.:-]+)$/),
   port: z.coerce.number().int().min(1).max(65535).default(3306),
   database: z.string().regex(/^[A-Za-z0-9_]{1,64}$/).default('backoffice'),
   username: z.string().trim().min(1).max(80),

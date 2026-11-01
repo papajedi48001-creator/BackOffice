@@ -12,6 +12,10 @@ describe('setupDatabaseSchema', () => {
   it('rejects a database name outside letters, digits and underscore', () => {
     expect(setupDatabaseSchema.safeParse({ ...database, database: 'back-office' }).success).toBe(false);
   });
+  it.each(['db.local', 'db-1.example.org', '192.168.1.254', '::1', '[fe80::1]'])('accepts host %s', (host) =>
+    expect(setupDatabaseSchema.safeParse({ ...database, host }).success).toBe(true));
+  it.each(['h/x?multipleStatements=true&', 'a@b', 'a b', 'h#x'])('rejects host %s', (host) =>
+    expect(setupDatabaseSchema.safeParse({ ...database, host }).success).toBe(false));
   it('rejects an empty host', () => expect(setupDatabaseSchema.safeParse({ ...database, host: '  ' }).success).toBe(false));
 });
 
