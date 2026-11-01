@@ -49,7 +49,8 @@ describe('ModuleSettings', () => {
     const confirm = screen.getAllByRole('dialog').at(-1)!;
     fireEvent.click(within(confirm).getByRole('button', { name: 'ลบ' }));
     await waitFor(() => expect(refresh).toHaveBeenCalled());
-    expect(fetchMock.mock.calls[0]![0]).toBe('/api/admin/people/p-adm/roles/fleet-manager');
-    expect((fetchMock.mock.calls[0]![1] as RequestInit).method).toBe('DELETE');
+    const [url, init] = fetchMock.mock.calls[0]! as unknown as [string, RequestInit];
+    expect(url).toBe('/api/admin/people/p-adm/roles/fleet-manager');
+    expect(init.method).toBe('DELETE');
   });
 });
