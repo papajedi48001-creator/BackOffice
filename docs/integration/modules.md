@@ -54,6 +54,7 @@ sections: [
 | 0017 | `0017_person_photo.sql` | รูปประจำตัวของบุคลากร (`hr_person_profile.photo_attachment_id`) | กำลังพัฒนา |
 | 0018 | `0018_organization_soft_delete.sql` | ลบกลุ่มงานและงานแบบเก็บประวัติ | กำลังพัฒนา |
 | 0019 | `0019_hr_position.sql` | ทะเบียนตำแหน่งงานและระดับตาม ก.พ. (รายการตั้งต้นของโรงพยาบาลชุมชน ให้ HR ตรวจและนำเข้ารายการของกระทรวงทับได้) | กำลังพัฒนา |
+| 0020 | `0020_admin_module.sql` | โมดูลผู้ดูแลระบบ (`admin_module_setting` เปิด/ปิดโมดูล) | กำลังพัฒนา |
 
 - ตารางของโมดูลใช้ prefix ของโมดูล (`room_*`) และอ้างอิงบุคลากรด้วย `person.id` เท่านั้น
 - เก็บเวลาเป็น UTC แสดงเป็น Asia/Bangkok
@@ -62,6 +63,9 @@ sections: [
 
 - permission ใหม่เพิ่มใน `permissionSchema` (`packages/contracts/src/access.ts`) ชื่อ `<module>.<entity>.<verb>` และผูกบทบาทใน `packages/core/src/access/policy.ts`
 - ทุก API และหน้า server ตรวจด้วย `AuthorizationService` เสมอ การซ่อนปุ่มไม่ใช่การกันสิทธิ์
+- **ผู้ดูแลระบบ** (role `admin`) ผ่านทุกการตรวจของ `AuthorizationService` และ `canManage*` โดยอัตโนมัติ โมดูลไม่ต้องเพิ่มอะไร แต่ห้ามตรวจชื่อ role ตรง ๆ (`roles.some(...)`) โดยไม่ผ่าน `isAdmin`
+- **ผู้จัดการโมดูล**: ถ้าโมดูลมี role ผู้จัดการ ให้เพิ่มคู่ `code → role` ใน `moduleManagerRoles` (`packages/core/src/admin/module-managers.ts`) และใน `grantableRoleSchema` (`packages/contracts/src/admin.ts`) เพื่อให้ผู้ดูแลระบบกำหนดได้จากหน้า ตั้งค่าโปรแกรม
+- โมดูลที่ผู้ดูแลระบบปิดใช้งาน: `apps/web/src/proxy.ts` ปฏิเสธทุกหน้าใต้ `href` และทุก API ใต้ `/api<href>` ให้เอง (403) จึงควรวาง API ของโมดูลไว้ใต้ `/api<href>` เดียวกับหน้า
 
 ## 4. การแจ้งเตือน, audit และ outbox
 

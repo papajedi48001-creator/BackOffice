@@ -32,6 +32,13 @@ describeWithDatabase('seedLocalDemo', () => {
     expect(manager?.managerCode).toBe('NUR001');
   });
 
+  it('makes IT001 นายจีระศักดิ์ หอกคำ the first ผู้ดูแลระบบ with a local account, once', async () => {
+    await seedLocalDemo(database, protector, { password: 'demo-password-2569' });
+    await seedLocalDemo(database, protector, { password: 'demo-password-2569' });
+    const admins = await database.query<{ username: string; displayName: string; organizationId: string | null }>("SELECT account.username, person.display_name AS displayName, assignment.organization_id AS organizationId FROM role_assignment assignment JOIN role ON role.id = assignment.role_id JOIN person ON person.id = assignment.person_id JOIN local_account account ON account.person_id = person.id WHERE role.name = 'admin' AND person.employee_code = 'IT001'");
+    expect(admins).toEqual([{ username: 'it001', displayName: 'นายจีระศักดิ์ หอกคำ', organizationId: null }]);
+  });
+
   it('gives every sample person an employment type and appointment date so they can file leave', async () => {
     await seedLocalDemo(database, protector, { password: 'demo-password-2569' });
     const profiles = await database.query<{ code: string; employmentTypeCode: string | null; appointedOn: string | null }>("SELECT person.employee_code AS code, type.code AS employmentTypeCode, DATE_FORMAT(profile.appointed_on, '%Y-%m-%d') AS appointedOn FROM person LEFT JOIN hr_person_profile profile ON profile.person_id = person.id LEFT JOIN hr_employment_type type ON type.id = profile.employment_type_id WHERE person.employee_code IN ('NUR014', 'NUR022', 'HR001')");
