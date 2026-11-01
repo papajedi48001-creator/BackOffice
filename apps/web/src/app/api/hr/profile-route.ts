@@ -27,7 +27,7 @@ export async function readInput<T>(request: Request, schema: Schema<T>, prepare:
   return { ok: false, response: NextResponse.json({ error: 'invalid_input', fields }, { status: 400 }) };
 }
 
-const statusByCode: Record<string, number> = { FORBIDDEN: 403, NOT_FOUND: 404, DUPLICATE_CODE: 409, DUPLICATE_NAME: 409 };
+const statusByCode: Record<string, number> = { FORBIDDEN: 403, NOT_FOUND: 404, DUPLICATE_CODE: 409, DUPLICATE_NAME: 409, POSITION_IN_USE: 409 };
 
 export function resultResponse(result: { ok: true; id?: string } | { ok: false; code: string }): Response {
   if (result.ok) return NextResponse.json(result);
