@@ -557,3 +557,6 @@ video.inventory-camera { display: block; flex-basis: 100%; width: 100%; max-widt
 .mode-switch button[aria-pressed="true"][data-mode="DEVELOPMENT"] { background: var(--dev-amber); }
 .mode-switch button[aria-pressed="true"][data-mode="OFF"] { background: #6b7280; }
 .mode-switch button:disabled { cursor: default; }
+.admin-role-chips li.is-tester { border-style: dashed; border-color: var(--dev-amber); background: var(--dev-amber-soft); color: var(--dev-amber-ink); }
+.admin-subheading { margin: 12px 0 6px; font-size: .95rem; }
+.admin-role-options.is-testers { margin-top: 12px; }
