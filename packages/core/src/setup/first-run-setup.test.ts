@@ -8,12 +8,13 @@ const connection = { host: '192.168.1.254', port: 3306, database: 'backoffice', 
 const admin = { firstName: 'จีระศักดิ์', lastName: 'หอกคำ', employeeCode: 'IT001', nationalId: '1101700230708', username: 'it001', password: 'long-enough-pw' };
 const protector = new NationalIdProtector('a'.repeat(64), 'b'.repeat(64));
 
-function fakeDatabase(answers: { version?: string; accounts?: number; versionError?: Error }) {
+function fakeDatabase(answers: { version?: string; accounts?: number; versionError?: Error; lockHeld?: number }) {
   const state = { closed: 0, transactions: 0 };
   const database: Database = {
     execute: async () => undefined,
     query: async <T extends object>(sql: string) => {
       if (sql.includes('VERSION()')) { if (answers.versionError) throw answers.versionError; return [{ version: answers.version ?? '11.8.3-MariaDB-ubu2404' }] as T[]; }
+      if (sql.includes('GET_LOCK')) return [{ held: answers.lockHeld ?? 1 }] as T[];
       if (sql.includes('information_schema.tables')) return [{ present: 1 }] as T[];
       if (sql.includes('SELECT version FROM schema_migration')) return [] as T[];
       if (sql.includes('FROM local_account')) return [{ n: answers.accounts ?? 0 }] as T[];
@@ -69,6 +70,13 @@ describe('FirstRunSetup', () => {
     expect(await codeOf(setup.complete(connection, admin))).toBe('accounts_exist');
     expect(state.transactions).toBe(0);
     expect(state.closed).toBe(1);
+  });
+
+  it('refuses while another server holds the setup lock', async () => {
+    const { database, state } = fakeDatabase({ lockHeld: 0 });
+    const setup = new FirstRunSetup({ connect: () => database, protector, migrationsDir: '/nowhere' });
+    expect(await codeOf(setup.complete(connection, admin))).toBe('already_configured');
+    expect(state.transactions).toBe(0);
   });
 
   it.each([

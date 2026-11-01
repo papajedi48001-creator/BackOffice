@@ -14,6 +14,7 @@ export class SetupError extends Error {
 }
 
 export interface FirstRunSetupDeps {
+  /** Must give a single connection: the setup lock is a MariaDB session lock held until the database closes. */
   connect(url: string): Database;
   /** Null while NATIONAL_ID_ENCRYPTION_KEY or NATIONAL_ID_LOOKUP_KEY is missing. */
   protector: NationalIdProtector | null;
@@ -51,12 +52,16 @@ export class FirstRunSetup {
     const databaseUrl = buildDatabaseUrl(input);
     return this.withDatabase(input, async (database) => {
       const serverVersion = await checkServer(database);
+      // Serialises setup across web servers; released when withDatabase closes the connection.
+      const [lock] = await database.query<{ held: number | null }>("SELECT GET_LOCK('backoffice.first_run_setup', 30) AS held");
+      if (Number(lock?.held) !== 1) throw new SetupError('already_configured');
       // Checked before migrating: the setup page must never add an account to a database already in use.
       if ((await countAccounts(database)) > 0) throw new SetupError('accounts_exist');
       const migrationsApplied = (await pendingMigrations(database)).length > 0 ? (await migrate(database, this.deps.migrationsDir)).length : 0;
       const passwordHash = await hashPassword(admin.password);
       const personId = this.createId();
       await database.transaction(async (transaction) => {
+        if ((await countAccounts(transaction)) > 0) throw new SetupError('accounts_exist');
         await transaction.execute(
           "INSERT INTO person (id, employee_code, national_id_ciphertext, national_id_lookup, national_id_masked, employment_status, created_at) VALUES (?, ?, ?, ?, ?, 'ACTIVE', UTC_TIMESTAMP())",
           [personId, admin.employeeCode, protector.encrypt(admin.nationalId), protector.lookup(admin.nationalId), protector.mask(admin.nationalId)]);

@@ -20,7 +20,7 @@ describeWithDatabase('FirstRunSetup against MariaDB', () => {
   const protector = new NationalIdProtector('a'.repeat(64), 'b'.repeat(64));
   const made: { databases: string[]; users: string[] } = { databases: [], users: [] };
   const opened: Database[] = [];
-  const connect = (url: string) => { const database = createDatabase(url); opened.push(database); return database; };
+  const connect = (url: string) => { const database = createDatabase(url.includes('?') ? url : `${url}?connectionLimit=1`); opened.push(database); return database; };
   const setup = new FirstRunSetup({ connect, protector, migrationsDir });
   const short = () => randomUUID().replace(/-/g, '').slice(0, 10);
   const admin = () => ({ firstName: 'จีระศักดิ์', lastName: 'หอกคำ', employeeCode: `IT${short()}`, nationalId: nationalId(`1${String(Math.floor(Math.random() * 1e11)).padStart(11, '0')}`), username: `it.${short()}`, password: 'long-enough-pw' });
@@ -86,6 +86,14 @@ describeWithDatabase('FirstRunSetup against MariaDB', () => {
     const before = await count(db, 'SELECT COUNT(*) AS n FROM person');
     expect(await codeOf(setup.complete(connection, admin()))).toBe('accounts_exist');
     expect(await count(db, 'SELECT COUNT(*) AS n FROM person')).toBe(before);
+  });
+
+  it('creates one ผู้ดูแลระบบ when two servers complete setup at the same time', async () => {
+    const { connection, name } = await freshDatabase('ddl');
+    const other = new FirstRunSetup({ connect, protector, migrationsDir });
+    const codes = await Promise.all([codeOf(setup.complete(connection, admin())), codeOf(other.complete(connection, admin()))]);
+    expect(codes.sort()).toEqual(['accounts_exist', 'none']);
+    expect(await count(inDatabase(name), 'SELECT COUNT(*) AS n FROM local_account')).toBe(1);
   });
 
   it('rolls everything back when the employee code is taken', async () => {
