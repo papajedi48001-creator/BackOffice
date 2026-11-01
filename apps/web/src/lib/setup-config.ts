@@ -18,6 +18,20 @@ export async function writeDatabaseConfig(url: string, path: string = databaseCo
   }
 }
 
+/** Proves the config directory takes a file before setup touches the database, so a read-only volume cannot strand an admin it already created. */
+export async function assertConfigWritable(path: string = databaseConfigFilePath()): Promise<void> {
+  const probe = `${path}.probe-${randomBytes(6).toString('hex')}`;
+  try {
+    await mkdir(dirname(path), { recursive: true, mode: 0o700 });
+    await writeFile(probe, '', { mode: 0o600, flag: 'wx' });
+    await rm(probe, { force: true });
+  } catch (error) {
+    await rm(probe, { force: true }).catch(() => undefined);
+    console.error('backoffice.setup.config_write_failed', { code: (error as NodeJS.ErrnoException).code ?? 'UNKNOWN' });
+    throw new SetupError('config_write_failed');
+  }
+}
+
 /** The SQL migrations: the Docker image sets BACKOFFICE_MIGRATIONS_DIR; in the repo they sit beside apps/web. */
 export function migrationsDir(env: Readonly<Record<string, string | undefined>> = process.env, cwd: string = process.cwd()): string {
   return env.BACKOFFICE_MIGRATIONS_DIR?.trim() || resolve(cwd, '../../packages/db/migrations');

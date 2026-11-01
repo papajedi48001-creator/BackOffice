@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { setupCompleteSchema } from '@backoffice/contracts';
 import { clearSetupCode, verifySetupCode } from '../../../../lib/setup-code';
-import { writeDatabaseConfig } from '../../../../lib/setup-config';
+import { assertConfigWritable, writeDatabaseConfig } from '../../../../lib/setup-config';
 import { isSetupMode } from '../../../../lib/setup-mode';
 import { createFirstRunSetup, readSetupBody, setupFailure, setupNotFound, setupRefused } from '../../../../lib/setup-service';
 
@@ -17,6 +17,7 @@ export async function POST(request: Request): Promise<Response> {
     const body = await readSetupBody(request, setupCompleteSchema);
     if (!body) return setupRefused('invalid_input', 400);
     if (!verifySetupCode(body.code)) return setupRefused('invalid_code', 403);
+    await assertConfigWritable();
     const completed = await createFirstRunSetup().complete(body.database, body.admin);
     await writeDatabaseConfig(completed.databaseUrl);
     clearSetupCode();

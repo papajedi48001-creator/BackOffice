@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { SetupError } from '@backoffice/core';
-import { migrationsDir, writeDatabaseConfig } from './setup-config';
+import { assertConfigWritable, migrationsDir, writeDatabaseConfig } from './setup-config';
 
 describe('writeDatabaseConfig', () => {
   const directories: string[] = [];
@@ -27,6 +27,25 @@ describe('writeDatabaseConfig', () => {
     const failure = await writeDatabaseConfig('mysql://u:p@h/db', join(blocker, 'database_url')).catch((error: unknown) => error);
     expect(failure).toBeInstanceOf(SetupError);
     expect((failure as SetupError).code).toBe('config_write_failed');
+  });
+});
+
+describe('assertConfigWritable', () => {
+  it('passes and leaves nothing behind when the directory can be written', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'backoffice-setup-probe-'));
+    try {
+      await assertConfigWritable(join(directory, 'database_url'));
+      expect(readdirSync(directory)).toEqual([]);
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  it('refuses with config_write_failed before anything touches the database', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'backoffice-setup-probe-'));
+    try {
+      writeFileSync(join(directory, 'blocker'), 'x');
+      const failure = await assertConfigWritable(join(directory, 'blocker', 'database_url')).catch((error: unknown) => error);
+      expect((failure as SetupError).code).toBe('config_write_failed');
+    } finally { rmSync(directory, { recursive: true, force: true }); }
   });
 });
 
