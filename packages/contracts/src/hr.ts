@@ -113,6 +113,36 @@ export const updatePersonFamilyInputSchema = z.object({
 }).strict();
 export type UpdatePersonFamilyInput = z.infer<typeof updatePersonFamilyInputSchema>;
 
+/** กบข. on the ก.พ.7: สมัคร or ไม่สมัคร. */
+export const gpfStatusSchema = z.enum(['MEMBER', 'NOT_MEMBER']);
+export type GpfStatus = z.infer<typeof gpfStatusSchema>;
+
+/** ข้อมูลการปฏิบัติราชการ on the ก.พ.7. These record official orders, so only HR edits them. */
+export const updateCivilServiceInputSchema = z.object({
+  positionNumber: optionalText(32), salary: z.number().min(0).max(9_999_999).multipleOf(0.01).nullable().optional(), parentAgency: optionalText(255),
+  gpfStatus: gpfStatusSchema.nullable().optional(), firstAppointedOn: calendarDateSchema.nullable().optional(), reappointedOn: calendarDateSchema.nullable().optional(),
+  transferredInOn: calendarDateSchema.nullable().optional(), transferredOutOn: calendarDateSchema.nullable().optional(), joinedUnitOn: calendarDateSchema.nullable().optional(),
+  currentLevelSince: calendarDateSchema.nullable().optional(), qualification: optionalText(255), qualificationMajor: optionalText(255), specialAllowance: optionalText(255)
+}).strict();
+export type UpdateCivilServiceInput = z.infer<typeof updateCivilServiceInputSchema>;
+
+/** วันเกษียณอายุ: 1 ต.ค. after the fiscal year in which the person turns 60 (born 2 ต.ค. or later retires a year on). */
+export function retirementDate(birthDate: string | null): string | null {
+  if (!birthDate) return null;
+  const [year, month, day] = birthDate.split('-').map(Number) as [number, number, number];
+  const lateInYear = month > 10 || (month === 10 && day >= 2);
+  return `${year + 60 + (lateInYear ? 1 : 0)}-10-01`;
+}
+
+/** One row of ข้อมูลการศึกษา. */
+export const educationEntrySchema = z.object({
+  graduatedOn: calendarDateSchema.nullable().optional(), degree: z.string().trim().min(1).max(255), major: optionalText(255), institution: optionalText(255), country: optionalText(120)
+}).strict();
+export type EducationEntry = z.infer<typeof educationEntrySchema>;
+/** The whole ข้อมูลการศึกษา list, in order; saving replaces the list. The person and HR edit it. */
+export const updateEducationInputSchema = z.object({ entries: z.array(educationEntrySchema).max(20) }).strict();
+export type UpdateEducationInput = z.infer<typeof updateEducationInputSchema>;
+
 /** The ก.พ.7 file: a PDF printed from the ministry system, up to 10 MB. */
 export const MAX_KP7_FILE_BYTES = 10 * 1024 * 1024;
 
