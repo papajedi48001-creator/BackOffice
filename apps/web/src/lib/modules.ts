@@ -17,6 +17,8 @@ export interface ModuleSection {
   visible(subject: AccessSubject): boolean;
   /** Work waiting for this person, shown on the section tab. */
   badge?(db: Database, subject: AccessSubject): Promise<number>;
+  /** Hides the link when the database says it is not for this person; like visible, never a security check. */
+  available?(db: Database, subject: AccessSubject): Promise<boolean>;
 }
 
 /** One tile on the main page and, when live, one sidebar item. Module threads add their entry here; see docs/integration/modules.md. */
@@ -119,8 +121,8 @@ export const moduleRegistry: readonly ModuleEntry[] = [
       { href: '/fleet/dashboard', labelKey: 'fleetDashboard', visible: canManageFleet, badge: fleetWaiting },
       { href: '/fleet/mine', labelKey: 'fleetMine', visible: everyone },
       { href: '/fleet/calendar', labelKey: 'fleetCalendar', visible: everyone },
-      // A พนักงานขับรถ is a fleet_driver row, not a role, so the synchronous check cannot see it: the link shows to everyone and the page says who it is for.
-      { href: '/fleet/driving', labelKey: 'fleetDriving', visible: everyone, badge: fleetDriverToday },
+      // A พนักงานขับรถ is a fleet_driver row, not a role, so the database check decides; the page checks again.
+      { href: '/fleet/driving', labelKey: 'fleetDriving', visible: everyone, available: async (db, subject) => (subject.personId ? new FleetQueries(db).isActiveDriver(subject.personId) : false), badge: fleetDriverToday },
       { href: '/fleet/settings', labelKey: 'fleetSettings', visible: canManageFleet }
     ]),
     badge: async (db, subject) => (await fleetWaiting(db, subject)) + (await fleetDriverToday(db, subject))
@@ -141,6 +143,12 @@ export function moduleSections(code: string, subject: AccessSubject): ModuleSect
 }
 
 /** Drops modules whose availability check says there is nothing to show; a check that fails keeps the module. */
+/** Drops the sections whose own database check says they are not for this person; a check that fails keeps the link. */
+export async function availableSections(sections: readonly ModuleSection[], db: Database, subject: AccessSubject): Promise<ModuleSection[]> {
+  const shown = await Promise.all(sections.map((section) => section.available ? section.available(db, subject).catch(() => true) : true));
+  return sections.filter((_, index) => shown[index]);
+}
+
 export async function availableModules(modules: ModuleEntry[], db: Database, subject: AccessSubject): Promise<ModuleEntry[]> {
   const shown = await Promise.all(modules.map((entry) => entry.available ? entry.available(db, subject).catch(() => true) : true));
   return modules.filter((_, index) => shown[index]);

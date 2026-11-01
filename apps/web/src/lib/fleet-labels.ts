@@ -22,7 +22,7 @@ const errorKeys: Record<string, MessageKey> = {
   INVALID_RANGE: 'fleetErrorInvalidRange', IN_PAST: 'fleetErrorInPast', TOO_FAR_AHEAD: 'fleetErrorTooFarAhead', TOO_LONG: 'fleetErrorTooLong', NOT_QUARTER_HOUR: 'fleetErrorNotQuarterHour',
   NO_ORGANIZATION: 'fleetErrorNoOrganization', NO_APPROVER: 'fleetErrorNoApprover', TRAVEL_NOT_ELIGIBLE: 'fleetErrorTravelNotEligible', TRAVEL_ALREADY_HAS_CAR: 'fleetErrorTravelAlreadyHasCar',
   NOT_FOUND: 'fleetErrorNotFound', NOT_PENDING: 'fleetErrorNotPending', NOT_RETURNED: 'fleetErrorNotReturned',
-  VEHICLE_BUSY: 'fleetErrorVehicleBusy', DRIVER_BUSY: 'fleetErrorDriverBusy', VEHICLE_UNAVAILABLE: 'fleetErrorVehicleUnavailable', DRIVER_INACTIVE: 'fleetErrorDriverInactive', TRIP_DOES_NOT_COVER: 'fleetErrorTripDoesNotCover',
+  HAS_HISTORY: 'fleetErrorHasHistory', VEHICLE_BUSY: 'fleetErrorVehicleBusy', DRIVER_BUSY: 'fleetErrorDriverBusy', VEHICLE_UNAVAILABLE: 'fleetErrorVehicleUnavailable', DRIVER_INACTIVE: 'fleetErrorDriverInactive', TRIP_DOES_NOT_COVER: 'fleetErrorTripDoesNotCover',
   DEPARTURE_TOO_EARLY: 'fleetErrorDepartureTooEarly', ODOMETER_BELOW_LAST: 'fleetErrorOdometerBelowLast', ODOMETER_BELOW_OUT: 'fleetErrorOdometerBelowOut',
   DRIVER_HAS_TRIPS: 'fleetErrorDriverHasTrips', DUPLICATE_REGISTRATION: 'fleetErrorDuplicateRegistration', fleet_request_route: 'fleetErrorRequestRoute', invalid_input: 'leaveErrorInvalid', decision_not_accepted: 'actionNotAccepted'
 };
