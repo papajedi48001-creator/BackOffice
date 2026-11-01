@@ -1,10 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ refresh: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: mocks.refresh }) }));
 
-import { ProfileForm, type ProfileFormValues } from './hr-profile-forms';
+import { ContactForm, PersonalForm, PhotoForm, ProfileForm, type ProfileFormValues } from './hr-profile-forms';
 
 const units = [
   { id: 'nur', name: 'กลุ่มการพยาบาล', unitType: 'DIVISION', parentId: 'hosp' },
@@ -17,11 +17,14 @@ const values: ProfileFormValues = { namePrefix: 'นาง', firstName: 'สม�
 const options = (listId: string) => Array.from(document.querySelectorAll(`datalist#${listId} option`)).map((option) => option.getAttribute('value'));
 const sent = (fetchMock: ReturnType<typeof vi.fn>) => JSON.parse((fetchMock.mock.calls.at(-1) as unknown as [string, RequestInit])[1].body as string) as Record<string, unknown>;
 
+const openProfile = () => fireEvent.click(screen.getByRole('button', { name: 'แก้ไขข้อมูลส่วนตัวและข้อมูลงาน' }));
+
 afterEach(() => { vi.clearAllMocks(); vi.unstubAllGlobals(); });
 
 describe('ProfileForm กลุ่มงาน and งาน', () => {
   it('shows the person\'s กลุ่มงาน and งาน and suggests only the งาน of the chosen กลุ่มงาน', () => {
     render(<ProfileForm personId="p1" values={values} employmentTypes={[]} units={units} />);
+    openProfile();
     const division = screen.getByRole('combobox', { name: 'กลุ่มงาน' });
     const section = screen.getByRole('combobox', { name: 'งาน' });
     expect(division).toHaveValue('กลุ่มการพยาบาล');
@@ -37,37 +40,43 @@ describe('ProfileForm กลุ่มงาน and งาน', () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
     render(<ProfileForm personId="p1" values={values} employmentTypes={[]} units={units} />);
-    const division = screen.getByRole('combobox', { name: 'กลุ่มงาน' });
-    const section = screen.getByRole('combobox', { name: 'งาน' });
+    openProfile();
+    const division = () => screen.getByRole('combobox', { name: 'กลุ่มงาน' });
+    const section = () => screen.getByRole('combobox', { name: 'งาน' });
     const save = () => fireEvent.click(screen.getByRole('button', { name: 'บันทึกข้อมูล' }));
+    const reopen = async () => { await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull()); openProfile(); };
 
-    fireEvent.change(section, { target: { value: 'งานอุบัติเหตุฉุกเฉิน' } });
+    fireEvent.change(section(), { target: { value: 'งานอุบัติเหตุฉุกเฉิน' } });
     save();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(sent(fetchMock).organizationId).toBe('er');
+    expect(await screen.findByRole('status')).toHaveTextContent('บันทึกแล้ว');
 
-    fireEvent.change(section, { target: { value: '' } });
+    await reopen();
+    fireEvent.change(section(), { target: { value: '' } });
     save();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     expect(sent(fetchMock).organizationId).toBe('nur');
 
-    fireEvent.change(division, { target: { value: '' } });
+    await reopen();
+    fireEvent.change(division(), { target: { value: '' } });
     save();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
     expect(sent(fetchMock).organizationId).toBeNull();
   });
 
-  it('refuses a name that matches no unit without saving', () => {
+  it('refuses a name that matches no unit without saving', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
     render(<ProfileForm personId="p1" values={values} employmentTypes={[]} units={units} />);
+    openProfile();
     fireEvent.change(screen.getByRole('combobox', { name: 'กลุ่มงาน' }), { target: { value: 'กลุ่มที่ไม่มี' } });
     fireEvent.click(screen.getByRole('button', { name: 'บันทึกข้อมูล' }));
-    expect(screen.getByRole('alert')).toHaveTextContent('ไม่พบกลุ่มงานนี้ กรุณาเลือกจากรายการ');
+    expect(await screen.findByText('ไม่พบกลุ่มงานนี้ กรุณาเลือกจากรายการ')).toHaveAttribute('role', 'alert');
     fireEvent.change(screen.getByRole('combobox', { name: 'กลุ่มงาน' }), { target: { value: 'กลุ่มงานการแพทย์' } });
     fireEvent.change(screen.getByRole('combobox', { name: 'งาน' }), { target: { value: 'งานผู้ป่วยใน' } });
     fireEvent.click(screen.getByRole('button', { name: 'บันทึกข้อมูล' }));
-    expect(screen.getByRole('alert')).toHaveTextContent('ไม่พบงานนี้ในกลุ่มงานที่เลือก');
+    expect(await screen.findByText('ไม่พบงานนี้ในกลุ่มงานที่เลือก')).toHaveAttribute('role', 'alert');
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -75,6 +84,7 @@ describe('ProfileForm กลุ่มงาน and งาน', () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
     render(<ProfileForm personId="p1" values={{ ...values, organizationId: 'old' }} employmentTypes={[]} units={[...units, { id: 'old', name: 'หน่วยเดิม', unitType: null, parentId: null }]} />);
+    openProfile();
     expect(screen.getByRole('combobox', { name: 'กลุ่มงาน' })).toHaveValue('หน่วยเดิม');
     fireEvent.click(screen.getByRole('button', { name: 'บันทึกข้อมูล' }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
@@ -85,11 +95,58 @@ describe('ProfileForm กลุ่มงาน and งาน', () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
     render(<ProfileForm personId="p1" values={values} employmentTypes={[]} units={[...units, { id: 'old', name: 'หน่วยเดิม', unitType: null, parentId: null }, { id: 'hosp', name: 'โรงพยาบาลวาริชภูมิ', unitType: 'HOSPITAL', parentId: null }]} />);
+    openProfile();
     const division = screen.getByRole('combobox', { name: 'กลุ่มงาน' });
     expect(options(division.getAttribute('list')!)).toEqual(['กลุ่มการพยาบาล', 'กลุ่มงานการแพทย์', 'หน่วยเดิม']);
     fireEvent.change(division, { target: { value: 'หน่วยเดิม' } });
     fireEvent.click(screen.getByRole('button', { name: 'บันทึกข้อมูล' }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     expect(sent(fetchMock).organizationId).toBe('old');
+  });
+});
+
+describe('own profile popups', () => {
+  it('edits contact details in a popup and closes once saved', async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<ContactForm endpoint="/api/hr/me/contact" values={{ phone: null, address: null, emergencyContactName: null, emergencyContactRelationship: null, emergencyContactPhone: null }} />);
+    expect(screen.queryByRole('form')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'แก้ไขข้อมูลติดต่อ' }));
+    fireEvent.change(screen.getByLabelText('เบอร์โทร'), { target: { value: '0800000000' } });
+    fireEvent.click(screen.getByRole('button', { name: 'บันทึกข้อมูลติดต่อ' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(sent(fetchMock).phone).toBe('0800000000');
+  });
+
+  it('keeps the personal popup open with the error when the save is refused', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ error: 'GENDER_REQUIRED' }), { status: 400 })));
+    render(<PersonalForm endpoint="/api/hr/me/personal" values={{ namePrefix: null, firstName: 'สมใจ', lastName: 'ใจดี', gender: null, birthDate: null }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'แก้ไขข้อมูลส่วนตัว' }));
+    fireEvent.click(screen.getByRole('button', { name: 'บันทึกข้อมูลส่วนตัว' }));
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'แก้ไขข้อมูลส่วนตัว' })).toBeInTheDocument();
+  });
+
+  it('confirms before removing the photo', async () => {
+    const fetchMock = vi.fn(async () => new Response(null, { status: 204 }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<PhotoForm photoUrl="/api/hr/people/p1/photo/a1" initials="สจ" uploadsEnabled />);
+    fireEvent.click(screen.getByRole('button', { name: 'ลบรูป' }));
+    expect(fetchMock).not.toHaveBeenCalled();
+    const dialog = screen.getByRole('dialog', { name: 'ลบรูป' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'ลบรูป' }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/hr/me/photo', expect.objectContaining({ method: 'DELETE' })));
+  });
+
+  it('uploads a new photo from the popup', async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<PhotoForm photoUrl={null} initials="สจ" uploadsEnabled />);
+    fireEvent.click(screen.getByRole('button', { name: 'เปลี่ยนรูป' }));
+    const file = new File(['x'], 'me.png', { type: 'image/png' });
+    fireEvent.change(screen.getByLabelText('เลือกรูป'), { target: { files: [file] } });
+    fireEvent.click(screen.getByRole('button', { name: 'อัปโหลดรูป' }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/hr/me/photo', expect.objectContaining({ method: 'POST' })));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 });

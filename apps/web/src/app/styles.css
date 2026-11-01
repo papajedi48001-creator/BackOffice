@@ -394,6 +394,7 @@ video.inventory-camera { display: block; flex-basis: 100%; width: 100%; max-widt
 .action-dialog button.button-danger-solid { background: #c2410c; }
 .action-dialog button.button-danger-solid:hover:not(:disabled) { background: #9a3412; }
 .action-dialog button:disabled { cursor: not-allowed; opacity: .55; }
+.profile-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line-soft); }
 /* Popup for add, edit and delete forms (components/form-dialog.tsx): ActionDialog's look with a scrolling field area. */
 .form-dialog-wide { width: min(94vw, 720px); }
 .form-dialog .action-dialog-panel { max-height: 90dvh; grid-template-rows: auto minmax(0, 1fr) auto auto; }

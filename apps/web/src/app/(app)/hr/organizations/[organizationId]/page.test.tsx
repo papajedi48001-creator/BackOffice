@@ -61,10 +61,12 @@ describe('OrganizationPage', () => {
 
     render(await page());
 
+    fireEvent.click(screen.getByRole('button', { name: 'แก้ไขชนิดหน่วยงาน' }));
     expect(screen.getByRole('combobox', { name: 'ชนิดหน่วยงาน' })).toHaveValue('DIVISION');
     expect(screen.getByRole('button', { name: 'บันทึกชนิดหน่วยงาน' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'ปิด' }));
+    fireEvent.click(screen.getByRole('button', { name: 'ตั้งเป็นหัวหน้า' }));
     expect(screen.getByRole('combobox', { name: 'หัวหน้าคนใหม่' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'ตั้งเป็นหัวหน้า' })).toBeInTheDocument();
     expect(document.querySelector('option[value="E001 นายสมศักดิ์ รักงาน"]')).not.toBeNull();
     expect(document.querySelector('option[value="E009 ลาออกแล้ว"]')).toBeNull();
   });
@@ -79,9 +81,9 @@ describe('OrganizationPage', () => {
     expect(screen.getByText('ผู้อำนวยการพ้นสภาพ')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'ประวัติผู้อำนวยการ' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'ผู้อำนวยการ' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'ตั้งเป็นผู้อำนวยการ' }));
     expect(screen.getByRole('combobox', { name: 'ผู้อำนวยการคนใหม่' })).toBeInTheDocument();
     expect(screen.getByLabelText('วันที่เริ่มเป็นผู้อำนวยการ')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'ตั้งเป็นผู้อำนวยการ' })).toBeInTheDocument();
     expect(screen.queryByText(/หัวหน้า/)).not.toBeInTheDocument();
   });
 
@@ -128,6 +130,7 @@ describe('OrganizationPage', () => {
 
     render(await page('ipd'));
 
+    fireEvent.click(screen.getByRole('button', { name: 'แก้ไขหน่วยงาน' }));
     expect(screen.getByLabelText('ชื่องาน')).toHaveValue('งานผู้ป่วยใน');
     expect(screen.getByRole('combobox', { name: 'อยู่ในกลุ่มงาน' })).toHaveValue('nur');
     fireEvent.change(screen.getByLabelText('ชื่องาน'), { target: { value: 'งานผู้ป่วยในชาย' } });

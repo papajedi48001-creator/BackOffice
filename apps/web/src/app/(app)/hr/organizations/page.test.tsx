@@ -84,6 +84,7 @@ describe('OrganizationsPage', () => {
 
     render(await OrganizationsPage());
 
+    fireEvent.click(screen.getByRole('button', { name: 'เพิ่มงาน' }));
     const sectionForm = screen.getByRole('form', { name: 'เพิ่มงาน' });
     fireEvent.change(within(sectionForm).getByLabelText('ชื่องาน'), { target: { value: 'งานผู้ป่วยใน' } });
     fireEvent.change(within(sectionForm).getByLabelText('กลุ่มงาน'), { target: { value: 'nur' } });
@@ -93,6 +94,8 @@ describe('OrganizationsPage', () => {
     expect(url).toBe('/api/hr/organizations');
     expect(JSON.parse(init.body as string)).toEqual({ name: 'งานผู้ป่วยใน', unitType: 'SECTION', parentId: 'nur' });
 
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    fireEvent.click(screen.getByRole('button', { name: 'เพิ่มกลุ่มงาน' }));
     const divisionForm = screen.getByRole('form', { name: 'เพิ่มกลุ่มงาน' });
     fireEvent.change(within(divisionForm).getByLabelText('ชื่อกลุ่มงาน'), { target: { value: 'กลุ่มงานเภสัชกรรม' } });
     fireEvent.click(within(divisionForm).getByRole('button', { name: 'เพิ่มกลุ่มงาน' }));

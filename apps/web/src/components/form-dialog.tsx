@@ -55,8 +55,10 @@ function FormDialogPanel({ title, submitLabel, tone, wide, isSubmitting, ready, 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (blocked || !ready) return;
+    const result = onSubmit(event);
+    if (!(result instanceof Promise)) { if (result === true) onClose(); return; }
     setBusy(true);
-    try { if ((await onSubmit(event)) === true) onClose(); } finally { setBusy(false); }
+    try { if ((await result) === true) onClose(); } finally { setBusy(false); }
   }
   return <dialog ref={ref} className={`action-dialog form-dialog tone-${tone}${wide ? ' form-dialog-wide' : ''}`} aria-labelledby={titleId}
     onCancel={(event) => { event.preventDefault(); close(); }}

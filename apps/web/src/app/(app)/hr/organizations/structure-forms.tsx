@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { t, type MessageKey } from '@backoffice/i18n';
 import { ActionDialog } from '../../../../components/action-dialog';
+import { FormDialog } from '../../../../components/form-dialog';
 
 export interface UnitOption { id: string; name: string }
 export interface EditableUnit { id: string; name: string; unitType: string | null; parentId: string | null }
@@ -28,31 +29,33 @@ export function AddUnitForms({ divisions }: { divisions: UnitOption[] }) {
   const [sectionName, setSectionName] = useState('');
   const [parentId, setParentId] = useState(divisions[0]?.id ?? '');
   const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState<'division' | 'section' | null>(null);
+  const toggle = (which: 'division' | 'section') => (next: boolean) => { setError(null); setOpen(next ? which : null); };
 
   async function add(event: React.FormEvent, body: Record<string, string>, reset: () => void) {
     event.preventDefault();
     setError(null);
     const failure = await send('/api/hr/organizations', 'POST', body);
-    if (failure) { setError(failure); return; }
+    if (failure) { setError(failure); return false; }
     reset();
     router.refresh();
+    return true;
   }
 
-  return <div className="organization-forms">
-    {error && <p role="alert" className="form-error">{error}</p>}
-    <form aria-label={t('hrAddDivision')} className="organization-form" onSubmit={(event) => add(event, { name: divisionName.trim(), unitType: 'DIVISION' }, () => setDivisionName(''))}>
+  return <div className="organization-forms row-actions">
+    <FormDialog triggerLabel={t('hrAddDivision')} title={t('hrAddDivision')} submitLabel={t('hrAddDivision')} open={open === 'division'} onOpenChange={toggle('division')} error={error}
+      onSubmit={(event) => add(event, { name: divisionName.trim(), unitType: 'DIVISION' }, () => setDivisionName(''))}>
       <label>{t('hrDivisionName')}<input value={divisionName} maxLength={255} required onChange={(event) => setDivisionName(event.target.value)} /></label>
-      <button type="submit">{t('hrAddDivision')}</button>
-    </form>
-    {divisions.length > 0 && <form aria-label={t('hrAddSection')} className="organization-form" onSubmit={(event) => add(event, { name: sectionName.trim(), unitType: 'SECTION', parentId }, () => setSectionName(''))}>
+    </FormDialog>
+    {divisions.length > 0 && <FormDialog triggerLabel={t('hrAddSection')} title={t('hrAddSection')} submitLabel={t('hrAddSection')} open={open === 'section'} onOpenChange={toggle('section')} error={error}
+      onSubmit={(event) => add(event, { name: sectionName.trim(), unitType: 'SECTION', parentId }, () => setSectionName(''))}>
       <label>{t('hrSectionName')}<input value={sectionName} maxLength={255} required onChange={(event) => setSectionName(event.target.value)} /></label>
       <label>{t('hrDivision')}
         <select value={parentId} onChange={(event) => setParentId(event.target.value)}>
           {divisions.map((division) => <option key={division.id} value={division.id}>{division.name}</option>)}
         </select>
       </label>
-      <button type="submit">{t('hrAddSection')}</button>
-    </form>}
+    </FormDialog>}
   </div>;
 }
 
@@ -62,6 +65,7 @@ export function UnitEditForms({ unit, divisions, impact }: { unit: EditableUnit;
   const [name, setName] = useState(unit.name);
   const [parentId, setParentId] = useState(unit.parentId ?? '');
   const [confirming, setConfirming] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const movable = unit.unitType === 'SECTION';
@@ -70,8 +74,9 @@ export function UnitEditForms({ unit, divisions, impact }: { unit: EditableUnit;
     event.preventDefault();
     setError(null);
     const failure = await send(`/api/hr/organizations/${unit.id}`, 'PUT', { name: name.trim(), ...(movable && parentId ? { parentId } : {}) });
-    if (failure) { setError(failure); return; }
+    if (failure) { setError(failure); return false; }
     router.refresh();
+    return true;
   }
 
   async function remove() {
@@ -87,17 +92,16 @@ export function UnitEditForms({ unit, divisions, impact }: { unit: EditableUnit;
     ? `${t('hrDeleteManyPrefix')} ${impact.units} ${t('hrDeleteManyMiddle')} ${impact.people} ${t('hrDeletePeopleSuffix')}`
     : `${t('hrDeleteOnePrefix')} ${impact.people} ${t('hrDeletePeopleSuffix')}`;
   return <div className="organization-forms">
-    {error && <p role="alert" className="form-error">{error}</p>}
-    <form className="organization-form" onSubmit={save}>
+    {error && !editing && !confirming && <p role="alert" className="form-error">{error}</p>}
+    <FormDialog triggerLabel={t('hrEditUnit')} triggerClassName="button-secondary" title={t('hrEditUnit')} submitLabel={t('hrSaveUnitName')} open={editing} onOpenChange={(next) => { setError(null); setEditing(next); }} error={error} onSubmit={save}>
       <label>{t(nameLabel(unit.unitType))}<input value={name} maxLength={255} required onChange={(event) => setName(event.target.value)} /></label>
       {movable && <label>{t('hrInDivision')}
         <select value={parentId} onChange={(event) => setParentId(event.target.value)}>
           {divisions.map((division) => <option key={division.id} value={division.id}>{division.name}</option>)}
         </select>
       </label>}
-      <button type="submit">{t('hrSaveUnitName')}</button>
-    </form>
-    <p><button type="button" className="button-secondary" onClick={() => setConfirming(true)}>{t(deleteLabel(unit.unitType))}</button></p>
+    </FormDialog>
+    <p><button type="button" className="button-secondary" onClick={() => { setError(null); setConfirming(true); }}>{t(deleteLabel(unit.unitType))}</button></p>
     {confirming && <ActionDialog title={t(deleteLabel(unit.unitType))} message={message} confirmLabel={t('hrConfirmDelete')} tone="danger" isSubmitting={busy} error={error} onConfirm={() => void remove()} onClose={() => setConfirming(false)} />}
   </div>;
 }
