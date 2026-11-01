@@ -62,4 +62,18 @@ describeWithDatabase('ก.พ.7 civil service and education against MariaDB', ()
     expect(logged).toHaveLength(2);
     expect(JSON.parse(logged[0]!)).toEqual({ changedFields: ['education'] });
   });
+  it('lets only HR replace ตำแหน่งและอัตราเงินเดือน, lists rows by date, and keeps salaries out of the audit', async () => {
+    const id = await person();
+    const later = { effectiveOn: '2021-10-01', description: 'เลื่อนเงินเดือน', positionNumber: '900001', positionType: 'วิชาการ', level: 'ปฏิบัติการ', salary: 16500, positionAllowance: null, reference: 'คำสั่งที่ 2/2564' };
+    const first = { effectiveOn: '2020-08-24', description: 'บรรจุและแต่งตั้ง', positionNumber: '900001', positionType: 'วิชาการ', level: 'ปฏิบัติการ', salary: 15000, positionAllowance: 3500.5, reference: null };
+    await expect(service.updatePositionHistory(id, { entries: [later, first] }, manager)).resolves.toEqual({ ok: true });
+    expect((await view(id, self(id))).private!.positionHistory).toEqual([first, later]);
+    await expect(service.updatePositionHistory(id, { entries: [] }, self(id))).resolves.toEqual({ ok: false, code: 'FORBIDDEN' });
+    await expect(service.updatePositionHistory(id, { entries: [] }, reader)).resolves.toEqual({ ok: false, code: 'FORBIDDEN' });
+    await expect(service.updatePositionHistory(id, { entries: [first, later] }, manager)).resolves.toEqual({ ok: true });
+    const logged = await audit(id, 'hr.person.position-history.update');
+    expect(logged).toHaveLength(1);
+    expect(JSON.parse(logged[0]!)).toEqual({ changedFields: ['positionHistory'] });
+    expect(logged[0]).not.toContain('15000');
+  });
 });

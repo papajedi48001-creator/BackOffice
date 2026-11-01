@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { levelAllowed, MAX_KP7_FILE_BYTES, MAX_PROFILE_PHOTO_BYTES, profilePhotoContentTypeSchema, updateOwnPersonalInputSchema, updatePersonContactInputSchema, updatePersonFamilyInputSchema, updatePersonProfileInputSchema, type AccessSubject, type Gender, type MaritalStatus, type UpdateOwnPersonalInput, type UpdatePersonContactInput, type UpdatePersonFamilyInput, type GpfStatus, type UpdateCivilServiceInput, type UpdateEducationInput, updateCivilServiceInputSchema, updateEducationInputSchema, retirementDate, type UpdatePersonProfileInput } from '@backoffice/contracts';
+import { levelAllowed, MAX_KP7_FILE_BYTES, MAX_PROFILE_PHOTO_BYTES, profilePhotoContentTypeSchema, updateOwnPersonalInputSchema, updatePersonContactInputSchema, updatePersonFamilyInputSchema, updatePersonProfileInputSchema, type AccessSubject, type Gender, type MaritalStatus, type UpdateOwnPersonalInput, type UpdatePersonContactInput, type UpdatePersonFamilyInput, type GpfStatus, type UpdateCivilServiceInput, type UpdateEducationInput, type UpdatePositionHistoryInput, updatePositionHistoryInputSchema, updateCivilServiceInputSchema, updateEducationInputSchema, retirementDate, type UpdatePersonProfileInput } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { AuditService } from '../audit/audit-service';
 import { DatabaseAuditRepository } from '../audit/database-audit-repository';
@@ -22,6 +22,7 @@ export interface ProfilePrivate {
   kp7File: { attachmentId: string; uploadedAt: string } | null;
   civilService: CivilServiceView;
   education: EducationEntryView[];
+  positionHistory: PositionHistoryView[];
 }
 export interface CivilServiceView {
   positionNumber: string | null; salary: number | null; parentAgency: string | null; gpfStatus: GpfStatus | null; firstAppointedOn: string | null; reappointedOn: string | null;
@@ -29,11 +30,12 @@ export interface CivilServiceView {
   specialAllowance: string | null; retirementDate: string | null;
 }
 export interface EducationEntryView { graduatedOn: string | null; degree: string; major: string | null; institution: string | null; country: string | null }
+export interface PositionHistoryView { effectiveOn: string; description: string; positionNumber: string | null; positionType: string | null; level: string | null; salary: number | null; positionAllowance: number | null; reference: string | null }
 export type WorkChanges = Record<string, { from: string | null; to: string | null }>;
 export interface ProfileChange { at: string; actorDisplayName: string | null; action: string; changedFields: string[]; workChanges: WorkChanges; }
 export interface ProfileView { work: ProfileWork; private: ProfilePrivate | null; access: ProfileAccess; history: ProfileChange[]; }
 
-export const profileAuditActions = ['hr.person.profile.update', 'hr.person.personal.update', 'hr.person.contact.update', 'hr.person.photo.update', 'hr.person.family.update', 'hr.person.kp7.update', 'hr.person.civil.update', 'hr.person.education.update'] as const;
+export const profileAuditActions = ['hr.person.profile.update', 'hr.person.personal.update', 'hr.person.contact.update', 'hr.person.photo.update', 'hr.person.family.update', 'hr.person.kp7.update', 'hr.person.civil.update', 'hr.person.education.update', 'hr.person.position-history.update'] as const;
 const historyLimit = 50;
 const workFields = ['employmentType', 'appointedOn', 'positionTitle', 'positionLevel', 'organization'] as const;
 const contactFields = ['phone', 'address', 'emergencyContactName', 'emergencyContactRelationship', 'emergencyContactPhone'] as const;
@@ -109,10 +111,11 @@ export class HrProfileService {
     const civilService = { ...Object.fromEntries(civilServiceFields.map((field) => [field, stored[field] ?? null])), salary: stored.salary === null ? null : Number(stored.salary), retirementDate: retirementDate(row?.birthDate ?? null) } as CivilServiceView;
     const education = await this.database.query<EducationEntryView>(
       "SELECT DATE_FORMAT(graduated_on, '%Y-%m-%d') AS graduatedOn, degree, major, institution, country FROM hr_person_education WHERE person_id = ? ORDER BY sequence", [personId]);
+    const positionHistory = await readPositionHistory(this.database, personId);
     if (!row) return { namePrefix: null, firstName: null, lastName: null, gender: null, birthDate: null, phone: null, address: null, emergencyContactName: null, emergencyContactRelationship: null, emergencyContactPhone: null,
-      maritalStatus: null, religion: null, birthplace: null, fatherName: null, motherName: null, motherMaidenName: null, spouseName: null, spouseMaidenName: null, childrenCount: null, kp7File: null, civilService, education };
+      maritalStatus: null, religion: null, birthplace: null, fatherName: null, motherName: null, motherMaidenName: null, spouseName: null, spouseMaidenName: null, childrenCount: null, kp7File: null, civilService, education, positionHistory };
     const { kp7AttachmentId, kp7UploadedAt, childrenCount, ...rest } = row;
-    return { ...rest, childrenCount: childrenCount === null ? null : Number(childrenCount), kp7File: kp7AttachmentId ? { attachmentId: kp7AttachmentId, uploadedAt: kp7UploadedAt! } : null, civilService, education };
+    return { ...rest, childrenCount: childrenCount === null ? null : Number(childrenCount), kp7File: kp7AttachmentId ? { attachmentId: kp7AttachmentId, uploadedAt: kp7UploadedAt! } : null, civilService, education, positionHistory };
   }
 
   private async readHistory(personId: string): Promise<ProfileChange[]> {
@@ -222,6 +225,28 @@ export class HrProfileService {
           [this.createId(), personId, index + 1, entry.graduatedOn, entry.degree, entry.major, entry.institution, entry.country]);
       }
       await recordProfileAudit(database, 'hr.person.education.update', personId, actor.personId ?? null, { changedFields: ['education'], workChanges: {} }, this.createId);
+      return { ok: true };
+    }, { isolationLevel: 'READ COMMITTED' });
+  }
+
+  /** ตำแหน่งและอัตราเงินเดือน (ก.พ.7): only HR replaces the whole list; rows are kept in date order. */
+  async updatePositionHistory(personId: string, input: UpdatePositionHistoryInput, actor: AccessSubject): Promise<UpdateEducationResult> {
+    const valid = updatePositionHistoryInputSchema.parse(input);
+    return this.database.transaction(async (database): Promise<UpdateEducationResult> => {
+      const subject = await lockProfileSubject(database, personId);
+      if (!subject) return { ok: false, code: 'NOT_FOUND' };
+      if (!profileAccess(actor, subject).editProfile) return { ok: false, code: 'FORBIDDEN' };
+      const next: PositionHistoryView[] = valid.entries
+        .map((entry) => ({ effectiveOn: entry.effectiveOn, description: entry.description, positionNumber: entry.positionNumber ?? null, positionType: entry.positionType ?? null, level: entry.level ?? null, salary: entry.salary ?? null, positionAllowance: entry.positionAllowance ?? null, reference: entry.reference ?? null }))
+        .map((entry, index) => ({ entry, index })).sort((a, b) => a.entry.effectiveOn.localeCompare(b.entry.effectiveOn) || a.index - b.index).map(({ entry }) => entry);
+      const current = await readPositionHistory(database, personId);
+      if (JSON.stringify(current) === JSON.stringify(next)) return { ok: true };
+      await database.execute('DELETE FROM hr_person_position_history WHERE person_id = ?', [personId]);
+      for (const [index, entry] of next.entries()) {
+        await database.execute('INSERT INTO hr_person_position_history (id, person_id, sequence, effective_on, description, position_number, position_type, level, salary, position_allowance, reference, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())',
+          [this.createId(), personId, index + 1, entry.effectiveOn, entry.description, entry.positionNumber, entry.positionType, entry.level, entry.salary, entry.positionAllowance, entry.reference]);
+      }
+      await recordProfileAudit(database, 'hr.person.position-history.update', personId, actor.personId ?? null, { changedFields: ['positionHistory'], workChanges: {} }, this.createId);
       return { ok: true };
     }, { isolationLevel: 'READ COMMITTED' });
   }
@@ -420,4 +445,11 @@ function pick<T extends object, K extends string>(source: T, keys: readonly K[])
 
 function defined<T extends Record<string, unknown>>(values: T): Partial<T> {
   return Object.fromEntries(Object.entries(values).filter(([, value]) => value !== undefined)) as Partial<T>;
+}
+
+async function readPositionHistory(database: Pick<Database, 'query'>, personId: string): Promise<PositionHistoryView[]> {
+  const rows = await database.query<Omit<PositionHistoryView, 'salary' | 'positionAllowance'> & { salary: string | number | null; positionAllowance: string | number | null }>(
+    `SELECT DATE_FORMAT(effective_on, '%Y-%m-%d') AS effectiveOn, description, position_number AS positionNumber, position_type AS positionType, level, salary, position_allowance AS positionAllowance, reference
+     FROM hr_person_position_history WHERE person_id = ? ORDER BY sequence`, [personId]);
+  return rows.map((row) => ({ ...row, salary: row.salary === null ? null : Number(row.salary), positionAllowance: row.positionAllowance === null ? null : Number(row.positionAllowance) }));
 }
