@@ -14,15 +14,26 @@ describe('module gate', () => {
     expect(moduleForPath('/api/attachments/x/download')).toBeNull();
   });
 
-  it('refuses pages and APIs of a disabled module, and nothing else', () => {
-    expect(gateDecision('/fleet/settings', ['fleet'])).toEqual({ moduleCode: 'fleet', api: false });
-    expect(gateDecision('/api/fleet/drivers', ['fleet'])).toEqual({ moduleCode: 'fleet', api: true });
-    expect(gateDecision('/leave/mine', ['fleet'])).toBeNull();
-    expect(gateDecision('/dashboard', ['fleet'])).toBeNull();
+  const nobody = async () => null;
+  const person = (...roles: string[]) => async () => ({ authenticated: true, personId: 'p-1', roles: roles.map((name) => ({ name, organizationId: null })), dataOwnerModules: [] });
+
+  it('refuses pages and APIs of an OFF module to everyone, and nothing else', async () => {
+    const off = { fleet: 'OFF' } as const;
+    await expect(gateDecision('/fleet/settings', off, nobody)).resolves.toEqual({ moduleCode: 'fleet', api: false });
+    await expect(gateDecision('/api/fleet/drivers', off, person('admin'))).resolves.toEqual({ moduleCode: 'fleet', api: true });
+    await expect(gateDecision('/leave/mine', off, nobody)).resolves.toBeNull();
+    await expect(gateDecision('/dashboard', off, nobody)).resolves.toBeNull();
   });
 
-  it('never refuses the admin module, so it can always switch others back on', () => {
-    expect(gateDecision('/admin/modules', ['admin'])).toBeNull();
-    expect(gateDecision('/api/admin/modules/fleet', ['admin'])).toBeNull();
+  it('lets only ผู้ดูแลระบบ, ผู้จัดการ and ผู้ทดสอบ into a DEVELOPMENT module', async () => {
+    const dev = { fleet: 'DEVELOPMENT' } as const;
+    await expect(gateDecision('/fleet/mine', dev, nobody)).resolves.toEqual({ moduleCode: 'fleet', api: false });
+    await expect(gateDecision('/api/fleet/requests', dev, person('leave-tester'))).resolves.toEqual({ moduleCode: 'fleet', api: true });
+    for (const role of ['admin', 'fleet-manager', 'fleet-tester']) await expect(gateDecision('/fleet/mine', dev, person(role))).resolves.toBeNull();
+  });
+
+  it('never refuses the admin module, so it can always switch others back on', async () => {
+    await expect(gateDecision('/admin/modules', { admin: 'OFF' }, nobody)).resolves.toBeNull();
+    await expect(gateDecision('/api/admin/modules/fleet', { admin: 'DEVELOPMENT' }, nobody)).resolves.toBeNull();
   });
 });

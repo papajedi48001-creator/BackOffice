@@ -1,7 +1,7 @@
 import type { AccessSubject } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { describe, expect, it, vi } from 'vitest';
-import { availableModules, availableSections, enabledModules, moduleCodeForPath, moduleLabel, moduleRegistry, moduleSections, navigationFor, navigationFrom, visibleModules } from './modules';
+import { availableModules, availableSections, usableModules, moduleCodeForPath, moduleLabel, moduleRegistry, moduleSections, navigationFor, navigationFrom, visibleModules } from './modules';
 
 const subject = (overrides: Partial<AccessSubject> = {}): AccessSubject => ({ authenticated: true, personId: 'p', roles: [], dataOwnerModules: [], ...overrides });
 const hrefs = (value: AccessSubject) => navigationFor(value).map((item) => item.href);
@@ -42,9 +42,11 @@ describe('module registry', () => {
     for (const entry of moduleRegistry) for (const section of entry.sections ?? []) expect(section.href.startsWith(`${entry.href}/`)).toBe(true);
   });
 
-  it('never puts planned modules in navigation but lists them in visibleModules', () => {
+  it('never puts planned modules in navigation, and lists them in visibleModules for ผู้ดูแลระบบ only', () => {
     expect(hrefs(subject())).not.toContain('/maintenance');
-    expect(visibleModules(subject()).find((entry) => entry.code === 'maintenance')?.status).toBe('planned');
+    expect(visibleModules(subject()).find((entry) => entry.code === 'maintenance')).toBeUndefined();
+    expect(visibleModules(subject({ roles: [{ name: 'hr-manager', organizationId: null }] })).some((entry) => entry.status === 'planned')).toBe(false);
+    expect(visibleModules(subject({ roles: [{ name: 'admin', organizationId: null }] })).find((entry) => entry.code === 'maintenance')?.status).toBe('planned');
   });
 
   it('puts room booking in everyone\'s navigation', () => {
@@ -250,9 +252,27 @@ describe('admin module', () => {
   });
 
   it('drops switched-off modules from the menu but never the admin module', () => {
-    const shown = enabledModules(visibleModules(admin), ['fleet', 'leave', 'admin']).map((entry) => entry.code);
+    const shown = usableModules(visibleModules(admin), { fleet: 'OFF', leave: 'OFF', admin: 'OFF' }, admin).map((entry) => entry.code);
     expect(shown).not.toContain('fleet');
     expect(shown).not.toContain('leave');
     expect(shown).toContain('admin');
+  });
+
+  it('shows a module in development only to ผู้ดูแลระบบ, its ผู้จัดการ and its ผู้ทดสอบ, marked as such', () => {
+    const modes = { fleet: 'DEVELOPMENT', leave: 'ON' } as const;
+    const codes = (value: AccessSubject) => usableModules(visibleModules(value), modes, value).map((entry) => entry.code);
+    expect(codes(subject())).not.toContain('fleet');
+    expect(codes(subject())).toContain('leave');
+    expect(codes(subject({ roles: [{ name: 'fleet-tester', organizationId: null }] }))).toContain('fleet');
+    expect(codes(subject({ roles: [{ name: 'fleet-manager', organizationId: null }] }))).toContain('fleet');
+    expect(codes(subject({ roles: [{ name: 'leave-tester', organizationId: null }] }))).not.toContain('fleet');
+    expect(codes(admin)).toContain('fleet');
+    const navigation = navigationFrom(usableModules(visibleModules(admin), modes, admin), {}, modes);
+    expect(navigation.find((item) => item.module === 'fleet')).toMatchObject({ development: true });
+    expect(navigation.find((item) => item.module === 'leave')?.development).toBeUndefined();
+  });
+
+  it('labels the home page หน้าหลัก', () => {
+    expect(navigationFor(subject())[0]).toMatchObject({ href: '/dashboard', label: 'dashboard' });
   });
 });

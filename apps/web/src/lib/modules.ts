@@ -1,5 +1,5 @@
-import type { AccessSubject } from '@backoffice/contracts';
-import { AuthorizationService, FleetQueries, isAdmin, lockedModules, LeaveQueries, OfficialTravelQueries, RoomBookingQueries, canManageFleet, canManageLeave, canManageTravel, hasOpenRequestWork, listPendingApprovals } from '@backoffice/core';
+import type { AccessSubject, ModuleMode } from '@backoffice/contracts';
+import { AuthorizationService, FleetQueries, canUseModule, isAdmin, LeaveQueries, OfficialTravelQueries, RoomBookingQueries, canManageFleet, canManageLeave, canManageTravel, hasOpenRequestWork, listPendingApprovals } from '@backoffice/core';
 import type { Database } from '@backoffice/db';
 import { t, type MessageKey } from '@backoffice/i18n';
 import type { NavigationItem } from '../components/app-shell';
@@ -143,13 +143,22 @@ export const moduleRegistry: readonly ModuleEntry[] = [
   planned('donor-registry', '/donors', 'moduleDonorRegistry', 'moduleDonorRegistryDescription', 'heart')
 ];
 
+/** Live modules the person can see, in registry order; planned modules (the "โมดูลที่กำลังพัฒนา" strip) for ผู้ดูแลระบบ only. */
 export function visibleModules(subject: AccessSubject): ModuleEntry[] {
-  return moduleRegistry.filter((entry) => entry.status === 'planned' || entry.visible(subject));
+  return moduleRegistry.filter((entry) => entry.status === 'planned' ? isAdmin(subject) : entry.visible(subject));
 }
 
-/** Drops modules a ผู้ดูแลระบบ switched off (ตั้งค่าโปรแกรม); the admin module always stays. Pages and APIs are refused by the proxy. */
-export function enabledModules(modules: ModuleEntry[], disabled: readonly string[]): ModuleEntry[] {
-  return modules.filter((entry) => lockedModules.includes(entry.code) || !disabled.includes(entry.code));
+/**
+ * Drops modules the person may not use in their current mode (ตั้งค่าโปรแกรม): OFF for everyone, DEVELOPMENT for anyone but
+ * ผู้ดูแลระบบ, the module's ผู้จัดการ and ผู้ทดสอบ. The admin module always stays. Pages and APIs are refused by the proxy.
+ */
+export function usableModules(modules: ModuleEntry[], modes: Readonly<Record<string, ModuleMode>>, subject: AccessSubject): ModuleEntry[] {
+  return modules.filter((entry) => entry.status === 'planned' || canUseModule(subject, entry.code, modes[entry.code] ?? 'ON'));
+}
+
+/** Whether a live module is in DEVELOPMENT mode, for the กำลังพัฒนา marker on its tile and menu item. */
+export function inDevelopment(code: string, modes: Readonly<Record<string, ModuleMode>>): boolean {
+  return modes[code] === 'DEVELOPMENT';
 }
 
 export function moduleSections(code: string, subject: AccessSubject): ModuleSection[] {
@@ -168,8 +177,8 @@ export async function availableModules(modules: ModuleEntry[], db: Database, sub
   return modules.filter((_, index) => shown[index]);
 }
 
-export function navigationFrom(modules: ModuleEntry[], badges: Record<string, number | undefined> = {}): NavigationItem[] {
-  return [{ href: '/dashboard', label: 'dashboard', module: 'home' }, ...modules.filter((entry) => entry.status === 'live').map((entry) => ({ href: entry.href, label: entry.labelKey, module: entry.code, ...(badges[entry.code] === undefined ? {} : { badge: badges[entry.code] }) }))];
+export function navigationFrom(modules: ModuleEntry[], badges: Record<string, number | undefined> = {}, modes: Readonly<Record<string, ModuleMode>> = {}): NavigationItem[] {
+  return [{ href: '/dashboard', label: 'dashboard', module: 'home' }, ...modules.filter((entry) => entry.status === 'live').map((entry) => ({ href: entry.href, label: entry.labelKey, module: entry.code, ...(badges[entry.code] === undefined ? {} : { badge: badges[entry.code] }), ...(inDevelopment(entry.code, modes) ? { development: true } : {}) }))];
 }
 
 export function navigationFor(subject: AccessSubject): NavigationItem[] {

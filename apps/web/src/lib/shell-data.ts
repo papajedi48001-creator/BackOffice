@@ -4,8 +4,8 @@ import type { NavigationItem } from '../components/app-shell';
 import type { BellItem, ShellProfile } from '../components/profile-menu';
 import { attachmentsEnabled } from './attachments';
 import { collectBadges } from './dashboard-badges';
-import { readDisabledModules } from './module-gate';
-import { availableModules, enabledModules, moduleLabel, navigationFrom, visibleModules } from './modules';
+import { readModuleModes } from './module-gate';
+import { availableModules, moduleLabel, navigationFrom, usableModules, visibleModules } from './modules';
 import { profilePhotoUrl } from './profile-photo';
 
 export interface ShellData { navigation: NavigationItem[]; profile: ShellProfile; bell: { unread: number; items: BellItem[] }; }
@@ -39,7 +39,8 @@ async function signedInProfile(db: Database, personId: string): Promise<ShellPro
 
 /** Sidebar items with their counts, the signed-in person's chip and their newest unread notices; anything that fails to load is left out so the page still renders. */
 export async function loadShellData(db: Database, subject: AccessSubject): Promise<ShellData> {
-  const modules = await availableModules(enabledModules(visibleModules(subject), await readDisabledModules(db)), db, subject);
+  const modes = await readModuleModes(db);
+  const modules = await availableModules(usableModules(visibleModules(subject), modes, subject), db, subject);
   const [badges, items, profile] = await Promise.all([collectBadges(modules, db, subject), subject.personId ? recentNotices(db, subject.personId) : Promise.resolve([]), subject.personId ? signedInProfile(db, subject.personId) : Promise.resolve(emptyProfile)]);
-  return { navigation: navigationFrom(modules, badges), profile, bell: { unread: badges.notifications ?? 0, items } };
+  return { navigation: navigationFrom(modules, badges, modes), profile, bell: { unread: badges.notifications ?? 0, items } };
 }

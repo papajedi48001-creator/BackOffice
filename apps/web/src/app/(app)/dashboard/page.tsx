@@ -4,8 +4,8 @@ import { loadDashboardSummary } from '@backoffice/core';
 import { createDatabase } from '@backoffice/db';
 import { ModuleLauncher, type LauncherSummary } from '../../../components/module-launcher';
 import { collectBadges } from '../../../lib/dashboard-badges';
-import { readDisabledModules } from '../../../lib/module-gate';
-import { availableModules, enabledModules, visibleModules } from '../../../lib/modules';
+import { readModuleModes, type ModuleModes } from '../../../lib/module-gate';
+import { availableModules, usableModules, visibleModules } from '../../../lib/modules';
 import { readRuntimeValue } from '../../../lib/runtime-env';
 import { readSession } from '../../../lib/session';
 
@@ -15,16 +15,18 @@ export default async function DashboardPage() {
   let modules = visibleModules(session);
   let summary: LauncherSummary = { displayName: null, greetingName: null, organizationName: null, pendingApprovals: null, unreadNotifications: null };
   let badges: Record<string, number | undefined> = {};
+  let modes: ModuleModes = {};
   const databaseUrl = readRuntimeValue('DATABASE_URL');
   if (databaseUrl && session.personId) {
     let database: ReturnType<typeof createDatabase> | undefined;
     try {
       database = createDatabase(databaseUrl);
-      modules = await availableModules(enabledModules(modules, await readDisabledModules(database)), database, session);
+      modes = await readModuleModes(database);
+      modules = await availableModules(usableModules(modules, modes, session), database, session);
       [summary, badges] = await Promise.all([loadDashboardSummary(database, session.personId), collectBadges(modules, database, session)]);
     } catch (error) {
       console.error('dashboard_summary_failed', (error as { code?: unknown }).code ?? 'UNKNOWN');
     } finally { await database?.close().catch(() => undefined); }
   }
-  return <ModuleLauncher modules={modules} badges={badges} summary={summary} today={new Date()} />;
+  return <ModuleLauncher modules={modules} modes={modes} badges={badges} summary={summary} today={new Date()} />;
 }
