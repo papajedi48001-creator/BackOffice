@@ -52,8 +52,7 @@ export class PersonAccountService {
   }
 
   async getAccount(personId: string): Promise<{ username: string } | null> {
-    const [account] = await this.database.query<{ username: string }>('SELECT username FROM local_account WHERE person_id = ? ORDER BY created_at LIMIT 1', [personId]);
-    return account ?? null;
+    return localAccountOf(this.database, personId);
   }
 
   async updateIdentity(personId: string, input: UpdatePersonIdentityInput, actor: AccessSubject): Promise<IdentityResult> {
@@ -115,6 +114,12 @@ export class PersonAccountService {
   private audit(database: QueryDatabase, actorPersonId: string, action: string, targetType: string, targetId: string, metadata: Record<string, unknown>): Promise<void> {
     return new AuditService(new DatabaseAuditRepository(database), this.createId).recordAudit({ actorPersonId, action, targetType, targetId, result: 'SUCCESS', metadata });
   }
+}
+
+/** The person's บัญชีท้องถิ่น username, or null. Reads nothing sensitive, so it needs no national ID key. */
+export async function localAccountOf(database: Pick<Database, 'query'>, personId: string): Promise<{ username: string } | null> {
+  const [account] = await database.query<{ username: string }>('SELECT username FROM local_account WHERE person_id = ? ORDER BY created_at LIMIT 1', [personId]);
+  return account ?? null;
 }
 
 async function findDuplicate(database: QueryDatabase, values: { lookup: string | null; employeeCode: string | null; username: string | null }, exceptPersonId = ''): Promise<DuplicateCode | null> {

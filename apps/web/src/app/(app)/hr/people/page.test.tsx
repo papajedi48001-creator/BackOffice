@@ -49,4 +49,17 @@ describe('PeoplePage', () => {
 
     expect(mocks.redirect).toHaveBeenCalledWith('/');
   });
+
+  it('offers เพิ่มบุคลากร only to a hospital-wide HR manager', async () => {
+    mocks.headers.mockResolvedValue(new Headers());
+    mocks.getSharedDatabase.mockReturnValue({ query: vi.fn() });
+    mocks.listPeople.mockResolvedValue([person]);
+    mocks.readSession.mockResolvedValue({ authenticated: true, personId: 'manager', roles: [{ name: 'hr-manager', organizationId: null }], dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: ['hr'] });
+    const { unmount } = render(await PeoplePage());
+    expect(screen.getByRole('link', { name: 'เพิ่มบุคลากร' })).toHaveAttribute('href', '/hr/people/new');
+    unmount();
+    mocks.readSession.mockResolvedValue({ authenticated: true, personId: 'reader', roles: [{ name: 'hr-reader', organizationId: null }], dataOwnerModules: [] });
+    render(await PeoplePage());
+    expect(screen.queryByRole('link', { name: 'เพิ่มบุคลากร' })).toBeNull();
+  });
 });

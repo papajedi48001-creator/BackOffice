@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { AuthorizationService, HrDirectory } from '@backoffice/core';
+import { AuthorizationService, HrDirectory, canManagePeople } from '@backoffice/core';
 import { t } from '@backoffice/i18n';
 import { getSharedDatabase } from '../../../../lib/database';
 import { readSession } from '../../../../lib/session';
@@ -19,7 +19,7 @@ export default async function PeoplePage() {
   const people = await new HrDirectory(database).listPeople({ organizationIds: scope });
   return (
     <section>
-      <h2>{t('peopleTitle')}</h2>
+      <div className="page-heading"><h2>{t('peopleTitle')}</h2>{canManagePeople(session) ? <nav className="page-actions"><Link className="button-link" href="/hr/people/new">{t('hrAddPerson')}</Link></nav> : null}</div>
       {people.length === 0 ? <p>{t('noPeople')}</p> : (
         <table>
           <thead><tr><th>{t('employeeCode')}</th><th>{t('displayName')}</th><th>{t('positionTitle')}</th><th>{t('hrFieldEmploymentType')}</th><th>{t('organization')}</th><th>{t('nationalIdLabel')}</th><th>{t('employmentStatus')}</th></tr></thead>

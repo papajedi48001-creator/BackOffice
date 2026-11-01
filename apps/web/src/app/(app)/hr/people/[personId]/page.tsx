@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
-import { AuthorizationService, EmploymentTypeService, HrDirectory, HrProfileService, PositionCatalogService } from '@backoffice/core';
+import { AuthorizationService, EmploymentTypeService, HrDirectory, HrProfileService, PositionCatalogService, canManagePeople, localAccountOf } from '@backoffice/core';
 import { t } from '@backoffice/i18n';
+import { AccountForm, IdentityForm } from '../../../../../components/hr-account-forms';
 import { HrProfileView } from '../../../../../components/hr-profile-view';
 import { getSharedDatabase } from '../../../../../lib/database';
 import { readSession } from '../../../../../lib/session';
@@ -35,9 +36,16 @@ export default async function PersonProfilePage({ params }: { params: Promise<{ 
     units = all.filter((organization) => inScope.includes(organization) || (organization.unitType === 'DIVISION' && parents.has(organization.id)))
       .map(({ id, name, unitType, parentId }) => ({ id, name, unitType, parentId }));
   }
+  // Only a hospital-wide HR manager edits identity and accounts; the API checks again. getAccount reads the username only.
+  const managesPeople = canManagePeople(session);
+  const account = managesPeople ? await localAccountOf(database, personId) : null;
   return <section>
     <p><Link href="/hr/people">{t('hrBackToPeople')}</Link></p>
     <h2>{view.work.displayName ?? view.work.employeeCode ?? t('notAssigned')}</h2>
     <HrProfileView view={view} contactEndpoint={`/api/hr/people/${personId}/contact`} employmentTypes={employmentTypes} units={units} positions={positions} />
+    {managesPeople ? <>
+      <IdentityForm personId={personId} values={{ employeeCode: view.work.employeeCode, employmentStatus: view.work.employmentStatus }} username={account?.username ?? null} />
+      <AccountForm personId={personId} username={account?.username ?? null} />
+    </> : null}
   </section>;
 }

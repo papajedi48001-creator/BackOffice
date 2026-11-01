@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ headers: vi.fn(), redirect: vi.fn(), notFound: vi.fn(() => { throw new Error('NEXT_NOT_FOUND'); }), refresh: vi.fn(), readSession: vi.fn(), getSharedDatabase: vi.fn(), get: vi.fn(), listTypes: vi.fn(), listOrganizations: vi.fn(), listPositions: vi.fn() }));
+const mocks = vi.hoisted(() => ({ headers: vi.fn(), redirect: vi.fn(), notFound: vi.fn(() => { throw new Error('NEXT_NOT_FOUND'); }), refresh: vi.fn(), readSession: vi.fn(), getSharedDatabase: vi.fn(), get: vi.fn(), listTypes: vi.fn(), listOrganizations: vi.fn(), listPositions: vi.fn(), getAccount: vi.fn() }));
 vi.mock('next/headers', () => ({ headers: mocks.headers }));
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect, notFound: mocks.notFound, useRouter: () => ({ refresh: mocks.refresh }) }));
 vi.mock('../../../../../lib/session', () => ({ readSession: mocks.readSession }));
@@ -11,7 +11,8 @@ vi.mock('@backoffice/core', async (importOriginal) => ({
   HrProfileService: class { get = mocks.get; },
   EmploymentTypeService: class { list = mocks.listTypes; },
   HrDirectory: class { listOrganizations = mocks.listOrganizations; },
-  PositionCatalogService: class { list = mocks.listPositions; }
+  PositionCatalogService: class { list = mocks.listPositions; },
+  localAccountOf: mocks.getAccount
 }));
 
 import PersonProfilePage from './page';
@@ -116,5 +117,24 @@ describe('PersonProfilePage', () => {
 
     ready(reader, 'NOT_FOUND');
     await expect(page('missing')).rejects.toThrow('NEXT_NOT_FOUND');
+  });
+
+  it('gives a hospital-wide HR manager the identity and account forms, with the username fixed', async () => {
+    ready(manager, { work, private: personal, access: { viewWork: true, viewPrivate: true, editProfile: true, editContact: true }, history: [] });
+    mocks.getAccount.mockResolvedValue({ username: 'malee' });
+    render(await page());
+    const identity = screen.getByRole('form', { name: 'ข้อมูลระบุตัวตน' });
+    expect(within(identity).getByLabelText(/ชื่อผู้ใช้/)).toHaveValue('malee');
+    expect(within(identity).getByLabelText(/ชื่อผู้ใช้/)).toHaveAttribute('readonly');
+    expect(within(identity).getByLabelText('รหัสบุคลากร')).toHaveValue('E001');
+    expect(within(screen.getByRole('form', { name: 'บัญชีผู้ใช้' })).getByRole('button', { name: 'ตั้งรหัสผ่านใหม่' })).toBeInTheDocument();
+  });
+
+  it('shows no identity or account forms to a reader', async () => {
+    ready(reader, { work, private: null, access: { viewWork: true, viewPrivate: false, editProfile: false, editContact: false }, history: [] });
+    render(await page());
+    expect(screen.queryByRole('form', { name: 'ข้อมูลระบุตัวตน' })).toBeNull();
+    expect(screen.queryByRole('form', { name: 'บัญชีผู้ใช้' })).toBeNull();
+    expect(mocks.getAccount).not.toHaveBeenCalled();
   });
 });
