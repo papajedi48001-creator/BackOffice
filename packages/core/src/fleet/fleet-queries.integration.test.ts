@@ -38,7 +38,7 @@ describeWithDatabase('FleetQueries against MariaDB', () => {
   };
   const vehicle = async (status = 'ACTIVE') => {
     const id = randomUUID();
-    const registration = `ทด ${run}${id.slice(0, 4)}`;
+    const registration = `ทด ${run}${id.slice(0, 10)}`;
     await database.execute("INSERT INTO fleet_vehicle (id, registration, make_model, kind, seats, status, created_at, updated_at) VALUES (?, ?, 'Toyota Commuter', 'VAN', 12, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())", [id, registration, status]);
     return { id, registration };
   };

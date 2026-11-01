@@ -10,6 +10,22 @@ function isDuplicateEntry(error: unknown): boolean {
   return code === 'ER_DUP_ENTRY' || errno === 1062;
 }
 
+function isReferenced(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) return false;
+  const { code, errno } = error as { code?: string; errno?: number };
+  return code === 'ER_ROW_IS_REFERENCED_2' || code === 'ER_ROW_IS_REFERENCED' || errno === 1451;
+}
+
+/**
+ * The foreign-key check takes locks on fleet_trip after this delete holds the car or driver, the reverse of dispatch's
+ * trip → car → driver order; a deadlock there means a เที่ยวรถ is using it, which is history too.
+ */
+function isDeadlock(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) return false;
+  const { code, errno } = error as { code?: string; errno?: number };
+  return code === 'ER_LOCK_DEADLOCK' || errno === 1213;
+}
+
 /** The car register and the driver list. Callers check `canManageFleet` first. */
 export class FleetCatalogService {
   constructor(private readonly database: Database, private readonly createId: () => string = randomUUID) {}
@@ -61,6 +77,35 @@ export class FleetCatalogService {
       if (existing) await database.execute('UPDATE fleet_driver SET phone = ?, is_active = ?, updated_at = UTC_TIMESTAMP() WHERE person_id = ?', [driver.phone, isActive, driver.personId]);
       else await database.execute('INSERT INTO fleet_driver (person_id, phone, is_active, created_at, updated_at) VALUES (?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())', [driver.personId, driver.phone, isActive]);
       await this.audit(database, actorPersonId, existing ? 'fleet.driver.update' : 'fleet.driver.create', 'fleet_driver', driver.personId, { isActive: driver.isActive });
+      return { ok: true as const };
+    }, { isolationLevel: 'READ COMMITTED' });
+  }
+
+  /** Removes a car never put on a เที่ยวรถ. One with history stays (HAS_HISTORY), so past trips keep their car; it is retired through its status instead. */
+  async deleteVehicle(actorPersonId: string, vehicleId: string): Promise<{ ok: true } | { ok: false; code: 'NOT_FOUND' | 'HAS_HISTORY' }> {
+    return this.database.transaction(async (database) => {
+      const [vehicle] = await database.query<{ registration: string }>('SELECT registration FROM fleet_vehicle WHERE id = ? FOR UPDATE', [vehicleId]);
+      if (!vehicle) return { ok: false as const, code: 'NOT_FOUND' as const };
+      // The foreign key from fleet_trip is the authority: no read of trips can race a new assignment.
+      try { await database.execute('DELETE FROM fleet_vehicle WHERE id = ?', [vehicleId]); } catch (error) {
+        if (isReferenced(error) || isDeadlock(error)) return { ok: false as const, code: 'HAS_HISTORY' as const };
+        throw error;
+      }
+      await this.audit(database, actorPersonId, 'fleet.vehicle.delete', 'fleet_vehicle', vehicleId, { registration: vehicle.registration });
+      return { ok: true as const };
+    }, { isolationLevel: 'READ COMMITTED' });
+  }
+
+  /** Takes a person off the driver list when they never drove a เที่ยวรถ; the บุคลากร record stays. One with history is paused instead. */
+  async deleteDriver(actorPersonId: string, personId: string): Promise<{ ok: true } | { ok: false; code: 'NOT_FOUND' | 'HAS_HISTORY' }> {
+    return this.database.transaction(async (database) => {
+      const [driver] = await database.query<{ personId: string }>('SELECT person_id AS personId FROM fleet_driver WHERE person_id = ? FOR UPDATE', [personId]);
+      if (!driver) return { ok: false as const, code: 'NOT_FOUND' as const };
+      try { await database.execute('DELETE FROM fleet_driver WHERE person_id = ?', [personId]); } catch (error) {
+        if (isReferenced(error) || isDeadlock(error)) return { ok: false as const, code: 'HAS_HISTORY' as const };
+        throw error;
+      }
+      await this.audit(database, actorPersonId, 'fleet.driver.delete', 'fleet_driver', personId, {});
       return { ok: true as const };
     }, { isolationLevel: 'READ COMMITTED' });
   }

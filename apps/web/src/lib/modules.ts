@@ -123,8 +123,8 @@ export const moduleRegistry: readonly ModuleEntry[] = [
       { href: '/fleet/dashboard', labelKey: 'fleetDashboard', visible: canManageFleet, badge: fleetWaiting },
       { href: '/fleet/mine', labelKey: 'fleetMine', visible: everyone },
       { href: '/fleet/calendar', labelKey: 'fleetCalendar', visible: everyone },
-      // A พนักงานขับรถ is a fleet_driver row, not a role, so the synchronous check cannot see it: the link shows to everyone and the page says who it is for.
-      { href: '/fleet/driving', labelKey: 'fleetDriving', visible: everyone, badge: fleetDriverToday },
+      // A พนักงานขับรถ is a fleet_driver row, not a role, so the database check decides; the page checks again.
+      { href: '/fleet/driving', labelKey: 'fleetDriving', visible: everyone, available: async (db, subject) => (subject.personId ? new FleetQueries(db).isActiveDriver(subject.personId) : false), badge: fleetDriverToday },
       { href: '/fleet/settings', labelKey: 'fleetSettings', visible: canManageFleet }
     ]),
     badge: async (db, subject) => (await fleetWaiting(db, subject)) + (await fleetDriverToday(db, subject))

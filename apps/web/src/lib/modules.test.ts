@@ -109,11 +109,22 @@ describe('fleet module', () => {
 
   it('is live in the services group, opening on my ใบ for everyone and on the dashboard for the หัวหน้าหมวด', () => {
     expect(moduleRegistry.find((entry) => entry.code === 'fleet')).toMatchObject({ status: 'live', group: 'services', href: '/fleet', labelKey: 'moduleFleet', icon: 'car' });
-    // Whether someone drives comes from fleet_driver, which the synchronous section check cannot read: the link shows to everyone and the page says who it is for.
+    // Whether someone drives comes from fleet_driver, so งานขับของฉัน passes this check for everyone and is narrowed by availableSections.
     expect(sectionHrefs('fleet', subject())).toEqual(['/fleet/mine', '/fleet/calendar', '/fleet/driving']);
     expect(sectionHrefs('fleet', manager)).toEqual(['/fleet/dashboard', '/fleet/mine', '/fleet/calendar', '/fleet/driving', '/fleet/settings']);
     expect(sectionHrefs('fleet', subject({ roles: [{ name: 'fleet-manager', organizationId: 'unit-1' }] }))).not.toContain('/fleet/dashboard');
     expect(moduleCodeForPath('/fleet/requests/1')).toBe('fleet');
+  });
+
+  it('lists งานขับของฉัน only for a person on the driver list', async () => {
+    const driving = moduleRegistry.find((entry) => entry.code === 'fleet')!.sections!.find((entry) => entry.href === '/fleet/driving')!;
+    const drivers = (found: boolean) => ({ query: vi.fn(async () => (found ? [{ found: 1 }] : [])) }) as unknown as Database;
+    expect(await availableSections([driving], drivers(true), subject())).toEqual([driving]);
+    expect(await availableSections([driving], drivers(false), subject())).toEqual([]);
+    expect(await availableSections([driving], drivers(true), subject({ personId: null }))).toEqual([]);
+    // Sections with no check of their own stay, and a failed check leaves the link in place, as for modules.
+    const mine = moduleRegistry.find((entry) => entry.code === 'fleet')!.sections!.find((entry) => entry.href === '/fleet/mine')!;
+    expect(await availableSections([mine, driving], { query: vi.fn(async () => { throw new Error('down'); }) } as unknown as Database, subject())).toEqual([mine, driving]);
   });
 
   it('badges รอจัดรถ for the หัวหน้าหมวด and today\'s เที่ยวรถ for a driver, summed on the module', async () => {

@@ -6,6 +6,7 @@ import type { DriverView } from '@backoffice/core';
 import { t } from '@backoffice/i18n';
 import { FormDialog } from '../../../../components/form-dialog';
 import { sendFleet } from '../../../../lib/fleet-labels';
+import { DeleteButton } from './delete-button';
 
 interface Person { personId: string; displayName: string | null; organizationName: string | null }
 
@@ -86,6 +87,7 @@ export function DriverRow({ driver }: { driver: DriverView }) {
         <div className="form-field"><label htmlFor={`${id}-phone`}>{t('fleetWorkPhone')}</label><input id={`${id}-phone`} type="tel" value={phone} maxLength={32} required onChange={(event) => setPhone(event.target.value)} /></div>
       </FormDialog>
       <button type="button" className="button-secondary" disabled={busy || driver.phone.trim() === ''} onClick={() => void save(driver.phone, !driver.isActive)}>{t(driver.isActive ? 'fleetDeactivate' : 'fleetActivate')}</button>
+      <DeleteButton url={`/api/fleet/drivers/${encodeURIComponent(driver.personId)}`} name={driver.displayName ?? '—'} />
       {error && !open && <p role="alert" className="form-error">{error}</p>}
     </td>
   </tr>;

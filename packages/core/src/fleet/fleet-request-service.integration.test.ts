@@ -44,7 +44,7 @@ describeWithDatabase('FleetRequestService against MariaDB', () => {
     const driver = randomUUID();
     const tripId = randomUUID();
     await insertPerson(database, driver);
-    await database.execute("INSERT INTO fleet_vehicle (id, registration, make_model, kind, seats, status, created_at, updated_at) VALUES (?, ?, 'Toyota', 'VAN', 12, 'ACTIVE', UTC_TIMESTAMP(), UTC_TIMESTAMP())", [vehicleId, `T5${run}${vehicleId.slice(0, 4)}`]);
+    await database.execute("INSERT INTO fleet_vehicle (id, registration, make_model, kind, seats, status, created_at, updated_at) VALUES (?, ?, 'Toyota', 'VAN', 12, 'ACTIVE', UTC_TIMESTAMP(), UTC_TIMESTAMP())", [vehicleId, `T5${run}${vehicleId.slice(0, 10)}`]);
     await database.execute("INSERT INTO fleet_driver (person_id, phone, is_active, created_at, updated_at) VALUES (?, '0800000000', 1, UTC_TIMESTAMP(), UTC_TIMESTAMP())", [driver]);
     await database.execute("INSERT INTO fleet_trip (id, vehicle_id, driver_person_id, starts_at, ends_at, status, created_by_person_id, created_at, updated_at) VALUES (?, ?, ?, '2026-11-10 01:00:00', '2026-11-10 09:00:00', ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())", [tripId, vehicleId, driver, status, manager]);
     for (const id of fleetRequestIds) await database.execute("UPDATE fleet_request SET dispatch_status = 'ASSIGNED', trip_id = ? WHERE id = ?", [tripId, id]);
