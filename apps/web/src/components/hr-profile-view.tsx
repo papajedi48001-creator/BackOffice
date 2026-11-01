@@ -1,7 +1,8 @@
 import type { ProfileView } from '@backoffice/core';
 import { t } from '@backoffice/i18n';
 import { bangkokToday, formatBangkokDate, formatBangkokTime } from '../lib/bangkok-time';
-import { dateFields, genderLabelKeys, profileFieldLabelKeys } from '../lib/hr-profile-labels';
+import { dateFields, genderLabelKeys, maritalStatusLabelKeys, profileFieldLabelKeys } from '../lib/hr-profile-labels';
+import { FamilyForm, Kp7FileForm } from './hr-kp7-forms';
 import { ContactForm, PersonalForm, PhotoForm, ProfileForm, type ProfileFormPosition, type ProfileFormUnit } from './hr-profile-forms';
 import { initialsOf } from '../lib/initials';
 
@@ -10,7 +11,7 @@ const text = (value: string | null) => value ?? t('notAssigned');
 const historyValue = (field: string, value: string | null) => value === null ? t('notAssigned') : dateFields.has(field) ? formatBangkokDate(value) : value;
 
 /** One person's profile boxes. Private boxes render only when the server returned private details. */
-export function HrProfileView({ view, contactEndpoint, personalEndpoint, photo, employmentTypes = [], units = [], positions = [] }: { view: ProfileView; contactEndpoint: string; personalEndpoint?: string; photo?: { url: string | null; uploadsEnabled: boolean }; employmentTypes?: { id: string; name: string }[]; units?: ProfileFormUnit[]; positions?: ProfileFormPosition[] }) {
+export function HrProfileView({ view, contactEndpoint, personalEndpoint, photo, employmentTypes = [], units = [], positions = [], uploadsEnabled = false }: { view: ProfileView; contactEndpoint: string; personalEndpoint?: string; photo?: { url: string | null; uploadsEnabled: boolean }; employmentTypes?: { id: string; name: string }[]; units?: ProfileFormUnit[]; positions?: ProfileFormPosition[]; uploadsEnabled?: boolean }) {
   const { work, private: personal, access, history } = view;
   const rows = (entries: [string, React.ReactNode][]) => <dl className="profile-summary">{entries.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>;
   return <div className="profile">
@@ -37,6 +38,15 @@ export function HrProfileView({ view, contactEndpoint, personalEndpoint, photo, 
           [t('hrFieldEmergencyContactRelationship'), text(personal.emergencyContactRelationship)], [t('hrFieldEmergencyContactPhone'), text(personal.emergencyContactPhone)]
         ])}
       </section>
+      <section className="profile-box" aria-label={t('hrProfileFamily')}>
+        <h3>{t('hrProfileFamily')}</h3>
+        {rows([
+          [t('hrFieldMaritalStatus'), personal.maritalStatus ? t(maritalStatusLabelKeys[personal.maritalStatus]) : t('notAssigned')], [t('hrFieldReligion'), text(personal.religion)], [t('hrFieldBirthplace'), text(personal.birthplace)],
+          [t('hrFieldFatherName'), text(personal.fatherName)], [t('hrFieldMotherName'), text(personal.motherName)], [t('hrFieldMotherMaidenName'), text(personal.motherMaidenName)],
+          [t('hrFieldSpouseName'), text(personal.spouseName)], [t('hrFieldSpouseMaidenName'), text(personal.spouseMaidenName)], [t('hrFieldChildrenCount'), personal.childrenCount === null ? t('notAssigned') : String(personal.childrenCount)]
+        ])}
+      </section>
+      <Kp7FileForm endpoint={access.editContact ? `/api/hr/people/${work.personId}/kp7` : undefined} file={personal.kp7File} uploadsEnabled={uploadsEnabled} />
     </> : null}
     {access.editProfile && personal ? <ProfileForm personId={work.personId} employmentTypes={employmentTypes} units={units} positions={positions} organizationName={work.organizationName} values={{
       namePrefix: personal.namePrefix, firstName: personal.firstName, lastName: personal.lastName, gender: personal.gender, birthDate: personal.birthDate,
@@ -44,6 +54,10 @@ export function HrProfileView({ view, contactEndpoint, personalEndpoint, photo, 
     }} /> : null}
     {photo ? <PhotoForm photoUrl={photo.url} initials={initialsOf(work.displayName)} uploadsEnabled={photo.uploadsEnabled} /> : null}
     {personalEndpoint && !access.editProfile && personal ? <PersonalForm endpoint={personalEndpoint} values={{ namePrefix: personal.namePrefix, firstName: personal.firstName, lastName: personal.lastName, gender: personal.gender, birthDate: personal.birthDate }} /> : null}
+    {access.editContact && personal ? <FamilyForm endpoint={`/api/hr/people/${work.personId}/family`} values={{
+      maritalStatus: personal.maritalStatus, religion: personal.religion, birthplace: personal.birthplace, fatherName: personal.fatherName, motherName: personal.motherName,
+      motherMaidenName: personal.motherMaidenName, spouseName: personal.spouseName, spouseMaidenName: personal.spouseMaidenName, childrenCount: personal.childrenCount
+    }} /> : null}
     {access.editContact && personal ? <ContactForm endpoint={contactEndpoint} values={{ phone: personal.phone, address: personal.address, emergencyContactName: personal.emergencyContactName, emergencyContactRelationship: personal.emergencyContactRelationship, emergencyContactPhone: personal.emergencyContactPhone }} /> : null}
     <section className="profile-box">
       <h3>{t('hrProfileHistory')}</h3>

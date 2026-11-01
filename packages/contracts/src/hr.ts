@@ -101,6 +101,21 @@ export const updatePersonContactInputSchema = z.object({
 }).strict();
 export type UpdatePersonContactInput = z.infer<typeof updatePersonContactInputSchema>;
 
+/** สถานภาพ on the ก.พ.7: โสด, สมรส, หย่า, แยกกันอยู่, หม้าย. */
+export const maritalStatusSchema = z.enum(['SINGLE', 'MARRIED', 'DIVORCED', 'SEPARATED', 'WIDOWED']);
+export type MaritalStatus = z.infer<typeof maritalStatusSchema>;
+
+/** ข้อมูลส่วนตัวและครอบครัว as laid out on the ก.พ.7. The person and HR edit it; an absent field keeps its value, null clears it. */
+export const updatePersonFamilyInputSchema = z.object({
+  maritalStatus: maritalStatusSchema.nullable().optional(), religion: optionalText(64), birthplace: optionalText(255),
+  fatherName: optionalText(255), motherName: optionalText(255), motherMaidenName: optionalText(255),
+  spouseName: optionalText(255), spouseMaidenName: optionalText(255), childrenCount: z.number().int().min(0).max(30).nullable().optional()
+}).strict();
+export type UpdatePersonFamilyInput = z.infer<typeof updatePersonFamilyInputSchema>;
+
+/** The ก.พ.7 file: a PDF printed from the ministry system, up to 10 MB. */
+export const MAX_KP7_FILE_BYTES = 10 * 1024 * 1024;
+
 export const employmentTypeInputSchema = z.object({
   code: z.string().regex(/^[A-Z][A-Z0-9_]{1,31}$/), name: z.string().trim().min(1).max(120),
   isActive: z.boolean(), sortOrder: z.number().int().min(0).max(9999)
