@@ -29,3 +29,6 @@ export function canManageEmploymentTypes(subject: AccessSubject): boolean {
 
 /** Positions are a hospital-wide list, managed by the same people as employment types. */
 export const canManagePositions = canManageEmploymentTypes;
+
+/** Creating people and changing their identity fields or password is for a hospital-wide HR manager. */
+export const canManagePeople = canManageEmploymentTypes;
