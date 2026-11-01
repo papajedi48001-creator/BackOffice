@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { levelAllowed, MAX_KP7_FILE_BYTES, MAX_PROFILE_PHOTO_BYTES, profilePhotoContentTypeSchema, updateOwnPersonalInputSchema, updatePersonContactInputSchema, updatePersonFamilyInputSchema, updatePersonProfileInputSchema, type AccessSubject, type Gender, type MaritalStatus, type UpdateOwnPersonalInput, type UpdatePersonContactInput, type UpdatePersonFamilyInput, type UpdatePersonProfileInput } from '@backoffice/contracts';
+import { levelAllowed, MAX_KP7_FILE_BYTES, MAX_PROFILE_PHOTO_BYTES, profilePhotoContentTypeSchema, updateOwnPersonalInputSchema, updatePersonContactInputSchema, updatePersonFamilyInputSchema, updatePersonProfileInputSchema, type AccessSubject, type Gender, type MaritalStatus, type UpdateOwnPersonalInput, type UpdatePersonContactInput, type UpdatePersonFamilyInput, type GpfStatus, type UpdateCivilServiceInput, type UpdateEducationInput, updateCivilServiceInputSchema, updateEducationInputSchema, retirementDate, type UpdatePersonProfileInput } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { AuditService } from '../audit/audit-service';
 import { DatabaseAuditRepository } from '../audit/database-audit-repository';
@@ -20,12 +20,20 @@ export interface ProfilePrivate {
   spouseName: string | null; spouseMaidenName: string | null; childrenCount: number | null;
   /** The ก.พ.7 PDF, opened through the attachment download route. */
   kp7File: { attachmentId: string; uploadedAt: string } | null;
+  civilService: CivilServiceView;
+  education: EducationEntryView[];
 }
+export interface CivilServiceView {
+  positionNumber: string | null; salary: number | null; parentAgency: string | null; gpfStatus: GpfStatus | null; firstAppointedOn: string | null; reappointedOn: string | null;
+  transferredInOn: string | null; transferredOutOn: string | null; joinedUnitOn: string | null; currentLevelSince: string | null; qualification: string | null; qualificationMajor: string | null;
+  specialAllowance: string | null; retirementDate: string | null;
+}
+export interface EducationEntryView { graduatedOn: string | null; degree: string; major: string | null; institution: string | null; country: string | null }
 export type WorkChanges = Record<string, { from: string | null; to: string | null }>;
 export interface ProfileChange { at: string; actorDisplayName: string | null; action: string; changedFields: string[]; workChanges: WorkChanges; }
 export interface ProfileView { work: ProfileWork; private: ProfilePrivate | null; access: ProfileAccess; history: ProfileChange[]; }
 
-export const profileAuditActions = ['hr.person.profile.update', 'hr.person.personal.update', 'hr.person.contact.update', 'hr.person.photo.update', 'hr.person.family.update', 'hr.person.kp7.update'] as const;
+export const profileAuditActions = ['hr.person.profile.update', 'hr.person.personal.update', 'hr.person.contact.update', 'hr.person.photo.update', 'hr.person.family.update', 'hr.person.kp7.update', 'hr.person.civil.update', 'hr.person.education.update'] as const;
 const historyLimit = 50;
 const workFields = ['employmentType', 'appointedOn', 'positionTitle', 'positionLevel', 'organization'] as const;
 const contactFields = ['phone', 'address', 'emergencyContactName', 'emergencyContactRelationship', 'emergencyContactPhone'] as const;
@@ -34,8 +42,14 @@ const profileColumns = {
   emergencyContactName: 'emergency_contact_name', emergencyContactRelationship: 'emergency_contact_relationship', emergencyContactPhone: 'emergency_contact_phone',
   employmentTypeId: 'employment_type_id', appointedOn: 'appointed_on', positionLevel: 'position_level', positionId: 'position_id',
   maritalStatus: 'marital_status', religion: 'religion', birthplace: 'birthplace', fatherName: 'father_name', motherName: 'mother_name',
-  motherMaidenName: 'mother_maiden_name', spouseName: 'spouse_name', spouseMaidenName: 'spouse_maiden_name', childrenCount: 'children_count'
+  motherMaidenName: 'mother_maiden_name', spouseName: 'spouse_name', spouseMaidenName: 'spouse_maiden_name', childrenCount: 'children_count',
+  positionNumber: 'position_number', salary: 'salary', parentAgency: 'parent_agency', gpfStatus: 'gpf_status', firstAppointedOn: 'first_appointed_on', reappointedOn: 'reappointed_on',
+  transferredInOn: 'transferred_in_on', transferredOutOn: 'transferred_out_on', joinedUnitOn: 'joined_unit_on', currentLevelSince: 'current_level_since',
+  qualification: 'qualification', qualificationMajor: 'qualification_major', specialAllowance: 'special_allowance'
 } as const;
+const dateColumns = new Set(['birth_date', 'appointed_on', 'first_appointed_on', 'reappointed_on', 'transferred_in_on', 'transferred_out_on', 'joined_unit_on', 'current_level_since']);
+/** ข้อมูลการปฏิบัติราชการ on the ก.พ.7; HR only. */
+const civilServiceFields = ['positionNumber', 'salary', 'parentAgency', 'gpfStatus', 'firstAppointedOn', 'reappointedOn', 'transferredInOn', 'transferredOutOn', 'joinedUnitOn', 'currentLevelSince', 'qualification', 'qualificationMajor', 'specialAllowance'] as const;
 /** ข้อมูลส่วนตัวและครอบครัว on the ก.พ.7. */
 const familyFields = ['maritalStatus', 'religion', 'birthplace', 'fatherName', 'motherName', 'motherMaidenName', 'spouseName', 'spouseMaidenName', 'childrenCount'] as const;
 type ProfileColumn = keyof typeof profileColumns;
@@ -47,6 +61,8 @@ export type UpdateProfileResult = { ok: true } | { ok: false; code: 'NOT_FOUND' 
 export type UpdateContactResult = { ok: true } | { ok: false; code: 'NOT_FOUND' | 'FORBIDDEN' };
 export type UpdateOwnPersonalResult = { ok: true } | { ok: false; code: 'NOT_FOUND' | 'FORBIDDEN' | 'GENDER_REQUIRED' };
 export type UpdateFamilyResult = { ok: true } | { ok: false; code: 'NOT_FOUND' | 'FORBIDDEN' };
+export type UpdateCivilServiceResult = { ok: true } | { ok: false; code: 'NOT_FOUND' | 'FORBIDDEN' };
+export type UpdateEducationResult = { ok: true } | { ok: false; code: 'NOT_FOUND' | 'FORBIDDEN' };
 export type SetKp7FileResult = { ok: true } | { ok: false; code: 'NOT_FOUND' | 'FORBIDDEN' | 'INVALID_FILE' };
 export type SetPhotoResult = { ok: true } | { ok: false; code: 'NOT_FOUND' | 'FORBIDDEN' | 'INVALID_PHOTO' };
 
@@ -82,17 +98,21 @@ export class HrProfileService {
   }
 
   private async readPrivate(personId: string): Promise<ProfilePrivate> {
-    const [row] = await this.database.query<Omit<ProfilePrivate, 'kp7File' | 'childrenCount'> & { childrenCount: number | string | null; kp7AttachmentId: string | null; kp7UploadedAt: string | null }>(
+    const [row] = await this.database.query<Omit<ProfilePrivate, 'kp7File' | 'childrenCount' | 'civilService' | 'education'> & { childrenCount: number | string | null; kp7AttachmentId: string | null; kp7UploadedAt: string | null }>(
       `SELECT pr.name_prefix AS namePrefix, pr.first_name AS firstName, pr.last_name AS lastName, pr.gender, DATE_FORMAT(pr.birth_date, '%Y-%m-%d') AS birthDate,
          pr.phone, pr.address, pr.emergency_contact_name AS emergencyContactName, pr.emergency_contact_relationship AS emergencyContactRelationship, pr.emergency_contact_phone AS emergencyContactPhone,
          pr.marital_status AS maritalStatus, pr.religion, pr.birthplace, pr.father_name AS fatherName, pr.mother_name AS motherName, pr.mother_maiden_name AS motherMaidenName,
          pr.spouse_name AS spouseName, pr.spouse_maiden_name AS spouseMaidenName, pr.children_count AS childrenCount,
          pr.kp7_attachment_id AS kp7AttachmentId, DATE_FORMAT(k.created_at, '%Y-%m-%dT%H:%i:%sZ') AS kp7UploadedAt
        FROM hr_person_profile pr LEFT JOIN attachment k ON k.id = pr.kp7_attachment_id WHERE pr.person_id = ?`, [personId]);
+    const stored = await readStoredProfile(this.database, personId);
+    const civilService = { ...Object.fromEntries(civilServiceFields.map((field) => [field, stored[field] ?? null])), salary: stored.salary === null ? null : Number(stored.salary), retirementDate: retirementDate(row?.birthDate ?? null) } as CivilServiceView;
+    const education = await this.database.query<EducationEntryView>(
+      "SELECT DATE_FORMAT(graduated_on, '%Y-%m-%d') AS graduatedOn, degree, major, institution, country FROM hr_person_education WHERE person_id = ? ORDER BY sequence", [personId]);
     if (!row) return { namePrefix: null, firstName: null, lastName: null, gender: null, birthDate: null, phone: null, address: null, emergencyContactName: null, emergencyContactRelationship: null, emergencyContactPhone: null,
-      maritalStatus: null, religion: null, birthplace: null, fatherName: null, motherName: null, motherMaidenName: null, spouseName: null, spouseMaidenName: null, childrenCount: null, kp7File: null };
+      maritalStatus: null, religion: null, birthplace: null, fatherName: null, motherName: null, motherMaidenName: null, spouseName: null, spouseMaidenName: null, childrenCount: null, kp7File: null, civilService, education };
     const { kp7AttachmentId, kp7UploadedAt, childrenCount, ...rest } = row;
-    return { ...rest, childrenCount: childrenCount === null ? null : Number(childrenCount), kp7File: kp7AttachmentId ? { attachmentId: kp7AttachmentId, uploadedAt: kp7UploadedAt! } : null };
+    return { ...rest, childrenCount: childrenCount === null ? null : Number(childrenCount), kp7File: kp7AttachmentId ? { attachmentId: kp7AttachmentId, uploadedAt: kp7UploadedAt! } : null, civilService, education };
   }
 
   private async readHistory(personId: string): Promise<ProfileChange[]> {
@@ -163,6 +183,45 @@ export class HrProfileService {
       if (changes.changedFields.length === 0) return { ok: true };
       await writeProfile(database, personId, { ...stored, ...defined(after) });
       await recordProfileAudit(database, 'hr.person.family.update', personId, actor.personId ?? null, changes, this.createId);
+      return { ok: true };
+    }, { isolationLevel: 'READ COMMITTED' });
+  }
+
+  /** ข้อมูลการปฏิบัติราชการ (ก.พ.7): HR only, as it records official orders. The audit names fields, never the salary or dates. */
+  async updateCivilService(personId: string, input: UpdateCivilServiceInput, actor: AccessSubject): Promise<UpdateCivilServiceResult> {
+    const valid = updateCivilServiceInputSchema.parse(input);
+    return this.database.transaction(async (database): Promise<UpdateCivilServiceResult> => {
+      const subject = await lockProfileSubject(database, personId);
+      if (!subject) return { ok: false, code: 'NOT_FOUND' };
+      if (!profileAccess(actor, subject).editProfile) return { ok: false, code: 'FORBIDDEN' };
+      const stored = await readStoredProfile(database, personId);
+      const asText = (field: string, value: string | number | null | undefined) => value === undefined || value === null ? value : field === 'salary' ? Number(value).toFixed(2) : String(value);
+      const before = Object.fromEntries(civilServiceFields.map((field) => [field, asText(field, stored[field])])) as Record<string, string | null>;
+      const after = Object.fromEntries(civilServiceFields.map((field) => [field, asText(field, valid[field])]));
+      const changes = diffProfile(before, after, []);
+      if (changes.changedFields.length === 0) return { ok: true };
+      await writeProfile(database, personId, { ...stored, ...defined(after) });
+      await recordProfileAudit(database, 'hr.person.civil.update', personId, actor.personId ?? null, changes, this.createId);
+      return { ok: true };
+    }, { isolationLevel: 'READ COMMITTED' });
+  }
+
+  /** ข้อมูลการศึกษา (ก.พ.7): the person themself or HR replaces the whole list, kept in the order given. */
+  async updateEducation(personId: string, input: UpdateEducationInput, actor: AccessSubject): Promise<UpdateEducationResult> {
+    const valid = updateEducationInputSchema.parse(input);
+    return this.database.transaction(async (database): Promise<UpdateEducationResult> => {
+      const subject = await lockProfileSubject(database, personId);
+      if (!subject) return { ok: false, code: 'NOT_FOUND' };
+      if (!profileAccess(actor, subject).editContact) return { ok: false, code: 'FORBIDDEN' };
+      const current = await database.query<EducationEntryView>("SELECT DATE_FORMAT(graduated_on, '%Y-%m-%d') AS graduatedOn, degree, major, institution, country FROM hr_person_education WHERE person_id = ? ORDER BY sequence", [personId]);
+      const next = valid.entries.map((entry) => ({ graduatedOn: entry.graduatedOn ?? null, degree: entry.degree, major: entry.major ?? null, institution: entry.institution ?? null, country: entry.country ?? null }));
+      if (JSON.stringify(current) === JSON.stringify(next)) return { ok: true };
+      await database.execute('DELETE FROM hr_person_education WHERE person_id = ?', [personId]);
+      for (const [index, entry] of next.entries()) {
+        await database.execute('INSERT INTO hr_person_education (id, person_id, sequence, graduated_on, degree, major, institution, country, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())',
+          [this.createId(), personId, index + 1, entry.graduatedOn, entry.degree, entry.major, entry.institution, entry.country]);
+      }
+      await recordProfileAudit(database, 'hr.person.education.update', personId, actor.personId ?? null, { changedFields: ['education'], workChanges: {} }, this.createId);
       return { ok: true };
     }, { isolationLevel: 'READ COMMITTED' });
   }
@@ -328,9 +387,9 @@ export async function lockProfileSubject(database: QueryDatabase, personId: stri
   return { personId, positionTitle: person.positionTitle, assignmentId: assignment?.id ?? null, organizationId: assignment?.organizationId ?? null, managerPersonId: assignment?.managerPersonId ?? null, organizationName: assignment?.organizationName ?? null };
 }
 
-async function readStoredProfile(database: QueryDatabase, personId: string): Promise<StoredProfile> {
+async function readStoredProfile(database: Pick<Database, 'query'>, personId: string): Promise<StoredProfile> {
   const select = (Object.entries(profileColumns) as [ProfileColumn, string][])
-    .map(([field, column]) => column === 'birth_date' || column === 'appointed_on' ? `DATE_FORMAT(${column}, '%Y-%m-%d') AS ${field}` : `${column} AS ${field}`).join(', ');
+    .map(([field, column]) => dateColumns.has(column) ? `DATE_FORMAT(${column}, '%Y-%m-%d') AS ${field}` : `${column} AS ${field}`).join(', ');
   const [row] = await database.query<StoredProfile>(`SELECT ${select} FROM hr_person_profile WHERE person_id = ?`, [personId]);
   return row ?? Object.fromEntries(Object.keys(profileColumns).map((field) => [field, null])) as StoredProfile;
 }
