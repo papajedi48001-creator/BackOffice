@@ -1,11 +1,11 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ readSession: vi.fn(), getSharedDatabase: vi.fn(), enabled: vi.fn(), upload: vi.fn(), setKp7File: vi.fn(), updateFamily: vi.fn() }));
+const mocks = vi.hoisted(() => ({ readSession: vi.fn(), getSharedDatabase: vi.fn(), enabled: vi.fn(), upload: vi.fn(), setKp7File: vi.fn(), updateFamily: vi.fn(), canEditKp7: vi.fn() }));
 vi.mock('../../../../../../lib/session', () => ({ readSession: mocks.readSession }));
 vi.mock('../../../../../../lib/database', () => ({ getSharedDatabase: mocks.getSharedDatabase }));
 vi.mock('../../../../../../lib/attachments', async (importOriginal) => ({ ...await importOriginal<typeof import('../../../../../../lib/attachments')>(), attachmentsEnabled: mocks.enabled, attachmentService: () => ({ uploadAttachment: mocks.upload }) }));
-vi.mock('@backoffice/core', async (importOriginal) => ({ ...await importOriginal<typeof import('@backoffice/core')>(), HrProfileService: class { setKp7File = mocks.setKp7File; updateFamily = mocks.updateFamily; } }));
+vi.mock('@backoffice/core', async (importOriginal) => ({ ...await importOriginal<typeof import('@backoffice/core')>(), HrProfileService: class { setKp7File = mocks.setKp7File; updateFamily = mocks.updateFamily; canEditKp7 = mocks.canEditKp7; } }));
 
 import { PUT as putFamily } from '../family/route';
 import { DELETE as deleteKp7, POST as postKp7 } from './route';
@@ -14,7 +14,7 @@ const staff = { authenticated: true, personId: 'person-self', roles: [], dataOwn
 const params = { params: Promise.resolve({ personId: 'person-self' }) };
 const pdf = new TextEncoder().encode('%PDF-1.7\n');
 function form(file: File | null) { const body = new FormData(); if (file) body.append('file', file); return new Request('http://localhost/api/hr/people/person-self/kp7', { method: 'POST', body }); }
-const ready = () => { mocks.readSession.mockResolvedValue(staff); mocks.getSharedDatabase.mockReturnValue({}); mocks.enabled.mockReturnValue(true); };
+const ready = () => { mocks.readSession.mockResolvedValue(staff); mocks.getSharedDatabase.mockReturnValue({}); mocks.enabled.mockReturnValue(true); mocks.canEditKp7.mockResolvedValue(true); };
 
 afterEach(() => vi.clearAllMocks());
 
@@ -55,6 +55,13 @@ describe('POST /api/hr/people/[personId]/kp7', () => {
     const infected = await postKp7(form(new File([pdf], 'k.pdf', { type: 'application/pdf' })), params);
     expect(infected.status).toBe(422);
     await expect(infected.json()).resolves.toEqual({ error: 'FILE_INFECTED' });
+  });
+
+  it('refuses someone who may not change this ก.พ.7 before storing anything', async () => {
+    ready();
+    mocks.canEditKp7.mockResolvedValue(false);
+    expect((await postKp7(form(new File([pdf], 'k.pdf', { type: 'application/pdf' })), params)).status).toBe(403);
+    expect(mocks.upload).not.toHaveBeenCalled();
   });
 
   it('removes the file', async () => {

@@ -95,4 +95,16 @@ describeWithDatabase('ก.พ.7 family details and file against MariaDB', () => 
     expect(await may(reader)).toBe(false);
     expect(await may(other)).toBe(false);
   });
+
+  it('says up front who may change a person\'s ก.พ.7, and will not reuse a file already attached elsewhere', async () => {
+    const id = await person();
+    expect(await service.canEditKp7(id, self(id))).toBe(true);
+    expect(await service.canEditKp7(id, manager)).toBe(true);
+    expect(await service.canEditKp7(id, reader)).toBe(false);
+    expect(await service.canEditKp7(randomUUID(), manager)).toBe(false);
+    const used = await attachment(id);
+    const holder = await person();
+    await database.execute('INSERT INTO hr_person_profile (person_id, kp7_attachment_id, updated_at) VALUES (?, ?, UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE kp7_attachment_id = VALUES(kp7_attachment_id)', [holder, used]);
+    await expect(service.setKp7File(id, used, self(id))).resolves.toEqual({ ok: false, code: 'INVALID_FILE' });
+  });
 });

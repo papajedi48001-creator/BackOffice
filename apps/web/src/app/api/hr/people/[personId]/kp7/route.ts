@@ -11,6 +11,8 @@ const statusByCode: Record<string, number> = { FILE_TOO_LARGE: 413, INVALID_FILE
 export async function POST(request: Request, context: { params: Promise<{ personId: string }> }): Promise<Response> {
   return withSessionAndDatabase(request, async (session, database) => {
     const { personId } = await context.params;
+    // Refuse before anything is stored, so nobody can fill storage with files that would only be refused.
+    if (!(await new HrProfileService(database).canEditKp7(personId, session))) return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
     if (!attachmentsEnabled()) return NextResponse.json({ error: 'object_storage_not_configured' }, { status: 503 });
     if (Number(request.headers.get('content-length') ?? 0) > MAX_BODY_BYTES) return NextResponse.json({ error: 'FILE_TOO_LARGE' }, { status: 413 });
     const form = await request.formData().catch(() => null);

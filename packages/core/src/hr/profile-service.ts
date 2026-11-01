@@ -167,6 +167,13 @@ export class HrProfileService {
     }, { isolationLevel: 'READ COMMITTED' });
   }
 
+  /** Whether the actor may change this person's ก.พ.7 file; checked before an upload is stored. */
+  async canEditKp7(personId: string, actor: AccessSubject): Promise<boolean> {
+    const [person] = await this.database.query<{ organizationId: string | null }>(
+      'SELECT (SELECT a.organization_id FROM employment_assignment a WHERE a.person_id = p.id AND a.effective_until IS NULL ORDER BY a.effective_from DESC LIMIT 1) AS organizationId FROM person p WHERE p.id = ?', [personId]);
+    return person !== undefined && profileAccess(actor, { personId, organizationId: person.organizationId }).editContact;
+  }
+
   /** Sets (or with null removes) the person's ก.พ.7 file: a PDF the actor uploaded themself. The person and HR may. */
   async setKp7File(personId: string, attachmentId: string | null, actor: AccessSubject): Promise<SetKp7FileResult> {
     return this.database.transaction(async (database): Promise<SetKp7FileResult> => {
@@ -176,6 +183,10 @@ export class HrProfileService {
       if (attachmentId !== null) {
         const [file] = await database.query<{ contentType: string; sizeBytes: string; createdBy: string }>('SELECT content_type AS contentType, size_bytes AS sizeBytes, created_by_person_id AS createdBy FROM attachment WHERE id = ?', [attachmentId]);
         if (!file || file.createdBy !== actor.personId || file.contentType !== 'application/pdf' || Number(file.sizeBytes) > MAX_KP7_FILE_BYTES) return { ok: false, code: 'INVALID_FILE' };
+        // A file already attached to a ใบลา, a trip or another ก.พ.7 must not gain a second set of readers.
+        const [{ used }] = await database.query<{ used: number }>(`SELECT (EXISTS (SELECT 1 FROM leave_request WHERE attachment_id = ?) OR EXISTS (SELECT 1 FROM official_travel WHERE attachment_id = ?)
+          OR EXISTS (SELECT 1 FROM hr_person_profile WHERE kp7_attachment_id = ? AND person_id <> ?)) AS used`, [attachmentId, attachmentId, attachmentId, personId]) as [{ used: number }];
+        if (Number(used)) return { ok: false, code: 'INVALID_FILE' };
       }
       const [current] = await database.query<{ file: string | null }>('SELECT kp7_attachment_id AS file FROM hr_person_profile WHERE person_id = ?', [personId]);
       if ((current?.file ?? null) === attachmentId) return { ok: true };
