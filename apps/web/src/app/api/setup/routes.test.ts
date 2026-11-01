@@ -7,6 +7,7 @@ vi.mock('../../../lib/setup-mode', () => ({ isSetupMode: () => state.setupMode }
 vi.mock('../../../lib/setup-code', () => ({ verifySetupCode: () => state.codeOk, clearSetupCode: () => { state.cleared += 1; } }));
 vi.mock('../../../lib/setup-config', () => ({
   migrationsDir: () => '/migrations',
+  assertConfigWritable: async () => { if (state.writeFails) throw new SetupError('config_write_failed'); },
   writeDatabaseConfig: async (url: string) => { if (state.writeFails) throw new SetupError('config_write_failed'); state.written.push(url); }
 }));
 vi.mock('../../../lib/setup-service', async (importOriginal) => ({
@@ -92,11 +93,12 @@ describe('setup API', () => {
     expect(state.complete).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps the setup code when the config file cannot be written', async () => {
+  it('refuses before touching the database when the config file cannot be written', async () => {
     state.writeFails = true;
     const response = await completeSetup(post({ code: 'C', database, admin }));
     expect(response.status).toBe(500);
     await expect(response.json()).resolves.toEqual({ ok: false, error: 'config_write_failed' });
     expect(state.cleared).toBe(0);
+    expect(state.complete).not.toHaveBeenCalled();
   });
 });
