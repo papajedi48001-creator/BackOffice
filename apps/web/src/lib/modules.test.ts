@@ -1,7 +1,7 @@
 import type { AccessSubject } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { describe, expect, it, vi } from 'vitest';
-import { availableModules, moduleCodeForPath, moduleLabel, moduleRegistry, moduleSections, navigationFor, navigationFrom, visibleModules } from './modules';
+import { availableModules, availableSections, moduleCodeForPath, moduleLabel, moduleRegistry, moduleSections, navigationFor, navigationFrom, visibleModules } from './modules';
 
 const subject = (overrides: Partial<AccessSubject> = {}): AccessSubject => ({ authenticated: true, personId: 'p', roles: [], dataOwnerModules: [], ...overrides });
 const hrefs = (value: AccessSubject) => navigationFor(value).map((item) => item.href);
@@ -196,5 +196,26 @@ describe('moduleCodeForPath', () => {
     const items = navigationFor(subject());
     expect(items[0]).toMatchObject({ href: '/dashboard', module: 'home' });
     expect(items.find((item) => item.href === '/rooms')).toMatchObject({ module: 'room-booking' });
+  });
+});
+
+describe('ไปราชการ approvals tab', () => {
+  // canApprove asks for heads and ผู้แทน first, then for trips waiting on the person.
+  const travelDb = (allowed: number, waiting: number) => ({ query: vi.fn(async (sql: string) => sql.includes('AS allowed') ? [{ allowed }] : Array.from({ length: waiting }, (_, index) => ({ requestId: `r${index}` }))) }) as unknown as Database;
+  const hrefs = async (database: Database) => (await availableSections(moduleSections('official-travel', subject()), database, subject())).map((section) => section.href);
+
+  it('shows อนุมัติไปราชการ only to someone who may approve a trip', async () => {
+    expect(await hrefs(travelDb(0, 0))).toEqual(['/travel/mine', '/travel/new']);
+    expect(await hrefs(travelDb(1, 0))).toContain('/travel/approvals');
+    expect(await hrefs(travelDb(0, 1))).toContain('/travel/approvals');
+  });
+
+  it('hides อนุมัติไปราชการ from a signed-in account with no person', async () => {
+    const sections = await availableSections(moduleSections('official-travel', subject({ personId: null })), travelDb(1, 1), subject({ personId: null }));
+    expect(sections.map((section) => section.href)).not.toContain('/travel/approvals');
+  });
+
+  it('keeps the tab when the check fails, since the page still guards itself', async () => {
+    expect(await hrefs({ query: vi.fn().mockRejectedValue(new Error('down')) } as unknown as Database)).toContain('/travel/approvals');
   });
 });
