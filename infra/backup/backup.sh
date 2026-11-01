@@ -37,8 +37,11 @@ trap 'rm -rf "${work_dir}"; "${compose[@]}" start seaweedfs >/dev/null 2>&1 || t
 "${compose[@]}" stop seaweedfs
 "${compose[@]}" run --rm --no-deps -T --entrypoint tar seaweedfs -C /data -cf - . > "${work_dir}/attachments.tar"
 "${compose[@]}" start seaweedfs
+# The database URL the first-run setup page saved (/var/lib/backoffice/config). It holds the database password,
+# so it only ever leaves the volume inside the encrypted archive.
+"${compose[@]}" exec -T web tar -C /var/lib/backoffice/config -cf - . > "${work_dir}/config.tar"
 
-tar -C "${work_dir}" -cf - database.sql attachments.tar | gpg --batch --yes --pinentry-mode loopback --passphrase-file "${key_file}" --symmetric --cipher-algo AES256 --output "${archive}"
+tar -C "${work_dir}" -cf - database.sql attachments.tar config.tar | gpg --batch --yes --pinentry-mode loopback --passphrase-file "${key_file}" --symmetric --cipher-algo AES256 --output "${archive}"
 archive_sha256="$(sha256sum "${archive}" | awk '{print $1}')"
 printf '{"completedAt":"%s","archive":"%s","sha256":"%s","retentionDays":%s,"result":"success"}\n' "$(date -u +%FT%TZ)" "$(basename "${archive}")" "${archive_sha256}" "${retention_days}" > "${metadata}"
 chmod 600 "${archive}" "${metadata}"

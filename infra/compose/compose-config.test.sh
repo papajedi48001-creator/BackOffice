@@ -54,5 +54,46 @@ node -e '
   if (!command.includes("-ip.bind=127.0.0.1") || !command.includes("-s3.ip.bind=0.0.0.0")) fail("seaweedfs must keep master, volume and filer on loopback and expose only S3");
 ' <<< "${rendered}"
 echo "web stores attachments in SeaweedFS and scans them with ClamAV"
-docker compose --env-file "${root_dir}/infra/compose/.env.staging.example" -f "${root_dir}/infra/compose/docker-compose.staging.yml" config --quiet
+env_without_database_url="$(mktemp)"
+grep -v '^DATABASE_URL_FILE=' "${env_file}" > "${env_without_database_url}"
+rendered="$(docker compose --env-file "${env_without_database_url}" -f "${compose_file}" config --format json)"
+node -e '
+  const { services, volumes } = JSON.parse(require("fs").readFileSync(0, "utf8"));
+  const fail = (message) => { console.error(message); process.exit(1); };
+  const mount = (name) => (services[name].volumes ?? []).find((volume) => volume.target === "/var/lib/backoffice/config");
+  if (!volumes["backoffice-config"]) fail("production compose must declare the backoffice-config volume");
+  if (mount("web")?.source !== "backoffice-config" || mount("web").read_only) fail("web must mount backoffice-config read-write at /var/lib/backoffice/config");
+  if (mount("worker")?.source !== "backoffice-config" || !mount("worker").read_only) fail("worker must mount backoffice-config read-only at /var/lib/backoffice/config");
+  for (const name of ["web", "worker"]) if (services[name].environment.DATABASE_URL_FILE) fail(`${name} must find its database URL in the config volume by default`);
+' <<< "${rendered}"
+echo "web and worker read the database URL from the setup config volume"
+
+rendered="$(docker compose --env-file "${env_without_database_url}" -f "${compose_file}" -f "${root_dir}/infra/compose/docker-compose.external-db.yml" config --format json)"
+node -e '
+  const { services, networks } = JSON.parse(require("fs").readFileSync(0, "utf8"));
+  const fail = (message) => { console.error(message); process.exit(1); };
+  if (services.mariadb) fail("the external database override must not start the bundled mariadb");
+  if (!networks.database || networks.database.internal) fail("the external database override needs a non-internal database network");
+  for (const name of ["web", "worker"]) if (!Object.keys(services[name].networks ?? {}).includes("database")) fail(`${name} must join the database network`);
+  if (Object.keys(services.web.networks).length !== 4) fail("web must keep its backplane, storage and scan networks");
+' <<< "${rendered}"
+echo "external database override reaches a database outside compose"
+
+rendered="$(docker compose --env-file "${env_file}" -f "${compose_file}" -f "${root_dir}/infra/compose/docker-compose.database-url-secret.yml" config --format json)"
+node -e '
+  const { services } = JSON.parse(require("fs").readFileSync(0, "utf8"));
+  const fail = (message) => { console.error(message); process.exit(1); };
+  for (const name of ["web", "worker"]) {
+    if (services[name].environment.DATABASE_URL_FILE !== "/run/secrets/database_url") fail(`${name} must read DATABASE_URL_FILE from the secret with the override`);
+    if (!services[name].secrets.some((secret) => secret.source === "database_url")) fail(`${name} must mount the database_url secret with the override`);
+  }
+' <<< "${rendered}"
+echo "the database URL secret override still works"
+rm -f "${env_without_database_url}"
+
+rendered="$(docker compose --env-file "${root_dir}/infra/compose/.env.staging.example" -f "${root_dir}/infra/compose/docker-compose.staging.yml" config --format json)"
+node -e '
+  const { services } = JSON.parse(require("fs").readFileSync(0, "utf8"));
+  for (const name of ["web", "worker"]) if (services[name].environment.DATABASE_URL_FILE !== "/run/secrets/database_url") { console.error(`staging ${name} must keep reading the database_url secret`); process.exit(1); }
+' <<< "${rendered}"
 echo "staging compose renders"

@@ -36,6 +36,10 @@ if ! grep -Fq 'stop seaweedfs' "${script_dir}/backup.sh" || ! grep -Fq 'start se
   echo "backup.sh must copy SeaweedFS data while SeaweedFS is stopped, then start it again" >&2
   exit 1
 fi
+if ! grep -Fq 'config.tar' "${script_dir}/backup.sh" || ! grep -Fq '/var/lib/backoffice/config' "${script_dir}/backup.sh"; then
+  echo "backup.sh must keep the first-run setup config (/var/lib/backoffice/config) as config.tar" >&2
+  exit 1
+fi
 for script in "${restore_script}" "${script_dir}/backup.sh"; do
   if grep -qi minio "${script}"; then
     echo "$(basename "${script}") must back up SeaweedFS, not MinIO" >&2
