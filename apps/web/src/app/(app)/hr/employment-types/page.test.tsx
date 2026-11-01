@@ -35,10 +35,13 @@ describe('EmploymentTypesPage', () => {
     ready(manager);
     render(await EmploymentTypesPage());
     expect(screen.getByRole('heading', { name: 'ประเภทการจ้าง' })).toBeInTheDocument();
-    expect(screen.getAllByRole('form', { name: /^แก้ไขประเภทการจ้าง/ })).toHaveLength(6);
+    expect(screen.queryByRole('form')).toBeNull();
+    expect(screen.getAllByRole('button', { name: /^แก้ไขประเภทการจ้าง/ })).toHaveLength(6);
+    fireEvent.click(screen.getByRole('button', { name: 'แก้ไขประเภทการจ้าง ลูกจ้างชั่วคราว' }));
+    expect(screen.getByRole('dialog', { name: 'แก้ไขประเภทการจ้าง ลูกจ้างชั่วคราว' })).toHaveAttribute('open');
     const temporary = screen.getByRole('form', { name: 'แก้ไขประเภทการจ้าง ลูกจ้างชั่วคราว' });
     expect(within(temporary).getByLabelText('ใช้งาน')).not.toBeChecked();
-    expect(screen.getByRole('form', { name: 'เพิ่มประเภทการจ้าง' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'เพิ่มประเภทการจ้าง' })).toBeInTheDocument();
   });
 
   it('shows the Thai duplicate message when a rename collides', async () => {
@@ -47,6 +50,7 @@ describe('EmploymentTypesPage', () => {
     vi.stubGlobal('fetch', fetchMock);
     render(await EmploymentTypesPage());
 
+    fireEvent.click(screen.getByRole('button', { name: 'แก้ไขประเภทการจ้าง ลูกจ้างรายวัน' }));
     const daily = screen.getByRole('form', { name: 'แก้ไขประเภทการจ้าง ลูกจ้างรายวัน' });
     fireEvent.change(within(daily).getByLabelText('ชื่อประเภท'), { target: { value: 'ข้าราชการ' } });
     fireEvent.click(within(daily).getByRole('button', { name: 'บันทึก' }));
@@ -64,12 +68,14 @@ describe('EmploymentTypesPage', () => {
     vi.stubGlobal('fetch', fetchMock);
     render(await EmploymentTypesPage());
 
+    fireEvent.click(screen.getByRole('button', { name: 'เพิ่มประเภทการจ้าง' }));
     const add = screen.getByRole('form', { name: 'เพิ่มประเภทการจ้าง' });
     fireEvent.change(within(add).getByLabelText('รหัส'), { target: { value: 'INTERN' } });
     fireEvent.change(within(add).getByLabelText('ชื่อประเภท'), { target: { value: 'นักศึกษาฝึกงาน' } });
     fireEvent.click(within(add).getByRole('button', { name: 'เพิ่มประเภทการจ้าง' }));
 
     await vi.waitFor(() => expect(mocks.refresh).toHaveBeenCalled());
+    await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     const [url, init] = fetchMock.mock.calls[0]! as unknown as [string, RequestInit];
     expect(url).toBe('/api/hr/employment-types');
     expect(JSON.parse(init.body as string)).toEqual({ code: 'INTERN', name: 'นักศึกษาฝึกงาน', isActive: true, sortOrder: 7 });

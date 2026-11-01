@@ -61,11 +61,14 @@ describe('TravelPage', () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
     render(await TravelPage(params()));
+    expect(screen.queryByRole('form', { name: 'รายงานการไปราชการ' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'รายงานการไปราชการ' }));
     const form = screen.getByRole('form', { name: 'รายงานการไปราชการ' });
     fireEvent.change(within(form).getByLabelText('สรุปสาระสำคัญที่ได้รับ'), { target: { value: 'ได้แนวทางใหม่' } });
     fireEvent.change(within(form).getByLabelText('การนำไปใช้ประโยชน์'), { target: { value: 'อบรมต่อในหน่วยงาน' } });
     fireEvent.submit(form);
     await waitFor(() => expect(mocks.refresh).toHaveBeenCalled());
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     const [url, init] = fetchMock.mock.calls[0]! as unknown as [string, RequestInit];
     expect(url).toBe('/api/travel/travel-1/report');
     expect(init.method).toBe('PUT');
@@ -78,6 +81,7 @@ describe('TravelPage', () => {
     expect(screen.getByRole('heading', { name: 'รายงานการไปราชการ' })).toBeInTheDocument();
     expect(screen.getByText('อบรมต่อในหน่วยงาน')).toBeInTheDocument();
     expect(screen.queryByRole('form', { name: 'รายงานการไปราชการ' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'รายงานการไปราชการ' })).toBeNull();
     expect(screen.getByRole('link', { name: 'พิมพ์แบบขออนุมัติ' })).toHaveAttribute('href', '/travel/travel-1/print');
   });
   describe('ขอใช้รถ', () => {

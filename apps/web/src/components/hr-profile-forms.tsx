@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { genderForPrefix, type Gender } from '@backoffice/contracts';
 import { t, type MessageKey } from '@backoffice/i18n';
 import { genderLabelKeys } from '../lib/hr-profile-labels';
+import { ActionDialog } from './action-dialog';
+import { FormDialog } from './form-dialog';
 
 const errorKeys: Record<string, MessageKey> = {
   GENDER_REQUIRED: 'hrProfileGenderRequired', INACTIVE_EMPLOYMENT_TYPE: 'hrProfileInactiveType', UNKNOWN_EMPLOYMENT_TYPE: 'hrProfileUnknownType',
@@ -15,17 +17,21 @@ const orNull = (value: string) => value.trim() === '' ? null : value.trim();
 function useSave(endpoint: string) {
   const router = useRouter();
   const [message, setMessage] = useState<{ kind: 'error' | 'saved'; text: string } | null>(null);
-  async function save(body: unknown) {
+  async function save(body: unknown): Promise<boolean> {
     setMessage(null);
     try {
       const response = await fetch(endpoint, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-      if (response.ok) { setMessage({ kind: 'saved', text: t('hrProfileSaved') }); router.refresh(); return; }
+      if (response.ok) { setMessage({ kind: 'saved', text: t('hrProfileSaved') }); router.refresh(); return true; }
       const code = ((await response.json()) as { error?: string }).error;
       setMessage({ kind: 'error', text: t(code && errorKeys[code] ? errorKeys[code] : 'hrProfileSaveFailed') });
     } catch { setMessage({ kind: 'error', text: t('hrProfileSaveFailed') }); }
+    return false;
   }
-  const feedback = message && (message.kind === 'error' ? <p role="alert" className="form-error">{message.text}</p> : <p role="status">{message.text}</p>);
-  return { save, feedback };
+  /** The error goes in the popup; the saved note stays on the page after the popup closes. */
+  const error = message?.kind === 'error' ? message.text : null;
+  const saved = message?.kind === 'saved' ? <p role="status">{message.text}</p> : null;
+  const reset = (open: boolean) => { if (open) setMessage(null); };
+  return { save, error, saved, reset };
 }
 
 export interface ProfileFormValues {
@@ -46,7 +52,7 @@ function initialUnitNames(units: ProfileFormUnit[], organizationId: string | nul
 export interface ProfileFormPosition { name: string; allowedLevels: readonly string[]; }
 
 export function ProfileForm({ personId, values, employmentTypes, units, positions = [], organizationName = null }: { personId: string; values: ProfileFormValues; employmentTypes: { id: string; name: string }[]; units: ProfileFormUnit[]; positions?: ProfileFormPosition[]; organizationName?: string | null }) {
-  const { save, feedback } = useSave(`/api/hr/people/${personId}/profile`);
+  const { save, error, saved, reset } = useSave(`/api/hr/people/${personId}/profile`);
   const [form, setForm] = useState(() => Object.fromEntries(Object.entries(values).map(([key, value]) => [key, value ?? ''])) as Record<keyof ProfileFormValues, string>);
   const [initialUnit] = useState(() => initialUnitNames(units, values.organizationId, organizationName));
   const [unitNames, setUnitNames] = useState(initialUnit);
@@ -90,17 +96,15 @@ export function ProfileForm({ personId, values, employmentTypes, units, position
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     const positionError = checkPosition();
-    if (positionError) { setClientError(t(positionError)); return; }
+    if (positionError) { setClientError(t(positionError)); return false; }
     const unit = chosenUnit();
-    if (unit !== null && typeof unit === 'object') { setClientError(t(unit.error)); return; }
+    if (unit !== null && typeof unit === 'object') { setClientError(t(unit.error)); return false; }
     setClientError(null);
     const { gender, ...rest } = form;
-    await save({ ...Object.fromEntries(Object.entries(rest).filter(([key]) => key !== 'organizationId').map(([key, value]) => [key, orNull(value)])), gender: gender === '' ? null : gender, ...(unit === undefined ? {} : { organizationId: unit }) });
+    return save({ ...Object.fromEntries(Object.entries(rest).filter(([key]) => key !== 'organizationId').map(([key, value]) => [key, orNull(value)])), gender: gender === '' ? null : gender, ...(unit === undefined ? {} : { organizationId: unit }) });
   }
   const text = (field: keyof ProfileFormValues, label: MessageKey, max: number) => <label>{t(label)}<input value={form[field]} onChange={set(field)} maxLength={max} /></label>;
-  return <form aria-label={t('hrEditProfile')} className="profile-form" onSubmit={submit}>
-    <h4>{t('hrEditProfile')}</h4>
-    {clientError ? <p role="alert" className="form-error">{clientError}</p> : feedback}
+  return <div className="profile-form">{saved}<FormDialog triggerLabel={t('hrEditProfile')} title={t('hrEditProfile')} submitLabel={t('hrSaveProfile')} wide error={clientError ?? error} onOpenChange={(open) => { reset(open); setClientError(null); }} onSubmit={submit}>
     <label>{t('hrFieldNamePrefix')}<input value={form.namePrefix} onChange={changePrefix} maxLength={32} /></label>
     {text('firstName', 'hrFieldFirstName', 120)}
     {text('lastName', 'hrFieldLastName', 120)}
@@ -126,15 +130,14 @@ export function ProfileForm({ personId, values, employmentTypes, units, position
     <datalist id={`divisions-${personId}`}>{divisions.map((unit) => <option key={unit.id} value={unit.name} />)}</datalist>
     <label>{t('hrSection')}<input list={`sections-${personId}`} value={unitNames.section} maxLength={255} onChange={(event) => setUnitNames((current) => ({ ...current, section: event.target.value }))} /></label>
     <datalist id={`sections-${personId}`}>{sections.map((unit) => <option key={unit.id} value={unit.name} />)}</datalist>
-    <button type="submit">{t('hrSaveProfile')}</button>
-  </form>;
+  </FormDialog></div>;
 }
 
 export interface PersonalFormValues { namePrefix: string | null; firstName: string | null; lastName: string | null; gender: Gender | null; birthDate: string | null; }
 
 /** The person's own ข้อมูลส่วนตัว. Work fields are not in this form; the server refuses them too. */
 export function PersonalForm({ endpoint, values }: { endpoint: string; values: PersonalFormValues }) {
-  const { save, feedback } = useSave(endpoint);
+  const { save, error, saved, reset } = useSave(endpoint);
   const [form, setForm] = useState(() => Object.fromEntries(Object.entries(values).map(([key, value]) => [key, value ?? ''])) as Record<keyof PersonalFormValues, string>);
   const set = (field: keyof PersonalFormValues) => (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setForm((current) => ({ ...current, [field]: event.target.value }));
   function changePrefix(event: React.ChangeEvent<HTMLInputElement>) {
@@ -144,11 +147,9 @@ export function PersonalForm({ endpoint, values }: { endpoint: string; values: P
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     const { gender, ...rest } = form;
-    await save({ ...Object.fromEntries(Object.entries(rest).map(([key, value]) => [key, orNull(value)])), gender: gender === '' ? null : gender });
+    return save({ ...Object.fromEntries(Object.entries(rest).map(([key, value]) => [key, orNull(value)])), gender: gender === '' ? null : gender });
   }
-  return <form aria-label={t('hrEditPersonal')} className="profile-form" onSubmit={submit}>
-    <h4>{t('hrEditPersonal')}</h4>
-    {feedback}
+  return <div className="profile-form">{saved}<FormDialog triggerLabel={t('hrEditPersonal')} title={t('hrEditPersonal')} submitLabel={t('hrSavePersonal')} error={error} onOpenChange={reset} onSubmit={submit}>
     <label>{t('hrFieldNamePrefix')}<input value={form.namePrefix} onChange={changePrefix} maxLength={32} /></label>
     <label>{t('hrFieldFirstName')}<input value={form.firstName} onChange={set('firstName')} maxLength={120} /></label>
     <label>{t('hrFieldLastName')}<input value={form.lastName} onChange={set('lastName')} maxLength={120} /></label>
@@ -160,8 +161,7 @@ export function PersonalForm({ endpoint, values }: { endpoint: string; values: P
     </label>
     <label>{t('hrFieldBirthDate')}<input type="date" value={form.birthDate} onChange={set('birthDate')} /></label>
     <p className="form-hint">{t('hrPersonalWorkNote')}</p>
-    <button type="submit">{t('hrSavePersonal')}</button>
-  </form>;
+  </FormDialog></div>;
 }
 
 const photoErrorKeys: Record<string, MessageKey> = { UNSUPPORTED_FILE_TYPE: 'hrPhotoWrongType', FILE_TOO_LARGE: 'hrPhotoTooLarge', INVALID_FILE_CONTENT: 'hrPhotoInvalid', FILE_INFECTED: 'hrPhotoInvalid', INVALID_PHOTO: 'hrPhotoInvalid', object_storage_not_configured: 'hrPhotoUnavailable' };
@@ -171,55 +171,69 @@ export function PhotoForm({ photoUrl, initials, uploadsEnabled }: { photoUrl: st
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ kind: 'error' | 'saved'; text: string } | null>(null);
-  async function send(init: RequestInit, saved: MessageKey) {
+  const [file, setFile] = useState<File | null>(null);
+  const [dialog, setDialog] = useState<'upload' | 'remove' | null>(null);
+  async function send(init: RequestInit, saved: MessageKey): Promise<boolean> {
     setBusy(true); setMessage(null);
     try {
       const response = await fetch('/api/hr/me/photo', init);
-      if (response.ok) { setMessage({ kind: 'saved', text: t(saved) }); router.refresh(); return; }
+      if (response.ok) { setMessage({ kind: 'saved', text: t(saved) }); router.refresh(); return true; }
       const code = ((await response.json().catch(() => ({}))) as { error?: string }).error;
       setMessage({ kind: 'error', text: t(code && photoErrorKeys[code] ? photoErrorKeys[code] : 'hrPhotoFailed') });
     } catch { setMessage({ kind: 'error', text: t('hrPhotoFailed') }); } finally { setBusy(false); }
+    return false;
   }
-  function upload(file: File | undefined) {
-    if (!file) return;
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) { setMessage({ kind: 'error', text: t('hrPhotoWrongType') }); return; }
-    if (file.size > 2 * 1024 * 1024) { setMessage({ kind: 'error', text: t('hrPhotoTooLarge') }); return; }
+  function choose(chosen: File | undefined) {
+    setMessage(null);
+    setFile(null);
+    if (!chosen) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(chosen.type)) { setMessage({ kind: 'error', text: t('hrPhotoWrongType') }); return; }
+    if (chosen.size > 2 * 1024 * 1024) { setMessage({ kind: 'error', text: t('hrPhotoTooLarge') }); return; }
+    setFile(chosen);
+  }
+  async function upload() {
+    if (!file) return false;
     const body = new FormData();
     body.append('file', file);
-    void send({ method: 'POST', body }, 'hrPhotoSaved');
+    const saved = await send({ method: 'POST', body }, 'hrPhotoSaved');
+    if (saved) setFile(null);
+    return saved;
   }
+  const open = (next: 'upload' | 'remove' | null) => { setMessage(null); setFile(null); setDialog(next); };
+  const error = message?.kind === 'error' ? message.text : null;
   return <section aria-label={t('hrFieldPhoto')} className="profile-form">
     <h4>{t('hrFieldPhoto')}</h4>
-    {message && (message.kind === 'error' ? <p role="alert" className="form-error">{message.text}</p> : <p role="status">{message.text}</p>)}
+    {message && !dialog && (message.kind === 'error' ? <p role="alert" className="form-error">{message.text}</p> : <p role="status">{message.text}</p>)}
     <div className="profile-photo-field">
       {photoUrl ? <img className="profile-avatar" src={photoUrl} alt={t('hrFieldPhoto')} width={72} height={72} /> : <span className="profile-avatar profile-initials" aria-hidden="true">{initials}</span>}
       {uploadsEnabled ? <>
-        <label>{t('hrPhotoChoose')}<input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy} onChange={(event) => { upload(event.target.files?.[0]); event.target.value = ''; }} /></label>
-        {photoUrl ? <button type="button" className="button-secondary" disabled={busy} onClick={() => void send({ method: 'DELETE' }, 'hrPhotoRemoved')}>{t('hrPhotoRemove')}</button> : null}
+        <FormDialog triggerLabel={t('hrPhotoChange')} title={t('hrPhotoChange')} submitLabel={t('hrPhotoUpload')} open={dialog === 'upload'} onOpenChange={(next) => (next ? open('upload') : setDialog(null))} isSubmitting={busy} ready={file !== null} error={error} onSubmit={upload}>
+          <label>{t('hrPhotoChoose')}<input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy} onChange={(event) => choose(event.target.files?.[0])} /></label>
+          <p className="form-hint">{busy ? t('hrPhotoUploading') : t('hrPhotoHint')}</p>
+        </FormDialog>
+        {photoUrl ? <button type="button" className="button-secondary" disabled={busy} onClick={() => open('remove')}>{t('hrPhotoRemove')}</button> : null}
       </> : <p className="form-hint">{t('hrPhotoUnavailable')}</p>}
     </div>
-    {uploadsEnabled ? <p className="form-hint">{busy ? t('hrPhotoUploading') : t('hrPhotoHint')}</p> : null}
+    {dialog === 'remove' && <ActionDialog title={t('hrPhotoRemove')} confirmLabel={t('hrPhotoRemove')} tone="danger" isSubmitting={busy} error={error}
+      onConfirm={() => void send({ method: 'DELETE' }, 'hrPhotoRemoved').then((done) => { if (done) setDialog(null); })} onClose={() => setDialog(null)} />}
   </section>;
 }
 
 export interface ContactFormValues { phone: string | null; address: string | null; emergencyContactName: string | null; emergencyContactRelationship: string | null; emergencyContactPhone: string | null; }
 
 export function ContactForm({ endpoint, values }: { endpoint: string; values: ContactFormValues }) {
-  const { save, feedback } = useSave(endpoint);
+  const { save, error, saved, reset } = useSave(endpoint);
   const [form, setForm] = useState(() => Object.fromEntries(Object.entries(values).map(([key, value]) => [key, value ?? ''])) as Record<keyof ContactFormValues, string>);
   const field = (name: keyof ContactFormValues, label: MessageKey, max: number, type = 'text') => <label>{t(label)}<input type={type} value={form[name]} maxLength={max} onChange={(event) => setForm((current) => ({ ...current, [name]: event.target.value }))} /></label>;
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    await save(Object.fromEntries(Object.entries(form).map(([key, value]) => [key, orNull(value)])));
+    return save(Object.fromEntries(Object.entries(form).map(([key, value]) => [key, orNull(value)])));
   }
-  return <form aria-label={t('hrEditContact')} className="profile-form" onSubmit={submit}>
-    <h4>{t('hrEditContact')}</h4>
-    {feedback}
+  return <div className="profile-form">{saved}<FormDialog triggerLabel={t('hrEditContact')} title={t('hrEditContact')} submitLabel={t('hrSaveContact')} error={error} onOpenChange={reset} onSubmit={submit}>
     {field('phone', 'hrFieldPhone', 32, 'tel')}
     <label>{t('hrFieldAddress')}<textarea value={form.address} maxLength={500} onChange={(event) => setForm((current) => ({ ...current, address: event.target.value }))} /></label>
     {field('emergencyContactName', 'hrFieldEmergencyContactName', 255)}
     {field('emergencyContactRelationship', 'hrFieldEmergencyContactRelationship', 64)}
     {field('emergencyContactPhone', 'hrFieldEmergencyContactPhone', 32, 'tel')}
-    <button type="submit">{t('hrSaveContact')}</button>
-  </form>;
+  </FormDialog></div>;
 }

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { t } from '@backoffice/i18n';
 import { ActionDialog } from '../../../../../components/action-dialog';
+import { FormDialog } from '../../../../../components/form-dialog';
 import { leaveErrorMessage } from '../../../../../lib/leave-labels';
 
 type Decision = 'APPROVE' | 'RETURN' | 'REJECT';
@@ -18,16 +19,18 @@ export function LeaveActions({ requestId, canDecide, canCancel, canRequestCancel
   const [range, setRange] = useState<CancelRange>(returnedCancelDays ?? { startDate: '', endDate: '', startHalf: 'FULL', endHalf: 'FULL', reason: '' });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [cancelDaysOpen, setCancelDaysOpen] = useState(false);
   const id = encodeURIComponent(requestId);
 
-  async function send(url: string, body: Record<string, string>, onDone: (result: { requestId?: string }) => void, method = 'POST') {
+  async function send(url: string, body: Record<string, string>, onDone: (result: { requestId?: string }) => void, method = 'POST'): Promise<boolean> {
     setBusy(true); setError(null);
     try {
       const response = await fetch(url, { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
       const result = (await response.json()) as { error?: string; requestId?: string };
-      if (response.ok) { onDone(result); return; }
+      if (response.ok) { onDone(result); return true; }
       setError(leaveErrorMessage(result.error));
     } catch { setError(leaveErrorMessage(null)); } finally { setBusy(false); }
+    return false;
   }
 
   function confirm(current: LeaveDialog, reason: string) {
@@ -41,9 +44,9 @@ export function LeaveActions({ requestId, canDecide, canCancel, canRequestCancel
 
   function cancelDays(event: React.FormEvent) {
     event.preventDefault();
-    if (!range.reason.trim()) { setError(t('leaveReasonRequired')); return; }
-    if (returnedCancelDays) void send(`/api/leave/${id}`, { ...range, reason: range.reason.trim() }, () => router.refresh(), 'PUT');
-    else void send(`/api/leave/${id}/cancel-days`, { ...range, reason: range.reason.trim() }, (result) => router.push(`/leave/requests/${result.requestId}`));
+    if (!range.reason.trim()) { setError(t('leaveReasonRequired')); return false; }
+    if (returnedCancelDays) return send(`/api/leave/${id}`, { ...range, reason: range.reason.trim() }, () => router.refresh(), 'PUT');
+    return send(`/api/leave/${id}/cancel-days`, { ...range, reason: range.reason.trim() }, (result) => router.push(`/leave/requests/${result.requestId}`));
   }
 
   const editsCancelDays = canRequestCancelDays || returnedCancelDays !== undefined;
@@ -57,8 +60,8 @@ export function LeaveActions({ requestId, canDecide, canCancel, canRequestCancel
       {canCancel && <button type="button" className="button-danger" disabled={busy} onClick={() => open('CANCEL')}>{t('leaveCancel')}</button>}
     </div>}
     {dialog && <ActionDialog title={dialogTitle[dialog]} message={dialog === 'APPROVE' ? t('dialogConfirmQuestion') : undefined} confirmLabel={t('confirmAction')} tone={dialog === 'REJECT' || dialog === 'CANCEL' ? 'danger' : 'primary'} reason={dialog !== 'APPROVE'} isSubmitting={busy} error={error} onConfirm={(reason) => confirm(dialog, reason)} onClose={() => { setDialog(null); setError(null); }} />}
-    {editsCancelDays && <form aria-label={cancelDaysTitle} className="reason-form" onSubmit={cancelDays}>
-      <h3>{cancelDaysTitle}</h3>
+    {editsCancelDays && <div className="request-actions"><FormDialog title={cancelDaysTitle} triggerLabel={cancelDaysTitle} triggerClassName="button-secondary" submitLabel={returnedCancelDays ? t('leaveResubmit') : t('leaveCancelDaysSubmit')} wide
+      open={cancelDaysOpen} onOpenChange={(next) => { setError(null); setCancelDaysOpen(next); }} isSubmitting={busy} error={error} onSubmit={cancelDays}>
       <p className="permission-notice">{t('leaveCancelDaysHelp')}</p>
       <div className="form-row">
         <div className="form-field"><label htmlFor="cancel-start">{t('leaveStartDate')}</label><input id="cancel-start" type="date" value={range.startDate} required onChange={(event) => setRange({ ...range, startDate: event.target.value, endDate: range.endDate || event.target.value })} /></div>
@@ -70,8 +73,7 @@ export function LeaveActions({ requestId, canDecide, canCancel, canRequestCancel
       </div>
       <label htmlFor="cancel-reason">{t('leaveCancelDaysReason')}</label>
       <textarea id="cancel-reason" value={range.reason} maxLength={1000} rows={2} onChange={(event) => setRange({ ...range, reason: event.target.value })} />
-      <div className="form-actions"><button type="submit" disabled={busy}>{returnedCancelDays ? t('leaveResubmit') : t('leaveCancelDaysSubmit')}</button></div>
-    </form>}
-    {error && !dialog && <p role="alert" className="form-error">{error}</p>}
+    </FormDialog></div>}
+    {error && !dialog && !cancelDaysOpen && <p role="alert" className="form-error">{error}</p>}
   </section>;
 }

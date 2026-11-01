@@ -22,9 +22,25 @@ describe('VendorForms', () => {
   it('explains a duplicate vendor name', async () => {
     fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ error: 'DUPLICATE_NAME' }), { status: 409 }));
     render(<VendorForms vendors={[]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'เพิ่มผู้ขาย' }));
+    expect(screen.getByRole('dialog', { name: 'เพิ่มผู้ขาย' })).toHaveAttribute('open');
     const form = screen.getByRole('form', { name: 'เพิ่มผู้ขาย' });
     fireEvent.change(form.querySelector('[name="name"]')!, { target: { value: 'บริษัท เอ จำกัด' } });
     fireEvent.submit(form);
     expect(await screen.findByText('ชื่อนี้มีอยู่แล้ว')).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'เพิ่มผู้ขาย' })).toBeInTheDocument();
+  });
+
+  it('edits a vendor in a popup and closes it once saved', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('{}', { status: 200 }));
+    render(<VendorForms vendors={[{ id: 'vendor-1', name: 'บริษัท เอ จำกัด', phone: '02-000', address: '', isActive: true }]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'แก้ไข บริษัท เอ จำกัด' }));
+    const form = screen.getByRole('form', { name: 'แก้ไข บริษัท เอ จำกัด' });
+    fireEvent.change(form.querySelector('[name="phone"]')!, { target: { value: '02-111' } });
+    fireEvent.submit(form);
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect([url, init.method]).toEqual(['/api/inventory/vendors/vendor-1', 'PUT']);
+    expect(JSON.parse(init.body)).toMatchObject({ phone: '02-111', isActive: true });
   });
 });

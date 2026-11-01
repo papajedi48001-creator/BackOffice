@@ -395,6 +395,20 @@ video.inventory-camera { display: block; flex-basis: 100%; width: 100%; max-widt
 .action-dialog button.button-danger-solid { background: #c2410c; }
 .action-dialog button.button-danger-solid:hover:not(:disabled) { background: #9a3412; }
 .action-dialog button:disabled { cursor: not-allowed; opacity: .55; }
+.profile-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line-soft); }
+.leave-entitlement-summary { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 0; }
+.leave-entitlement-summary dt { color: var(--muted); font-size: .85rem; }
+.leave-entitlement-summary dd { margin: 0; font-weight: 700; }
+/* Popup for add, edit and delete forms (components/form-dialog.tsx): ActionDialog's look with a scrolling field area. */
+.form-dialog-wide { width: min(94vw, 720px); }
+.form-dialog .action-dialog-panel { max-height: 90dvh; grid-template-rows: auto minmax(0, 1fr) auto auto; }
+.form-dialog-body { display: grid; gap: 12px; min-height: 0; overflow-y: auto; padding: 2px; }
+.form-dialog-body label { display: grid; gap: 6px; font-weight: 700; }
+.form-dialog-body label:has(> input[type=checkbox]), .form-dialog-body label:has(> input[type=radio]) { display: flex; align-items: center; gap: 8px; font-weight: 400; }
+.form-dialog-body :is(input:not([type=checkbox]):not([type=radio]), select, textarea) { width: 100%; border: 1px solid var(--line-strong); border-radius: 10px; color: var(--ink); background: var(--surface); padding: 9px 12px; font: inherit; }
+.form-dialog-body :is(input, select, textarea):focus { border-color: var(--accent); outline: 3px solid var(--accent-tint); outline-offset: 0; }
+.form-dialog-body fieldset { display: grid; gap: 8px; border: 1px solid var(--line-soft); border-radius: 12px; padding: 10px 12px; }
+.form-dialog-body button.button-secondary, .form-dialog-body button { justify-self: start; }
 @keyframes dialog-in { from { opacity: 0; transform: translateY(12px) scale(.97); } to { opacity: 1; transform: none; } }
 @keyframes backdrop-in { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .action-dialog[open], .action-dialog::backdrop { animation: none; } }

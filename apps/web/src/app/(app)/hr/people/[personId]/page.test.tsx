@@ -68,14 +68,15 @@ describe('PersonProfilePage', () => {
     render(await page());
 
     // Open positions are offered, and the closed one this person holds, but no other closed one.
+    fireEvent.click(screen.getByRole('button', { name: 'แก้ไขข้อมูลส่วนตัวและข้อมูลงาน' }));
     const list = screen.getByRole('combobox', { name: 'ตำแหน่งงาน' }).getAttribute('list')!;
     expect(Array.from(document.querySelectorAll(`datalist#${list} option`)).map((option) => option.getAttribute('value'))).toEqual(['พยาบาลวิชาชีพ', 'เจ้าพนักงานธุรการ']);
 
     expect(screen.getByRole('heading', { name: 'ข้อมูลส่วนตัว' })).toBeInTheDocument();
     expect(screen.getByText('17 พ.ค. 2533')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'ข้อมูลติดต่อ' })).toBeInTheDocument();
-    expect(screen.getByRole('form', { name: 'แก้ไขข้อมูลส่วนตัวและข้อมูลงาน' })).toBeInTheDocument();
-    expect(screen.getByRole('form', { name: 'แก้ไขข้อมูลติดต่อ' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'แก้ไขข้อมูลส่วนตัวและข้อมูลงาน' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'แก้ไขข้อมูลติดต่อ' })).toBeInTheDocument();
     expect(screen.getByText('ยังไม่มีการเปลี่ยนแปลง')).toBeInTheDocument();
   });
 
@@ -85,6 +86,7 @@ describe('PersonProfilePage', () => {
     vi.stubGlobal('fetch', fetchMock);
     render(await page());
 
+    fireEvent.click(screen.getByRole('button', { name: 'แก้ไขข้อมูลส่วนตัวและข้อมูลงาน' }));
     const form = screen.getByRole('form', { name: 'แก้ไขข้อมูลส่วนตัวและข้อมูลงาน' });
     fireEvent.change(within(form).getByLabelText('คำนำหน้า'), { target: { value: 'นาย' } });
     expect(within(form).getByLabelText('เพศ')).toHaveValue('MALE');
@@ -96,7 +98,9 @@ describe('PersonProfilePage', () => {
     expect(JSON.parse(init.body as string)).toMatchObject({ namePrefix: 'นาย', gender: 'MALE', employmentTypeId: 't1', birthDate: '1990-05-17' });
     // The unit was not touched, so it is not sent.
     expect(JSON.parse(init.body as string)).not.toHaveProperty('organizationId');
-    expect(within(form).getByRole('combobox', { name: 'กลุ่มงาน' })).toHaveValue('กลุ่มการพยาบาล');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    fireEvent.click(screen.getByRole('button', { name: 'แก้ไขข้อมูลส่วนตัวและข้อมูลงาน' }));
+    expect(screen.getByRole('combobox', { name: 'กลุ่มงาน' })).toHaveValue('กลุ่มการพยาบาล');
   });
 
   it('shows a Thai message when a save is refused', async () => {
@@ -104,6 +108,7 @@ describe('PersonProfilePage', () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ error: 'GENDER_REQUIRED' }), { status: 400 })));
     render(await page());
 
+    fireEvent.click(screen.getByRole('button', { name: 'แก้ไขข้อมูลส่วนตัวและข้อมูลงาน' }));
     fireEvent.click(within(screen.getByRole('form', { name: 'แก้ไขข้อมูลส่วนตัวและข้อมูลงาน' })).getByRole('button', { name: 'บันทึกข้อมูล' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('คำนำหน้านี้บอกเพศไม่ได้ กรุณาระบุเพศ');

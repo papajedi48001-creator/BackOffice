@@ -33,7 +33,7 @@ export default async function PositionsPage() {
         <td>{levelRange(position.allowedLevels)}</td>
         <td>{`${position.holders} ${t('hrPeopleUnit')}`}</td>
         <td>{position.isActive ? t('hrPositionActive') : t('hrPositionInactive')}</td>
-        <td><details><summary>{t('hrEdit')}</summary><PositionForm position={position} /></details></td>
+        <td><PositionForm position={position} /></td>
       </tr>)}</tbody>
     </table>
   </section>;

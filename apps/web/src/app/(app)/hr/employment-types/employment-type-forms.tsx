@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { EmploymentTypeInput } from '@backoffice/contracts';
 import { t, type MessageKey } from '@backoffice/i18n';
+import { FormDialog } from '../../../../components/form-dialog';
 
 const errorKeys: Record<string, MessageKey> = { DUPLICATE_CODE: 'hrEmploymentTypeDuplicate', DUPLICATE_NAME: 'hrEmploymentTypeDuplicate', NOT_FOUND: 'hrEmploymentTypeNotFound', invalid_input: 'hrEmploymentTypeInvalid' };
 
@@ -26,20 +27,24 @@ export function EmploymentTypeForm({ type }: { type: EmploymentTypeInput & { id?
       if (response.ok) {
         if (adding) setForm({ code: '', name: '', isActive: true, sortOrder: String(Number(form.sortOrder) + 1) });
         router.refresh();
-        return;
+        return true;
       }
       const code = ((await response.json()) as { error?: string }).error;
       setError(t(code && errorKeys[code] ? errorKeys[code] : 'hrProfileSaveFailed'));
     } catch { setError(t('hrProfileSaveFailed')); }
+    return false;
   }
 
-  return <form aria-label={title} className="profile-form" onSubmit={submit}>
-    <h4>{title}</h4>
-    {error && <p role="alert" className="form-error">{error}</p>}
+  const dialog = <FormDialog title={title} triggerLabel={adding ? t('hrAddEmploymentType') : t('formEdit')} triggerAriaLabel={adding ? undefined : title} triggerClassName={adding ? undefined : 'button-secondary'}
+    submitLabel={adding ? t('hrAddEmploymentType') : t('hrSaveEmploymentType')} error={error} onOpenChange={(open) => { if (open) setError(null); }} onSubmit={submit}>
     <label>{t('hrEmploymentTypeCode')}<input value={form.code} maxLength={32} required onChange={(event) => setForm({ ...form, code: event.target.value.toUpperCase() })} /></label>
     <label>{t('hrEmploymentTypeName')}<input value={form.name} maxLength={120} required onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
     <label>{t('hrEmploymentTypeOrder')}<input type="number" min={0} max={9999} value={form.sortOrder} onChange={(event) => setForm({ ...form, sortOrder: event.target.value })} /></label>
     <label className="profile-check"><input type="checkbox" checked={form.isActive} onChange={(event) => setForm({ ...form, isActive: event.target.checked })} />{t('hrEmploymentTypeActive')}</label>
-    <button type="submit">{adding ? t('hrAddEmploymentType') : t('hrSaveEmploymentType')}</button>
-  </form>;
+  </FormDialog>;
+  if (adding) return <div className="row-actions">{dialog}</div>;
+  return <div className="profile-row">
+    <span><strong>{type.name}</strong> <span className="code">{type.code}</span> · {type.isActive ? t('hrEmploymentTypeActive') : t('hrEmploymentTypeInactive')}</span>
+    {dialog}
+  </div>;
 }

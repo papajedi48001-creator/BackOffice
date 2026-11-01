@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { t } from '@backoffice/i18n';
+import { ActionDialog } from '../../../../components/action-dialog';
+import { FormDialog } from '../../../../components/form-dialog';
 import { formatBangkokDate } from '../../../../lib/bangkok-time';
 import { leaveErrorMessage } from '../../../../lib/leave-labels';
 
@@ -21,30 +23,46 @@ export function HolidayAddForm({ year }: { year: number }) {
     event.preventDefault();
     const failure = await send('/api/leave/holidays', 'POST', { date: form.date, name: form.name.trim() });
     setError(failure);
-    if (!failure) { setForm({ date: '', name: '' }); router.refresh(); }
+    if (failure) return false;
+    setForm({ date: '', name: '' });
+    router.refresh();
+    return true;
   }
-  return <form aria-label={t('leaveAddHoliday')} className="reason-form" onSubmit={submit}>
-    <div className="form-row">
+  return <div className="form-actions">
+    <FormDialog title={t('leaveAddHoliday')} triggerLabel={t('leaveAddHoliday')} submitLabel={t('leaveAddHoliday')} error={error} onOpenChange={(open) => { if (open) setError(null); }} onSubmit={submit}>
       <div className="form-field"><label htmlFor="holiday-date">{t('leaveHolidayDate')}</label><input id="holiday-date" type="date" min={`${year}-01-01`} max={`${year}-12-31`} required value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} /></div>
       <div className="form-field"><label htmlFor="holiday-name">{t('leaveHolidayName')}</label><input id="holiday-name" maxLength={120} required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></div>
-    </div>
-    {error && <p role="alert" className="form-error">{error}</p>}
-    <div className="form-actions"><button type="submit">{t('leaveAddHoliday')}</button></div>
-  </form>;
+    </FormDialog>
+  </div>;
 }
 
 export function HolidayRow({ holiday }: { holiday: { date: string; name: string } }) {
   const router = useRouter();
   const [name, setName] = useState(holiday.name);
   const [error, setError] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<'rename' | 'delete' | null>(null);
+  const [busy, setBusy] = useState(false);
+  const date = formatBangkokDate(holiday.date);
   async function act(method: 'PUT' | 'DELETE') {
+    setBusy(true);
     const failure = await send(`/api/leave/holidays/${holiday.date}`, method, method === 'PUT' ? { name: name.trim() } : undefined);
+    setBusy(false);
     setError(failure);
     if (!failure) router.refresh();
+    return !failure;
   }
+  const open = (next: 'rename' | 'delete' | null) => { setError(null); setDialog(next); };
   return <tr>
-    <td>{formatBangkokDate(holiday.date)}</td>
-    <td><input aria-label={`${t('leaveHolidayName')} ${formatBangkokDate(holiday.date)}`} value={name} maxLength={120} onChange={(event) => setName(event.target.value)} />{error && <p role="alert" className="form-error">{error}</p>}</td>
-    <td><div className="row-actions"><button type="button" onClick={() => void act('PUT')}>{t('leaveRenameHoliday')}</button><button type="button" className="button-danger" onClick={() => void act('DELETE')}>{t('leaveDeleteHoliday')}</button></div></td>
+    <td>{date}</td>
+    <td>{holiday.name}</td>
+    <td><div className="row-actions">
+      <FormDialog title={`${t('leaveEditHolidayName')} ${date}`} triggerLabel={t('leaveEditHolidayName')} triggerAriaLabel={`${t('leaveEditHolidayName')} ${date}`} triggerClassName="button-secondary" submitLabel={t('leaveRenameHoliday')}
+        open={dialog === 'rename'} onOpenChange={(next) => (next ? open('rename') : setDialog(null))} isSubmitting={busy} error={error} onSubmit={(event) => { event.preventDefault(); return act('PUT'); }}>
+        <div className="form-field"><label htmlFor={`holiday-name-${holiday.date}`}>{t('leaveHolidayName')}</label><input id={`holiday-name-${holiday.date}`} value={name} maxLength={120} required onChange={(event) => setName(event.target.value)} /></div>
+      </FormDialog>
+      <button type="button" className="button-danger" aria-label={`${t('leaveDeleteHoliday')} ${date}`} onClick={() => open('delete')}>{t('leaveDeleteHoliday')}</button>
+    </div>
+    {dialog === 'delete' && <ActionDialog title={`${t('leaveDeleteHoliday')} ${holiday.name}`} message={`${t('dialogConfirmQuestion')} ${date}`} confirmLabel={t('leaveDeleteHoliday')} tone="danger" isSubmitting={busy} error={error}
+      onConfirm={() => void act('DELETE').then((done) => { if (done) setDialog(null); })} onClose={() => setDialog(null)} />}</td>
   </tr>;
 }
