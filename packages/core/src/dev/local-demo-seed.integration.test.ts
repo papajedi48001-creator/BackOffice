@@ -39,6 +39,31 @@ describeWithDatabase('seedLocalDemo', () => {
     expect(admins).toEqual([{ username: 'it001', displayName: 'นายจีระศักดิ์ หอกคำ', organizationId: null }]);
   });
 
+  it('runs again over demo data seeded under another lookup key or edited since, keeps the edits, and still adds IT001 as ผู้ดูแลระบบ', async () => {
+    // Another developer key (or a key changed in .env) gives the same synthetic national IDs a different lookup.
+    const otherKeys = new NationalIdProtector('33'.repeat(32), '44'.repeat(32));
+    await seedLocalDemo(database, otherKeys, { password: 'demo-password-2569' });
+    await database.execute("UPDATE person SET display_name = 'ชื่อที่แก้ไขแล้ว ทดสอบ' WHERE employee_code = 'NUR022'");
+    await database.execute("UPDATE organization SET name = 'งานไอทีที่แก้ไขแล้ว' WHERE code = 'IT'");
+
+    const bareImporters = async () => Number((await database.query<{ count: number }>("SELECT COUNT(*) AS count FROM person WHERE employee_code IS NULL AND display_name IS NULL AND national_id_lookup IN (?, ?)", [protector.lookup('1100000001012'), otherKeys.lookup('1100000001012')]))[0]?.count);
+    const bareBefore = await bareImporters();
+
+    await seedLocalDemo(database, protector, { password: 'demo-password-2569' });
+    await seedLocalDemo(database, protector, { password: 'demo-password-2569' });
+
+    const [edited] = await database.query<{ displayName: string }>("SELECT display_name AS displayName FROM person WHERE employee_code = 'NUR022'");
+    expect(edited?.displayName).toBe('ชื่อที่แก้ไขแล้ว ทดสอบ');
+    const [unit] = await database.query<{ name: string }>("SELECT name FROM organization WHERE code = 'IT'");
+    expect(unit?.name).toBe('งานไอทีที่แก้ไขแล้ว');
+    const admins = await database.query<{ username: string }>("SELECT account.username FROM role_assignment assignment JOIN role ON role.id = assignment.role_id JOIN local_account account ON account.person_id = assignment.person_id WHERE role.name = 'admin' AND account.username = 'it001'");
+    expect(admins).toEqual([{ username: 'it001' }]);
+    const [demoPeople] = await database.query<{ count: number }>("SELECT COUNT(*) AS count FROM person WHERE employee_code IN ('DIR001', 'HR001', 'NUR001', 'NUR014', 'NUR022', 'ADM003', 'LAB002', 'PHA005', 'IT001')");
+    expect(Number(demoPeople?.count)).toBe(9);
+    // No bare importer row is added for the other key.
+    expect(await bareImporters()).toBe(bareBefore);
+  });
+
   it('gives every sample person an employment type and appointment date so they can file leave', async () => {
     await seedLocalDemo(database, protector, { password: 'demo-password-2569' });
     const profiles = await database.query<{ code: string; employmentTypeCode: string | null; appointedOn: string | null }>("SELECT person.employee_code AS code, type.code AS employmentTypeCode, DATE_FORMAT(profile.appointed_on, '%Y-%m-%d') AS appointedOn FROM person LEFT JOIN hr_person_profile profile ON profile.person_id = person.id LEFT JOIN hr_employment_type type ON type.id = profile.employment_type_id WHERE person.employee_code IN ('NUR014', 'NUR022', 'HR001')");
