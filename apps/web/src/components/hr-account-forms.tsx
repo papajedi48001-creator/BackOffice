@@ -9,10 +9,12 @@ import type { ProfileFormPosition, ProfileFormUnit } from './hr-profile-forms';
 
 const errorKeys: Record<string, MessageKey> = {
   DUPLICATE_NATIONAL_ID: 'hrErrorDuplicateNationalId', DUPLICATE_EMPLOYEE_CODE: 'hrErrorDuplicateEmployeeCode', DUPLICATE_USERNAME: 'hrErrorDuplicateUsername',
-  ACCOUNT_EXISTS: 'hrErrorAccountExists', NO_ACCOUNT: 'hrErrorNoAccount', GENDER_REQUIRED: 'hrProfileGenderRequired', INACTIVE_EMPLOYMENT_TYPE: 'hrProfileInactiveType',
+  ACCOUNT_EXISTS: 'hrErrorAccountExists', NO_ACCOUNT: 'hrErrorNoAccount', PROTECTED_ACCOUNT: 'hrErrorProtectedAccount', GENDER_REQUIRED: 'hrProfileGenderRequired', INACTIVE_EMPLOYMENT_TYPE: 'hrProfileInactiveType',
   UNKNOWN_EMPLOYMENT_TYPE: 'hrProfileUnknownType', UNKNOWN_ORGANIZATION: 'hrProfileUnknownOrganization', UNKNOWN_POSITION: 'hrErrorUnknownPosition',
   INACTIVE_POSITION: 'hrErrorInactivePosition', LEVEL_NOT_ALLOWED: 'hrErrorLevelNotAllowed', FORBIDDEN: 'hrProfileForbidden', NOT_FOUND: 'hrPersonNotFound', invalid_input: 'hrErrorPersonInvalid'
 };
+/** Same rule as the server: English letters, digits, dot, underscore and dash. */
+const USERNAME_PATTERN = '[A-Za-z0-9._\\-]{3,64}';
 const orNull = (value: string) => value.trim() === '' ? null : value.trim();
 type Message = { kind: 'error' | 'saved'; text: string } | null;
 const feedbackOf = (message: Message) => message && (message.kind === 'error' ? <p role="alert" className="form-error">{message.text}</p> : <p role="status">{message.text}</p>);
@@ -110,7 +112,7 @@ export function NewPersonForm({ employmentTypes, units, positions }: { employmen
     {text('section', 'hrSection', 255, { list: 'new-person-sections' })}
     <datalist id="new-person-sections">{sections.map((unit) => <option key={unit.id} value={unit.name} />)}</datalist>
     <h4>{t('hrAccountTitle')}</h4>
-    {text('username', 'hrFieldUsername', 64, { required: true, autoComplete: 'off' })}
+    {text('username', 'hrFieldUsername', 64, { required: true, autoComplete: 'off', pattern: USERNAME_PATTERN })}
     <p className="form-hint">{t('hrUsernameFixed')}</p>
     {text('password', 'hrFieldPassword', 128, { required: true, type: 'password', minLength: 8, autoComplete: 'new-password' })}
     <p className="form-hint">{t('hrPasswordHint')}</p>
@@ -125,11 +127,14 @@ export function IdentityForm({ personId, values, username }: { personId: string;
   const [employmentStatus, setEmploymentStatus] = useState(values.employmentStatus);
   const [nationalId, setNationalId] = useState('');
   const [message, setMessage] = useState<Message>(null);
+  const [busy, setBusy] = useState(false);
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setMessage(null);
+    setBusy(true);
     const body = { employeeCode: orNull(employeeCode), employmentStatus, ...(nationalId.trim() === '' ? {} : { nationalId: nationalId.trim() }) };
     const result = await send(`/api/hr/people/${personId}/identity`, 'PUT', body);
+    setBusy(false);
     if (!result.ok) { setMessage({ kind: 'error', text: result.text }); return; }
     setNationalId('');
     setMessage({ kind: 'saved', text: t('hrProfileSaved') });
@@ -148,7 +153,7 @@ export function IdentityForm({ personId, values, username }: { personId: string;
     </label>
     <label>{t('hrNewNationalId')}<input value={nationalId} maxLength={17} inputMode="numeric" autoComplete="off" onChange={(event) => setNationalId(event.target.value)} /></label>
     <p className="form-hint">{t('hrNewNationalIdHint')}</p>
-    <button type="submit">{t('hrSaveIdentity')}</button>
+    <button type="submit" disabled={busy}>{t('hrSaveIdentity')}</button>
   </form>;
 }
 
@@ -158,12 +163,15 @@ export function AccountForm({ personId, username }: { personId: string; username
   const [newUsername, setNewUsername] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState<Message>(null);
+  const [busy, setBusy] = useState(false);
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setMessage(null);
+    setBusy(true);
     const result = username
       ? await send(`/api/hr/people/${personId}/password`, 'PUT', { password })
       : await send(`/api/hr/people/${personId}/account`, 'POST', { username: newUsername.trim(), password });
+    setBusy(false);
     if (!result.ok) { setMessage({ kind: 'error', text: result.text }); return; }
     setPassword('');
     setMessage({ kind: 'saved', text: t('hrProfileSaved') });
@@ -175,13 +183,13 @@ export function AccountForm({ personId, username }: { personId: string; username
     {username ? <>
       <label>{t('hrNewPassword')}<input type="password" value={password} required minLength={8} maxLength={128} autoComplete="new-password" onChange={(event) => setPassword(event.target.value)} /></label>
       <p className="form-hint">{t('hrPasswordSetNote')}</p>
-      <button type="submit">{t('hrSetPassword')}</button>
+      <button type="submit" disabled={busy}>{t('hrSetPassword')}</button>
     </> : <>
       <p>{t('hrNoAccount')}</p>
-      <label>{t('hrFieldUsername')}<input value={newUsername} required maxLength={64} autoComplete="off" onChange={(event) => setNewUsername(event.target.value)} /></label>
+      <label>{t('hrFieldUsername')}<input value={newUsername} required maxLength={64} pattern={USERNAME_PATTERN} autoComplete="off" onChange={(event) => setNewUsername(event.target.value)} /></label>
       <label>{t('hrFieldPassword')}<input type="password" value={password} required minLength={8} maxLength={128} autoComplete="new-password" onChange={(event) => setPassword(event.target.value)} /></label>
       <p className="form-hint">{t('hrUsernameFixed')}</p>
-      <button type="submit">{t('hrCreateAccount')}</button>
+      <button type="submit" disabled={busy}>{t('hrCreateAccount')}</button>
     </>}
   </form>;
 }

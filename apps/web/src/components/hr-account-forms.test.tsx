@@ -107,4 +107,17 @@ describe('AccountForm', () => {
     const [url, init] = lastCall(fetchMock);
     expect([url, init.method]).toEqual(['/api/hr/people/p1/account', 'POST']);
   });
+
+  it('explains why HR cannot set the password of a protected account, and blocks a second click while saving', async () => {
+    let finish: (response: Response) => void = () => undefined;
+    const fetchMock = vi.fn(() => new Promise<Response>((resolve) => { finish = resolve; }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<AccountForm personId="p1" username="admin" />);
+    type('รหัสผ่านใหม่', 'brand-new-pass');
+    fireEvent.click(screen.getByRole('button', { name: 'ตั้งรหัสผ่านใหม่' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'ตั้งรหัสผ่านใหม่' })).toBeDisabled());
+    finish(new Response(JSON.stringify({ error: 'PROTECTED_ACCOUNT' }), { status: 409 }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('ผู้ดูแลระบบ');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });

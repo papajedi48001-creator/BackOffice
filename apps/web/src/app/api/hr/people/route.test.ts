@@ -12,7 +12,7 @@ import { POST as postAccount } from './[personId]/account/route';
 import { PUT as putIdentity } from './[personId]/identity/route';
 import { PUT as putPassword } from './[personId]/password/route';
 
-const manager = { authenticated: true, personId: 'person-a', roles: [{ name: 'hr-manager', organizationId: null }], dataOwnerModules: ['hr'] };
+const manager = { authenticated: true, personId: 'person-a', roles: [{ name: 'hr-manager', organizationId: null }], dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: ['hr'] };
 const params = { params: Promise.resolve({ personId: 'person-b' }) };
 const request = (method: string, body: unknown) => new Request('http://localhost/api/hr/people', { method, body: typeof body === 'string' ? body : JSON.stringify(body) });
 const newPerson = { nationalId: '1101700230708', firstName: 'สมใจ', lastName: 'ใจดี', username: 'somjai', password: 'long-enough-1' };
@@ -94,5 +94,20 @@ describe('identity, password and account of an existing person', () => {
     expect((await postAccount(request('POST', { username: 'somjai', password: 'long-enough-1' }), params)).status).toBe(201);
     mocks.createAccount.mockResolvedValueOnce({ ok: false, code: 'ACCOUNT_EXISTS' });
     expect((await postAccount(request('POST', { username: 'somjai', password: 'long-enough-1' }), params)).status).toBe(409);
+  });
+
+  it('refuses someone who is not a hospital-wide HR manager before reading the body', async () => {
+    ready();
+    mocks.readSession.mockResolvedValue({ authenticated: true, personId: 'reader', roles: [{ name: 'hr-reader', organizationId: null }], dataOwnerModules: [] });
+    expect((await postPerson(request('POST', { nationalId: 'bad' }))).status).toBe(403);
+    expect((await putIdentity(request('PUT', { username: 'x' }), params)).status).toBe(403);
+    expect((await putPassword(request('PUT', { password: 'x' }), params)).status).toBe(403);
+    expect((await postAccount(request('POST', {}), params)).status).toBe(403);
+  });
+
+  it('answers 409 for a protected account', async () => {
+    ready();
+    mocks.setPassword.mockResolvedValueOnce({ ok: false, code: 'PROTECTED_ACCOUNT' });
+    expect((await putPassword(request('PUT', { password: 'brand-new-pass' }), params)).status).toBe(409);
   });
 });

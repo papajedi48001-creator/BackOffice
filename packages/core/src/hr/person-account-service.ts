@@ -16,7 +16,7 @@ type DuplicateCode = 'DUPLICATE_NATIONAL_ID' | 'DUPLICATE_EMPLOYEE_CODE' | 'DUPL
 type ProfileCode = Extract<UpdateProfileResult, { ok: false }>['code'];
 export type CreatePersonResult = { ok: true; id: string } | { ok: false; code: DuplicateCode | ProfileCode };
 export type IdentityResult = { ok: true } | { ok: false; code: 'NOT_FOUND' | 'FORBIDDEN' | DuplicateCode };
-export type PasswordResult = { ok: true } | { ok: false; code: 'NOT_FOUND' | 'FORBIDDEN' | 'NO_ACCOUNT' };
+export type PasswordResult = { ok: true } | { ok: false; code: 'NOT_FOUND' | 'FORBIDDEN' | 'NO_ACCOUNT' | 'PROTECTED_ACCOUNT' };
 export type CreateAccountResult = { ok: true } | { ok: false; code: 'NOT_FOUND' | 'FORBIDDEN' | 'ACCOUNT_EXISTS' | 'DUPLICATE_USERNAME' };
 
 /** Thrown inside a transaction to roll it back and answer with a code. */
@@ -43,7 +43,7 @@ export class PersonAccountService {
         [id, employeeCode ?? null, this.protector.encrypt(nationalId), this.protector.lookup(nationalId), this.protector.mask(nationalId)]);
       const subject = await lockProfileSubject(database, id);
       // The profile save writes the one audit event, as hr.person.create; it names fields, never their values.
-      const saved = await applyProfileUpdate(database, subject!, profile, actor.personId!, this.createId, { canEditOrganization: () => true, syncDisplayName: true, checkPosition: true, auditAction: 'hr.person.create' });
+      const saved = await applyProfileUpdate(database, subject!, profile, actor.personId!, this.createId, { canEditOrganization: () => true, syncDisplayName: true, checkPosition: true, auditAction: 'hr.person.create', extraChangedFields: phone ? ['phone'] : [] });
       if (!saved.ok) throw new Refused(saved.code);
       if (phone) await database.execute('UPDATE hr_person_profile SET phone = ? WHERE person_id = ?', [phone, id]);
       await database.execute('INSERT INTO local_account (id, person_id, username, password_hash, created_at) VALUES (?, ?, ?, ?, UTC_TIMESTAMP())', [this.createId(), id, username, passwordHash]);
@@ -72,6 +72,8 @@ export class PersonAccountService {
       if (duplicate) return { ok: false, code: duplicate };
       if (changedFields.includes('employeeCode')) await database.execute('UPDATE person SET employee_code = ? WHERE id = ?', [valid.employeeCode ?? null, personId]);
       if (changedFields.includes('employmentStatus')) await database.execute('UPDATE person SET employment_status = ? WHERE id = ?', [valid.employmentStatus!, personId]);
+      // A person who has left (พ้นสภาพ) is signed out now; login refuses them until they are active again.
+      if (changedFields.includes('employmentStatus') && valid.employmentStatus === 'INACTIVE') await database.execute('UPDATE user_session SET revoked_at = UTC_TIMESTAMP() WHERE person_id = ? AND revoked_at IS NULL', [personId]);
       if (changedFields.includes('nationalId')) await database.execute('UPDATE person SET national_id_ciphertext = ?, national_id_lookup = ?, national_id_masked = ? WHERE id = ?', [this.protector.encrypt(valid.nationalId!), lookup, this.protector.mask(valid.nationalId!), personId]);
       await this.audit(database, actor.personId!, 'hr.person.identity.update', 'person', personId, { changedFields });
       return { ok: true };
@@ -85,6 +87,9 @@ export class PersonAccountService {
     return this.database.transaction(async (database): Promise<PasswordResult> => {
       const [person] = await database.query<{ id: string }>('SELECT id FROM person WHERE id = ? FOR UPDATE', [personId]);
       if (!person) return { ok: false, code: 'NOT_FOUND' };
+      // HR may not take over its own account or one that holds any role in the system (an administrator, an approver role):
+      // those passwords are changed by their owner or by a system administrator.
+      if (personId === actor.personId || (await database.query('SELECT id FROM role_assignment WHERE person_id = ? LIMIT 1', [personId])).length > 0) return { ok: false, code: 'PROTECTED_ACCOUNT' };
       const [account] = await database.query<{ id: string }>('SELECT id FROM local_account WHERE person_id = ? ORDER BY created_at LIMIT 1', [personId]);
       if (!account) return { ok: false, code: 'NO_ACCOUNT' };
       await database.execute('UPDATE local_account SET password_hash = ? WHERE id = ?', [passwordHash, account.id]);
@@ -137,7 +142,9 @@ async function refusals<T>(work: () => Promise<T>): Promise<T | { ok: false; cod
     if (error instanceof Refused) return { ok: false, code: error.code };
     if (error && typeof error === 'object' && 'errno' in error && error.errno === 1062) {
       const message = String((error as { message?: unknown }).message);
-      return { ok: false, code: message.includes('local_account_username') ? 'DUPLICATE_USERNAME' : message.includes('employee_code') ? 'DUPLICATE_EMPLOYEE_CODE' : 'DUPLICATE_NATIONAL_ID' };
+      if (message.includes('local_account_username')) return { ok: false, code: 'DUPLICATE_USERNAME' };
+      if (message.includes('employee_code')) return { ok: false, code: 'DUPLICATE_EMPLOYEE_CODE' };
+      if (message.includes('national_id_lookup')) return { ok: false, code: 'DUPLICATE_NATIONAL_ID' };
     }
     throw error;
   }

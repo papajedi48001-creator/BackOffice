@@ -108,4 +108,32 @@ describeWithDatabase('PersonAccountService against MariaDB', () => {
     await expect(service.getAccount(someone)).resolves.toEqual({ username });
     expect('updateUsername' in service).toBe(false);
   });
+
+  it('signs out and locks out a person marked พ้นสภาพ, and lets them back in when active again', async () => {
+    const values = input();
+    const id = created(await service.create(values, hrManager));
+    await database.execute('INSERT INTO user_session (id, token_hash, person_id, created_at, last_seen_at, expires_at) VALUES (?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP(), UTC_TIMESTAMP() + INTERVAL 1 DAY)', [randomUUID(), randomUUID().replace(/-/g, '').padEnd(64, '0'), id]);
+    await expect(service.updateIdentity(id, { employmentStatus: 'INACTIVE' }, hrManager)).resolves.toEqual({ ok: true });
+    expect(await count('SELECT COUNT(*) AS n FROM user_session WHERE person_id = ? AND revoked_at IS NULL', [id])).toBe(0);
+    await expect(login(values.username, values.password)).rejects.toThrow('INVALID_CREDENTIALS');
+    await expect(service.updateIdentity(id, { employmentStatus: 'ACTIVE' }, hrManager)).resolves.toEqual({ ok: true });
+    await expect(login(values.username, values.password)).resolves.toMatchObject({ personId: id });
+  });
+
+  it('will not set the password of the HR manager themself or of anyone holding a role in the system', async () => {
+    await expect(service.setPassword(actor, 'brand-new-secret', hrManager)).resolves.toEqual({ ok: false, code: 'PROTECTED_ACCOUNT' });
+    const values = input();
+    const id = created(await service.create(values, hrManager));
+    const roleId = randomUUID();
+    await database.execute('INSERT INTO role (id, name, created_at) VALUES (?, ?, UTC_TIMESTAMP())', [roleId, `admin-${short()}`]);
+    await database.execute('INSERT INTO role_assignment (id, person_id, role_id, organization_id, created_at) VALUES (?, ?, ?, NULL, UTC_TIMESTAMP())', [randomUUID(), id, roleId]);
+    await expect(service.setPassword(id, 'brand-new-secret', hrManager)).resolves.toEqual({ ok: false, code: 'PROTECTED_ACCOUNT' });
+    await expect(login(values.username, values.password)).resolves.toMatchObject({ personId: id });
+  });
+
+  it('records the phone among the fields of the creation audit', async () => {
+    const id = created(await service.create(input(), hrManager));
+    const [audit] = await database.query<{ metadata: string }>('SELECT metadata FROM audit_event WHERE target_id = ? AND action = ?', [id, 'hr.person.create']);
+    expect(JSON.parse(audit!.metadata).changedFields).toContain('phone');
+  });
 });

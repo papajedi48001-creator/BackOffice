@@ -41,8 +41,9 @@ export class DatabaseAccessSubjectLoader implements AccessSubjectLoader {
 export class DatabaseLocalAccountRepository implements LocalAccountRepository {
   constructor(private readonly database: Pick<Database, 'query'>) {}
 
+  /** Only an active person's account: someone marked พ้นสภาพ cannot sign in. */
   async findByUsername(username: string): Promise<LocalAccount | null> {
-    return (await this.database.query<LocalAccount>('SELECT id, person_id AS personId, username, password_hash AS passwordHash FROM local_account WHERE username = ? LIMIT 1', [username]))[0] ?? null;
+    return (await this.database.query<LocalAccount>("SELECT a.id, a.person_id AS personId, a.username, a.password_hash AS passwordHash FROM local_account a JOIN person p ON p.id = a.person_id WHERE a.username = ? AND p.employment_status = 'ACTIVE' LIMIT 1", [username]))[0] ?? null;
   }
 }
 
