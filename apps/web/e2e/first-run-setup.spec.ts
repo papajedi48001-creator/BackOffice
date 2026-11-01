@@ -25,9 +25,10 @@ test('first-run setup creates the first ผู้ดูแลระบบ and th
   await page.getByLabel('ยืนยันรหัสผ่าน').fill('long-enough-pw');
   await page.getByRole('button', { name: 'บันทึกและสร้างบัญชี' }).click();
   await expect(page).toHaveURL(/\/$/);
-  await page.getByLabel('ชื่อผู้ใช้').fill('it001');
-  await page.getByLabel('รหัสผ่าน').fill('long-enough-pw');
+  await page.getByLabel('ชื่อผู้ใช้', { exact: true }).fill('it001');
+  await page.getByRole('textbox', { name: 'รหัสผ่าน' }).fill('long-enough-pw');
   await page.getByRole('button', { name: 'เข้าสู่ระบบ' }).click();
+  await expect(page).toHaveURL(/\/dashboard$/);
   await page.goto('/admin/grants');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   expect((await request.get('/setup')).status()).toBe(404);
