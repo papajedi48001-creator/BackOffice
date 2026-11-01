@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto';
-import { MAX_PROFILE_PHOTO_BYTES, profilePhotoContentTypeSchema, updateOwnPersonalInputSchema, updatePersonContactInputSchema, updatePersonProfileInputSchema, type AccessSubject, type Gender, type UpdateOwnPersonalInput, type UpdatePersonContactInput, type UpdatePersonProfileInput } from '@backoffice/contracts';
+import { levelAllowed, MAX_PROFILE_PHOTO_BYTES, profilePhotoContentTypeSchema, updateOwnPersonalInputSchema, updatePersonContactInputSchema, updatePersonProfileInputSchema, type AccessSubject, type Gender, type UpdateOwnPersonalInput, type UpdatePersonContactInput, type UpdatePersonProfileInput } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { AuditService } from '../audit/audit-service';
 import { DatabaseAuditRepository } from '../audit/database-audit-repository';
 import { toMariaDbDatetime } from '../rooms/database-room-booking-repository';
+import { levelsOf } from './position-catalog-service';
 import { diffProfile, resolveGender } from './profile-changes';
 import { profileAccess, type ProfileAccess } from './profile-access';
 
@@ -27,14 +28,14 @@ const contactFields = ['phone', 'address', 'emergencyContactName', 'emergencyCon
 const profileColumns = {
   namePrefix: 'name_prefix', firstName: 'first_name', lastName: 'last_name', gender: 'gender', birthDate: 'birth_date', phone: 'phone', address: 'address',
   emergencyContactName: 'emergency_contact_name', emergencyContactRelationship: 'emergency_contact_relationship', emergencyContactPhone: 'emergency_contact_phone',
-  employmentTypeId: 'employment_type_id', appointedOn: 'appointed_on', positionLevel: 'position_level'
+  employmentTypeId: 'employment_type_id', appointedOn: 'appointed_on', positionLevel: 'position_level', positionId: 'position_id'
 } as const;
 type ProfileColumn = keyof typeof profileColumns;
 type StoredProfile = Record<ProfileColumn, string | null>;
 type QueryDatabase = Pick<Database, 'query' | 'execute'>;
 export type ProfileSubject = { personId: string; organizationId: string | null; assignmentId: string | null; managerPersonId: string | null; organizationName: string | null; positionTitle: string | null };
 
-export type UpdateProfileResult = { ok: true } | { ok: false; code: 'NOT_FOUND' | 'FORBIDDEN' | 'GENDER_REQUIRED' | 'UNKNOWN_EMPLOYMENT_TYPE' | 'INACTIVE_EMPLOYMENT_TYPE' | 'UNKNOWN_ORGANIZATION' };
+export type UpdateProfileResult = { ok: true } | { ok: false; code: 'NOT_FOUND' | 'FORBIDDEN' | 'GENDER_REQUIRED' | 'UNKNOWN_EMPLOYMENT_TYPE' | 'INACTIVE_EMPLOYMENT_TYPE' | 'UNKNOWN_ORGANIZATION' | 'UNKNOWN_POSITION' | 'INACTIVE_POSITION' | 'LEVEL_NOT_ALLOWED' };
 export type UpdateContactResult = { ok: true } | { ok: false; code: 'NOT_FOUND' | 'FORBIDDEN' };
 export type UpdateOwnPersonalResult = { ok: true } | { ok: false; code: 'NOT_FOUND' | 'FORBIDDEN' | 'GENDER_REQUIRED' };
 export type SetPhotoResult = { ok: true } | { ok: false; code: 'NOT_FOUND' | 'FORBIDDEN' | 'INVALID_PHOTO' };
@@ -99,7 +100,7 @@ export class HrProfileService {
       if (!profileAccess(actor, subject).editProfile) return { ok: false, code: 'FORBIDDEN' };
       return applyProfileUpdate(database, subject, valid, actor.personId!, this.createId, {
         canEditOrganization: (organizationId) => profileAccess(actor, { personId, organizationId }).editProfile,
-        syncDisplayName: true
+        syncDisplayName: true, checkPosition: true
       });
     }, { isolationLevel: 'READ COMMITTED' });
   }
@@ -160,8 +161,10 @@ export class HrProfileService {
  * Writes personal and work fields for a person whose row the caller already locked, with one audit event.
  * Access is the caller's job; the master data import calls this inside its own transaction.
  */
-export async function applyProfileUpdate(database: QueryDatabase, subject: ProfileSubject, valid: UpdatePersonProfileInput, actorPersonId: string, createId: () => string, options: { canEditOrganization: (organizationId: string) => boolean; syncDisplayName: boolean; auditAction?: string }): Promise<UpdateProfileResult> {
+export async function applyProfileUpdate(database: QueryDatabase, subject: ProfileSubject, valid: UpdatePersonProfileInput, actorPersonId: string, createId: () => string, options: { canEditOrganization: (organizationId: string) => boolean; syncDisplayName: boolean; auditAction?: string; checkPosition?: boolean }): Promise<UpdateProfileResult> {
   const stored = await readStoredProfile(database, subject.personId);
+  const position = await resolvePosition(database, subject, stored, valid, options.checkPosition ?? false);
+  if (typeof position === 'string') return { ok: false, code: position };
   let employmentTypeName = stored.employmentTypeId ? await employmentTypeNameOf(database, stored.employmentTypeId) : null;
   const before: Record<string, string | null> = { ...pick(stored, ['namePrefix', 'firstName', 'lastName', 'gender', 'birthDate', 'appointedOn', 'positionLevel']) as Record<string, string | null>, employmentType: employmentTypeName, positionTitle: subject.positionTitle, organization: subject.organizationName };
   if (valid.employmentTypeId !== undefined && valid.employmentTypeId !== stored.employmentTypeId) {
@@ -193,7 +196,7 @@ export async function applyProfileUpdate(database: QueryDatabase, subject: Profi
   const moved = valid.organizationId !== undefined && valid.organizationId !== subject.organizationId;
   if (moved && !changes.changedFields.includes('organization')) changes.changedFields.push('organization');
   if (changes.changedFields.length === 0) return { ok: true };
-  const merged: StoredProfile = { ...stored, ...defined(pick(valid, ['namePrefix', 'firstName', 'lastName', 'birthDate', 'employmentTypeId', 'appointedOn', 'positionLevel'])), gender };
+  const merged: StoredProfile = { ...stored, ...defined(pick(valid, ['namePrefix', 'firstName', 'lastName', 'birthDate', 'employmentTypeId', 'appointedOn', 'positionLevel'])), gender, positionId: position.positionId };
   await writeProfile(database, subject.personId, merged);
   if (options.syncDisplayName && ['namePrefix', 'firstName', 'lastName'].some((field) => changes.changedFields.includes(field)) && (merged.firstName || merged.lastName)) {
     await database.execute('UPDATE person SET display_name = ? WHERE id = ?', [`${merged.namePrefix ?? ''}${merged.firstName ?? ''} ${merged.lastName ?? ''}`.trim(), subject.personId]);
@@ -204,6 +207,38 @@ export async function applyProfileUpdate(database: QueryDatabase, subject: Profi
   if (moved && valid.organizationId === null) await database.execute('UPDATE employment_assignment SET effective_until = UTC_TIMESTAMP() WHERE person_id = ? AND effective_until IS NULL', [subject.personId]);
   await recordProfileAudit(database, options.auditAction ?? 'hr.person.profile.update', subject.personId, actorPersonId, changes, createId);
   return { ok: true };
+}
+
+/**
+ * Links the position title to the catalogue and checks the level against it (ก.พ. structure).
+ * Only a changed title or level is checked, so a person still on an older free-text title can be saved untouched.
+ * HR's form is strict; the master data import links a title it finds and keeps any other as free text.
+ */
+async function resolvePosition(database: QueryDatabase, subject: ProfileSubject, stored: StoredProfile, valid: UpdatePersonProfileInput, strict: boolean): Promise<{ positionId: string | null } | 'UNKNOWN_POSITION' | 'INACTIVE_POSITION' | 'LEVEL_NOT_ALLOWED'> {
+  const titleChanged = valid.positionTitle !== undefined && valid.positionTitle !== subject.positionTitle;
+  const levelChanged = valid.positionLevel !== undefined && valid.positionLevel !== stored.positionLevel;
+  let positionId = stored.positionId;
+  // A person never linked (older data) is linked through the title they already hold, so a level-only change is checked too.
+  if (!titleChanged && positionId === null && subject.positionTitle) {
+    const [found] = await database.query<{ id: string }>('SELECT id FROM hr_position WHERE name = ? LOCK IN SHARE MODE', [subject.positionTitle]);
+    positionId = found?.id ?? null;
+  }
+  if (titleChanged) {
+    if (valid.positionTitle === null) positionId = null;
+    else {
+      // A shared lock keeps the position from being renamed or deleted until this save commits.
+      const [found] = await database.query<{ id: string; isActive: number }>('SELECT id, is_active AS isActive FROM hr_position WHERE name = ? LOCK IN SHARE MODE', [valid.positionTitle]);
+      if (!found && strict) return 'UNKNOWN_POSITION';
+      if (found && !found.isActive && strict) return 'INACTIVE_POSITION';
+      positionId = found?.id ?? null;
+    }
+  }
+  if (strict && (titleChanged || levelChanged) && positionId) {
+    const [held] = await database.query<{ allowedLevels: string | string[] }>('SELECT allowed_levels AS allowedLevels FROM hr_position WHERE id = ? LOCK IN SHARE MODE', [positionId]);
+    const level = valid.positionLevel !== undefined ? valid.positionLevel : stored.positionLevel;
+    if (held && !levelAllowed(levelsOf(held.allowedLevels), level ?? null)) return 'LEVEL_NOT_ALLOWED';
+  }
+  return { positionId };
 }
 
 function recordProfileAudit(database: QueryDatabase, action: string, personId: string, actorPersonId: string | null, changes: { changedFields: string[]; workChanges: WorkChanges }, createId: () => string): Promise<void> {

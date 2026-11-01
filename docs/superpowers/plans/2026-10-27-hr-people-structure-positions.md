@@ -67,7 +67,7 @@ Each service sits behind Next.js route handlers guarded by `canActHospitalWide`.
 - [x] PR A.
 
 ### Task B1: Position catalogue
-- [ ] Failing tests:
+- [x] Failing tests:
   - contracts: the levels by category, and an `allowedLevels` value must be a contiguous subset of its category's levels;
   - integration:
     - the seed exists;
@@ -75,14 +75,14 @@ Each service sits behind Next.js route handlers guarded by `canActHospitalWide`.
     - delete it only when unused, otherwise `POSITION_IN_USE`;
     - a CSV import adds or updates by name;
     - a profile save checks the position and level (`UNKNOWN_POSITION`, `INACTIVE_POSITION`, `LEVEL_NOT_ALLOWED`).
-- [ ] Migration `0019_hr_position.sql`: the table, the seed, and `hr_person_profile.position_id`.
-- [ ] Commit `feat(hr): position catalogue with ก.พ. levels`.
+- [x] Migration `0019_hr_position.sql`: the table, the seed, and `hr_person_profile.position_id`.
+- [x] Commit `feat(hr): position catalogue with ก.พ. levels`.
 
 ### Task B2: Positions page and person form suggestions
-- [ ] Failing tests:
+- [x] Failing tests:
   - the `/hr/positions` page and its routes;
   - the person form suggests positions, and suggests only the allowed levels of the chosen position.
-- [ ] Commit `feat(web): manage positions and suggest position and level`.
+- [x] Commit `feat(web): manage positions and suggest position and level`.
 - [ ] PR B.
 
 ### Task C1: Create a person with an account; edit identity fields
