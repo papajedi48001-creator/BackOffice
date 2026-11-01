@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { levelAllowed, MAX_PROFILE_PHOTO_BYTES, profilePhotoContentTypeSchema, updateOwnPersonalInputSchema, updatePersonContactInputSchema, updatePersonProfileInputSchema, type AccessSubject, type Gender, type UpdateOwnPersonalInput, type UpdatePersonContactInput, type UpdatePersonProfileInput } from '@backoffice/contracts';
+import { levelAllowed, MAX_KP7_FILE_BYTES, MAX_PROFILE_PHOTO_BYTES, profilePhotoContentTypeSchema, updateOwnPersonalInputSchema, updatePersonContactInputSchema, updatePersonFamilyInputSchema, updatePersonProfileInputSchema, type AccessSubject, type Gender, type MaritalStatus, type UpdateOwnPersonalInput, type UpdatePersonContactInput, type UpdatePersonFamilyInput, type UpdatePersonProfileInput } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { AuditService } from '../audit/audit-service';
 import { DatabaseAuditRepository } from '../audit/database-audit-repository';
@@ -16,20 +16,28 @@ export interface ProfileWork {
 export interface ProfilePrivate {
   namePrefix: string | null; firstName: string | null; lastName: string | null; gender: Gender | null; birthDate: string | null;
   phone: string | null; address: string | null; emergencyContactName: string | null; emergencyContactRelationship: string | null; emergencyContactPhone: string | null;
+  maritalStatus: MaritalStatus | null; religion: string | null; birthplace: string | null; fatherName: string | null; motherName: string | null; motherMaidenName: string | null;
+  spouseName: string | null; spouseMaidenName: string | null; childrenCount: number | null;
+  /** The ก.พ.7 PDF, opened through the attachment download route. */
+  kp7File: { attachmentId: string; uploadedAt: string } | null;
 }
 export type WorkChanges = Record<string, { from: string | null; to: string | null }>;
 export interface ProfileChange { at: string; actorDisplayName: string | null; action: string; changedFields: string[]; workChanges: WorkChanges; }
 export interface ProfileView { work: ProfileWork; private: ProfilePrivate | null; access: ProfileAccess; history: ProfileChange[]; }
 
-export const profileAuditActions = ['hr.person.profile.update', 'hr.person.personal.update', 'hr.person.contact.update', 'hr.person.photo.update'] as const;
+export const profileAuditActions = ['hr.person.profile.update', 'hr.person.personal.update', 'hr.person.contact.update', 'hr.person.photo.update', 'hr.person.family.update', 'hr.person.kp7.update'] as const;
 const historyLimit = 50;
 const workFields = ['employmentType', 'appointedOn', 'positionTitle', 'positionLevel', 'organization'] as const;
 const contactFields = ['phone', 'address', 'emergencyContactName', 'emergencyContactRelationship', 'emergencyContactPhone'] as const;
 const profileColumns = {
   namePrefix: 'name_prefix', firstName: 'first_name', lastName: 'last_name', gender: 'gender', birthDate: 'birth_date', phone: 'phone', address: 'address',
   emergencyContactName: 'emergency_contact_name', emergencyContactRelationship: 'emergency_contact_relationship', emergencyContactPhone: 'emergency_contact_phone',
-  employmentTypeId: 'employment_type_id', appointedOn: 'appointed_on', positionLevel: 'position_level', positionId: 'position_id'
+  employmentTypeId: 'employment_type_id', appointedOn: 'appointed_on', positionLevel: 'position_level', positionId: 'position_id',
+  maritalStatus: 'marital_status', religion: 'religion', birthplace: 'birthplace', fatherName: 'father_name', motherName: 'mother_name',
+  motherMaidenName: 'mother_maiden_name', spouseName: 'spouse_name', spouseMaidenName: 'spouse_maiden_name', childrenCount: 'children_count'
 } as const;
+/** ข้อมูลส่วนตัวและครอบครัว on the ก.พ.7. */
+const familyFields = ['maritalStatus', 'religion', 'birthplace', 'fatherName', 'motherName', 'motherMaidenName', 'spouseName', 'spouseMaidenName', 'childrenCount'] as const;
 type ProfileColumn = keyof typeof profileColumns;
 type StoredProfile = Record<ProfileColumn, string | null>;
 type QueryDatabase = Pick<Database, 'query' | 'execute'>;
@@ -38,6 +46,8 @@ export type ProfileSubject = { personId: string; organizationId: string | null; 
 export type UpdateProfileResult = { ok: true } | { ok: false; code: 'NOT_FOUND' | 'FORBIDDEN' | 'GENDER_REQUIRED' | 'UNKNOWN_EMPLOYMENT_TYPE' | 'INACTIVE_EMPLOYMENT_TYPE' | 'UNKNOWN_ORGANIZATION' | 'UNKNOWN_POSITION' | 'INACTIVE_POSITION' | 'LEVEL_NOT_ALLOWED' };
 export type UpdateContactResult = { ok: true } | { ok: false; code: 'NOT_FOUND' | 'FORBIDDEN' };
 export type UpdateOwnPersonalResult = { ok: true } | { ok: false; code: 'NOT_FOUND' | 'FORBIDDEN' | 'GENDER_REQUIRED' };
+export type UpdateFamilyResult = { ok: true } | { ok: false; code: 'NOT_FOUND' | 'FORBIDDEN' };
+export type SetKp7FileResult = { ok: true } | { ok: false; code: 'NOT_FOUND' | 'FORBIDDEN' | 'INVALID_FILE' };
 export type SetPhotoResult = { ok: true } | { ok: false; code: 'NOT_FOUND' | 'FORBIDDEN' | 'INVALID_PHOTO' };
 
 const isSelf = (actor: AccessSubject, personId: string) => actor.authenticated && actor.personId === personId;
@@ -72,11 +82,17 @@ export class HrProfileService {
   }
 
   private async readPrivate(personId: string): Promise<ProfilePrivate> {
-    const [row] = await this.database.query<ProfilePrivate>(
-      `SELECT name_prefix AS namePrefix, first_name AS firstName, last_name AS lastName, gender, DATE_FORMAT(birth_date, '%Y-%m-%d') AS birthDate,
-         phone, address, emergency_contact_name AS emergencyContactName, emergency_contact_relationship AS emergencyContactRelationship, emergency_contact_phone AS emergencyContactPhone
-       FROM hr_person_profile WHERE person_id = ?`, [personId]);
-    return row ?? { namePrefix: null, firstName: null, lastName: null, gender: null, birthDate: null, phone: null, address: null, emergencyContactName: null, emergencyContactRelationship: null, emergencyContactPhone: null };
+    const [row] = await this.database.query<Omit<ProfilePrivate, 'kp7File' | 'childrenCount'> & { childrenCount: number | string | null; kp7AttachmentId: string | null; kp7UploadedAt: string | null }>(
+      `SELECT pr.name_prefix AS namePrefix, pr.first_name AS firstName, pr.last_name AS lastName, pr.gender, DATE_FORMAT(pr.birth_date, '%Y-%m-%d') AS birthDate,
+         pr.phone, pr.address, pr.emergency_contact_name AS emergencyContactName, pr.emergency_contact_relationship AS emergencyContactRelationship, pr.emergency_contact_phone AS emergencyContactPhone,
+         pr.marital_status AS maritalStatus, pr.religion, pr.birthplace, pr.father_name AS fatherName, pr.mother_name AS motherName, pr.mother_maiden_name AS motherMaidenName,
+         pr.spouse_name AS spouseName, pr.spouse_maiden_name AS spouseMaidenName, pr.children_count AS childrenCount,
+         pr.kp7_attachment_id AS kp7AttachmentId, DATE_FORMAT(k.created_at, '%Y-%m-%dT%H:%i:%sZ') AS kp7UploadedAt
+       FROM hr_person_profile pr LEFT JOIN attachment k ON k.id = pr.kp7_attachment_id WHERE pr.person_id = ?`, [personId]);
+    if (!row) return { namePrefix: null, firstName: null, lastName: null, gender: null, birthDate: null, phone: null, address: null, emergencyContactName: null, emergencyContactRelationship: null, emergencyContactPhone: null,
+      maritalStatus: null, religion: null, birthplace: null, fatherName: null, motherName: null, motherMaidenName: null, spouseName: null, spouseMaidenName: null, childrenCount: null, kp7File: null };
+    const { kp7AttachmentId, kp7UploadedAt, childrenCount, ...rest } = row;
+    return { ...rest, childrenCount: childrenCount === null ? null : Number(childrenCount), kp7File: kp7AttachmentId ? { attachmentId: kp7AttachmentId, uploadedAt: kp7UploadedAt! } : null };
   }
 
   private async readHistory(personId: string): Promise<ProfileChange[]> {
@@ -129,6 +145,44 @@ export class HrProfileService {
       if (!subject) return { ok: false, code: 'NOT_FOUND' };
       const result = await applyProfileUpdate(database, subject, valid, personId, this.createId, { canEditOrganization: () => false, syncDisplayName: true, auditAction: 'hr.person.personal.update' });
       return result.ok || result.code === 'NOT_FOUND' || result.code === 'FORBIDDEN' || result.code === 'GENDER_REQUIRED' ? result as UpdateOwnPersonalResult : { ok: false, code: 'FORBIDDEN' };
+    }, { isolationLevel: 'READ COMMITTED' });
+  }
+
+  /** ข้อมูลส่วนตัวและครอบครัว (ก.พ.7): the person themself or HR. The audit names the changed fields, never their values. */
+  async updateFamily(personId: string, input: UpdatePersonFamilyInput, actor: AccessSubject): Promise<UpdateFamilyResult> {
+    const valid = updatePersonFamilyInputSchema.parse(input);
+    return this.database.transaction(async (database): Promise<UpdateFamilyResult> => {
+      const subject = await lockProfileSubject(database, personId);
+      if (!subject) return { ok: false, code: 'NOT_FOUND' };
+      if (!profileAccess(actor, subject).editContact) return { ok: false, code: 'FORBIDDEN' };
+      const stored = await readStoredProfile(database, personId);
+      const asText = (value: string | number | null | undefined) => value === undefined || value === null ? value : String(value);
+      const before = Object.fromEntries(familyFields.map((field) => [field, asText(stored[field])])) as Record<string, string | null>;
+      const after = Object.fromEntries(familyFields.map((field) => [field, asText(valid[field])]));
+      const changes = diffProfile(before, after, []);
+      if (changes.changedFields.length === 0) return { ok: true };
+      await writeProfile(database, personId, { ...stored, ...defined(after) });
+      await recordProfileAudit(database, 'hr.person.family.update', personId, actor.personId ?? null, changes, this.createId);
+      return { ok: true };
+    }, { isolationLevel: 'READ COMMITTED' });
+  }
+
+  /** Sets (or with null removes) the person's ก.พ.7 file: a PDF the actor uploaded themself. The person and HR may. */
+  async setKp7File(personId: string, attachmentId: string | null, actor: AccessSubject): Promise<SetKp7FileResult> {
+    return this.database.transaction(async (database): Promise<SetKp7FileResult> => {
+      const subject = await lockProfileSubject(database, personId);
+      if (!subject) return { ok: false, code: 'NOT_FOUND' };
+      if (!profileAccess(actor, subject).editContact) return { ok: false, code: 'FORBIDDEN' };
+      if (attachmentId !== null) {
+        const [file] = await database.query<{ contentType: string; sizeBytes: string; createdBy: string }>('SELECT content_type AS contentType, size_bytes AS sizeBytes, created_by_person_id AS createdBy FROM attachment WHERE id = ?', [attachmentId]);
+        if (!file || file.createdBy !== actor.personId || file.contentType !== 'application/pdf' || Number(file.sizeBytes) > MAX_KP7_FILE_BYTES) return { ok: false, code: 'INVALID_FILE' };
+      }
+      const [current] = await database.query<{ file: string | null }>('SELECT kp7_attachment_id AS file FROM hr_person_profile WHERE person_id = ?', [personId]);
+      if ((current?.file ?? null) === attachmentId) return { ok: true };
+      await database.execute(`INSERT INTO hr_person_profile (person_id, kp7_attachment_id, updated_at) VALUES (?, ?, UTC_TIMESTAMP())
+        ON DUPLICATE KEY UPDATE kp7_attachment_id = VALUES(kp7_attachment_id), updated_at = VALUES(updated_at)`, [personId, attachmentId]);
+      await recordProfileAudit(database, 'hr.person.kp7.update', personId, actor.personId ?? null, { changedFields: ['kp7File'], workChanges: {} }, this.createId);
+      return { ok: true };
     }, { isolationLevel: 'READ COMMITTED' });
   }
 
