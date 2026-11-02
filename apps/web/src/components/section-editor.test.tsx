@@ -23,6 +23,18 @@ it('closes with the × button without saving', () => {
   expect(screen.queryByRole('dialog')).toBeNull();
 });
 
+it('stays open on Esc or a click outside it, so typed data is not lost', () => {
+  render(<SectionEditor title="ข้อมูลติดต่อ"><FakeForm /></SectionEditor>);
+  fireEvent.click(screen.getByRole('button', { name: 'แก้ไขข้อมูล ข้อมูลติดต่อ' }));
+  const dialog = screen.getByRole('dialog', { name: 'แก้ไขข้อมูลติดต่อ' });
+  expect(dialog).toHaveAttribute('closedby', 'none');
+  const esc = new Event('cancel', { cancelable: true });
+  fireEvent(dialog, esc);
+  expect(esc.defaultPrevented).toBe(true);
+  fireEvent.click(dialog);
+  expect(screen.getByRole('dialog', { name: 'แก้ไขข้อมูลติดต่อ' })).toBeInTheDocument();
+});
+
 it('lets a form outside any popup call saved without failing', () => {
   render(<FakeForm />);
   fireEvent.click(screen.getByRole('button', { name: 'บันทึก' }));

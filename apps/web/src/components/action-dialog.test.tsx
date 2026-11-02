@@ -2,13 +2,19 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import { ActionDialog } from './action-dialog';
 
-it('opens as a modal named by its title and closes on Esc', () => {
+it('opens as a modal named by its title and stays open on Esc or a click outside it', () => {
   const onClose = vi.fn();
   render(<ActionDialog title="ไม่อนุมัติ" confirmLabel="ไม่อนุมัติ" tone="danger" reason onConfirm={vi.fn()} onClose={onClose} />);
   const dialog = screen.getByRole('dialog', { name: 'ไม่อนุมัติ' });
   expect(dialog).toHaveAttribute('open');
-  fireEvent(dialog, new Event('cancel', { cancelable: true }));
-  expect(onClose).toHaveBeenCalled();
+  expect(dialog).toHaveAttribute('closedby', 'none');
+  const esc = new Event('cancel', { cancelable: true });
+  fireEvent(dialog, esc);
+  expect(esc.defaultPrevented).toBe(true);
+  fireEvent.click(dialog);
+  expect(onClose).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'ยกเลิก' }));
+  expect(onClose).toHaveBeenCalledTimes(1);
 });
 
 it('needs a reason before confirming when asked for one', () => {

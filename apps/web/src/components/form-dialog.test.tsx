@@ -26,16 +26,20 @@ it('closes after a submit that reports success and stays open otherwise', async 
   expect(screen.queryByRole('dialog')).toBeNull();
 });
 
-it('closes on Esc, backdrop, × and cancel, but not while submitting', () => {
+it('closes only from × and cancel, never on Esc or a click outside it, and not while submitting', () => {
   const onOpenChange = vi.fn();
   const { rerender } = render(<FormDialog open onOpenChange={onOpenChange} title="แก้ไข" submitLabel="บันทึก" error="บันทึกไม่ได้" onSubmit={vi.fn()}><Fields /></FormDialog>);
   expect(screen.getByRole('alert')).toHaveTextContent('บันทึกไม่ได้');
   const dialog = screen.getByRole('dialog', { name: 'แก้ไข' });
-  fireEvent(dialog, new Event('cancel', { cancelable: true }));
+  expect(dialog).toHaveAttribute('closedby', 'none');
+  const esc = new Event('cancel', { cancelable: true });
+  fireEvent(dialog, esc);
+  expect(esc.defaultPrevented).toBe(true);
   fireEvent.click(dialog);
+  expect(onOpenChange).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: 'ปิด' }));
   fireEvent.click(screen.getByRole('button', { name: 'ยกเลิก' }));
-  expect(onOpenChange).toHaveBeenCalledTimes(4);
+  expect(onOpenChange).toHaveBeenCalledTimes(2);
   expect(onOpenChange).toHaveBeenCalledWith(false);
   onOpenChange.mockClear();
   rerender(<FormDialog open onOpenChange={onOpenChange} title="แก้ไข" submitLabel="บันทึก" isSubmitting onSubmit={vi.fn()}><Fields /></FormDialog>);

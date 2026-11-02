@@ -6,8 +6,8 @@ import { t } from '@backoffice/i18n';
 type SubmitResult = boolean | void | Promise<boolean | void>;
 
 /**
- * Popup for every add, edit and delete-with-fields form. Same native <dialog> look as ActionDialog: showModal, Esc and
- * backdrop close, × button, focus on the first field. Opened from its own trigger button (`triggerLabel`) or controlled
+ * Popup for every add, edit and delete-with-fields form. Same native <dialog> look as ActionDialog: showModal, focus on
+ * the first field, and closed only by its ×, ยกเลิก or a successful save (never Esc or a click outside). Opened from its own trigger button (`triggerLabel`) or controlled
  * with `open` / `onOpenChange` (for a row's "แก้ไข" button). `onSubmit` returns true when the save worked; the popup then closes.
  */
 export function FormDialog({ title, triggerLabel, triggerAriaLabel, triggerClassName, triggerDisabled, submitLabel, tone = 'primary', wide = false, isSubmitting = false, ready = true, error, open: controlledOpen, onOpenChange, onSubmit, children }: {
@@ -47,6 +47,7 @@ function FormDialogPanel({ title, submitLabel, tone, wide, isSubmitting, ready, 
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
+    dialog.setAttribute('closedby', 'none');
     if (!dialog.open) { if (typeof dialog.showModal === 'function') dialog.showModal(); else dialog.setAttribute('open', ''); }
     const first = dialog.querySelector<HTMLElement>('.form-dialog-body :is(input, select, textarea):not([type=hidden]):not(:disabled)');
     first?.focus();
@@ -61,8 +62,7 @@ function FormDialogPanel({ title, submitLabel, tone, wide, isSubmitting, ready, 
     try { if ((await result) === true) onClose(); } finally { setBusy(false); }
   }
   return <dialog ref={ref} className={`action-dialog form-dialog tone-${tone}${wide ? ' form-dialog-wide' : ''}`} aria-labelledby={titleId}
-    onCancel={(event) => { event.preventDefault(); close(); }}
-    onClick={(event) => { if (event.target === event.currentTarget) close(); }}>
+    onCancel={(event) => event.preventDefault()}>
     <form className="action-dialog-panel" aria-labelledby={titleId} noValidate={false} onSubmit={(event) => void submit(event)}>
       <header className="action-dialog-header">
         <h2 id={titleId}>{title}</h2>
