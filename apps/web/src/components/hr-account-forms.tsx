@@ -6,6 +6,9 @@ import { genderForPrefix, type Gender } from '@backoffice/contracts';
 import { t, type MessageKey } from '@backoffice/i18n';
 import { genderLabelKeys } from '../lib/hr-profile-labels';
 import type { ProfileFormPosition, ProfileFormUnit } from './hr-profile-forms';
+import { NewPasswordField, passwordProblem } from './new-password-field';
+
+const submitProblem = (password: string, confirm: string): MessageKey | null => passwordProblem(password, confirm) ?? (password === confirm ? null : 'hrPasswordMismatch');
 
 const errorKeys: Record<string, MessageKey> = {
   DUPLICATE_NATIONAL_ID: 'hrErrorDuplicateNationalId', DUPLICATE_EMPLOYEE_CODE: 'hrErrorDuplicateEmployeeCode', DUPLICATE_USERNAME: 'hrErrorDuplicateUsername',
@@ -36,6 +39,7 @@ type NewPersonField = typeof fields[number];
 export function NewPersonForm({ employmentTypes, units, positions }: { employmentTypes: { id: string; name: string }[]; units: ProfileFormUnit[]; positions: ProfileFormPosition[] }) {
   const router = useRouter();
   const [form, setForm] = useState(() => Object.fromEntries(fields.map((field) => [field, ''])) as Record<NewPersonField, string>);
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [message, setMessage] = useState<Message>(null);
   const [busy, setBusy] = useState(false);
   const chosenPosition = positions.find((position) => position.name === form.positionTitle.trim());
@@ -67,6 +71,8 @@ export function NewPersonForm({ employmentTypes, units, positions }: { employmen
   }
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    const passwordError = submitProblem(form.password, confirmPassword);
+    if (passwordError) { setMessage({ kind: 'error', text: t(passwordError) }); return; }
     const positionError = checkPosition();
     if (positionError) { setMessage({ kind: 'error', text: t(positionError) }); return; }
     const unit = chosenUnit();
@@ -114,7 +120,7 @@ export function NewPersonForm({ employmentTypes, units, positions }: { employmen
     <h4>{t('hrAccountTitle')}</h4>
     {text('username', 'hrFieldUsername', 64, { required: true, autoComplete: 'off', pattern: USERNAME_PATTERN })}
     <p className="form-hint">{t('hrUsernameFixed')}</p>
-    {text('password', 'hrFieldPassword', 128, { required: true, type: 'password', minLength: 8, autoComplete: 'new-password' })}
+    <NewPasswordField label="hrFieldPassword" value={form.password} confirm={confirmPassword} onChange={(password) => setForm((current) => ({ ...current, password }))} onConfirmChange={setConfirmPassword} />
     <p className="form-hint">{t('hrPasswordHint')}</p>
     <button type="submit" disabled={busy}>{t('hrCreatePerson')}</button>
   </form>;
@@ -162,10 +168,13 @@ export function AccountForm({ personId, username }: { personId: string; username
   const router = useRouter();
   const [newUsername, setNewUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
   const [message, setMessage] = useState<Message>(null);
   const [busy, setBusy] = useState(false);
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    const passwordError = submitProblem(password, confirm);
+    if (passwordError) { setMessage({ kind: 'error', text: t(passwordError) }); return; }
     setMessage(null);
     setBusy(true);
     const result = username
@@ -174,6 +183,7 @@ export function AccountForm({ personId, username }: { personId: string; username
     setBusy(false);
     if (!result.ok) { setMessage({ kind: 'error', text: result.text }); return; }
     setPassword('');
+    setConfirm('');
     setMessage({ kind: 'saved', text: t('hrProfileSaved') });
     router.refresh();
   }
@@ -181,13 +191,13 @@ export function AccountForm({ personId, username }: { personId: string; username
     <h4>{t('hrAccountTitle')}</h4>
     {feedbackOf(message)}
     {username ? <>
-      <label>{t('hrNewPassword')}<input type="password" value={password} required minLength={8} maxLength={128} autoComplete="new-password" onChange={(event) => setPassword(event.target.value)} /></label>
+      <NewPasswordField label="hrNewPassword" value={password} confirm={confirm} onChange={setPassword} onConfirmChange={setConfirm} />
       <p className="form-hint">{t('hrPasswordSetNote')}</p>
       <button type="submit" disabled={busy}>{t('hrSetPassword')}</button>
     </> : <>
       <p>{t('hrNoAccount')}</p>
       <label>{t('hrFieldUsername')}<input value={newUsername} required maxLength={64} pattern={USERNAME_PATTERN} autoComplete="off" onChange={(event) => setNewUsername(event.target.value)} /></label>
-      <label>{t('hrFieldPassword')}<input type="password" value={password} required minLength={8} maxLength={128} autoComplete="new-password" onChange={(event) => setPassword(event.target.value)} /></label>
+      <NewPasswordField label="hrFieldPassword" value={password} confirm={confirm} onChange={setPassword} onConfirmChange={setConfirm} />
       <p className="form-hint">{t('hrUsernameFixed')}</p>
       <button type="submit" disabled={busy}>{t('hrCreateAccount')}</button>
     </>}

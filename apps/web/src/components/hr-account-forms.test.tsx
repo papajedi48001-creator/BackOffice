@@ -23,7 +23,8 @@ describe('NewPersonForm', () => {
     type('ชื่อ', 'สมใจ');
     type('นามสกุล', 'ใจดี');
     type(/ชื่อผู้ใช้/, 'somjai');
-    type(/รหัสผ่าน/, 'long-enough-1');
+    type('รหัสผ่าน', 'long-enough-1');
+    type('ยืนยันรหัสผ่าน', 'long-enough-1');
   }
 
   it('creates the person with กลุ่มงาน, งาน and position, then opens their page', async () => {
@@ -52,6 +53,17 @@ describe('NewPersonForm', () => {
     type('ระดับตำแหน่ง', 'ปฏิบัติการ');
     fireEvent.click(screen.getByRole('button', { name: 'บันทึกบุคลากรใหม่' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('ระดับนี้ใช้กับตำแหน่งนี้ไม่ได้');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('does not send when the two passwords differ', async () => {
+    const fetchMock = respond(201, { ok: true, id: 'person-new' });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<NewPersonForm employmentTypes={[]} units={units} positions={positions} />);
+    fillRequired();
+    type('ยืนยันรหัสผ่าน', 'long-enough-2');
+    fireEvent.click(screen.getByRole('button', { name: 'บันทึกบุคลากรใหม่' }));
+    expect(await screen.findAllByRole('alert')).not.toHaveLength(0);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -88,11 +100,23 @@ describe('AccountForm', () => {
     vi.stubGlobal('fetch', fetchMock);
     render(<AccountForm personId="p1" username="somjai" />);
     type('รหัสผ่านใหม่', 'brand-new-pass');
+    type('ยืนยันรหัสผ่าน', 'brand-new-pass');
     fireEvent.click(screen.getByRole('button', { name: 'ตั้งรหัสผ่านใหม่' }));
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('บันทึกแล้ว'));
     const [url, init] = lastCall(fetchMock);
     expect([url, init.method]).toEqual(['/api/hr/people/p1/password', 'PUT']);
     expect(JSON.parse(init.body as string)).toEqual({ password: 'brand-new-pass' });
+  });
+
+  it('does not set a password typed on a Thai keyboard', async () => {
+    const fetchMock = respond(200, { ok: true });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<AccountForm personId="p1" username="somjai" />);
+    type('รหัสผ่านใหม่', 'หกฟหกฟหกฟ');
+    type('ยืนยันรหัสผ่าน', 'หกฟหกฟหกฟ');
+    fireEvent.click(screen.getByRole('button', { name: 'ตั้งรหัสผ่านใหม่' }));
+    expect(screen.getAllByRole('alert')[0]).toHaveTextContent('แป้นพิมพ์อาจเป็นภาษาไทย');
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('creates an account for a person without one', async () => {
@@ -101,7 +125,8 @@ describe('AccountForm', () => {
     render(<AccountForm personId="p1" username={null} />);
     expect(screen.getByText('ยังไม่มีบัญชีผู้ใช้')).toBeInTheDocument();
     type(/ชื่อผู้ใช้/, 'somjai');
-    type(/รหัสผ่าน/, 'long-enough-1');
+    type('รหัสผ่าน', 'long-enough-1');
+    type('ยืนยันรหัสผ่าน', 'long-enough-1');
     fireEvent.click(screen.getByRole('button', { name: 'สร้างบัญชีผู้ใช้' }));
     await waitFor(() => expect(mocks.refresh).toHaveBeenCalled());
     const [url, init] = lastCall(fetchMock);
@@ -114,6 +139,7 @@ describe('AccountForm', () => {
     vi.stubGlobal('fetch', fetchMock);
     render(<AccountForm personId="p1" username="admin" />);
     type('รหัสผ่านใหม่', 'brand-new-pass');
+    type('ยืนยันรหัสผ่าน', 'brand-new-pass');
     fireEvent.click(screen.getByRole('button', { name: 'ตั้งรหัสผ่านใหม่' }));
     await waitFor(() => expect(screen.getByRole('button', { name: 'ตั้งรหัสผ่านใหม่' })).toBeDisabled());
     finish(new Response(JSON.stringify({ error: 'PROTECTED_ACCOUNT' }), { status: 409 }));
