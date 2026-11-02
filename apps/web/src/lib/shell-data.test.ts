@@ -23,6 +23,19 @@ describe('loadShellData', () => {
     expect(shell.bell).toEqual({ unread: 1, items: [{ id: 'n-1', moduleLabel: 'การลา', module: 'leave', subject: 'อนุมัติ > หัวหน้ากลุ่มการพยาบาล', readAt: null, createdAt: '2026-10-26T03:00:00.000Z' }] });
   });
 
+  it('tells the chat button whether the person is ผู้ดูแลระบบ and how many chat messages wait', async () => {
+    const query = vi.fn(async (sql: string) => sql.includes('FROM support_conversation') ? [{ total: 2 }] : []);
+    expect((await loadShellData({ query } as unknown as Database, session)).chat).toEqual({ admin: false, images: false, unread: 2 });
+    const admin = { ...session, roles: [{ name: 'admin', organizationId: null }] };
+    expect((await loadShellData({ query } as unknown as Database, admin)).chat).toMatchObject({ admin: true, unread: 2 });
+  });
+
+  it('still renders the page when the chat count fails', async () => {
+    const query = vi.fn(async (sql: string) => { if (sql.includes('support_conversation')) throw Object.assign(new Error('no table'), { code: 'ER_NO_SUCH_TABLE' }); return []; });
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect((await loadShellData({ query } as unknown as Database, session)).chat.unread).toBe(0);
+  });
+
   it('leaves the notification menu out when nothing is unread and asks the bell for unread notices only', async () => {
     const query = vi.fn(async (sql: string) => {
       if (sql.includes('AS found')) return [{ found: 0 }];

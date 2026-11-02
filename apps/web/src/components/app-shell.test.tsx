@@ -22,3 +22,8 @@ it('puts the module submit action first in the top row, before the permission no
   const action = screen.getByRole('button', { name: 'ยื่นใบลา' });
   expect(action.compareDocumentPosition(screen.getByText('รายการที่แสดงเป็นไปตามสิทธิ์ของคุณ')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });
+
+it('puts the แชตกับผู้ดูแลระบบ button on every page', () => {
+  render(<AppShell navigation={[{ href: '/dashboard', label: 'dashboard', module: 'home' }]} chat={{ admin: false, images: true, unread: 1 }}><p>เนื้อหา</p></AppShell>);
+  expect(screen.getByRole('button', { name: 'แชตกับผู้ดูแลระบบ 1 ข้อความที่ยังไม่อ่าน' })).toBeInTheDocument();
+});
