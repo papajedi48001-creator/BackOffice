@@ -566,3 +566,6 @@ video.inventory-camera { display: block; flex-basis: 100%; width: 100%; max-widt
 .filter-bar label { display: grid; gap: 4px; min-width: 180px; flex: 1 1 180px; }
 .filter-bar label:first-child { flex: 2 1 260px; }
 .filter-count { color: var(--muted, #5b6b66); margin: 4px 0 12px; }
+
+.password-field { display: flex; gap: 8px; align-items: end; }
+.password-field label { flex: 1; }
