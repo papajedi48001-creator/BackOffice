@@ -66,7 +66,7 @@ export const th = {
   hrFieldFirstAppointedOn: 'วันที่บรรจุครั้งแรก', hrFieldReappointedOn: 'วันที่บรรจุกลับ', hrFieldTransferredInOn: 'วันที่รับโอน', hrFieldTransferredOutOn: 'วันที่ให้โอน',
   hrFieldJoinedUnitOn: 'วันเข้าสู่หน่วยงานปัจจุบัน', hrFieldCurrentLevelSince: 'วันเข้าสู่ระดับปัจจุบัน', hrFieldQualification: 'วุฒิในตำแหน่ง', hrFieldQualificationMajor: 'สาขา/วิชาเอก',
   hrFieldSpecialAllowance: 'เงินเพิ่มพิเศษ', hrFieldRetirementDate: 'วันเกษียณอายุ',
-  filterAll: 'ทั้งหมด', peopleSearch: 'ค้นหารายชื่อ', hrShowPassword: 'แสดงรหัสผ่าน', hrHidePassword: 'ซ่อนรหัสผ่าน', hrConfirmPassword: 'ยืนยันรหัสผ่าน', hrPasswordMismatch: 'รหัสผ่านทั้งสองช่องไม่ตรงกัน',
+  filterAll: 'ทั้งหมด', peopleSearch: 'ค้นหารายชื่อ', hrEditSection: 'แก้ไขข้อมูล', hrEditPrefix: 'แก้ไข', hrShowPassword: 'แสดงรหัสผ่าน', hrHidePassword: 'ซ่อนรหัสผ่าน', hrConfirmPassword: 'ยืนยันรหัสผ่าน', hrPasswordMismatch: 'รหัสผ่านทั้งสองช่องไม่ตรงกัน',
   hrPasswordNotAscii: 'รหัสผ่านต้องเป็นอักษรภาษาอังกฤษ ตัวเลข หรือสัญลักษณ์ (แป้นพิมพ์อาจเป็นภาษาไทย)', peopleSearchPlaceholder: 'ชื่อ นามสกุล หรือรหัสบุคลากร', peopleShown: 'แสดง', peopleOf: 'จาก', peopleUnit: 'คน', peopleNoMatch: 'ไม่พบบุคลากรที่ตรงกับเงื่อนไข',
   hrProfilePositionHistory: 'ตำแหน่งและอัตราเงินเดือน (ก.พ.7)', hrEditPositionHistory: 'แก้ไขตำแหน่งและอัตราเงินเดือน', hrSavePositionHistory: 'บันทึกตำแหน่งและอัตราเงินเดือน', hrAddPositionHistory: 'เพิ่มรายการ',
   hrNoPositionHistory: 'ยังไม่มีประวัติตำแหน่งและอัตราเงินเดือน', hrFieldEffectiveOn: 'วันที่', hrFieldHistoryDescription: 'รายการ', hrFieldPositionType: 'ประเภท', hrFieldHistoryLevel: 'ระดับ',

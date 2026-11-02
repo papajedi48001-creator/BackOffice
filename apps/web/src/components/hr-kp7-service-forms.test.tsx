@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ refresh: vi.fn() }));
@@ -70,16 +70,20 @@ describe('HrProfileView ก.พ.7 service and education boxes', async () => {
     expect(screen.getByRole('region', { name: 'ข้อมูลการปฏิบัติราชการ (ก.พ.7)' })).toHaveTextContent('25,000.50');
     expect(screen.getByRole('region', { name: 'ข้อมูลการปฏิบัติราชการ (ก.พ.7)' })).toHaveTextContent('สมัคร');
     expect(screen.getByRole('region', { name: 'ข้อมูลการศึกษา (ก.พ.7)' })).toHaveTextContent('มหาวิทยาลัยทดสอบ');
-    expect(screen.queryByRole('form', { name: 'แก้ไขข้อมูลการปฏิบัติราชการ' })).toBeNull();
-    expect(screen.getByRole('form', { name: 'แก้ไขข้อมูลการศึกษา' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'แก้ไขข้อมูล ข้อมูลการปฏิบัติราชการ (ก.พ.7)' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'แก้ไขข้อมูล ข้อมูลการศึกษา (ก.พ.7)' }));
+    expect(within(screen.getByRole('dialog')).getByRole('form', { name: 'แก้ไขข้อมูลการศึกษา' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'ตำแหน่งและอัตราเงินเดือน (ก.พ.7)' })).toHaveTextContent('คำสั่งที่ 1/2563');
     expect(screen.getByRole('region', { name: 'ตำแหน่งและอัตราเงินเดือน (ก.พ.7)' })).toHaveTextContent('15,000.00');
-    expect(screen.queryByRole('form', { name: 'แก้ไขตำแหน่งและอัตราเงินเดือน' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'แก้ไขข้อมูล ตำแหน่งและอัตราเงินเดือน (ก.พ.7)' })).toBeNull();
   });
 
   it('gives HR the civil-service form', () => {
     render(<HrProfileView view={view(true)} contactEndpoint="/x" />);
-    expect(screen.getByRole('form', { name: 'แก้ไขข้อมูลการปฏิบัติราชการ' })).toBeInTheDocument();
-    expect(screen.getByRole('form', { name: 'แก้ไขตำแหน่งและอัตราเงินเดือน' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'แก้ไขข้อมูล ข้อมูลการปฏิบัติราชการ (ก.พ.7)' }));
+    expect(within(screen.getByRole('dialog')).getByRole('form', { name: 'แก้ไขข้อมูลการปฏิบัติราชการ' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'ปิด' }));
+    fireEvent.click(screen.getByRole('button', { name: 'แก้ไขข้อมูล ตำแหน่งและอัตราเงินเดือน (ก.พ.7)' }));
+    expect(within(screen.getByRole('dialog')).getByRole('form', { name: 'แก้ไขตำแหน่งและอัตราเงินเดือน' })).toBeInTheDocument();
   });
 });
