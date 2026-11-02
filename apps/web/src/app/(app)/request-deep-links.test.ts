@@ -15,7 +15,7 @@ describe('request form deep links open the module page with the popup', () => {
     await NewTravelPage();
     expect(mocks.redirect).toHaveBeenLastCalledWith('/travel/mine?request=1');
     await NewRoomBookingPage();
-    expect(mocks.redirect).toHaveBeenLastCalledWith('/rooms?request=1');
+    expect(mocks.redirect).toHaveBeenLastCalledWith('/rooms/dashboard?request=1');
     await NewFleetRequestPage({ searchParams: Promise.resolve({}) });
     expect(mocks.redirect).toHaveBeenLastCalledWith('/fleet/mine?request=1');
     await NewFleetRequestPage({ searchParams: Promise.resolve({ travel: 'travel 1' }) });

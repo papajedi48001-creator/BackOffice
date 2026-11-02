@@ -15,6 +15,11 @@ it('sends an old week or day calendar link to the week calendar with its query',
   expect(mocks.redirect).toHaveBeenCalledWith('/rooms/calendar?view=day&date=2026-11-05');
 });
 
+it('keeps the request popup deep link when it lands on /rooms', async () => {
+  await expect(Page({ searchParams: Promise.resolve({ request: '1' }) })).rejects.toThrow('redirected');
+  expect(mocks.redirect).toHaveBeenCalledWith('/rooms/dashboard?request=1');
+});
+
 it('opens the first section otherwise', async () => {
   const element = await Page({ searchParams: Promise.resolve({}) });
   expect(mocks.redirect).not.toHaveBeenCalled();

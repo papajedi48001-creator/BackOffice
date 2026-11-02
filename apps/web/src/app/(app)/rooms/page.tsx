@@ -9,5 +9,6 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
     for (const key of ['view', 'week', 'date', 'roomId']) { const value = params[key]; if (typeof value === 'string') query.set(key, value); }
     redirect(`/rooms/calendar?${query.toString()}`);
   }
+  if (params.request === '1') redirect('/rooms/dashboard?request=1');
   return <ModuleIndex code="room-booking" />;
 }
