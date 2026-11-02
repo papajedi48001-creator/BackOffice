@@ -41,4 +41,16 @@ describe('RequestsPage', () => {
 
     expect(screen.getByText('ไม่มีคำขอรอคุณพิจารณา')).toBeInTheDocument();
   });
+
+  it('does not offer a maintenance request while that module is not built yet', async () => {
+    mocks.headers.mockResolvedValue(new Headers());
+    mocks.readSession.mockResolvedValue({ authenticated: true, personId: 'staff', roles: [], dataOwnerModules: [] });
+    mocks.getSharedDatabase.mockReturnValue({ query: mocks.query });
+    mocks.listPendingApprovals.mockResolvedValue([]);
+    mocks.query.mockImplementation(async (sql: string) => sql.includes('employment_assignment') ? [{ organizationId: 'org-1' }] : []);
+
+    render(await RequestsPage());
+
+    expect(screen.queryByRole('button', { name: 'สร้างคำขอซ่อมบำรุง' })).not.toBeInTheDocument();
+  });
 });
