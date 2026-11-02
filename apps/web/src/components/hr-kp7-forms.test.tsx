@@ -69,13 +69,15 @@ describe('HrProfileView ก.พ.7 boxes', () => {
     const { unmount } = render(<HrProfileView view={view(true)} contactEndpoint="/x" uploadsEnabled />);
     const box = screen.getByRole('region', { name: 'ข้อมูลส่วนตัวและครอบครัว (ก.พ.7)' });
     expect(within(box).getByText('โสด')).toBeInTheDocument();
-    expect(screen.getByRole('form', { name: 'แก้ไขข้อมูลครอบครัว' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'แก้ไขข้อมูล ข้อมูลส่วนตัวและครอบครัว (ก.พ.7)' }));
+    expect(within(screen.getByRole('dialog')).getByRole('form', { name: 'แก้ไขข้อมูลครอบครัว' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'ปิด' }));
     expect(screen.getByRole('link', { name: 'เปิดไฟล์ ก.พ.7' })).toBeInTheDocument();
     expect(screen.getByText('สถานภาพ', { selector: 'li' })).toBeInTheDocument();
     expect(screen.getByText('ไฟล์ ก.พ.7', { selector: 'li' })).toBeInTheDocument();
     unmount();
     render(<HrProfileView view={view(false)} contactEndpoint="/x" uploadsEnabled />);
-    expect(screen.queryByRole('form', { name: 'แก้ไขข้อมูลครอบครัว' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'แก้ไขข้อมูล ข้อมูลส่วนตัวและครอบครัว (ก.พ.7)' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'ลบไฟล์ ก.พ.7' })).toBeNull();
     expect(screen.getByRole('link', { name: 'เปิดไฟล์ ก.พ.7' })).toBeInTheDocument();
   });

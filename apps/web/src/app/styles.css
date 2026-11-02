@@ -569,3 +569,7 @@ video.inventory-camera { display: block; flex-basis: 100%; width: 100%; max-widt
 
 .password-field { display: flex; gap: 8px; align-items: end; }
 .password-field label { flex: 1; }
+
+.profile-box-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.profile-box-header h3 { margin: 0; }
+.section-edit { padding: 6px 14px; }
