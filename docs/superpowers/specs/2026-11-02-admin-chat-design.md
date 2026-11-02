@@ -66,7 +66,7 @@ API (`apps/web/src/app/api/support-chat/…`):
 - `GET /mine` → ข้อความ 200 ล่าสุดของตัวเอง; `POST /mine/messages`; `POST /mine/read`
 - `GET /conversations` (admin) ; `GET /conversations/[id]` (admin); `POST /conversations/[id]/messages`; `POST /conversations/[id]/read`
 - `GET /images/[attachmentId]` → รูป inline ผ่าน `AttachmentAccess` (ไม่บันทึกการดาวน์โหลดทุกครั้งที่แสดง)
-- อัปโหลดรูปใช้ `POST /api/attachments` เดิม (สแกนไวรัส ตรวจ signature)
+- `POST /images` → อัปโหลดรูปของแชต (JPEG/PNG/WebP ≤ 10 MB) ผ่าน `AttachmentService` เดิม (สแกนไวรัส ตรวจ signature)
 
 ข้อความแชตไม่ถูกเขียนลง log, audit metadata, notification หรือ outbox
 
