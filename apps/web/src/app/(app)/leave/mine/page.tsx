@@ -14,7 +14,7 @@ export default async function MyLeavePage({ searchParams }: { searchParams: Prom
   const queries = new LeaveQueries(database);
   const [balances, items] = await Promise.all([queries.balances(session.personId, fiscalYear), queries.myLeave(session.personId, fiscalYear)]);
   return <section>
-    <div className="page-heading"><h2>{t('leaveMine')}</h2><div className="page-actions"><Link className="button-link" href="/leave/new">{t('leaveNew')}</Link></div></div>
+    <div className="page-heading"><h2>{t('leaveMine')}</h2></div>
     <p className="permission-notice">{t('leaveFiscalYear')} {fiscalYear} · <Link href={`/leave/mine?fy=${fiscalYear - 1}`}>{fiscalYear - 1}</Link> · <Link href={`/leave/mine?fy=${fiscalYear + 1}`}>{fiscalYear + 1}</Link></p>
     <h3>{t('leaveBalanceTitle')}</h3>
     {balances.length === 0 ? <p>{t('leaveNoBalances')}</p> : <div className="leave-balances">

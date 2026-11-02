@@ -11,11 +11,18 @@ services:
     extends:
       file: docker-compose.production.yml
       service: web
+    # Staging keeps its operator-managed database URL secret, so the first-run setup page never opens there.
+    environment:
+      DATABASE_URL_FILE: /run/secrets/database_url
+    secrets: [database_url]
 
   worker:
     extends:
       file: docker-compose.production.yml
       service: worker
+    environment:
+      DATABASE_URL_FILE: /run/secrets/database_url
+    secrets: [database_url]
 
   mariadb:
     extends:
@@ -66,6 +73,7 @@ volumes:
   redis-data: {}
   seaweedfs-data: {}
   clamav-data: {}
+  backoffice-config: {}
 
 secrets:
   database_url:

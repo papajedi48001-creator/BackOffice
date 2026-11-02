@@ -1,6 +1,6 @@
 # Backup and restore operations
 
-`backup.sh` creates a daily encrypted archive containing a consistent MariaDB dump and the private object-storage data. It writes a non-sensitive JSON completion record beside the archive. The operator supplies secret file paths and the retention duration from an approved operational policy; neither values nor keys belong in Git.
+`backup.sh` creates a daily encrypted archive containing a consistent MariaDB dump, the private object-storage data, and the web app's config volume (`config.tar`, the database URL saved by the first-run setup page; it holds the database password, so it exists only inside the encrypted archive). It writes a non-sensitive JSON completion record beside the archive. The operator supplies secret file paths and the retention duration from an approved operational policy; neither values nor keys belong in Git.
 
 Required host tools are Docker Compose, GNU tar, GnuPG, and SHA-256 tooling. Run from a protected operator account:
 
@@ -22,3 +22,5 @@ infra/backup/restore-verify.sh
 ```
 
 `--check` verifies local command prerequisites only; it is not a restore drill. Record the archive name, SHA-256, operator, time, and result in the restore evidence record after every real drill.
+
+When MariaDB runs outside Compose (`docker-compose.external-db.yml`), `backup.sh` cannot dump it: back the database up on its own host with the approved procedure, and keep the config volume with `docker compose ... exec -T web tar -C /var/lib/backoffice/config -cf - . | gpg --symmetric ...` under the same retention.

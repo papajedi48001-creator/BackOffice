@@ -85,4 +85,14 @@ describe('SessionService', () => {
     await expect(sessions.resolve(token)).resolves.toBeNull();
     await expect(sessions.revoke('unknown')).resolves.toBeNull();
   });
+  it('gives a session whose password must change no access, only the right to change the password', async () => {
+    const repository = new MemorySessionRepository();
+    const sessions = service(repository);
+    const { token } = await sessions.start('person-a');
+    await expect(sessions.pendingPasswordChange(token)).resolves.toBeNull();
+    for (const row of repository.rows.values()) row.mustChangePassword = true;
+    await expect(sessions.resolve(token)).resolves.toBeNull();
+    await expect(sessions.pendingPasswordChange(token)).resolves.toEqual({ personId: 'person-a' });
+    await expect(sessions.pendingPasswordChange('unknown')).resolves.toBeNull();
+  });
 });

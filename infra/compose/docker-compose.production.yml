@@ -22,7 +22,8 @@ services:
     environment:
       NODE_ENV: production
       HOSTNAME: 0.0.0.0
-      DATABASE_URL_FILE: /run/secrets/database_url
+      # The first-run setup page (/setup) saves the database URL here; see docs/runbooks/deploy.md.
+      BACKOFFICE_CONFIG_DIR: /var/lib/backoffice/config
       BACKOFFICE_SESSION_SECRET_FILE: /run/secrets/session_secret
       NATIONAL_ID_ENCRYPTION_KEY_FILE: /run/secrets/national_id_encryption_key
       NATIONAL_ID_LOOKUP_KEY_FILE: /run/secrets/national_id_lookup_key
@@ -33,7 +34,8 @@ services:
       CLAMD_HOST: clamav
       CLAMD_PORT: "3310"
       REDIS_URL: redis://redis:6379
-    secrets: [database_url, session_secret, national_id_encryption_key, national_id_lookup_key, s3_access_key_id, s3_secret_access_key]
+    secrets: [session_secret, national_id_encryption_key, national_id_lookup_key, s3_access_key_id, s3_secret_access_key]
+    volumes: [backoffice-config:/var/lib/backoffice/config]
     networks: [backplane, storage, scan]
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3000/api/health"]
@@ -47,9 +49,9 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      DATABASE_URL_FILE: /run/secrets/database_url
+      BACKOFFICE_CONFIG_DIR: /var/lib/backoffice/config
       REDIS_URL: redis://redis:6379
-    secrets: [database_url]
+    volumes: [backoffice-config:/var/lib/backoffice/config:ro]
     networks: [backplane]
 
   mariadb:
@@ -129,10 +131,9 @@ volumes:
   redis-data: {}
   seaweedfs-data: {}
   clamav-data: {}
+  backoffice-config: {}
 
 secrets:
-  database_url:
-    file: ${DATABASE_URL_FILE:?set DATABASE_URL_FILE}
   session_secret:
     file: ${BACKOFFICE_SESSION_SECRET_FILE:?set BACKOFFICE_SESSION_SECRET_FILE}
   national_id_encryption_key:

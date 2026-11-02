@@ -56,9 +56,9 @@ describe('module registry', () => {
 
   it('splits room booking into sections, with approvals and room management by role', () => {
     const sections = (roles: { name: string; organizationId: string | null }[]) => moduleRegistry.find((entry) => entry.code === 'room-booking')!.sections!.filter((section) => section.visible(subject({ roles }))).map((section) => section.href);
-    expect(sections([])).toEqual(['/rooms/dashboard', '/rooms/calendar', '/rooms/bookings/new', '/rooms/bookings']);
+    expect(sections([])).toEqual(['/rooms/dashboard', '/rooms/calendar', '/rooms/bookings']);
     expect(sections([{ name: 'room-booking-approver', organizationId: null }])).toContain('/rooms/approvals');
-    expect(sections([{ name: 'room-manager', organizationId: null }])).toEqual(['/rooms/dashboard', '/rooms/calendar', '/rooms/bookings/new', '/rooms/bookings', '/rooms/manage']);
+    expect(sections([{ name: 'room-manager', organizationId: null }])).toEqual(['/rooms/dashboard', '/rooms/calendar', '/rooms/bookings', '/rooms/manage']);
   });
 
   it('badges the room approvals tab with what waits for the approver', async () => {
@@ -111,8 +111,8 @@ describe('official travel module', () => {
 
   it('is live in the mine group with HR sections only for travel.manage', () => {
     expect(moduleRegistry.find((entry) => entry.code === 'official-travel')).toMatchObject({ status: 'live', group: 'mine', href: '/travel', labelKey: 'moduleTravel' });
-    expect(sectionHrefs('official-travel', subject())).toEqual(['/travel/mine', '/travel/new', '/travel/approvals']);
-    expect(sectionHrefs('official-travel', manager)).toEqual(['/travel/mine', '/travel/new', '/travel/approvals', '/travel/all', '/travel/settings']);
+    expect(sectionHrefs('official-travel', subject())).toEqual(['/travel/mine', '/travel/approvals']);
+    expect(sectionHrefs('official-travel', manager)).toEqual(['/travel/mine', '/travel/approvals', '/travel/all', '/travel/settings']);
   });
 });
 
@@ -158,8 +158,8 @@ describe('leave module', () => {
 
   it('is live in the mine group with staff sections first and HR sections after', () => {
     expect(moduleRegistry.find((entry) => entry.code === 'leave')).toMatchObject({ status: 'live', group: 'mine', href: '/leave' });
-    expect(sectionHrefs('leave', subject())).toEqual(['/leave/mine', '/leave/new', '/leave/approvals', '/leave/calendar']);
-    expect(sectionHrefs('leave', manager)).toEqual(['/leave/mine', '/leave/new', '/leave/approvals', '/leave/calendar', '/leave/all', '/leave/settings', '/leave/holidays', '/leave/balances']);
+    expect(sectionHrefs('leave', subject())).toEqual(['/leave/mine', '/leave/approvals', '/leave/calendar']);
+    expect(sectionHrefs('leave', manager)).toEqual(['/leave/mine', '/leave/approvals', '/leave/calendar', '/leave/all', '/leave/settings', '/leave/holidays', '/leave/balances']);
   });
 
   it('counts the ใบลา waiting on the person on the อนุมัติการลา section', async () => {
@@ -231,7 +231,7 @@ describe('ไปราชการ approvals tab', () => {
   const hrefs = async (database: Database) => (await availableSections(moduleSections('official-travel', subject()), database, subject())).map((section) => section.href);
 
   it('shows อนุมัติไปราชการ only to someone who may approve a trip', async () => {
-    expect(await hrefs(travelDb(0, 0))).toEqual(['/travel/mine', '/travel/new']);
+    expect(await hrefs(travelDb(0, 0))).toEqual(['/travel/mine']);
     expect(await hrefs(travelDb(1, 0))).toContain('/travel/approvals');
     expect(await hrefs(travelDb(0, 1))).toContain('/travel/approvals');
   });
@@ -287,5 +287,30 @@ describe('admin module', () => {
 
   it('labels the home page หน้าหลัก', () => {
     expect(navigationFor(subject())[0]).toMatchObject({ href: '/dashboard', label: 'dashboard' });
+  });
+});
+
+describe('submit actions', () => {
+  it('gives request modules a top submit action and leaves data-management modules without one', () => {
+    const actions = Object.fromEntries(navigationFor(subject()).filter((item) => item.submitAction).map((item) => [item.module, item.submitAction]));
+    expect(actions).toEqual({
+      leave: { href: '/leave/new', label: 'leaveNew', icon: 'leave' },
+      'official-travel': { href: '/travel/new', label: 'travelSubmitAction', icon: 'travel' },
+      fleet: { href: '/fleet/new', label: 'fleetNew', icon: 'car' },
+      'room-booking': { href: '/rooms/bookings/new', label: 'bookRoom', icon: 'room' }
+    });
+  });
+});
+
+describe('request forms open as a popup from the top button', () => {
+  it('lists no request form as a sub-nav tab: the top button is the single entry point', () => {
+    for (const entry of moduleRegistry.filter((item) => item.submitAction)) {
+      expect((entry.sections ?? []).map((section) => section.href)).not.toContain(entry.submitAction!.href);
+    }
+  });
+
+  it('has a popup form for every module with a submit action', async () => {
+    const { requestFormModules } = await import('../components/request-form');
+    expect([...requestFormModules].sort()).toEqual(moduleRegistry.filter((item) => item.submitAction).map((item) => item.code).sort());
   });
 });

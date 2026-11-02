@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSectionSaved } from './section-editor';
 import { genderForPrefix, type Gender } from '@backoffice/contracts';
 import { t, type MessageKey } from '@backoffice/i18n';
 import { genderLabelKeys } from '../lib/hr-profile-labels';
@@ -16,12 +17,13 @@ const orNull = (value: string) => value.trim() === '' ? null : value.trim();
 
 function useSave(endpoint: string) {
   const router = useRouter();
+  const sectionSaved = useSectionSaved();
   const [message, setMessage] = useState<{ kind: 'error' | 'saved'; text: string } | null>(null);
   async function save(body: unknown): Promise<boolean> {
     setMessage(null);
     try {
       const response = await fetch(endpoint, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-      if (response.ok) { setMessage({ kind: 'saved', text: t('hrProfileSaved') }); router.refresh(); return true; }
+      if (response.ok) { setMessage({ kind: 'saved', text: t('hrProfileSaved') }); router.refresh(); sectionSaved(); return true; }
       const code = ((await response.json()) as { error?: string }).error;
       setMessage({ kind: 'error', text: t(code && errorKeys[code] ? errorKeys[code] : 'hrProfileSaveFailed') });
     } catch { setMessage({ kind: 'error', text: t('hrProfileSaveFailed') }); }
@@ -104,7 +106,7 @@ export function ProfileForm({ personId, values, employmentTypes, units, position
     return save({ ...Object.fromEntries(Object.entries(rest).filter(([key]) => key !== 'organizationId').map(([key, value]) => [key, orNull(value)])), gender: gender === '' ? null : gender, ...(unit === undefined ? {} : { organizationId: unit }) });
   }
   const text = (field: keyof ProfileFormValues, label: MessageKey, max: number) => <label>{t(label)}<input value={form[field]} onChange={set(field)} maxLength={max} /></label>;
-  return <div className="profile-form">{saved}<FormDialog triggerLabel={t('hrEditProfile')} title={t('hrEditProfile')} submitLabel={t('hrSaveProfile')} wide error={clientError ?? error} onOpenChange={(open) => { reset(open); setClientError(null); }} onSubmit={submit}>
+  return <div className="profile-form">{saved}<FormDialog triggerLabel={t('hrEditSection')} triggerAriaLabel={t('hrEditProfile')} triggerClassName="button-secondary section-edit" title={t('hrEditProfile')} submitLabel={t('hrSaveProfile')} wide error={clientError ?? error} onOpenChange={(open) => { reset(open); setClientError(null); }} onSubmit={submit}>
     <label>{t('hrFieldNamePrefix')}<input value={form.namePrefix} onChange={changePrefix} maxLength={32} /></label>
     {text('firstName', 'hrFieldFirstName', 120)}
     {text('lastName', 'hrFieldLastName', 120)}
@@ -149,7 +151,7 @@ export function PersonalForm({ endpoint, values }: { endpoint: string; values: P
     const { gender, ...rest } = form;
     return save({ ...Object.fromEntries(Object.entries(rest).map(([key, value]) => [key, orNull(value)])), gender: gender === '' ? null : gender });
   }
-  return <div className="profile-form">{saved}<FormDialog triggerLabel={t('hrEditPersonal')} title={t('hrEditPersonal')} submitLabel={t('hrSavePersonal')} error={error} onOpenChange={reset} onSubmit={submit}>
+  return <div className="profile-form">{saved}<FormDialog triggerLabel={t('hrEditSection')} triggerAriaLabel={t('hrEditPersonal')} triggerClassName="button-secondary section-edit" title={t('hrEditPersonal')} submitLabel={t('hrSavePersonal')} error={error} onOpenChange={reset} onSubmit={submit}>
     <label>{t('hrFieldNamePrefix')}<input value={form.namePrefix} onChange={changePrefix} maxLength={32} /></label>
     <label>{t('hrFieldFirstName')}<input value={form.firstName} onChange={set('firstName')} maxLength={120} /></label>
     <label>{t('hrFieldLastName')}<input value={form.lastName} onChange={set('lastName')} maxLength={120} /></label>
@@ -169,6 +171,7 @@ const photoErrorKeys: Record<string, MessageKey> = { UNSUPPORTED_FILE_TYPE: 'hrP
 /** The person's own รูปประจำตัว: JPEG, PNG or WebP up to 2 MB. Without object storage it only says uploads are unavailable. */
 export function PhotoForm({ photoUrl, initials, uploadsEnabled }: { photoUrl: string | null; initials: string; uploadsEnabled: boolean }) {
   const router = useRouter();
+  const sectionSaved = useSectionSaved();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ kind: 'error' | 'saved'; text: string } | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -177,7 +180,7 @@ export function PhotoForm({ photoUrl, initials, uploadsEnabled }: { photoUrl: st
     setBusy(true); setMessage(null);
     try {
       const response = await fetch('/api/hr/me/photo', init);
-      if (response.ok) { setMessage({ kind: 'saved', text: t(saved) }); router.refresh(); return true; }
+      if (response.ok) { setMessage({ kind: 'saved', text: t(saved) }); router.refresh(); sectionSaved(); return true; }
       const code = ((await response.json().catch(() => ({}))) as { error?: string }).error;
       setMessage({ kind: 'error', text: t(code && photoErrorKeys[code] ? photoErrorKeys[code] : 'hrPhotoFailed') });
     } catch { setMessage({ kind: 'error', text: t('hrPhotoFailed') }); } finally { setBusy(false); }
@@ -229,7 +232,7 @@ export function ContactForm({ endpoint, values }: { endpoint: string; values: Co
     event.preventDefault();
     return save(Object.fromEntries(Object.entries(form).map(([key, value]) => [key, orNull(value)])));
   }
-  return <div className="profile-form">{saved}<FormDialog triggerLabel={t('hrEditContact')} title={t('hrEditContact')} submitLabel={t('hrSaveContact')} error={error} onOpenChange={reset} onSubmit={submit}>
+  return <div className="profile-form">{saved}<FormDialog triggerLabel={t('hrEditSection')} triggerAriaLabel={t('hrEditContact')} triggerClassName="button-secondary section-edit" title={t('hrEditContact')} submitLabel={t('hrSaveContact')} error={error} onOpenChange={reset} onSubmit={submit}>
     {field('phone', 'hrFieldPhone', 32, 'tel')}
     <label>{t('hrFieldAddress')}<textarea value={form.address} maxLength={500} onChange={(event) => setForm((current) => ({ ...current, address: event.target.value }))} /></label>
     {field('emergencyContactName', 'hrFieldEmergencyContactName', 255)}

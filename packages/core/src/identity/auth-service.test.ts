@@ -23,7 +23,7 @@ describe('LocalAuthService', () => {
   it('authenticates only a local account with the matching password and audits both outcomes', async () => {
     const { service, audits } = await setup();
 
-    await expect(service.authenticateLocal({ username: 'hr.admin', password: 'correct-password' })).resolves.toEqual({ personId: 'person-a', accountId: 'account-a' });
+    await expect(service.authenticateLocal({ username: 'hr.admin', password: 'correct-password' })).resolves.toEqual({ personId: 'person-a', accountId: 'account-a', mustChangePassword: false });
     await expect(service.authenticateLocal({ username: 'hr.admin', password: 'wrong-password' })).rejects.toThrow('INVALID_CREDENTIALS');
 
     expect(audits).toEqual([

@@ -1,11 +1,13 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { genderForPrefix, type Gender } from '@backoffice/contracts';
 import { t, type MessageKey } from '@backoffice/i18n';
 import { genderLabelKeys } from '../lib/hr-profile-labels';
 import type { ProfileFormPosition, ProfileFormUnit } from './hr-profile-forms';
+import { FormDialog } from './form-dialog';
 import { NewPasswordField, passwordProblem } from './new-password-field';
 
 const submitProblem = (password: string, confirm: string): MessageKey | null => passwordProblem(password, confirm) ?? (password === confirm ? null : 'hrPasswordMismatch');
@@ -25,7 +27,7 @@ const feedbackOf = (message: Message) => message && (message.kind === 'error' ? 
 /** Sends JSON and turns the answer into a message. Never puts what was typed into the message. */
 async function send(endpoint: string, method: string, body: unknown): Promise<{ ok: true; id?: string } | { ok: false; text: string }> {
   try {
-    const response = await fetch(endpoint, { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    const response = await fetch(endpoint, body === undefined ? { method } : { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
     const answer = (await response.json().catch(() => ({}))) as { id?: string; error?: string };
     if (response.ok) return { ok: true, ...(answer.id ? { id: answer.id } : {}) };
     return { ok: false, text: t(answer.error && errorKeys[answer.error] ? errorKeys[answer.error] : 'hrProfileSaveFailed') };
@@ -163,23 +165,27 @@ export function IdentityForm({ personId, values, username }: { personId: string;
   </form>;
 }
 
-/** Sets a new password, or adds a บัญชีผู้ใช้ for a person who has none. */
-export function AccountForm({ personId, username }: { personId: string; username: string | null }) {
+/** บัญชีผู้ใช้ on a person's page: HR or a ผู้ดูแลระบบ resets the password (never sets one), or adds an account for a person who has none. */
+export function AccountForm({ personId, username, self = false }: { personId: string; username: string | null; self?: boolean }) {
   const router = useRouter();
   const [newUsername, setNewUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [message, setMessage] = useState<Message>(null);
   const [busy, setBusy] = useState(false);
-  async function submit(event: React.FormEvent) {
+  async function reset(): Promise<boolean> {
+    setMessage(null);
+    const result = await send(`/api/hr/people/${personId}/password`, 'POST', undefined);
+    setMessage(result.ok ? { kind: 'saved', text: t('passwordResetDone') } : { kind: 'error', text: result.text });
+    return true;
+  }
+  async function create(event: React.FormEvent) {
     event.preventDefault();
     const passwordError = submitProblem(password, confirm);
     if (passwordError) { setMessage({ kind: 'error', text: t(passwordError) }); return; }
     setMessage(null);
     setBusy(true);
-    const result = username
-      ? await send(`/api/hr/people/${personId}/password`, 'PUT', { password })
-      : await send(`/api/hr/people/${personId}/account`, 'POST', { username: newUsername.trim(), password });
+    const result = await send(`/api/hr/people/${personId}/account`, 'POST', { username: newUsername.trim(), password });
     setBusy(false);
     if (!result.ok) { setMessage({ kind: 'error', text: result.text }); return; }
     setPassword('');
@@ -187,19 +193,22 @@ export function AccountForm({ personId, username }: { personId: string; username
     setMessage({ kind: 'saved', text: t('hrProfileSaved') });
     router.refresh();
   }
-  return <form aria-label={t('hrAccountTitle')} className="profile-form" onSubmit={submit}>
+  if (username) return <section aria-label={t('hrAccountTitle')} className="profile-form">
     <h4>{t('hrAccountTitle')}</h4>
     {feedbackOf(message)}
-    {username ? <>
-      <NewPasswordField label="hrNewPassword" value={password} confirm={confirm} onChange={setPassword} onConfirmChange={setConfirm} />
-      <p className="form-hint">{t('hrPasswordSetNote')}</p>
-      <button type="submit" disabled={busy}>{t('hrSetPassword')}</button>
-    </> : <>
-      <p>{t('hrNoAccount')}</p>
-      <label>{t('hrFieldUsername')}<input value={newUsername} required maxLength={64} pattern={USERNAME_PATTERN} autoComplete="off" onChange={(event) => setNewUsername(event.target.value)} /></label>
-      <NewPasswordField label="hrFieldPassword" value={password} confirm={confirm} onChange={setPassword} onConfirmChange={setConfirm} />
-      <p className="form-hint">{t('hrUsernameFixed')}</p>
-      <button type="submit" disabled={busy}>{t('hrCreateAccount')}</button>
-    </>}
+    {self
+      ? <><p className="form-hint">{t('passwordOwnOnly')}</p><Link className="button-link" href="/change-password">{t('passwordChangeTitle')}</Link></>
+      : <FormDialog triggerLabel={t('passwordResetButton')} triggerClassName="button-secondary" title={t('passwordResetButton')} submitLabel={t('passwordResetButton')} tone="danger" onSubmit={reset}>
+          <p>{t('passwordResetConfirm')}</p>
+        </FormDialog>}
+  </section>;
+  return <form aria-label={t('hrAccountTitle')} className="profile-form" onSubmit={create}>
+    <h4>{t('hrAccountTitle')}</h4>
+    {feedbackOf(message)}
+    <p>{t('hrNoAccount')}</p>
+    <label>{t('hrFieldUsername')}<input value={newUsername} required maxLength={64} pattern={USERNAME_PATTERN} autoComplete="off" onChange={(event) => setNewUsername(event.target.value)} /></label>
+    <NewPasswordField label="hrFieldPassword" value={password} confirm={confirm} onChange={setPassword} onConfirmChange={setConfirm} />
+    <p className="form-hint">{t('hrUsernameFixed')} {t('passwordFirstLoginNote')}</p>
+    <button type="submit" disabled={busy}>{t('hrCreateAccount')}</button>
   </form>;
 }

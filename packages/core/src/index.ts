@@ -83,3 +83,5 @@ export * from './inventory/inventory-queries';
 export * from './admin/module-managers';
 export * from './admin/admin-service';
 export * from './admin/admin-queries';
+export * from './setup/database-url';
+export * from './setup/first-run-setup';

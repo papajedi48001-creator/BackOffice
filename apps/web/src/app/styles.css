@@ -67,6 +67,14 @@ h1 { margin: 0; font-size: clamp(2rem, 6vw, 3.25rem); line-height: 1.15; letter-
 .sign-in-form > button[type="submit"] { justify-self: start; min-height: 44px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; cursor: pointer; font-weight: 700; padding: 11px 20px; }
 .sign-in-form > button[type="submit"]:hover:not(:disabled) { background: var(--accent-strong); }
 .sign-in-form > button[type="submit"]:disabled { cursor: not-allowed; opacity: .7; }
+.setup-panel { width: min(100%, 760px); }
+.setup-form { max-width: none; }
+.setup-form fieldset { display: grid; gap: 14px; margin: 0; border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px 18px; }
+.setup-form legend { padding: 0 6px; color: var(--ink); font-weight: 700; }
+.setup-form .form-hint { margin: 0; color: var(--muted); font-size: .9rem; }
+.setup-form .secondary-button { justify-self: start; min-height: 44px; border: 1px solid var(--accent); border-radius: 8px; background: var(--surface); color: var(--accent); cursor: pointer; font-weight: 700; padding: 10px 18px; }
+.setup-form .secondary-button:disabled { cursor: not-allowed; opacity: .7; }
+.setup-form ul { margin: 6px 0 0; padding-left: 20px; }
 .request-create { margin: 20px 0 24px; border: 1px solid var(--line); border-left: 5px solid var(--accent); border-radius: 10px; background: #fff; padding: 20px; }
 .request-create h3 { margin: 0; font-size: 1.2rem; }
 .request-create p { margin: 8px 0 16px; color: var(--muted); }
@@ -195,6 +203,13 @@ a.module-tile:hover .module-go { color: var(--accent); transform: translateX(2px
 /* Profile chip, top right of every page: photo or initials, name, ตำแหน่งงาน and the unread count. */
 .app-topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 24px; }
 .app-topbar .permission-notice { margin: 0; }
+.topbar-lead { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+.request-action { display: inline-flex; align-items: center; gap: 12px; border-radius: 12px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line), 0 1px 3px rgb(0 0 0 / 8%); color: var(--ink); font-size: 1.05rem; font-weight: 700; padding: 8px 18px 8px 8px; text-decoration: none; transition: transform .15s ease, box-shadow .15s ease; }
+.request-action-icon { display: inline-grid; place-items: center; width: 48px; height: 48px; border-radius: 8px; background: var(--accent); color: #fff; }
+.request-action:hover { transform: translateY(-2px); box-shadow: inset 0 0 0 1px var(--accent), 0 6px 14px rgb(0 0 0 / 12%); }
+.request-action:hover .request-action-icon { background: var(--accent-strong); }
+.request-action:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .request-action { transition: none; } .request-action:hover { transform: none; } }
 .count-badge { display: inline-block; min-width: 22px; height: 22px; margin-left: 8px; border-radius: 999px; background: var(--alert-count); color: #fff; font-size: .8rem; font-weight: 700; line-height: 22px; padding: 0 6px; text-align: center; vertical-align: middle; }
 .profile-menu { position: relative; flex: none; }
 .app-main .profile-chip { display: flex; align-items: center; gap: 10px; min-height: 52px; max-width: min(340px, 60vw); border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); box-shadow: var(--shadow-sm); padding: 5px 10px 5px 6px; font-weight: 400; text-align: left; }
@@ -431,7 +446,7 @@ video.inventory-camera { display: block; flex-basis: 100%; width: 100%; max-widt
 .travel-print-signature { margin-top: 28px; text-align: right; }
 .travel-detail-links { display: flex; gap: 8px; }
 @media print {
-  .sidebar, .app-topbar, .module-subnav, .travel-print-actions { display: none !important; }
+  .sidebar, .app-topbar, .request-action, .module-subnav, .travel-print-actions { display: none !important; }
   .app-shell, .app-main { display: block; padding: 0; margin: 0; background: #fff; }
   @page { size: A4 portrait; margin: 18mm 16mm; }
   .travel-print { max-width: none; font-family: 'TH Sarabun New', var(--font-body, sans-serif); color: #000; }
@@ -569,6 +584,19 @@ video.inventory-camera { display: block; flex-basis: 100%; width: 100%; max-widt
 
 .password-field { display: flex; gap: 8px; align-items: end; }
 .password-field label { flex: 1; }
+
+.profile-box-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.profile-box-header h3 { margin: 0; }
+.section-edit { padding: 6px 14px; }
+
+/* รหัสผ่านใหม่ and ยืนยันรหัสผ่าน stack on their own lines, across the whole form. */
+.password-fields { grid-column: 1 / -1; display: grid; gap: 12px; max-width: 520px; }
+.password-fields .password-field button { justify-self: auto; background: #fff; color: var(--accent); border: 1px solid var(--accent); }
+
+/* A box's แก้ไขข้อมูล button sits on the heading row, without the form card around it. */
+.profile-box-header { margin-bottom: 12px; }
+.profile-box-header .profile-form { display: flex; align-items: center; gap: 8px; border: 0; background: none; padding: 0; }
+.profile-box-header .profile-form button.section-edit, .profile-box-header button.section-edit { min-height: 36px; padding: 6px 14px; background: #fff; color: var(--accent); border: 1px solid var(--accent); }
 
 /* Text read by screen readers only. */
 .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }

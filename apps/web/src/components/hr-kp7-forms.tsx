@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSectionSaved } from './section-editor';
 import { MAX_KP7_FILE_BYTES, maritalStatusSchema, type MaritalStatus } from '@backoffice/contracts';
 import { t, type MessageKey } from '@backoffice/i18n';
 import { bangkokToday, formatBangkokDate, formatBangkokTime } from '../lib/bangkok-time';
@@ -22,6 +23,7 @@ const orNull = (value: string) => value.trim() === '' ? null : value.trim();
 /** ข้อมูลส่วนตัวและครอบครัว as on the ก.พ.7. The person themself and HR use it; the server checks who may save. */
 export function FamilyForm({ endpoint, values }: { endpoint: string; values: FamilyFormValues }) {
   const router = useRouter();
+  const sectionSaved = useSectionSaved();
   const [form, setForm] = useState(() => Object.fromEntries(Object.entries(values).map(([key, value]) => [key, value === null ? '' : String(value)])) as Record<keyof FamilyFormValues, string>);
   const [message, setMessage] = useState<Message>(null);
   const [busy, setBusy] = useState(false);
@@ -37,7 +39,7 @@ export function FamilyForm({ endpoint, values }: { endpoint: string; values: Fam
     };
     try {
       const response = await fetch(endpoint, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-      if (response.ok) { setMessage({ kind: 'saved', text: t('hrProfileSaved') }); router.refresh(); return; }
+      if (response.ok) { setMessage({ kind: 'saved', text: t('hrProfileSaved') }); router.refresh(); sectionSaved(); return; }
       const code = ((await response.json().catch(() => ({}))) as { error?: string }).error;
       setMessage({ kind: 'error', text: t(code === 'FORBIDDEN' ? 'hrProfileForbidden' : code === 'invalid_input' ? 'hrProfileInvalid' : 'hrProfileSaveFailed') });
     } catch { setMessage({ kind: 'error', text: t('hrProfileSaveFailed') }); } finally { setBusy(false); }
@@ -62,6 +64,7 @@ const uploadErrorKeys: Record<string, MessageKey> = { UNSUPPORTED_FILE_TYPE: 'hr
 /** The ก.พ.7 PDF. With an endpoint the viewer may upload, replace or remove it; without one they may only open it. */
 export function Kp7FileForm({ endpoint, file, uploadsEnabled }: { endpoint?: string; file: { attachmentId: string; uploadedAt: string } | null; uploadsEnabled: boolean }) {
   const router = useRouter();
+  const sectionSaved = useSectionSaved();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<Message>(null);
   async function send(init: RequestInit, saved: MessageKey) {
@@ -69,7 +72,7 @@ export function Kp7FileForm({ endpoint, file, uploadsEnabled }: { endpoint?: str
     setBusy(true); setMessage(null);
     try {
       const response = await fetch(endpoint, init);
-      if (response.ok) { setMessage({ kind: 'saved', text: t(saved) }); router.refresh(); return; }
+      if (response.ok) { setMessage({ kind: 'saved', text: t(saved) }); router.refresh(); sectionSaved(); return; }
       const code = ((await response.json().catch(() => ({}))) as { error?: string }).error;
       setMessage({ kind: 'error', text: t(code && uploadErrorKeys[code] ? uploadErrorKeys[code] : 'hrKp7Failed') });
     } catch { setMessage({ kind: 'error', text: t('hrKp7Failed') }); } finally { setBusy(false); }

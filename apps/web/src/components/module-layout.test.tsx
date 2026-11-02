@@ -59,6 +59,7 @@ it('leaves อนุมัติไปราชการ out of the section bar 
   mocks.readSession.mockResolvedValue(session([]));
   mocks.database.mockReturnValue({ query: vi.fn(async (sql: string) => sql.includes('AS allowed') ? [{ allowed: 0 }] : []) });
   render(await ModuleLayout({ code: 'official-travel', children: <p>เนื้อหา</p> }));
-  expect(screen.getByRole('link', { name: 'ไปราชการของฉัน' })).toHaveAttribute('href', '/travel/mine');
+  // Only ไปราชการของฉัน is left (the request form opens from the top button), so no section bar is drawn.
+  expect(screen.getByText('เนื้อหา')).toBeInTheDocument();
   expect(screen.queryByRole('link', { name: 'อนุมัติไปราชการ' })).toBeNull();
 });

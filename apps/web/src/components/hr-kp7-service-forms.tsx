@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSectionSaved } from './section-editor';
 import type { GpfStatus } from '@backoffice/contracts';
 import { t, type MessageKey } from '@backoffice/i18n';
 
@@ -10,13 +11,14 @@ const orNull = (value: string) => value.trim() === '' ? null : value.trim();
 
 function useSave(endpoint: string) {
   const router = useRouter();
+  const sectionSaved = useSectionSaved();
   const [message, setMessage] = useState<Message>(null);
   const [busy, setBusy] = useState(false);
   async function save(body: unknown) {
     setMessage(null); setBusy(true);
     try {
       const response = await fetch(endpoint, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-      if (response.ok) { setMessage({ kind: 'saved', text: t('hrProfileSaved') }); router.refresh(); return; }
+      if (response.ok) { setMessage({ kind: 'saved', text: t('hrProfileSaved') }); router.refresh(); sectionSaved(); return; }
       const code = ((await response.json().catch(() => ({}))) as { error?: string }).error;
       setMessage({ kind: 'error', text: t(code === 'FORBIDDEN' ? 'hrProfileForbidden' : code === 'invalid_input' ? 'hrProfileInvalid' : 'hrProfileSaveFailed') });
     } catch { setMessage({ kind: 'error', text: t('hrProfileSaveFailed') }); } finally { setBusy(false); }

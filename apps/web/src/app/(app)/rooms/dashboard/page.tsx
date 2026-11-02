@@ -34,7 +34,7 @@ export default async function RoomDashboardPage({ searchParams }: { searchParams
     ...(pending === null ? [] : [[t('roomCountPending'), pending] as [string, number]])
   ];
   return <section className="room-dashboard">
-    <div className="page-heading"><h2>{t('roomDashboard')}</h2><nav className="page-actions"><Link className="button-link" href="/rooms/bookings/new">{t('bookRoom')}</Link></nav></div>
+    <div className="page-heading"><h2>{t('roomDashboard')}</h2></div>
     <ul className="summary-grid room-dashboard-stats" aria-label={t('roomDashboard')}>
       {counts.map(([label, value]) => <li key={label}><article><span>{label}</span><strong>{value}</strong></article></li>)}
     </ul>

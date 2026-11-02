@@ -12,5 +12,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=build /app/apps/web/.next/standalone ./
 COPY --from=build /app/apps/web/.next/static ./apps/web/.next/static
+# The first-run setup page migrates an empty database from these files.
+COPY --from=build /app/packages/db/migrations ./packages/db/migrations
+ENV BACKOFFICE_MIGRATIONS_DIR=/app/packages/db/migrations
 EXPOSE 3000
 CMD ["node", "apps/web/server.js"]

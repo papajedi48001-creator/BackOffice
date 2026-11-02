@@ -1,0 +1,14 @@
+# Use with docker-compose.production.yml when MariaDB runs outside Compose (for example 192.168.1.254):
+#   docker compose --env-file /etc/backoffice/production.env -f docker-compose.production.yml -f docker-compose.external-db.yml up -d
+# The backplane is internal, so web and worker join a routed network to reach the database host.
+# The bundled mariadb service only starts with --profile bundled-db.
+services:
+  web:
+    networks: [database]
+  worker:
+    networks: [database]
+  mariadb:
+    profiles: [bundled-db]
+
+networks:
+  database: {}

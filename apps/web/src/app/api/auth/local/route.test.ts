@@ -58,4 +58,10 @@ describe('POST /api/auth/local', () => {
     mocks.authenticateLocal.mockRejectedValue(new Error('connect ECONNREFUSED'));
     expect((await login()).status).toBe(503);
   });
+  it('tells the sign-in form when the password must be changed first', async () => {
+    mocks.getSharedDatabase.mockReturnValue({ execute: vi.fn(), query: vi.fn() });
+    mocks.authenticateLocal.mockResolvedValue({ personId: 'person-a', accountId: 'account-a', mustChangePassword: true });
+    mocks.startSession.mockResolvedValue({ token: 'opaque-token', maxAgeSeconds: 43_200 });
+    await expect((await login()).json()).resolves.toEqual({ authenticated: true, mustChangePassword: true });
+  });
 });
