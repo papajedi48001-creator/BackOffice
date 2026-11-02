@@ -94,7 +94,6 @@ export const moduleRegistry: readonly ModuleEntry[] = [
   {
     ...withSections({ code: 'leave', href: '/leave', labelKey: 'moduleLeave', descriptionKey: 'moduleLeaveDescription', icon: 'leave', group: 'mine', status: 'live' }, [
       { href: '/leave/mine', labelKey: 'leaveMine', visible: everyone },
-      { href: '/leave/new', labelKey: 'leaveNew', visible: everyone },
       // Approvers are unit heads and ผู้แทน, not a role, so the link stays cheap and the page shows its own empty state.
       { href: '/leave/approvals', labelKey: 'leaveApprovals', visible: everyone, badge: async (db, subject) => subject.personId ? new LeaveQueries(db).pendingCount(subject.personId) : 0 },
       { href: '/leave/calendar', labelKey: 'leaveCalendar', visible: everyone },
@@ -109,7 +108,6 @@ export const moduleRegistry: readonly ModuleEntry[] = [
   {
     ...withSections({ code: 'official-travel', href: '/travel', labelKey: 'moduleTravel', descriptionKey: 'moduleTravelDescription', icon: 'travel', group: 'mine', status: 'live' }, [
       { href: '/travel/mine', labelKey: 'travelMine', visible: everyone },
-      { href: '/travel/new', labelKey: 'travelNew', visible: everyone },
       // Approvers are unit heads and ผู้แทน, not a role, as in leave.
       { href: '/travel/approvals', labelKey: 'travelApprovals', visible: everyone, badge: async (db, subject) => subject.personId ? new OfficialTravelQueries(db).pendingCount(subject.personId) : 0, available: async (db, subject) => subject.personId ? new OfficialTravelQueries(db).canApprove(subject.personId) : false },
       { href: '/travel/all', labelKey: 'travelAll', visible: canManageTravel },
