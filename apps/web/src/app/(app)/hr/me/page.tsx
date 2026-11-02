@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { HrProfileService } from '@backoffice/core';
@@ -19,7 +20,7 @@ export default async function MyProfilePage() {
   const uploadsEnabled = attachmentsEnabled();
   if (!view || typeof view === 'string') return <section><h2>{t('hrMyProfile')}</h2><p role="alert">{t('hrLoadError')}</p></section>;
   return <section>
-    <h2>{t('hrMyProfile')}</h2>
+    <div className="page-heading"><h2>{t('hrMyProfile')}</h2><nav className="page-actions"><Link className="button-link" href="/change-password">{t('passwordChangeTitle')}</Link></nav></div>
     <HrProfileView view={view} contactEndpoint="/api/hr/me/contact" personalEndpoint="/api/hr/me/personal" photo={{ url: uploadsEnabled && view.work.photoAttachmentId ? profilePhotoUrl(view.work.personId, view.work.photoAttachmentId) : null, uploadsEnabled }} uploadsEnabled={uploadsEnabled} />
   </section>;
 }

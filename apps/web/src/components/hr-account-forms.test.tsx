@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ refresh: vi.fn(), push: vi.fn() }));
@@ -95,28 +95,23 @@ describe('IdentityForm', () => {
 });
 
 describe('AccountForm', () => {
-  it('sets a new password for a person with an account', async () => {
+  it('resets the password to the default after a confirmation, sending no password', async () => {
     const fetchMock = respond(200, { ok: true });
     vi.stubGlobal('fetch', fetchMock);
     render(<AccountForm personId="p1" username="somjai" />);
-    type('รหัสผ่านใหม่', 'brand-new-pass');
-    type('ยืนยันรหัสผ่าน', 'brand-new-pass');
-    fireEvent.click(screen.getByRole('button', { name: 'ตั้งรหัสผ่านใหม่' }));
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('บันทึกแล้ว'));
+    expect(screen.queryByLabelText('รหัสผ่านใหม่')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'รีเซ็ตรหัสผ่าน' }));
+    const dialog = screen.getByRole('dialog', { name: 'รีเซ็ตรหัสผ่าน' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'รีเซ็ตรหัสผ่าน' }));
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('รีเซ็ตแล้ว'));
     const [url, init] = lastCall(fetchMock);
-    expect([url, init.method]).toEqual(['/api/hr/people/p1/password', 'PUT']);
-    expect(JSON.parse(init.body as string)).toEqual({ password: 'brand-new-pass' });
+    expect([url, init.method, init.body]).toEqual(['/api/hr/people/p1/password', 'POST', undefined]);
   });
 
-  it('does not set a password typed on a Thai keyboard', async () => {
-    const fetchMock = respond(200, { ok: true });
-    vi.stubGlobal('fetch', fetchMock);
-    render(<AccountForm personId="p1" username="somjai" />);
-    type('รหัสผ่านใหม่', 'หกฟหกฟหกฟ');
-    type('ยืนยันรหัสผ่าน', 'หกฟหกฟหกฟ');
-    fireEvent.click(screen.getByRole('button', { name: 'ตั้งรหัสผ่านใหม่' }));
-    expect(screen.getAllByRole('alert')[0]).toHaveTextContent('แป้นพิมพ์อาจเป็นภาษาไทย');
-    expect(fetchMock).not.toHaveBeenCalled();
+  it('shows a person their own account without a reset, pointing to เปลี่ยนรหัสผ่าน', () => {
+    render(<AccountForm personId="p1" username="somjai" self />);
+    expect(screen.queryByRole('button', { name: 'รีเซ็ตรหัสผ่าน' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'เปลี่ยนรหัสผ่าน' })).toHaveAttribute('href', '/change-password');
   });
 
   it('creates an account for a person without one', async () => {
@@ -133,17 +128,11 @@ describe('AccountForm', () => {
     expect([url, init.method]).toEqual(['/api/hr/people/p1/account', 'POST']);
   });
 
-  it('explains why HR cannot set the password of a protected account, and blocks a second click while saving', async () => {
-    let finish: (response: Response) => void = () => undefined;
-    const fetchMock = vi.fn(() => new Promise<Response>((resolve) => { finish = resolve; }));
-    vi.stubGlobal('fetch', fetchMock);
+  it('explains why HR cannot reset the password of a protected account', async () => {
+    vi.stubGlobal('fetch', respond(409, { error: 'PROTECTED_ACCOUNT' }));
     render(<AccountForm personId="p1" username="admin" />);
-    type('รหัสผ่านใหม่', 'brand-new-pass');
-    type('ยืนยันรหัสผ่าน', 'brand-new-pass');
-    fireEvent.click(screen.getByRole('button', { name: 'ตั้งรหัสผ่านใหม่' }));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'ตั้งรหัสผ่านใหม่' })).toBeDisabled());
-    finish(new Response(JSON.stringify({ error: 'PROTECTED_ACCOUNT' }), { status: 409 }));
+    fireEvent.click(screen.getByRole('button', { name: 'รีเซ็ตรหัสผ่าน' }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'รีเซ็ตรหัสผ่าน' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('ผู้ดูแลระบบ');
-    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

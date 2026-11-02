@@ -14,6 +14,8 @@ export interface LocalAccount {
   personId: string;
   username: string;
   passwordHash: string;
+  /** Set by a reset or by HR creating the account: the owner must choose a new password before using the system. */
+  mustChangePassword?: boolean;
 }
 
 export interface LocalAccountRepository {
@@ -27,7 +29,7 @@ export interface LoginThrottle {
 }
 
 export interface LoginAuditRecorder { recordAudit(input: AuditInput): Promise<void>; }
-export interface LocalAuthentication { personId: string; accountId: string; }
+export interface LocalAuthentication { personId: string; accountId: string; mustChangePassword: boolean; }
 
 const unlimitedThrottle: LoginThrottle = { reserveAttempt: async () => true, reset: async () => undefined };
 const noAudit: LoginAuditRecorder = { recordAudit: async () => undefined };
@@ -58,7 +60,7 @@ export class LocalAuthService {
     }
     await this.throttle.reset(throttleKey);
     await this.audit.recordAudit({ actorPersonId: account.personId, action: 'identity.local_login', targetType: 'local_account', targetId: account.id, result: 'SUCCESS', metadata: {} });
-    return { personId: account.personId, accountId: account.id };
+    return { personId: account.personId, accountId: account.id, mustChangePassword: account.mustChangePassword === true };
   }
 }
 
@@ -76,7 +78,7 @@ export async function hashPassword(password: string): Promise<string> {
   return `scrypt$${salt}$${derived.toString('base64url')}`;
 }
 
-async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
+export async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
   const [algorithm, salt, encodedHash] = storedHash.split('$');
   if (algorithm !== 'scrypt' || !salt || !encodedHash) return false;
   const expected = Buffer.from(encodedHash, 'base64url');

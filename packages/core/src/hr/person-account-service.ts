@@ -1,13 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import {
-  createPersonWithAccountInputSchema, localAccountInputSchema, passwordSchema, updatePersonIdentityInputSchema,
-  type AccessSubject, type CreatePersonWithAccountInput, type LocalAccountInput, type UpdatePersonIdentityInput
+  changeOwnPasswordInputSchema, createPersonWithAccountInputSchema, DEFAULT_RESET_PASSWORD, localAccountInputSchema, updatePersonIdentityInputSchema,
+  type AccessSubject, type ChangeOwnPasswordInput, type CreatePersonWithAccountInput, type LocalAccountInput, type UpdatePersonIdentityInput
 } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { AuditService } from '../audit/audit-service';
 import { DatabaseAuditRepository } from '../audit/database-audit-repository';
 import type { NationalIdProtector } from '../crypto/national-id';
-import { hashPassword } from '../identity/auth-service';
+import { isAdmin } from '../access/authorization-service';
+import { hashPassword, verifyPassword } from '../identity/auth-service';
 import { canManagePeople } from './profile-access';
 import { applyProfileUpdate, lockProfileSubject, type UpdateProfileResult } from './profile-service';
 
@@ -16,6 +17,7 @@ type DuplicateCode = 'DUPLICATE_NATIONAL_ID' | 'DUPLICATE_EMPLOYEE_CODE' | 'DUPL
 type ProfileCode = Extract<UpdateProfileResult, { ok: false }>['code'];
 export type CreatePersonResult = { ok: true; id: string } | { ok: false; code: DuplicateCode | ProfileCode };
 export type IdentityResult = { ok: true } | { ok: false; code: 'NOT_FOUND' | 'FORBIDDEN' | DuplicateCode };
+export type ChangeOwnPasswordResult = { ok: true } | { ok: false; code: 'NO_ACCOUNT' | 'WRONG_PASSWORD' | 'SAME_PASSWORD' };
 export type PasswordResult = { ok: true } | { ok: false; code: 'NOT_FOUND' | 'FORBIDDEN' | 'NO_ACCOUNT' | 'PROTECTED_ACCOUNT' };
 export type CreateAccountResult = { ok: true } | { ok: false; code: 'NOT_FOUND' | 'FORBIDDEN' | 'ACCOUNT_EXISTS' | 'DUPLICATE_USERNAME' };
 
@@ -46,7 +48,7 @@ export class PersonAccountService {
       const saved = await applyProfileUpdate(database, subject!, profile, actor.personId!, this.createId, { canEditOrganization: () => true, syncDisplayName: true, checkPosition: true, auditAction: 'hr.person.create', extraChangedFields: phone ? ['phone'] : [] });
       if (!saved.ok) throw new Refused(saved.code);
       if (phone) await database.execute('UPDATE hr_person_profile SET phone = ? WHERE person_id = ?', [phone, id]);
-      await database.execute('INSERT INTO local_account (id, person_id, username, password_hash, created_at) VALUES (?, ?, ?, ?, UTC_TIMESTAMP())', [this.createId(), id, username, passwordHash]);
+      await database.execute('INSERT INTO local_account (id, person_id, username, password_hash, must_change_password, created_at) VALUES (?, ?, ?, ?, 1, UTC_TIMESTAMP())', [this.createId(), id, username, passwordHash]);
       return { ok: true, id };
     }, { isolationLevel: 'READ COMMITTED' })) as Promise<CreatePersonResult>;
   }
@@ -80,22 +82,45 @@ export class PersonAccountService {
     }, { isolationLevel: 'READ COMMITTED' })) as Promise<IdentityResult>;
   }
 
-  async setPassword(personId: string, password: string, actor: AccessSubject): Promise<PasswordResult> {
-    const valid = passwordSchema.parse(password);
-    if (!canManagePeople(actor)) return { ok: false, code: 'FORBIDDEN' };
-    const passwordHash = await hashPassword(valid);
+  /**
+   * รีเซ็ตรหัสผ่าน: HR (hospital-wide) or a ผู้ดูแลระบบ puts the account back on DEFAULT_RESET_PASSWORD and the owner must choose a new
+   * one at the next login. Nobody resets their own account; HR may not reset anyone holding a role in the system, a ผู้ดูแลระบบ may.
+   */
+  async resetPassword(personId: string, actor: AccessSubject): Promise<PasswordResult> {
+    const admin = isAdmin(actor);
+    if (!admin && !canManagePeople(actor)) return { ok: false, code: 'FORBIDDEN' };
+    const passwordHash = await hashPassword(DEFAULT_RESET_PASSWORD);
     return this.database.transaction(async (database): Promise<PasswordResult> => {
       const [person] = await database.query<{ id: string }>('SELECT id FROM person WHERE id = ? FOR UPDATE', [personId]);
       if (!person) return { ok: false, code: 'NOT_FOUND' };
-      // HR may not take over its own account or one that holds any role in the system (an administrator, an approver role):
-      // those passwords are changed by their owner or by a system administrator.
-      if (personId === actor.personId || (await database.query('SELECT id FROM role_assignment WHERE person_id = ? LIMIT 1', [personId])).length > 0) return { ok: false, code: 'PROTECTED_ACCOUNT' };
+      if (personId === actor.personId) return { ok: false, code: 'PROTECTED_ACCOUNT' };
+      if (!admin && (await database.query('SELECT id FROM role_assignment WHERE person_id = ? LIMIT 1', [personId])).length > 0) return { ok: false, code: 'PROTECTED_ACCOUNT' };
       const [account] = await database.query<{ id: string }>('SELECT id FROM local_account WHERE person_id = ? ORDER BY created_at LIMIT 1', [personId]);
       if (!account) return { ok: false, code: 'NO_ACCOUNT' };
-      await database.execute('UPDATE local_account SET password_hash = ? WHERE id = ?', [passwordHash, account.id]);
+      await database.execute('UPDATE local_account SET password_hash = ?, must_change_password = 1 WHERE id = ?', [passwordHash, account.id]);
       // Whoever was signed in with the old password is signed out.
       await database.execute('UPDATE user_session SET revoked_at = UTC_TIMESTAMP() WHERE person_id = ? AND revoked_at IS NULL', [personId]);
-      await this.audit(database, actor.personId!, 'hr.person.password.set', 'local_account', account.id, { personId });
+      await this.audit(database, actor.personId!, 'hr.person.password.reset', 'local_account', account.id, { personId });
+      return { ok: true };
+    }, { isolationLevel: 'READ COMMITTED' });
+  }
+
+  /**
+   * เปลี่ยนรหัสผ่าน by the owner only. Right after a reset (must_change_password) the current password is not asked for; otherwise it
+   * must match. The new one may not repeat the current or the default. Every session ends, so the person signs in again with it.
+   */
+  async changeOwnPassword(personId: string, input: ChangeOwnPasswordInput): Promise<ChangeOwnPasswordResult> {
+    const valid = changeOwnPasswordInputSchema.parse(input);
+    return this.database.transaction(async (database): Promise<ChangeOwnPasswordResult> => {
+      const [account] = await database.query<{ id: string; passwordHash: string; mustChange: number | string }>(
+        'SELECT id, password_hash AS passwordHash, must_change_password AS mustChange FROM local_account WHERE person_id = ? ORDER BY created_at LIMIT 1 FOR UPDATE', [personId]);
+      if (!account) return { ok: false, code: 'NO_ACCOUNT' };
+      const forced = Number(account.mustChange) === 1;
+      if (!forced && !(valid.currentPassword && await verifyPassword(valid.currentPassword, account.passwordHash))) return { ok: false, code: 'WRONG_PASSWORD' };
+      if (valid.newPassword === DEFAULT_RESET_PASSWORD || await verifyPassword(valid.newPassword, account.passwordHash)) return { ok: false, code: 'SAME_PASSWORD' };
+      await database.execute('UPDATE local_account SET password_hash = ?, must_change_password = 0 WHERE id = ?', [await hashPassword(valid.newPassword), account.id]);
+      await database.execute('UPDATE user_session SET revoked_at = UTC_TIMESTAMP() WHERE person_id = ? AND revoked_at IS NULL', [personId]);
+      await this.audit(database, personId, 'identity.password.change', 'local_account', account.id, { forced });
       return { ok: true };
     }, { isolationLevel: 'READ COMMITTED' });
   }
@@ -110,7 +135,7 @@ export class PersonAccountService {
       if ((await database.query('SELECT id FROM local_account WHERE person_id = ?', [personId])).length > 0) return { ok: false, code: 'ACCOUNT_EXISTS' };
       if (await findDuplicate(database, { lookup: null, employeeCode: null, username: valid.username })) return { ok: false, code: 'DUPLICATE_USERNAME' };
       const accountId = this.createId();
-      await database.execute('INSERT INTO local_account (id, person_id, username, password_hash, created_at) VALUES (?, ?, ?, ?, UTC_TIMESTAMP())', [accountId, personId, valid.username, passwordHash]);
+      await database.execute('INSERT INTO local_account (id, person_id, username, password_hash, must_change_password, created_at) VALUES (?, ?, ?, ?, 1, UTC_TIMESTAMP())', [accountId, personId, valid.username, passwordHash]);
       await this.audit(database, actor.personId!, 'hr.person.account.create', 'local_account', accountId, { personId });
       return { ok: true };
     }, { isolationLevel: 'READ COMMITTED' })) as Promise<CreateAccountResult>;

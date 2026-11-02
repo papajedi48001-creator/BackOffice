@@ -1,16 +1,16 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ readSession: vi.fn(), getSharedDatabase: vi.fn(), getNationalIdProtector: vi.fn(), create: vi.fn(), updateIdentity: vi.fn(), setPassword: vi.fn(), createAccount: vi.fn() }));
+const mocks = vi.hoisted(() => ({ readSession: vi.fn(), getSharedDatabase: vi.fn(), getNationalIdProtector: vi.fn(), create: vi.fn(), updateIdentity: vi.fn(), resetPassword: vi.fn(), createAccount: vi.fn() }));
 vi.mock('../../../../lib/session', () => ({ readSession: mocks.readSession }));
 vi.mock('../../../../lib/database', () => ({ getSharedDatabase: mocks.getSharedDatabase }));
 vi.mock('../../../../lib/national-id', () => ({ getNationalIdProtector: mocks.getNationalIdProtector }));
-vi.mock('@backoffice/core', async (importOriginal) => ({ ...await importOriginal<typeof import('@backoffice/core')>(), PersonAccountService: class { create = mocks.create; updateIdentity = mocks.updateIdentity; setPassword = mocks.setPassword; createAccount = mocks.createAccount; } }));
+vi.mock('@backoffice/core', async (importOriginal) => ({ ...await importOriginal<typeof import('@backoffice/core')>(), PersonAccountService: class { create = mocks.create; updateIdentity = mocks.updateIdentity; resetPassword = mocks.resetPassword; createAccount = mocks.createAccount; } }));
 
 import { POST as postPerson } from './route';
 import { POST as postAccount } from './[personId]/account/route';
 import { PUT as putIdentity } from './[personId]/identity/route';
-import { PUT as putPassword } from './[personId]/password/route';
+import { POST as postReset } from './[personId]/password/route';
 
 const manager = { authenticated: true, personId: 'person-a', roles: [{ name: 'hr-manager', organizationId: null }], dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: ['hr'] };
 const params = { params: Promise.resolve({ personId: 'person-b' }) };
@@ -78,14 +78,15 @@ describe('identity, password and account of an existing person', () => {
     expect((await putIdentity(request('PUT', { employeeCode: 'E1' }), params)).status).toBe(409);
   });
 
-  it('sets a password and maps a person without an account', async () => {
+  it('resets a password to the default and maps a person without an account or a refusal', async () => {
     ready();
-    mocks.setPassword.mockResolvedValueOnce({ ok: true });
-    expect((await putPassword(request('PUT', { password: 'brand-new-pass' }), params)).status).toBe(200);
-    expect(mocks.setPassword).toHaveBeenCalledWith('person-b', 'brand-new-pass', manager);
-    mocks.setPassword.mockResolvedValueOnce({ ok: false, code: 'NO_ACCOUNT' });
-    expect((await putPassword(request('PUT', { password: 'brand-new-pass' }), params)).status).toBe(409);
-    expect((await putPassword(request('PUT', { password: 'short' }), params)).status).toBe(400);
+    mocks.resetPassword.mockResolvedValueOnce({ ok: true });
+    expect((await postReset(request('POST', {}), params)).status).toBe(200);
+    expect(mocks.resetPassword).toHaveBeenCalledWith('person-b', manager);
+    mocks.resetPassword.mockResolvedValueOnce({ ok: false, code: 'NO_ACCOUNT' });
+    expect((await postReset(request('POST', {}), params)).status).toBe(409);
+    mocks.resetPassword.mockResolvedValueOnce({ ok: false, code: 'FORBIDDEN' });
+    expect((await postReset(request('POST', {}), params)).status).toBe(403);
   });
 
   it('adds an account to a person who has none', async () => {
@@ -101,13 +102,12 @@ describe('identity, password and account of an existing person', () => {
     mocks.readSession.mockResolvedValue({ authenticated: true, personId: 'reader', roles: [{ name: 'hr-reader', organizationId: null }], dataOwnerModules: [] });
     expect((await postPerson(request('POST', { nationalId: 'bad' }))).status).toBe(403);
     expect((await putIdentity(request('PUT', { username: 'x' }), params)).status).toBe(403);
-    expect((await putPassword(request('PUT', { password: 'x' }), params)).status).toBe(403);
     expect((await postAccount(request('POST', {}), params)).status).toBe(403);
   });
 
   it('answers 409 for a protected account', async () => {
     ready();
-    mocks.setPassword.mockResolvedValueOnce({ ok: false, code: 'PROTECTED_ACCOUNT' });
-    expect((await putPassword(request('PUT', { password: 'brand-new-pass' }), params)).status).toBe(409);
+    mocks.resetPassword.mockResolvedValueOnce({ ok: false, code: 'PROTECTED_ACCOUNT' });
+    expect((await postReset(request('POST', {}), params)).status).toBe(409);
   });
 });

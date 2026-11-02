@@ -11,8 +11,11 @@ export class DatabaseSessionRepository implements SessionRepository {
   }
 
   async findByTokenHash(tokenHash: string): Promise<ActiveSessionRecord | null> {
-    const row = (await this.database.query<{ id: string; personId: string; idleSeconds: number | string; expired: number | string; revoked: number | string }>('SELECT id, person_id AS personId, TIMESTAMPDIFF(SECOND, last_seen_at, UTC_TIMESTAMP()) AS idleSeconds, expires_at <= UTC_TIMESTAMP() AS expired, revoked_at IS NOT NULL AS revoked FROM user_session WHERE token_hash = ? LIMIT 1', [tokenHash]))[0];
-    return row ? { id: row.id, personId: row.personId, idleSeconds: Number(row.idleSeconds), expired: Number(row.expired) === 1, revoked: Number(row.revoked) === 1 } : null;
+    const row = (await this.database.query<{ id: string; personId: string; idleSeconds: number | string; expired: number | string; revoked: number | string; mustChange: number | string | null }>(
+      `SELECT s.id, s.person_id AS personId, TIMESTAMPDIFF(SECOND, s.last_seen_at, UTC_TIMESTAMP()) AS idleSeconds, s.expires_at <= UTC_TIMESTAMP() AS expired, s.revoked_at IS NOT NULL AS revoked,
+         (SELECT MAX(a.must_change_password) FROM local_account a WHERE a.person_id = s.person_id) AS mustChange
+       FROM user_session s WHERE s.token_hash = ? LIMIT 1`, [tokenHash]))[0];
+    return row ? { id: row.id, personId: row.personId, idleSeconds: Number(row.idleSeconds), expired: Number(row.expired) === 1, revoked: Number(row.revoked) === 1, mustChangePassword: Number(row.mustChange ?? 0) === 1 } : null;
   }
 
   async touch(sessionId: string): Promise<void> {
@@ -43,7 +46,8 @@ export class DatabaseLocalAccountRepository implements LocalAccountRepository {
 
   /** Only an active person's account: someone marked พ้นสภาพ cannot sign in. */
   async findByUsername(username: string): Promise<LocalAccount | null> {
-    return (await this.database.query<LocalAccount>("SELECT a.id, a.person_id AS personId, a.username, a.password_hash AS passwordHash FROM local_account a JOIN person p ON p.id = a.person_id WHERE a.username = ? AND p.employment_status = 'ACTIVE' LIMIT 1", [username]))[0] ?? null;
+    const row = (await this.database.query<Omit<LocalAccount, 'mustChangePassword'> & { mustChangePassword: number | string }>("SELECT a.id, a.person_id AS personId, a.username, a.password_hash AS passwordHash, a.must_change_password AS mustChangePassword FROM local_account a JOIN person p ON p.id = a.person_id WHERE a.username = ? AND p.employment_status = 'ACTIVE' LIMIT 1", [username]))[0];
+    return row ? { ...row, mustChangePassword: Number(row.mustChangePassword) === 1 } : null;
   }
 }
 

@@ -31,3 +31,8 @@ export type UpdatePersonIdentityInput = z.infer<typeof updatePersonIdentityInput
 export const localAccountInputSchema = z.object({ username: usernameSchema, password: passwordSchema }).strict();
 export type LocalAccountInput = z.infer<typeof localAccountInputSchema>;
 export const setPasswordInputSchema = z.object({ password: passwordSchema }).strict();
+/** The password an account gets when HR or a ผู้ดูแลระบบ resets it. The owner must replace it at the next login. */
+export const DEFAULT_RESET_PASSWORD = 'P@ssw0rd#1';
+/** A person changing their own password. The current one is not asked for right after a reset, when the change is forced. */
+export const changeOwnPasswordInputSchema = z.object({ currentPassword: z.string().max(128).optional(), newPassword: passwordSchema }).strict();
+export type ChangeOwnPasswordInput = z.infer<typeof changeOwnPasswordInputSchema>;
