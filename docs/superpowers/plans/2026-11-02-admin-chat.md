@@ -1,6 +1,6 @@
 # แชตกับผู้ดูแลระบบ Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** A Facebook-style chat bubble on every signed-in page: each person talks only to ผู้ดูแลระบบ (one conversation), ผู้ดูแลระบบ share one inbox and open up to 3 chat windows at once; images can be attached or pasted.
 
@@ -36,9 +36,9 @@
 
 **Produces:** `supportMessageInputSchema` (`{ body?: string; attachmentId?: string }`, trims, refines non-empty), `SupportMessageInput`, `SUPPORT_MESSAGE_MAX_LENGTH = 2000`, `supportChatImageContentTypeSchema`, types `SupportMessage { id; fromAdmin; senderName; body: string | null; attachmentId: string | null; createdAt: string; mine: boolean }`, `SupportConversationSummary { id; personId; displayName; positionTitle; lastMessage: string | null; lastHasImage: boolean; lastMessageAt: string; unread: number }`.
 
-- [ ] Test: empty/whitespace body without image fails; 2,001 chars fails; image only passes; body is trimmed. Run `pnpm --filter @backoffice/contracts test` → FAIL, implement, PASS.
-- [ ] Migration + drizzle schema + version list; `pnpm --filter @backoffice/db test` PASS.
-- [ ] Commit `feat(chat): support chat contract and tables`.
+- [x] Test: empty/whitespace body without image fails; 2,001 chars fails; image only passes; body is trimmed. Run `pnpm --filter @backoffice/contracts test` → FAIL, implement, PASS.
+- [x] Migration + drizzle schema + version list; `pnpm --filter @backoffice/db test` PASS.
+- [x] Commit `feat(chat): support chat contract and tables`.
 
 ### Task 2: SupportChatService (core)
 
@@ -55,8 +55,8 @@
 - `Result<T> = { ok: true } & T | { ok: false; code: 'FORBIDDEN' | 'NOT_FOUND' | 'EMPTY_MESSAGE' | 'INVALID_ATTACHMENT' }`
 - `AttachmentAccess.canDownload` also allows conversation owner and ผู้ดูแลระบบ for an attachment in `support_message`.
 
-- [ ] Integration tests (skip without `DATABASE_URL`): person send creates conversation, second send reuses it, audit row metadata has no body; admin inbox lists with unread 1, mark read → 0; person unread counts admin reply then 0 after read; non-admin `adminInbox`/`sendAsAdmin` → FORBIDDEN; someone else's attachment or PDF → INVALID_ATTACHMENT; whitespace → EMPTY_MESSAGE; AttachmentAccess allows owner + admin, refuses a third person.
-- [ ] Run against local MariaDB → FAIL, implement, PASS. Commit `feat(chat): SupportChatService`.
+- [x] Integration tests (skip without `DATABASE_URL`): person send creates conversation, second send reuses it, audit row metadata has no body; admin inbox lists with unread 1, mark read → 0; person unread counts admin reply then 0 after read; non-admin `adminInbox`/`sendAsAdmin` → FORBIDDEN; someone else's attachment or PDF → INVALID_ATTACHMENT; whitespace → EMPTY_MESSAGE; AttachmentAccess allows owner + admin, refuses a third person.
+- [x] Run against local MariaDB → FAIL, implement, PASS. Commit `feat(chat): SupportChatService`.
 
 ### Task 3: API routes
 
@@ -64,8 +64,8 @@
 
 Status map: FORBIDDEN 403, NOT_FOUND 404, EMPTY_MESSAGE 400, INVALID_ATTACHMENT 400. Image GET: `content-disposition: inline`, `x-content-type-options: nosniff`, `cache-control: private, max-age=3600`, `openAttachment(..., { recordDownload: false })`.
 
-- [ ] Tests (mock service/session like existing route tests): 401 unauthenticated; mine/messages forwards body; admin conversations 403 for non-admin via service result; images POST rejects `application/pdf` with 415.
-- [ ] Implement, `pnpm --filter @backoffice/web test -- support-chat` PASS. Commit `feat(chat): support chat API`.
+- [x] Tests (mock service/session like existing route tests): 401 unauthenticated; mine/messages forwards body; admin conversations 403 for non-admin via service result; images POST rejects `application/pdf` with 415.
+- [x] Implement, `pnpm --filter @backoffice/web test -- support-chat` PASS. Commit `feat(chat): support chat API`.
 
 ### Task 4: SupportChat UI
 
@@ -73,9 +73,9 @@ Status map: FORBIDDEN 403, NOT_FOUND 404, EMPTY_MESSAGE 400, INVALID_ATTACHMENT 
 
 **Interfaces:** `SupportChat({ admin, images, unread })`; `SupportChatWindow({ title, source: { list: string; send: string; read: string }, images, onClose, onMinimize })`.
 
-- [ ] Tests: bubble shows unread count; person click opens window titled ผู้ดูแลระบบ and loads `/api/support-chat/mine`; Enter sends POST to `/mine/messages`, Shift+Enter does not; pasting an image file shows a preview and sends after upload to `/images`; Esc keeps window open; admin opens 4 conversations → 3 windows remain (first closed).
-- [ ] Implement, tests PASS. Commit `feat(chat): chat bubble and windows`.
+- [x] Tests: bubble shows unread count; person click opens window titled ผู้ดูแลระบบ and loads `/api/support-chat/mine`; Enter sends POST to `/mine/messages`, Shift+Enter does not; pasting an image file shows a preview and sends after upload to `/images`; Esc keeps window open; admin opens 4 conversations → 3 windows remain (first closed).
+- [x] Implement, tests PASS. Commit `feat(chat): chat bubble and windows`.
 
 ### Task 5: Verify
 
-- [ ] `pnpm lint && pnpm typecheck && pnpm test`, `DATABASE_URL=… pnpm test:integration`, `git diff --check`; screenshots desktop/mobile to `/mnt/project-files/screenshots/support-chat/`.
+- [x] `pnpm lint && pnpm typecheck && pnpm test`, `DATABASE_URL=… pnpm test:integration`, `git diff --check`; screenshots desktop/mobile to `/mnt/project-files/screenshots/support-chat/`.

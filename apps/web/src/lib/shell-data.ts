@@ -1,4 +1,5 @@
 import type { AccessSubject } from '@backoffice/contracts';
+import { SupportChatService, isAdmin } from '@backoffice/core';
 import type { Database } from '@backoffice/db';
 import type { NavigationItem } from '../components/app-shell';
 import type { BellItem, ShellProfile } from '../components/profile-menu';
@@ -8,7 +9,19 @@ import { readModuleModes } from './module-gate';
 import { availableModules, moduleLabel, navigationFrom, usableModules, visibleModules } from './modules';
 import { profilePhotoUrl } from './profile-photo';
 
-export interface ShellData { navigation: NavigationItem[]; profile: ShellProfile; bell: { unread: number; items: BellItem[] }; }
+/** แชตกับผู้ดูแลระบบ button: whether this person answers the shared inbox, whether pictures can be kept, and what waits. */
+export interface ShellChat { admin: boolean; images: boolean; unread: number; }
+export interface ShellData { navigation: NavigationItem[]; profile: ShellProfile; bell: { unread: number; items: BellItem[] }; chat: ShellChat; }
+export const noChat = (subject: AccessSubject): ShellChat => ({ admin: isAdmin(subject), images: attachmentsEnabled(), unread: 0 });
+
+async function chatUnread(db: Database, subject: AccessSubject): Promise<number> {
+  try {
+    return await new SupportChatService(db).unreadCount(subject);
+  } catch (error) {
+    console.error('support_chat_count_failed', (error as { code?: unknown }).code ?? 'UNKNOWN');
+    return 0;
+  }
+}
 export const emptyProfile: ShellProfile = { displayName: null, positionTitle: null, photoUrl: null };
 
 type NoticeRow = Omit<BellItem, 'moduleLabel'> & { moduleCode: string | null };
@@ -41,6 +54,6 @@ async function signedInProfile(db: Database, personId: string): Promise<ShellPro
 export async function loadShellData(db: Database, subject: AccessSubject): Promise<ShellData> {
   const modes = await readModuleModes(db);
   const modules = await availableModules(usableModules(visibleModules(subject), modes, subject), db, subject);
-  const [badges, items, profile] = await Promise.all([collectBadges(modules, db, subject), subject.personId ? recentNotices(db, subject.personId) : Promise.resolve([]), subject.personId ? signedInProfile(db, subject.personId) : Promise.resolve(emptyProfile)]);
-  return { navigation: navigationFrom(modules, badges, modes), profile, bell: { unread: badges.notifications ?? 0, items } };
+  const [badges, items, profile, chat] = await Promise.all([collectBadges(modules, db, subject), subject.personId ? recentNotices(db, subject.personId) : Promise.resolve([]), subject.personId ? signedInProfile(db, subject.personId) : Promise.resolve(emptyProfile), chatUnread(db, subject)]);
+  return { navigation: navigationFrom(modules, badges, modes), profile, bell: { unread: badges.notifications ?? 0, items }, chat: { ...noChat(subject), unread: chat } };
 }
