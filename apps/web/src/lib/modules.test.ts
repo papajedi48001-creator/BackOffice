@@ -276,3 +276,15 @@ describe('admin module', () => {
     expect(navigationFor(subject())[0]).toMatchObject({ href: '/dashboard', label: 'dashboard' });
   });
 });
+
+describe('submit actions', () => {
+  it('gives request modules a top submit action and leaves data-management modules without one', () => {
+    const actions = Object.fromEntries(navigationFor(subject()).filter((item) => item.submitAction).map((item) => [item.module, item.submitAction]));
+    expect(actions).toEqual({
+      leave: { href: '/leave/new', label: 'leaveNew', icon: 'leave' },
+      'official-travel': { href: '/travel/new', label: 'travelSubmitAction', icon: 'travel' },
+      fleet: { href: '/fleet/new', label: 'fleetNew', icon: 'car' },
+      'room-booking': { href: '/rooms/bookings/new', label: 'bookRoom', icon: 'room' }
+    });
+  });
+});

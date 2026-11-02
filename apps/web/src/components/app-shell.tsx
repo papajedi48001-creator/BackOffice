@@ -1,11 +1,13 @@
 import { t, type MessageKey } from '@backoffice/i18n';
+import type { SubmitAction } from '../lib/modules';
 import { ProfileMenu, type BellItem, type ShellProfile } from './profile-menu';
 import { ShellFrame } from './shell-frame';
 import { SidebarNav } from './sidebar-nav';
 import { SignOutButton } from './sign-out-button';
+import { RequestAction } from './request-action';
 
 /** `development`: the module is in DEVELOPMENT mode (ตั้งค่าโปรแกรม), shown with a กำลังพัฒนา marker. */
-export interface NavigationItem { href: string; label: MessageKey; badge?: number; module?: string; development?: boolean; }
+export interface NavigationItem { href: string; label: MessageKey; badge?: number; module?: string; development?: boolean; submitAction?: SubmitAction; }
 const noProfile: ShellProfile = { displayName: null, positionTitle: null, photoUrl: null };
 export function AppShell({ navigation, profile = noProfile, bell = { unread: 0, items: [] }, children }: { navigation: NavigationItem[]; profile?: ShellProfile; bell?: { unread: number; items: BellItem[] }; children: React.ReactNode }) {
   return <ShellFrame navigation={navigation}>
@@ -14,6 +16,6 @@ export function AppShell({ navigation, profile = noProfile, bell = { unread: 0, 
       <SidebarNav items={navigation} />
       <SignOutButton />
     </aside>
-    <main className="app-main"><div className="app-topbar"><p className="permission-notice">{t('permissionNotice')}</p><ProfileMenu profile={profile} unread={bell.unread} items={bell.items} /></div>{children}</main>
+    <main className="app-main"><div className="app-topbar"><div className="topbar-lead"><RequestAction navigation={navigation} /><p className="permission-notice">{t('permissionNotice')}</p></div><ProfileMenu profile={profile} unread={bell.unread} items={bell.items} /></div>{children}</main>
   </ShellFrame>;
 }

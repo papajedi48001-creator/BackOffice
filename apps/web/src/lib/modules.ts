@@ -38,7 +38,12 @@ export interface ModuleEntry {
   available?(db: Database, subject: AccessSubject): Promise<boolean>;
   /** Sub-pages under href, in section-bar order. A module with sections is visible when any section is. */
   sections?: readonly ModuleSection[];
+  /** The module's main ยื่นคำขอ action, shown as the large icon button at the top of every page of the module. Request modules only; never a data-management action. The target page checks access itself. */
+  submitAction?: SubmitAction;
 }
+
+export type SubmitIconName = 'leave' | 'travel' | 'car' | 'room';
+export interface SubmitAction { href: string; label: MessageKey; icon: SubmitIconName; }
 
 const everyone = () => true;
 const unreadNotices = async (db: Database, subject: AccessSubject) => subject.personId ? Number((await db.query<{ total: number }>('SELECT COUNT(*) AS total FROM notification WHERE recipient_person_id = ? AND channel = ? AND read_at IS NULL', [subject.personId, 'in_app']))[0]?.total ?? 0) : 0;
@@ -82,6 +87,7 @@ export const moduleRegistry: readonly ModuleEntry[] = [
   ]),
   {
     code: 'room-booking', href: '/rooms', labelKey: 'moduleRoomBooking', descriptionKey: 'moduleRoomBookingDescription', icon: 'room', group: 'services', status: 'live', visible: everyone,
+    submitAction: { href: '/rooms/bookings/new', label: 'bookRoom', icon: 'room' },
     // Bookings waiting for this approver; anyone without the approver role gets 0 without a query.
     badge: async (db, subject) => subject.personId ? (await new RoomBookingQueries(db).pendingForApprover({ personId: subject.personId, roles: subject.roles })).length : 0
   },
@@ -97,6 +103,7 @@ export const moduleRegistry: readonly ModuleEntry[] = [
       { href: '/leave/holidays', labelKey: 'leaveHolidays', visible: canManageLeave },
       { href: '/leave/balances', labelKey: 'leaveBalances', visible: canManageLeave }
     ]),
+    submitAction: { href: '/leave/new', label: 'leaveNew', icon: 'leave' },
     badge: async (db, subject) => subject.personId ? new LeaveQueries(db).pendingCount(subject.personId) : 0
   },
   {
@@ -108,6 +115,7 @@ export const moduleRegistry: readonly ModuleEntry[] = [
       { href: '/travel/all', labelKey: 'travelAll', visible: canManageTravel },
       { href: '/travel/settings', labelKey: 'travelSettings', visible: canManageTravel }
     ]),
+    submitAction: { href: '/travel/new', label: 'travelSubmitAction', icon: 'travel' },
     badge: async (db, subject) => subject.personId ? new OfficialTravelQueries(db).pendingCount(subject.personId) : 0
   },
   planned('maintenance', '/maintenance', 'moduleMaintenance', 'moduleMaintenanceDescription', 'wrench'),
@@ -127,6 +135,7 @@ export const moduleRegistry: readonly ModuleEntry[] = [
       { href: '/fleet/driving', labelKey: 'fleetDriving', visible: everyone, available: async (db, subject) => (subject.personId ? new FleetQueries(db).isActiveDriver(subject.personId) : false), badge: fleetDriverToday },
       { href: '/fleet/settings', labelKey: 'fleetSettings', visible: canManageFleet }
     ]),
+    submitAction: { href: '/fleet/new', label: 'fleetNew', icon: 'car' },
     badge: async (db, subject) => (await fleetWaiting(db, subject)) + (await fleetDriverToday(db, subject))
   },
   // ผู้ดูแลระบบ only. A new admin page is one more section here and one page under app/(app)/admin.
@@ -178,7 +187,7 @@ export async function availableModules(modules: ModuleEntry[], db: Database, sub
 }
 
 export function navigationFrom(modules: ModuleEntry[], badges: Record<string, number | undefined> = {}, modes: Readonly<Record<string, ModuleMode>> = {}): NavigationItem[] {
-  return [{ href: '/dashboard', label: 'dashboard', module: 'home' }, ...modules.filter((entry) => entry.status === 'live').map((entry) => ({ href: entry.href, label: entry.labelKey, module: entry.code, ...(badges[entry.code] === undefined ? {} : { badge: badges[entry.code] }), ...(inDevelopment(entry.code, modes) ? { development: true } : {}) }))];
+  return [{ href: '/dashboard', label: 'dashboard', module: 'home' }, ...modules.filter((entry) => entry.status === 'live').map((entry) => ({ href: entry.href, label: entry.labelKey, module: entry.code, ...(badges[entry.code] === undefined ? {} : { badge: badges[entry.code] }), ...(inDevelopment(entry.code, modes) ? { development: true } : {}), ...(entry.submitAction ? { submitAction: entry.submitAction } : {}) }))];
 }
 
 export function navigationFor(subject: AccessSubject): NavigationItem[] {

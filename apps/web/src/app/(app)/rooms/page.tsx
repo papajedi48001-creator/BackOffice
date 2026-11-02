@@ -28,7 +28,7 @@ export default async function RoomCalendarPage({ searchParams }: { searchParams:
   const dayLink = (date: string) => `/rooms?view=day&date=${date}${roomParam}`;
   const pageLink = view.view === 'day' ? dayLink : weekLink;
   return <section>
-    <div className="page-heading"><h2>{t('roomCalendarTitle')}</h2><nav className="page-actions">{covers('room.booking.decide') && <Link href="/rooms/approvals">{t('roomApprovals')}</Link>}{covers('room.manage') && <Link href="/rooms/manage">{t('roomManage')}</Link>}<Link href="/rooms/bookings">{t('myRoomBookings')}</Link><Link className="button-link" href="/rooms/bookings/new">{t('bookRoom')}</Link></nav></div>
+    <div className="page-heading"><h2>{t('roomCalendarTitle')}</h2><nav className="page-actions">{covers('room.booking.decide') && <Link href="/rooms/approvals">{t('roomApprovals')}</Link>}{covers('room.manage') && <Link href="/rooms/manage">{t('roomManage')}</Link>}<Link href="/rooms/bookings">{t('myRoomBookings')}</Link></nav></div>
     <form className="calendar-toolbar" method="get">
       {view.view === 'day' ? <><input type="hidden" name="view" value="day" /><input type="hidden" name="date" value={view.anchor} /></> : <input type="hidden" name="week" value={view.anchor} />}
       <label htmlFor="calendar-room">{t('roomField')}</label>
