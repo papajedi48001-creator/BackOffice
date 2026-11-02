@@ -1,11 +1,14 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { t } from '@backoffice/i18n';
+import { loadRequestForm, type RequestFormData } from '../app/(app)/request-forms';
 import type { SubmitIconName } from '../lib/modules';
 import { matchModule } from '../lib/module-theme';
 import type { NavigationItem } from './app-shell';
+import { FormDialog } from './form-dialog';
+import { RequestForm } from './request-form';
 
 const glyphs: Record<SubmitIconName, React.ReactNode> = {
   // calendar with a plus
@@ -17,14 +20,44 @@ const glyphs: Record<SubmitIconName, React.ReactNode> = {
   room: <><path d="M4 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M2 21h20"/><path d="M12 12h.01"/><path d="m16 8 2 2 4-4"/></>
 };
 
-/** The current module's ยื่นคำขอ action, at the top of every page of the module; hidden on the form it opens. */
+/**
+ * The current module's ยื่นคำขอ button, at the top of every page of the module. It opens the module's request form in
+ * FormDialog without leaving the page; `?request=1` (where the /…/new deep links land) opens it on load. The form's
+ * options come from the server. The popup closes from × or ยกเลิก, or when a successful submit navigates away.
+ */
 export function RequestAction({ navigation }: { navigation: NavigationItem[] }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const search = useSearchParams();
   const code = matchModule(pathname, navigation);
   const action = navigation.find((item) => item.module === code)?.submitAction;
-  if (!action || pathname === action.href || pathname.startsWith(`${action.href}/`)) return null;
-  return <Link className="request-action" href={action.href}>
-    <span className="request-action-icon"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">{glyphs[action.icon]}</svg></span>
-    <span className="request-action-label">{t(action.label)}</span>
-  </Link>;
+  const deepLink = search?.get('request') === '1';
+  const travelId = search?.get('travel') ?? undefined;
+  const [open, setOpen] = useState(false);
+  const [data, setData] = useState<RequestFormData | null>(null);
+  const openedAt = useRef<string | null>(null);
+
+  function show() {
+    if (!code) return;
+    openedAt.current = pathname;
+    setData(null);
+    setOpen(true);
+    void loadRequestForm(code, deepLink ? travelId : undefined).then(setData, () => setData({ module: 'unavailable' }));
+  }
+  // Opens once when a /…/new deep link lands here with request=1.
+  useEffect(() => { if (deepLink && action && !open) show(); }, [deepLink, code]);
+  // A successful submit navigates to the new request; the popup goes with the page it was opened on.
+  useEffect(() => { if (open && openedAt.current !== null && openedAt.current !== pathname) { setOpen(false); setData(null); } }, [pathname, open]);
+
+  if (!action) return null;
+  const close = () => { setOpen(false); setData(null); if (deepLink) router.replace(pathname); };
+  return <>
+    <button type="button" className="request-action" onClick={show}>
+      <span className="request-action-icon"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">{glyphs[action.icon]}</svg></span>
+      <span className="request-action-label">{t(action.label)}</span>
+    </button>
+    <FormDialog title={data?.module === 'fleet' && data.fromTravel ? t('fleetFromTravel') : t(action.label)} wide open={open} onOpenChange={(next) => { if (!next) close(); }}>
+      {data ? <RequestForm data={data} /> : <p role="status">{t('requestFormLoading')}</p>}
+    </FormDialog>
+  </>;
 }
