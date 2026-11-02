@@ -28,8 +28,8 @@
 ### Task 2: viewer-aware calendar query
 **Files:** Modify `packages/core/src/rooms/room-booking-queries.ts`, integration test
 **Produces:** `calendarForViewer(from: Date, to: Date, actor: RoomActor, roomId?: string): Promise<RoomCalendarViewerEntry[]>` with `roomPlace`, `canOpen`
-- [ ] failing integration test (booker and scoped approver canOpen, others not)
-- [ ] implement, pass, commit
+- [x] failing integration test (booker and scoped approver canOpen, others not)
+- [x] implement, pass, commit
 
 ### Task 3: month calendar component with detail dialog
 **Files:** Create `apps/web/src/app/(app)/rooms/dashboard/room-month-calendar.tsx` + test

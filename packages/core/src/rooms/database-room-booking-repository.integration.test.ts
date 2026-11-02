@@ -96,6 +96,21 @@ describeWithDatabase('room booking on MariaDB', () => {
     expect(audit.map((row) => row.metadata).join()).not.toContain('งดใช้ห้อง');
   });
 
+  it('tells each viewer whether they may open a calendar booking, without exposing who booked it', async () => {
+    const room = await createRoom();
+    const booking = await service().submit(booker, input(room.id, ['2026-11-26', '2026-11-27']));
+    const queries = new RoomBookingQueries(database);
+    const view = (actor: RoomActor) => queries.calendarForViewer(new Date('2026-11-25T17:00:00Z'), new Date('2026-11-27T17:00:00Z'), actor, room.id);
+
+    const forBooker = await view(booker);
+    expect(forBooker.map((entry) => entry.date)).toEqual(['2026-11-26', '2026-11-27']);
+    expect(forBooker[0]).toMatchObject({ bookingId: booking.id, roomPlace: 'อาคารอำนวยการ', bookerName: 'ผู้จอง ทดสอบ', canOpen: true });
+    expect(forBooker[0]).not.toHaveProperty('bookerPersonId');
+    expect((await view(approver)).every((entry) => entry.canOpen)).toBe(true);
+    expect((await view({ personId: otherBookerId, roles: [] })).some((entry) => entry.canOpen)).toBe(false);
+    expect((await view({ personId: otherBookerId, roles: [{ name: 'room-booking-approver', organizationId: bookerUnit }] })).some((entry) => entry.canOpen)).toBe(false);
+  });
+
   it('lists pending bookings only for approvers in scope', async () => {
     const room = await createRoom();
     const booking = await service().submit(booker, input(room.id, ['2026-11-25']));
