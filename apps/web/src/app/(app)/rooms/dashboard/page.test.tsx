@@ -44,7 +44,7 @@ describe('RoomDashboardPage', () => {
     expect(within(counts).queryByText('รออนุมัติ')).toBeNull();
     expect(screen.getByRole('link', { name: 'เดือนก่อน' })).toHaveAttribute('href', '/rooms/dashboard?month=2026-10');
     expect(screen.getByRole('link', { name: 'เดือนถัดไป' })).toHaveAttribute('href', '/rooms/dashboard?month=2026-12');
-    expect(within(screen.getByRole('region', { name: '20 พ.ย. 2569' })).getByRole('button', { name: /สมใจ ใจดี/ })).toBeInTheDocument();
+    expect(within(screen.getByRole('group', { name: '20 พ.ย. 2569' })).getByRole('button', { name: /สมใจ ใจดี/ })).toBeInTheDocument();
   });
 
   it('counts what waits for an approver and keeps the room filter in the month links', async () => {

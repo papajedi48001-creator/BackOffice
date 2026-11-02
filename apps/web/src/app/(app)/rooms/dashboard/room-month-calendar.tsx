@@ -22,6 +22,9 @@ const booker = (entry: MonthEntryView) => [entry.bookerName, entry.bookerOrganiz
  */
 export function RoomMonthCalendar({ grid, entries, dayHref }: { grid: MonthGrid; entries: MonthEntryView[]; dayHref: string }) {
   const [selected, setSelected] = useState<MonthEntryView | null>(null);
+  // The popup is removed rather than closed, so focus goes back to the booking that opened it by hand.
+  const opener = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => { if (!selected) opener.current?.focus(); }, [selected]);
   const byDate = new Map<string, MonthEntryView[]>();
   for (const entry of entries) byDate.set(entry.date, [...(byDate.get(entry.date) ?? []), entry]);
   return <div className="room-month">
@@ -29,11 +32,11 @@ export function RoomMonthCalendar({ grid, entries, dayHref }: { grid: MonthGrid;
     <div className="room-month-grid">{grid.weeks.flat().map((day) => {
       const dayEntries = byDate.get(day.date) ?? [];
       const classes = ['room-month-day', day.inMonth ? '' : 'is-outside', day.isPast ? 'is-past' : '', day.isToday ? 'is-today' : '', dayEntries.length === 0 ? 'is-empty' : ''].filter(Boolean).join(' ');
-      return <section key={day.date} className={classes} aria-label={formatBangkokDate(day.date)} aria-current={day.isToday ? 'date' : undefined}>
-        <h3 aria-hidden="true"><span className="room-month-number">{Number(day.date.slice(8))}</span><span className="room-month-fulldate">{formatWeekday(day.date)} {formatBangkokDate(day.date)}</span>{day.isToday && <span className="room-month-today">{t('roomToday')}</span>}</h3>
+      return <div key={day.date} role="group" className={classes} aria-label={formatBangkokDate(day.date)} aria-current={day.isToday ? 'date' : undefined}>
+        <h3><span className="room-month-number" aria-hidden="true">{Number(day.date.slice(8))}</span><span className="room-month-fulldate">{formatWeekday(day.date)} {formatBangkokDate(day.date)}</span>{day.isToday && <span className="room-month-today">{t('roomToday')}</span>}</h3>
         {dayEntries.length > 0 && <ul>
           {dayEntries.slice(0, SHOWN_PER_DAY).map((entry) => <li key={`${entry.bookingId}-${entry.date}`}>
-            <button type="button" className={`room-month-entry room-month-entry-${entry.status.toLowerCase()}`} aria-label={`${timeRange(entry)} ${entry.roomName} ${entry.title} — ${booker(entry)}`} onClick={() => setSelected(entry)}>
+            <button type="button" className={`room-month-entry room-month-entry-${entry.status.toLowerCase()}`} aria-label={`${timeRange(entry)} ${entry.roomName} ${entry.title} — ${booker(entry)}`} onClick={(event) => { opener.current = event.currentTarget; setSelected(entry); }}>
               <span className="room-month-entry-time">{formatBangkokTime(entry.startsAt)}</span>
               <span className="room-month-entry-room">{entry.roomName}</span>
               <span className="room-month-entry-booker">{entry.bookerName ?? ''}</span>
@@ -42,7 +45,7 @@ export function RoomMonthCalendar({ grid, entries, dayHref }: { grid: MonthGrid;
           </li>)}
           {dayEntries.length > SHOWN_PER_DAY && <li><Link className="room-month-more" href={dayHref.replace('{date}', day.date)}>+{dayEntries.length - SHOWN_PER_DAY} {t('roomMoreItems')}</Link></li>}
         </ul>}
-      </section>;
+      </div>;
     })}</div>
     {selected && <BookingDialog entry={selected} onClose={() => setSelected(null)} />}
   </div>;

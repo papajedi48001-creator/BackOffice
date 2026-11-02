@@ -9,21 +9,21 @@ const dayHref = '/rooms/calendar?view=day&date={date}';
 
 it('shows who booked which room under each day of the month', () => {
   render(<RoomMonthCalendar grid={grid} entries={[entry]} dayHref={dayHref} />);
-  const day = screen.getByRole('region', { name: '5 พ.ย. 2569' });
+  const day = screen.getByRole('group', { name: '5 พ.ย. 2569' });
   expect(within(day).getByRole('button', { name: /09:00.*ห้องประชุมใหญ่.*สมใจ ใจดี/ })).toBeInTheDocument();
   expect(within(day).getByText('อนุมัติแล้ว')).toBeInTheDocument();
 });
 
 it('marks today and dims the days already past', () => {
   render(<RoomMonthCalendar grid={grid} entries={[]} dayHref={dayHref} />);
-  expect(screen.getByRole('region', { name: '2 พ.ย. 2569' })).toHaveAttribute('aria-current', 'date');
-  expect(screen.getByRole('region', { name: '1 พ.ย. 2569' })).toHaveClass('is-past');
+  expect(screen.getByRole('group', { name: '2 พ.ย. 2569' })).toHaveAttribute('aria-current', 'date');
+  expect(screen.getByRole('group', { name: '1 พ.ย. 2569' })).toHaveClass('is-past');
 });
 
 it('shows the first three bookings of a day and links the rest to the day view', () => {
   const many = Array.from({ length: 5 }, (_, index) => ({ ...entry, bookingId: `b${index}`, title: `ประชุม ${index}` }));
   render(<RoomMonthCalendar grid={grid} entries={many} dayHref={dayHref} />);
-  const day = screen.getByRole('region', { name: '5 พ.ย. 2569' });
+  const day = screen.getByRole('group', { name: '5 พ.ย. 2569' });
   expect(within(day).getAllByRole('button')).toHaveLength(3);
   expect(within(day).getByRole('link', { name: '+2 รายการ' })).toHaveAttribute('href', '/rooms/calendar?view=day&date=2026-11-05');
 });
@@ -40,10 +40,17 @@ it('opens the booking details in a popup, without a link for someone who may not
   expect(within(dialog).queryByRole('link')).toBeNull();
   fireEvent.click(within(dialog).getByRole('button', { name: 'ปิด' }));
   expect(screen.queryByRole('dialog')).toBeNull();
+  expect(screen.getByRole('button', { name: /ห้องประชุมใหญ่/ })).toHaveFocus();
 });
 
 it('links the booker or an approver to the full booking page', () => {
   render(<RoomMonthCalendar grid={grid} entries={[{ ...entry, canOpen: true }]} dayHref={dayHref} />);
   fireEvent.click(screen.getByRole('button', { name: /ห้องประชุมใหญ่/ }));
   expect(within(screen.getByRole('dialog')).getByRole('link', { name: 'เปิดหน้ารายละเอียดการจอง' })).toHaveAttribute('href', '/rooms/bookings/b1');
+});
+
+it('gives each day a heading with its full date', () => {
+  render(<RoomMonthCalendar grid={grid} entries={[]} dayHref={dayHref} />);
+  expect(screen.getByRole('heading', { name: /วันพฤหัสบดี 5 พ.ย. 2569/ })).toBeInTheDocument();
+  expect(screen.queryAllByRole('region')).toHaveLength(0);
 });
