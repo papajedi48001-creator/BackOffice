@@ -53,6 +53,10 @@ const authorization = new AuthorizationService();
 const withSections = (entry: Omit<ModuleEntry, 'visible'>, sections: readonly ModuleSection[]): ModuleEntry => ({ ...entry, sections, visible: (subject) => sections.some((section) => section.visible(subject)) });
 const planned = (code: string, href: string, labelKey: MessageKey, descriptionKey: MessageKey, icon: ModuleIconName): ModuleEntry => ({ code, href, labelKey, descriptionKey, icon, group: 'services', status: 'planned', visible: everyone });
 
+/** Whether the person holds the permission for at least one หน่วยงาน (or all of them). */
+const covers = (subject: AccessSubject, permission: 'room.booking.decide' | 'room.manage') => { const scope = authorization.organizationScope(subject, permission); return scope === 'all' || scope.length > 0; };
+/** Room bookings waiting for this approver; anyone without the approver role gets 0 without a query. */
+const roomsPending = async (db: Database, subject: AccessSubject) => (subject.personId ? (await new RoomBookingQueries(db).pendingForApprover({ personId: subject.personId, roles: subject.roles })).length : 0);
 /** ใบ รอจัดรถ, for the หัวหน้าหมวดยานพาหนะ only. */
 const fleetWaiting = async (db: Database, subject: AccessSubject) => (subject.personId && canManageFleet(subject) ? new FleetQueries(db).waitingCount() : 0);
 /** The person's เที่ยวรถ today that have not left yet; 0 for anyone who does not drive. */
@@ -86,10 +90,15 @@ export const moduleRegistry: readonly ModuleEntry[] = [
     { href: '/access/audit', labelKey: 'audit', visible: everyone }
   ]),
   {
-    code: 'room-booking', href: '/rooms', labelKey: 'moduleRoomBooking', descriptionKey: 'moduleRoomBookingDescription', icon: 'room', group: 'services', status: 'live', visible: everyone,
+    ...withSections({ code: 'room-booking', href: '/rooms', labelKey: 'moduleRoomBooking', descriptionKey: 'moduleRoomBookingDescription', icon: 'room', group: 'services', status: 'live' }, [
+      { href: '/rooms/dashboard', labelKey: 'roomDashboard', visible: everyone },
+      { href: '/rooms/calendar', labelKey: 'roomWeekCalendar', visible: everyone },
+      { href: '/rooms/bookings', labelKey: 'myRoomBookings', visible: everyone },
+      { href: '/rooms/approvals', labelKey: 'roomApprovals', visible: (subject) => covers(subject, 'room.booking.decide'), badge: roomsPending },
+      { href: '/rooms/manage', labelKey: 'roomManage', visible: (subject) => covers(subject, 'room.manage') }
+    ]),
     submitAction: { href: '/rooms/bookings/new', label: 'bookRoom', icon: 'room' },
-    // Bookings waiting for this approver; anyone without the approver role gets 0 without a query.
-    badge: async (db, subject) => subject.personId ? (await new RoomBookingQueries(db).pendingForApprover({ personId: subject.personId, roles: subject.roles })).length : 0
+    badge: roomsPending
   },
   {
     ...withSections({ code: 'leave', href: '/leave', labelKey: 'moduleLeave', descriptionKey: 'moduleLeaveDescription', icon: 'leave', group: 'mine', status: 'live' }, [

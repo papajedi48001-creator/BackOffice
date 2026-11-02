@@ -8,6 +8,8 @@ import type { RoomAddonDetails, RoomDetails } from './room-catalog-service';
 export interface RoomListItem extends RoomDetails { ownerOrganizationName: string | null; upcomingBookingCount: number; }
 /** Public calendar entry: what every signed-in person may see. */
 export interface RoomCalendarEntry { bookingId: string; reference: string; roomId: string; roomName: string; date: string; startsAt: Date; endsAt: Date; status: RoomBookingStatus; title: string; bookerName: string | null; bookerOrganizationName: string | null; }
+/** A calendar entry as one viewer sees it; `canOpen` is decided on the server so no person id leaves it. */
+export interface RoomCalendarViewerEntry extends RoomCalendarEntry { roomPlace: string; canOpen: boolean; }
 export interface RoomBookingSummary { id: string; reference: string; roomName: string; title: string; status: RoomBookingStatus; firstDate: string; lastDate: string; startMinute: number; endMinute: number; activeDayCount: number; lastEndsAt: Date | null; bookerName: string | null; bookerOrganizationName: string | null; }
 export interface RoomBookingDetail extends RoomBookingSummary {
   roomId: string; roomPlace: string; attendeeCount: number; bookerPersonId: string;
@@ -50,8 +52,20 @@ export class RoomBookingQueries {
   }
 
   async calendar(from: Date, to: Date, roomId?: string): Promise<RoomCalendarEntry[]> {
-    const rows = await this.database.query<Omit<RoomCalendarEntry, 'date' | 'startsAt' | 'endsAt'> & { date: Date | string; startsAt: Date | string; endsAt: Date | string }>(
-      `SELECT b.id AS bookingId, b.reference, r.id AS roomId, r.name AS roomName, d.booking_date AS date, d.starts_at AS startsAt, d.ends_at AS endsAt, b.status, b.title, p.display_name AS bookerName, o.name AS bookerOrganizationName
+    return (await this.calendarRows(from, to, roomId)).map(({ bookerPersonId: _booker, ownerOrganizationId: _owner, roomPlace: _place, ...entry }) => { void _booker; void _owner; void _place; return entry; });
+  }
+
+  /** Calendar entries with the room's place and whether this viewer may open the full booking (its booker, or an approver over the room's unit). */
+  async calendarForViewer(from: Date, to: Date, actor: RoomActor, roomId?: string): Promise<RoomCalendarViewerEntry[]> {
+    const scope = this.authorizer.organizationScope(this.subject(actor), 'room.booking.decide');
+    const approves = (organizationId: string) => scope === 'all' || scope.includes(organizationId);
+    return (await this.calendarRows(from, to, roomId)).map(({ bookerPersonId, ownerOrganizationId, ...entry }) => ({ ...entry, canOpen: bookerPersonId === actor.personId || approves(ownerOrganizationId) }));
+  }
+
+  private async calendarRows(from: Date, to: Date, roomId?: string) {
+    const rows = await this.database.query<Omit<RoomCalendarEntry, 'date' | 'startsAt' | 'endsAt'> & { date: Date | string; startsAt: Date | string; endsAt: Date | string; roomPlace: string; bookerPersonId: string; ownerOrganizationId: string }>(
+      `SELECT b.id AS bookingId, b.reference, r.id AS roomId, r.name AS roomName, r.place AS roomPlace, r.owner_organization_id AS ownerOrganizationId, d.booking_date AS date, d.starts_at AS startsAt, d.ends_at AS endsAt, b.status, b.title,
+         b.booker_person_id AS bookerPersonId, p.display_name AS bookerName, o.name AS bookerOrganizationName
        FROM room_booking_day d JOIN room_booking b ON b.id = d.booking_id JOIN room r ON r.id = d.room_id
        LEFT JOIN person p ON p.id = b.booker_person_id LEFT JOIN organization o ON o.id = b.booker_organization_id
        WHERE d.status = 'ACTIVE' AND b.status IN ('PENDING', 'APPROVED') AND d.starts_at < ? AND d.ends_at > ? ${roomId ? 'AND d.room_id = ?' : ''}

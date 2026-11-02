@@ -54,6 +54,19 @@ describe('module registry', () => {
     expect(visibleModules(subject()).find((entry) => entry.code === 'room-booking')).toMatchObject({ status: 'live', group: 'services' });
   });
 
+  it('splits room booking into sections, with approvals and room management by role', () => {
+    const sections = (roles: { name: string; organizationId: string | null }[]) => moduleRegistry.find((entry) => entry.code === 'room-booking')!.sections!.filter((section) => section.visible(subject({ roles }))).map((section) => section.href);
+    expect(sections([])).toEqual(['/rooms/dashboard', '/rooms/calendar', '/rooms/bookings']);
+    expect(sections([{ name: 'room-booking-approver', organizationId: null }])).toContain('/rooms/approvals');
+    expect(sections([{ name: 'room-manager', organizationId: null }])).toEqual(['/rooms/dashboard', '/rooms/calendar', '/rooms/bookings', '/rooms/manage']);
+  });
+
+  it('badges the room approvals tab with what waits for the approver', async () => {
+    const approvals = moduleRegistry.find((entry) => entry.code === 'room-booking')!.sections!.find((section) => section.href === '/rooms/approvals')!;
+    const query = vi.fn().mockResolvedValue([{ id: 'b1', reference: 'RB-2569-0001', roomName: 'ห้อง 1', title: 'ประชุม', status: 'PENDING', startMinute: 540, endMinute: 720, firstDate: '2026-11-05', lastDate: '2026-11-05', activeDayCount: 1, lastEndsAt: '2026-11-05 05:00:00', bookerName: null, bookerOrganizationName: null }]);
+    expect(await approvals.badge!({ query } as unknown as Database, subject({ roles: [{ name: 'room-booking-approver', organizationId: null }] }))).toBe(1);
+  });
+
   it('badges room booking with pending bookings only for approvers', async () => {
     const roomBooking = moduleRegistry.find((entry) => entry.code === 'room-booking')!;
     const row = { id: 'b1', reference: 'RB-2569-0001', roomName: 'ห้อง 1', title: 'ประชุม', status: 'PENDING', startMinute: 540, endMinute: 720, firstDate: '2026-11-05', lastDate: '2026-11-05', activeDayCount: 1, lastEndsAt: '2026-11-05 05:00:00', bookerName: null, bookerOrganizationName: null };

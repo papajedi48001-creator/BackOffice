@@ -10,6 +10,9 @@ export interface SectionLink { href: string; labelKey: MessageKey; badge?: numbe
 export function ModuleSubnav({ sections }: { sections: SectionLink[] }) {
   const pathname = usePathname();
   if (sections.length < 2) return null;
-  const isCurrent = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  const matches = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  // When one section sits inside another (/rooms/bookings/new in /rooms/bookings), only the longest match is current.
+  const current = sections.filter((section) => matches(section.href)).sort((a, b) => b.href.length - a.href.length)[0]?.href;
+  const isCurrent = (href: string) => href === current;
   return <nav className="module-subnav" aria-label={t('moduleSectionsLabel')}><ul>{sections.map((section) => <li key={section.href}><Link href={section.href} aria-current={isCurrent(section.href) ? 'page' : undefined}>{t(section.labelKey)}{section.badge ? <span className="count-badge" aria-label={`${section.badge} ${t('launcherBadgeSuffix')}`}>{section.badge}</span> : null}</Link></li>)}</ul></nav>;
 }
