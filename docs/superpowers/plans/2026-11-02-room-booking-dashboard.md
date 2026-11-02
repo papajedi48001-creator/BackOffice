@@ -38,8 +38,8 @@
 
 ### Task 4: dashboard page, sections, layout, move week calendar
 **Files:** `rooms/layout.tsx`, `rooms/page.tsx` (ModuleIndex), `rooms/dashboard/page.tsx`, `rooms/calendar/page.tsx`, `lib/modules.ts`, styles, i18n
-- [ ] failing registry test (room-booking sections and approver badge on approvals tab)
-- [ ] implement, pass, commit
+- [x] failing registry test (room-booking sections and approver badge on approvals tab)
+- [x] implement, pass, commit
 
 ### Verification
 `pnpm lint && pnpm typecheck && pnpm test`, `DATABASE_URL=… pnpm test:integration` on MariaDB 11.8, web build, Playwright screenshots of `/rooms/dashboard`.

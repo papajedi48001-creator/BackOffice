@@ -574,7 +574,8 @@ video.inventory-camera { display: block; flex-basis: 100%; width: 100%; max-widt
 .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
 /* Room booking month dashboard (rooms/dashboard). */
-.room-dashboard-stats { margin: 4px 0 20px; }
+.room-dashboard-stats { margin: 4px 0 20px; padding: 0; list-style: none; }
+.room-dashboard-stats li { display: grid; }
 .room-dashboard-stats article { border-top: 4px solid var(--accent); }
 .room-dashboard-stats span { color: var(--muted); }
 .room-month-toolbar { justify-content: space-between; }
@@ -609,6 +610,7 @@ video.inventory-camera { display: block; flex-basis: 100%; width: 100%; max-widt
 .room-month-more { color: var(--accent); font-size: .82rem; font-weight: 700; }
 .room-month-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 12px 0 0; color: var(--muted); font-size: .9rem; }
 .room-month-legend span::before { content: ''; display: inline-block; width: 14px; height: 10px; margin-right: 6px; border-left: 4px solid var(--accent); border-radius: 3px; background: var(--accent-tint); vertical-align: middle; }
+.room-month-legend em { margin-left: auto; font-style: normal; }
 .room-month-legend .legend-pending::before { border: 1px dashed var(--accent); border-left: 4px dashed var(--accent); background: var(--surface); }
 .room-booking-dialog-reference { margin: 0 0 4px; color: var(--accent); font-family: ui-monospace, 'Cascadia Mono', monospace; font-weight: 700; }
 .room-booking-dialog-facts { display: grid; gap: 10px; margin: 0; }
