@@ -20,6 +20,6 @@ export default async function MyProfilePage() {
   if (!view || typeof view === 'string') return <section><h2>{t('hrMyProfile')}</h2><p role="alert">{t('hrLoadError')}</p></section>;
   return <section>
     <h2>{t('hrMyProfile')}</h2>
-    <HrProfileView view={view} contactEndpoint="/api/hr/me/contact" personalEndpoint="/api/hr/me/personal" photo={{ url: uploadsEnabled && view.work.photoAttachmentId ? profilePhotoUrl(view.work.personId, view.work.photoAttachmentId) : null, uploadsEnabled }} />
+    <HrProfileView view={view} contactEndpoint="/api/hr/me/contact" personalEndpoint="/api/hr/me/personal" photo={{ url: uploadsEnabled && view.work.photoAttachmentId ? profilePhotoUrl(view.work.personId, view.work.photoAttachmentId) : null, uploadsEnabled }} uploadsEnabled={uploadsEnabled} />
   </section>;
 }

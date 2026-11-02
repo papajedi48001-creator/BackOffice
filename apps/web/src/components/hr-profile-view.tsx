@@ -1,16 +1,19 @@
 import type { ProfileView } from '@backoffice/core';
 import { t } from '@backoffice/i18n';
 import { bangkokToday, formatBangkokDate, formatBangkokTime } from '../lib/bangkok-time';
-import { dateFields, genderLabelKeys, profileFieldLabelKeys } from '../lib/hr-profile-labels';
+import { dateFields, genderLabelKeys, maritalStatusLabelKeys, profileFieldLabelKeys } from '../lib/hr-profile-labels';
+import { FamilyForm, Kp7FileForm } from './hr-kp7-forms';
+import { CivilServiceForm, EducationForm, PositionHistoryForm } from './hr-kp7-service-forms';
 import { ContactForm, PersonalForm, PhotoForm, ProfileForm, type ProfileFormPosition, type ProfileFormUnit } from './hr-profile-forms';
 import { initialsOf } from '../lib/initials';
 
 const day = (value: string | null) => value ? formatBangkokDate(value) : t('notAssigned');
 const text = (value: string | null) => value ?? t('notAssigned');
+const baht = (value: number | null) => value === null ? t('notAssigned') : value.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const historyValue = (field: string, value: string | null) => value === null ? t('notAssigned') : dateFields.has(field) ? formatBangkokDate(value) : value;
 
 /** One person's profile boxes. Private boxes render only when the server returned private details. */
-export function HrProfileView({ view, contactEndpoint, personalEndpoint, photo, employmentTypes = [], units = [], positions = [] }: { view: ProfileView; contactEndpoint: string; personalEndpoint?: string; photo?: { url: string | null; uploadsEnabled: boolean }; employmentTypes?: { id: string; name: string }[]; units?: ProfileFormUnit[]; positions?: ProfileFormPosition[] }) {
+export function HrProfileView({ view, contactEndpoint, personalEndpoint, photo, employmentTypes = [], units = [], positions = [], uploadsEnabled = false }: { view: ProfileView; contactEndpoint: string; personalEndpoint?: string; photo?: { url: string | null; uploadsEnabled: boolean }; employmentTypes?: { id: string; name: string }[]; units?: ProfileFormUnit[]; positions?: ProfileFormPosition[]; uploadsEnabled?: boolean }) {
   const { work, private: personal, access, history } = view;
   const rows = (entries: [string, React.ReactNode][]) => <dl className="profile-summary">{entries.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>;
   return <div className="profile">
@@ -37,6 +40,43 @@ export function HrProfileView({ view, contactEndpoint, personalEndpoint, photo, 
           [t('hrFieldEmergencyContactRelationship'), text(personal.emergencyContactRelationship)], [t('hrFieldEmergencyContactPhone'), text(personal.emergencyContactPhone)]
         ])}
       </section>
+      <section className="profile-box" aria-label={t('hrProfileFamily')}>
+        <h3>{t('hrProfileFamily')}</h3>
+        {rows([
+          [t('hrFieldMaritalStatus'), personal.maritalStatus ? t(maritalStatusLabelKeys[personal.maritalStatus]) : t('notAssigned')], [t('hrFieldReligion'), text(personal.religion)], [t('hrFieldBirthplace'), text(personal.birthplace)],
+          [t('hrFieldFatherName'), text(personal.fatherName)], [t('hrFieldMotherName'), text(personal.motherName)], [t('hrFieldMotherMaidenName'), text(personal.motherMaidenName)],
+          [t('hrFieldSpouseName'), text(personal.spouseName)], [t('hrFieldSpouseMaidenName'), text(personal.spouseMaidenName)], [t('hrFieldChildrenCount'), personal.childrenCount === null ? t('notAssigned') : String(personal.childrenCount)]
+        ])}
+      </section>
+      <section className="profile-box" aria-label={t('hrProfileCivilService')}>
+        <h3>{t('hrProfileCivilService')}</h3>
+        {rows([
+          [t('hrFieldPositionNumber'), text(personal.civilService.positionNumber)],
+          [t('hrFieldSalary'), personal.civilService.salary === null ? t('notAssigned') : personal.civilService.salary.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })],
+          [t('hrFieldParentAgency'), text(personal.civilService.parentAgency)],
+          [t('hrFieldGpf'), personal.civilService.gpfStatus === null ? t('notAssigned') : t(personal.civilService.gpfStatus === 'MEMBER' ? 'hrGpfMember' : 'hrGpfNotMember')],
+          [t('hrFieldFirstAppointedOn'), day(personal.civilService.firstAppointedOn)], [t('hrFieldReappointedOn'), day(personal.civilService.reappointedOn)],
+          [t('hrFieldTransferredInOn'), day(personal.civilService.transferredInOn)], [t('hrFieldTransferredOutOn'), day(personal.civilService.transferredOutOn)],
+          [t('hrFieldJoinedUnitOn'), day(personal.civilService.joinedUnitOn)], [t('hrFieldCurrentLevelSince'), day(personal.civilService.currentLevelSince)],
+          [t('hrFieldQualification'), text(personal.civilService.qualification)], [t('hrFieldQualificationMajor'), text(personal.civilService.qualificationMajor)],
+          [t('hrFieldSpecialAllowance'), text(personal.civilService.specialAllowance)], [t('hrFieldRetirementDate'), day(personal.civilService.retirementDate)]
+        ])}
+      </section>
+      <section className="profile-box" aria-label={t('hrProfileEducation')}>
+        <h3>{t('hrProfileEducation')}</h3>
+        {personal.education.length === 0 ? <p>{t('hrNoEducation')}</p> : <table>
+          <thead><tr><th>{t('hrFieldGraduatedOn')}</th><th>{t('hrFieldDegree')}</th><th>{t('hrFieldMajor')}</th><th>{t('hrFieldInstitution')}</th><th>{t('hrFieldCountry')}</th></tr></thead>
+          <tbody>{personal.education.map((entry, index) => <tr key={index}><td>{day(entry.graduatedOn)}</td><td>{entry.degree}</td><td>{text(entry.major)}</td><td>{text(entry.institution)}</td><td>{text(entry.country)}</td></tr>)}</tbody>
+        </table>}
+      </section>
+      <section className="profile-box" aria-label={t('hrProfilePositionHistory')}>
+        <h3>{t('hrProfilePositionHistory')}</h3>
+        {personal.positionHistory.length === 0 ? <p>{t('hrNoPositionHistory')}</p> : <table>
+          <thead><tr><th>{t('hrFieldEffectiveOn')}</th><th>{t('hrFieldHistoryDescription')}</th><th>{t('hrFieldPositionNumber')}</th><th>{t('hrFieldPositionType')}</th><th>{t('hrFieldHistoryLevel')}</th><th>{t('hrFieldHistorySalary')}</th><th>{t('hrFieldPositionAllowance')}</th><th>{t('hrFieldReference')}</th></tr></thead>
+          <tbody>{personal.positionHistory.map((entry, index) => <tr key={index}><td>{day(entry.effectiveOn)}</td><td>{entry.description}</td><td>{text(entry.positionNumber)}</td><td>{text(entry.positionType)}</td><td>{text(entry.level)}</td><td>{baht(entry.salary)}</td><td>{baht(entry.positionAllowance)}</td><td>{text(entry.reference)}</td></tr>)}</tbody>
+        </table>}
+      </section>
+      <Kp7FileForm endpoint={access.editContact ? `/api/hr/people/${work.personId}/kp7` : undefined} file={personal.kp7File} uploadsEnabled={uploadsEnabled} />
     </> : null}
     {access.editProfile && personal ? <ProfileForm personId={work.personId} employmentTypes={employmentTypes} units={units} positions={positions} organizationName={work.organizationName} values={{
       namePrefix: personal.namePrefix, firstName: personal.firstName, lastName: personal.lastName, gender: personal.gender, birthDate: personal.birthDate,
@@ -44,6 +84,13 @@ export function HrProfileView({ view, contactEndpoint, personalEndpoint, photo, 
     }} /> : null}
     {photo ? <PhotoForm photoUrl={photo.url} initials={initialsOf(work.displayName)} uploadsEnabled={photo.uploadsEnabled} /> : null}
     {personalEndpoint && !access.editProfile && personal ? <PersonalForm endpoint={personalEndpoint} values={{ namePrefix: personal.namePrefix, firstName: personal.firstName, lastName: personal.lastName, gender: personal.gender, birthDate: personal.birthDate }} /> : null}
+    {access.editProfile && personal ? <CivilServiceForm endpoint={`/api/hr/people/${work.personId}/civil-service`} values={personal.civilService} /> : null}
+    {access.editProfile && personal ? <PositionHistoryForm endpoint={`/api/hr/people/${work.personId}/position-history`} entries={personal.positionHistory} /> : null}
+    {access.editContact && personal ? <EducationForm endpoint={`/api/hr/people/${work.personId}/education`} entries={personal.education} /> : null}
+    {access.editContact && personal ? <FamilyForm endpoint={`/api/hr/people/${work.personId}/family`} values={{
+      maritalStatus: personal.maritalStatus, religion: personal.religion, birthplace: personal.birthplace, fatherName: personal.fatherName, motherName: personal.motherName,
+      motherMaidenName: personal.motherMaidenName, spouseName: personal.spouseName, spouseMaidenName: personal.spouseMaidenName, childrenCount: personal.childrenCount
+    }} /> : null}
     {access.editContact && personal ? <ContactForm endpoint={contactEndpoint} values={{ phone: personal.phone, address: personal.address, emergencyContactName: personal.emergencyContactName, emergencyContactRelationship: personal.emergencyContactRelationship, emergencyContactPhone: personal.emergencyContactPhone }} /> : null}
     <section className="profile-box">
       <h3>{t('hrProfileHistory')}</h3>

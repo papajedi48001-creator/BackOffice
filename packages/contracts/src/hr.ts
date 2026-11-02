@@ -101,6 +101,61 @@ export const updatePersonContactInputSchema = z.object({
 }).strict();
 export type UpdatePersonContactInput = z.infer<typeof updatePersonContactInputSchema>;
 
+/** สถานภาพ on the ก.พ.7: โสด, สมรส, หย่า, แยกกันอยู่, หม้าย. */
+export const maritalStatusSchema = z.enum(['SINGLE', 'MARRIED', 'DIVORCED', 'SEPARATED', 'WIDOWED']);
+export type MaritalStatus = z.infer<typeof maritalStatusSchema>;
+
+/** ข้อมูลส่วนตัวและครอบครัว as laid out on the ก.พ.7. The person and HR edit it; an absent field keeps its value, null clears it. */
+export const updatePersonFamilyInputSchema = z.object({
+  maritalStatus: maritalStatusSchema.nullable().optional(), religion: optionalText(64), birthplace: optionalText(255),
+  fatherName: optionalText(255), motherName: optionalText(255), motherMaidenName: optionalText(255),
+  spouseName: optionalText(255), spouseMaidenName: optionalText(255), childrenCount: z.number().int().min(0).max(30).nullable().optional()
+}).strict();
+export type UpdatePersonFamilyInput = z.infer<typeof updatePersonFamilyInputSchema>;
+
+/** กบข. on the ก.พ.7: สมัคร or ไม่สมัคร. */
+export const gpfStatusSchema = z.enum(['MEMBER', 'NOT_MEMBER']);
+export type GpfStatus = z.infer<typeof gpfStatusSchema>;
+
+/** ข้อมูลการปฏิบัติราชการ on the ก.พ.7. These record official orders, so only HR edits them. */
+export const updateCivilServiceInputSchema = z.object({
+  positionNumber: optionalText(32), salary: z.number().min(0).max(9_999_999).multipleOf(0.01).nullable().optional(), parentAgency: optionalText(255),
+  gpfStatus: gpfStatusSchema.nullable().optional(), firstAppointedOn: calendarDateSchema.nullable().optional(), reappointedOn: calendarDateSchema.nullable().optional(),
+  transferredInOn: calendarDateSchema.nullable().optional(), transferredOutOn: calendarDateSchema.nullable().optional(), joinedUnitOn: calendarDateSchema.nullable().optional(),
+  currentLevelSince: calendarDateSchema.nullable().optional(), qualification: optionalText(255), qualificationMajor: optionalText(255), specialAllowance: optionalText(255)
+}).strict();
+export type UpdateCivilServiceInput = z.infer<typeof updateCivilServiceInputSchema>;
+
+/** วันเกษียณอายุ: 1 ต.ค. after the fiscal year in which the person turns 60 (born 2 ต.ค. or later retires a year on). */
+export function retirementDate(birthDate: string | null): string | null {
+  if (!birthDate) return null;
+  const [year, month, day] = birthDate.split('-').map(Number) as [number, number, number];
+  const lateInYear = month > 10 || (month === 10 && day >= 2);
+  return `${year + 60 + (lateInYear ? 1 : 0)}-10-01`;
+}
+
+/** One row of ข้อมูลการศึกษา. */
+export const educationEntrySchema = z.object({
+  graduatedOn: calendarDateSchema.nullable().optional(), degree: z.string().trim().min(1).max(255), major: optionalText(255), institution: optionalText(255), country: optionalText(120)
+}).strict();
+export type EducationEntry = z.infer<typeof educationEntrySchema>;
+/** The whole ข้อมูลการศึกษา list, in order; saving replaces the list. The person and HR edit it. */
+export const updateEducationInputSchema = z.object({ entries: z.array(educationEntrySchema).max(20) }).strict();
+export type UpdateEducationInput = z.infer<typeof updateEducationInputSchema>;
+
+/** One row of ตำแหน่งและอัตราเงินเดือน: one order (คำสั่ง). Only HR edits these rows. */
+export const positionHistoryEntrySchema = z.object({
+  effectiveOn: calendarDateSchema, description: z.string().trim().min(1).max(500), positionNumber: optionalText(32), positionType: optionalText(120), level: optionalText(120),
+  salary: z.number().min(0).max(9_999_999).multipleOf(0.01).nullable().optional(), positionAllowance: z.number().min(0).max(9_999_999).multipleOf(0.01).nullable().optional(), reference: optionalText(255)
+}).strict();
+export type PositionHistoryEntry = z.infer<typeof positionHistoryEntrySchema>;
+/** The whole list; saving replaces it and rows are kept in date order. */
+export const updatePositionHistoryInputSchema = z.object({ entries: z.array(positionHistoryEntrySchema).max(200) }).strict();
+export type UpdatePositionHistoryInput = z.infer<typeof updatePositionHistoryInputSchema>;
+
+/** The ก.พ.7 file: a PDF printed from the ministry system, up to 10 MB. */
+export const MAX_KP7_FILE_BYTES = 10 * 1024 * 1024;
+
 export const employmentTypeInputSchema = z.object({
   code: z.string().regex(/^[A-Z][A-Z0-9_]{1,31}$/), name: z.string().trim().min(1).max(120),
   isActive: z.boolean(), sortOrder: z.number().int().min(0).max(9999)
