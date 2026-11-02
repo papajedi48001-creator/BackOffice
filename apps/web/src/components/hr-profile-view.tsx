@@ -25,22 +25,24 @@ export function HrProfileView({ view, contactEndpoint, personalEndpoint, photo, 
   }} /> : null;
   const personalForm = profileForm ?? (personalEndpoint && personal ? <PersonalForm endpoint={personalEndpoint} values={{ namePrefix: personal.namePrefix, firstName: personal.firstName, lastName: personal.lastName, gender: personal.gender, birthDate: personal.birthDate }} /> : null);
   return <div className="profile">
-    <section className="profile-box">
-      {heading(t('hrProfileWork'), null, profileForm)}
-      {rows([
-        [t('employeeCode'), text(work.employeeCode)], [t('hrFieldOrganization'), text(work.organizationName)], [t('hrFieldPositionTitle'), text(work.positionTitle)],
-        [t('hrFieldPositionLevel'), text(work.positionLevel)], [t('hrFieldEmploymentType'), text(work.employmentTypeName)], [t('hrFieldAppointedOn'), day(work.appointedOn)],
-        [t('employmentStatus'), work.employmentStatus === 'ACTIVE' ? t('employmentActive') : t('employmentInactive')]
-      ])}
-    </section>
     {personal ? <>
       <section className="profile-box">
-        {heading(t('hrProfilePersonal'), null, access.editProfile ? null : personalForm)}
+        {heading(t('hrProfilePersonal'), null, personalForm)}
         {rows([
           [t('hrFieldNamePrefix'), text(personal.namePrefix)], [t('hrFieldFirstName'), text(personal.firstName)], [t('hrFieldLastName'), text(personal.lastName)],
           [t('hrFieldGender'), personal.gender ? t(genderLabelKeys[personal.gender]) : t('notAssigned')], [t('hrFieldBirthDate'), day(personal.birthDate)]
         ])}
       </section>
+    </> : null}
+    <section className="profile-box">
+        {heading(t('hrProfileWork'), null)}
+        {rows([
+          [t('employeeCode'), text(work.employeeCode)], [t('hrFieldOrganization'), text(work.organizationName)], [t('hrFieldPositionTitle'), text(work.positionTitle)],
+          [t('hrFieldPositionLevel'), text(work.positionLevel)], [t('hrFieldEmploymentType'), text(work.employmentTypeName)], [t('hrFieldAppointedOn'), day(work.appointedOn)],
+          [t('employmentStatus'), work.employmentStatus === 'ACTIVE' ? t('employmentActive') : t('employmentInactive')]
+        ])}
+      </section>
+    {personal ? <>
       <section className="profile-box">
         {heading(t('hrProfileContact'), null, access.editContact ? <ContactForm endpoint={contactEndpoint} values={{ phone: personal.phone, address: personal.address, emergencyContactName: personal.emergencyContactName, emergencyContactRelationship: personal.emergencyContactRelationship, emergencyContactPhone: personal.emergencyContactPhone }} /> : null)}
         {rows([

@@ -585,3 +585,8 @@ video.inventory-camera { display: block; flex-basis: 100%; width: 100%; max-widt
 /* รหัสผ่านใหม่ and ยืนยันรหัสผ่าน stack on their own lines, across the whole form. */
 .password-fields { grid-column: 1 / -1; display: grid; gap: 12px; max-width: 520px; }
 .password-fields .password-field button { justify-self: auto; background: #fff; color: var(--accent); border: 1px solid var(--accent); }
+
+/* A box's แก้ไขข้อมูล button sits on the heading row, without the form card around it. */
+.profile-box-header { margin-bottom: 12px; }
+.profile-box-header .profile-form { display: flex; align-items: center; gap: 8px; border: 0; background: none; padding: 0; }
+.profile-box-header .profile-form button.section-edit, .profile-box-header button.section-edit { min-height: 36px; padding: 6px 14px; background: #fff; color: var(--accent); border: 1px solid var(--accent); }
