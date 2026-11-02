@@ -33,8 +33,8 @@
 
 ### Task 3: month calendar component with detail dialog
 **Files:** Create `apps/web/src/app/(app)/rooms/dashboard/room-month-calendar.tsx` + test
-- [ ] failing tests (entries under their day, +N link, dialog shows details, link only when canOpen)
-- [ ] implement, pass, commit
+- [x] failing tests (entries under their day, +N link, dialog shows details, link only when canOpen)
+- [x] implement, pass, commit
 
 ### Task 4: dashboard page, sections, layout, move week calendar
 **Files:** `rooms/layout.tsx`, `rooms/page.tsx` (ModuleIndex), `rooms/dashboard/page.tsx`, `rooms/calendar/page.tsx`, `lib/modules.ts`, styles, i18n
