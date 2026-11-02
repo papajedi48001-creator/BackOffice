@@ -39,3 +39,13 @@ test('shows a Thai generic error for rejected credentials', async () => {
 
   expect(await screen.findByRole('alert')).toHaveTextContent('ไม่สามารถเข้าสู่ระบบได้ โปรดตรวจสอบชื่อผู้ใช้และรหัสผ่าน');
 });
+
+test('sends a person whose password was reset to the change-password step', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ authenticated: true, mustChangePassword: true }), { status: 200 })));
+  render(<LocalSignInForm />);
+  fireEvent.change(screen.getByLabelText('ชื่อผู้ใช้'), { target: { value: 'somjai' } });
+  fireEvent.change(screen.getByLabelText('รหัสผ่าน'), { target: { value: 'P@ssw0rd#1' } });
+  fireEvent.click(screen.getByRole('button', { name: 'เข้าสู่ระบบ' }));
+  await waitFor(() => expect(push).toHaveBeenCalledWith('/change-password'));
+  vi.unstubAllGlobals();
+});

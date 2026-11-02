@@ -13,9 +13,9 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const body = await request.json();
     const auth = new LocalAuthService(new DatabaseLocalAccountRepository(database), { throttle: new DatabaseLoginThrottle(database), audit: new AuditService(new DatabaseAuditRepository(database)) });
-    const { personId } = await auth.authenticateLocal(body);
+    const { personId, mustChangePassword } = await auth.authenticateLocal(body);
     const session = await startSession(personId);
-    const response = NextResponse.json({ authenticated: true });
+    const response = NextResponse.json({ authenticated: true, mustChangePassword: mustChangePassword === true });
     response.cookies.set(sessionCookieName, session.token, sessionCookieOptions(session.maxAgeSeconds));
     return response;
   } catch (error) {

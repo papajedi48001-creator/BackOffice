@@ -132,14 +132,14 @@ describe('PersonProfilePage', () => {
     expect(within(identity).getByLabelText(/ชื่อผู้ใช้/)).toHaveValue('malee');
     expect(within(identity).getByLabelText(/ชื่อผู้ใช้/)).toHaveAttribute('readonly');
     expect(within(identity).getByLabelText('รหัสบุคลากร')).toHaveValue('E001');
-    expect(within(screen.getByRole('form', { name: 'บัญชีผู้ใช้' })).getByRole('button', { name: 'ตั้งรหัสผ่านใหม่' })).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'บัญชีผู้ใช้' })).getByRole('button', { name: 'รีเซ็ตรหัสผ่าน' })).toBeInTheDocument();
   });
 
   it('shows no identity or account forms to a reader', async () => {
     ready(reader, { work, private: null, access: { viewWork: true, viewPrivate: false, editProfile: false, editContact: false }, history: [] });
     render(await page());
     expect(screen.queryByRole('form', { name: 'ข้อมูลระบุตัวตน' })).toBeNull();
-    expect(screen.queryByRole('form', { name: 'บัญชีผู้ใช้' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'บัญชีผู้ใช้' })).toBeNull();
     expect(mocks.getAccount).not.toHaveBeenCalled();
   });
 });

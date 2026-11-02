@@ -1,7 +1,7 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type { AccessSubject, Session } from '@backoffice/contracts';
 
-export interface ActiveSessionRecord { id: string; personId: string; idleSeconds: number; expired: boolean; revoked: boolean; }
+export interface ActiveSessionRecord { id: string; personId: string; idleSeconds: number; expired: boolean; revoked: boolean; /** The account still has a reset or HR-chosen password. */ mustChangePassword?: boolean; }
 export interface SessionRepository {
   insert(session: { id: string; tokenHash: string; personId: string; lifetimeSeconds: number }): Promise<void>;
   findByTokenHash(tokenHash: string): Promise<ActiveSessionRecord | null>;
@@ -34,10 +34,17 @@ export class SessionService {
 
   async resolve(token: string): Promise<Session | null> {
     const session = await this.findActive(token);
-    if (!session) return null;
+    // Until the owner replaces a reset password the session opens nothing but the change-password step.
+    if (!session || session.mustChangePassword) return null;
     if (session.idleSeconds >= this.touchIntervalSeconds) await this.sessions.touch(session.id);
     const access = await this.access.load(session.personId);
     return { authenticated: true, personId: session.personId, roles: access.roles, dataOwnerModules: access.dataOwnerModules, hospitalWideDataOwnerModules: access.hospitalWideDataOwnerModules ?? [] };
+  }
+
+  /** The person of a signed-in session that must change its password first, else null. */
+  async pendingPasswordChange(token: string): Promise<{ personId: string } | null> {
+    const session = await this.findActive(token);
+    return session?.mustChangePassword ? { personId: session.personId } : null;
   }
 
   async revoke(token: string): Promise<string | null> {

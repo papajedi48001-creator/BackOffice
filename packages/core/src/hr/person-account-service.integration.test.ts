@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { DEFAULT_RESET_PASSWORD } from '@backoffice/contracts';
 import { createDatabase, runMigrations } from '@backoffice/db';
 import { NationalIdProtector } from '../crypto/national-id';
 import { LocalAuthService } from '../identity/auth-service';
@@ -16,6 +17,7 @@ describeWithDatabase('PersonAccountService against MariaDB', () => {
   const service = new PersonAccountService(database, protector);
   const actor = randomUUID();
   const hrManager = { authenticated: true, personId: actor, roles: [{ name: 'hr-manager', organizationId: null }], dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: ['hr'] };
+  const admin = { authenticated: true, personId: randomUUID(), roles: [{ name: 'admin', organizationId: null }], dataOwnerModules: [], hospitalWideDataOwnerModules: [] };
   const scoped = { authenticated: true, personId: actor, roles: [{ name: 'hr-manager', organizationId: randomUUID() }], dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: [] };
   const newId = () => nationalId(`1${String(Math.floor(Math.random() * 1e11)).padStart(11, '0')}`);
   const short = () => randomUUID().slice(0, 8);
@@ -29,7 +31,8 @@ describeWithDatabase('PersonAccountService against MariaDB', () => {
 
   beforeAll(async () => {
     await runMigrations(database);
-    await database.execute('INSERT INTO person (id, national_id_ciphertext, national_id_lookup, created_at) VALUES (?, ?, ?, UTC_TIMESTAMP())', [actor, 'ciphertext', randomUUID()]);
+    for (const id of [actor, admin.personId]) await database.execute('INSERT INTO person (id, national_id_ciphertext, national_id_lookup, created_at) VALUES (?, ?, ?, UTC_TIMESTAMP())', [id, 'ciphertext', randomUUID()]);
+    await database.execute('INSERT INTO local_account (id, person_id, username, password_hash, created_at) VALUES (?, ?, ?, ?, UTC_TIMESTAMP())', [randomUUID(), admin.personId, `admin.${short()}`, 'x']);
   });
   afterAll(async () => database.close());
 
@@ -66,7 +69,7 @@ describeWithDatabase('PersonAccountService against MariaDB', () => {
     await expect(service.create(input(), scoped)).resolves.toEqual({ ok: false, code: 'FORBIDDEN' });
     const id = created(await service.create(input(), hrManager));
     await expect(service.updateIdentity(id, { employmentStatus: 'INACTIVE' }, scoped)).resolves.toEqual({ ok: false, code: 'FORBIDDEN' });
-    await expect(service.setPassword(id, 'another-secret-2', scoped)).resolves.toEqual({ ok: false, code: 'FORBIDDEN' });
+    await expect(service.resetPassword(id, scoped)).resolves.toEqual({ ok: false, code: 'FORBIDDEN' });
   });
 
   it('changes the employee code, status and national ID, refusing one already in use', async () => {
@@ -86,21 +89,40 @@ describeWithDatabase('PersonAccountService against MariaDB', () => {
     expect(JSON.parse(audit!.metadata)).toEqual({ changedFields: ['employeeCode', 'employmentStatus', 'nationalId'] });
   });
 
-  it('sets a new password that login then accepts, and ends the person\'s sessions', async () => {
+  it('resets to the default password, ends the person\'s sessions, and makes them change it at the next login', async () => {
     const values = input();
     const id = created(await service.create(values, hrManager));
     await database.execute('INSERT INTO user_session (id, token_hash, person_id, created_at, last_seen_at, expires_at) VALUES (?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP(), UTC_TIMESTAMP() + INTERVAL 1 DAY)', [randomUUID(), randomUUID().replace(/-/g, '').padEnd(64, '0'), id]);
-    await expect(service.setPassword(id, 'brand-new-secret', hrManager)).resolves.toEqual({ ok: true });
-    await expect(login(values.username, 'brand-new-secret')).resolves.toMatchObject({ personId: id });
+    await expect(service.resetPassword(id, hrManager)).resolves.toEqual({ ok: true });
+    await expect(login(values.username, DEFAULT_RESET_PASSWORD)).resolves.toMatchObject({ personId: id, mustChangePassword: true });
     await expect(login(values.username, values.password)).rejects.toThrow('INVALID_CREDENTIALS');
     expect(await count('SELECT COUNT(*) AS n FROM user_session WHERE person_id = ? AND revoked_at IS NULL', [id])).toBe(0);
+    const [audit] = await database.query<{ metadata: string }>('SELECT metadata FROM audit_event WHERE target_id IS NOT NULL AND action = ? ORDER BY created_at DESC LIMIT 1', ['hr.person.password.reset']);
+    expect(audit!.metadata).not.toContain(DEFAULT_RESET_PASSWORD);
+  });
+
+  it('lets only the person change their own password: forced after a reset, else with the current password; then every session ends', async () => {
+    const values = input();
+    const id = created(await service.create(values, hrManager));
+    await expect(login(values.username, values.password)).resolves.toMatchObject({ mustChangePassword: true });
+    await expect(service.changeOwnPassword(id, { newPassword: values.password })).resolves.toEqual({ ok: false, code: 'SAME_PASSWORD' });
+    await expect(service.changeOwnPassword(id, { newPassword: DEFAULT_RESET_PASSWORD })).resolves.toEqual({ ok: false, code: 'SAME_PASSWORD' });
+    await database.execute('INSERT INTO user_session (id, token_hash, person_id, created_at, last_seen_at, expires_at) VALUES (?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP(), UTC_TIMESTAMP() + INTERVAL 1 DAY)', [randomUUID(), randomUUID().replace(/-/g, '').padEnd(64, '0'), id]);
+    await expect(service.changeOwnPassword(id, { newPassword: 'my-own-secret-9' })).resolves.toEqual({ ok: true });
+    await expect(login(values.username, 'my-own-secret-9')).resolves.toMatchObject({ personId: id, mustChangePassword: false });
+    expect(await count('SELECT COUNT(*) AS n FROM user_session WHERE person_id = ? AND revoked_at IS NULL', [id])).toBe(0);
+    await expect(service.changeOwnPassword(id, { newPassword: 'another-secret-8' })).resolves.toEqual({ ok: false, code: 'WRONG_PASSWORD' });
+    await expect(service.changeOwnPassword(id, { currentPassword: 'wrong-one-123', newPassword: 'another-secret-8' })).resolves.toEqual({ ok: false, code: 'WRONG_PASSWORD' });
+    await expect(service.changeOwnPassword(id, { currentPassword: 'my-own-secret-9', newPassword: 'another-secret-8' })).resolves.toEqual({ ok: true });
+    await expect(login(values.username, 'another-secret-8')).resolves.toMatchObject({ mustChangePassword: false });
+    expect('setPassword' in service).toBe(false);
   });
 
   it('gives a person with no account one, once, and never changes a username', async () => {
     const someone = randomUUID();
     await database.execute('INSERT INTO person (id, national_id_ciphertext, national_id_lookup, employment_status, created_at) VALUES (?, ?, ?, ?, UTC_TIMESTAMP())', [someone, 'ciphertext', randomUUID(), 'ACTIVE']);
     await expect(service.getAccount(someone)).resolves.toBeNull();
-    await expect(service.setPassword(someone, 'brand-new-secret', hrManager)).resolves.toEqual({ ok: false, code: 'NO_ACCOUNT' });
+    await expect(service.resetPassword(someone, hrManager)).resolves.toEqual({ ok: false, code: 'NO_ACCOUNT' });
     const username = `late.${short()}`;
     await expect(service.createAccount(someone, { username, password: 'first-secret-1' }, hrManager)).resolves.toEqual({ ok: true });
     await expect(login(username, 'first-secret-1')).resolves.toMatchObject({ personId: someone });
@@ -121,14 +143,17 @@ describeWithDatabase('PersonAccountService against MariaDB', () => {
   });
 
   it('will not set the password of the HR manager themself or of anyone holding a role in the system', async () => {
-    await expect(service.setPassword(actor, 'brand-new-secret', hrManager)).resolves.toEqual({ ok: false, code: 'PROTECTED_ACCOUNT' });
+    await expect(service.resetPassword(actor, hrManager)).resolves.toEqual({ ok: false, code: 'PROTECTED_ACCOUNT' });
     const values = input();
     const id = created(await service.create(values, hrManager));
     const roleId = randomUUID();
     await database.execute('INSERT INTO role (id, name, created_at) VALUES (?, ?, UTC_TIMESTAMP())', [roleId, `admin-${short()}`]);
     await database.execute('INSERT INTO role_assignment (id, person_id, role_id, organization_id, created_at) VALUES (?, ?, ?, NULL, UTC_TIMESTAMP())', [randomUUID(), id, roleId]);
-    await expect(service.setPassword(id, 'brand-new-secret', hrManager)).resolves.toEqual({ ok: false, code: 'PROTECTED_ACCOUNT' });
+    await expect(service.resetPassword(id, hrManager)).resolves.toEqual({ ok: false, code: 'PROTECTED_ACCOUNT' });
     await expect(login(values.username, values.password)).resolves.toMatchObject({ personId: id });
+    // A ผู้ดูแลระบบ may reset a role holder's password, but never their own.
+    await expect(service.resetPassword(id, admin)).resolves.toEqual({ ok: true });
+    await expect(service.resetPassword(admin.personId, admin)).resolves.toEqual({ ok: false, code: 'PROTECTED_ACCOUNT' });
   });
 
   it('records the phone among the fields of the creation audit', async () => {

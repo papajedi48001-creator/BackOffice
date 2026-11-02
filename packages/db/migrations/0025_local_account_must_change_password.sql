@@ -1,0 +1,1 @@
+ALTER TABLE local_account ADD COLUMN IF NOT EXISTS must_change_password TINYINT NOT NULL DEFAULT 0;

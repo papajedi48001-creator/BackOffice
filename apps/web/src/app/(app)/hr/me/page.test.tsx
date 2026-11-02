@@ -30,6 +30,7 @@ describe('MyProfilePage', () => {
 
     expect(mocks.get).toHaveBeenCalledWith('me', staff);
     expect(screen.getByRole('heading', { name: 'ประวัติของฉัน' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'เปลี่ยนรหัสผ่าน' })).toHaveAttribute('href', '/change-password');
     expect(screen.getByRole('heading', { name: 'ข้อมูลส่วนตัว' })).toBeInTheDocument();
     expect(screen.getByText('ชาย', { selector: 'dd' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'แก้ไขข้อมูลส่วนตัวและข้อมูลงาน' })).toBeNull();

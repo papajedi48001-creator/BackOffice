@@ -28,7 +28,9 @@ export function LocalSignInForm() {
         body: JSON.stringify({ username: username.trim(), password }),
       });
       if (!response.ok) throw new Error('AUTHENTICATION_REJECTED');
-      router.push('/dashboard');
+      const result = await response.json().catch(() => ({})) as { mustChangePassword?: boolean };
+      // After a reset the person sets a new password and signs in again before using the system.
+      router.push(result.mustChangePassword ? '/change-password' : '/dashboard');
     } catch {
       setError('ไม่สามารถเข้าสู่ระบบได้ โปรดตรวจสอบชื่อผู้ใช้และรหัสผ่าน');
     } finally {
