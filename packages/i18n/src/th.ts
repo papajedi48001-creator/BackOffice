@@ -100,6 +100,7 @@ export const th = {
   adminErrorLAST_ADMIN: 'ต้องมีผู้ดูแลระบบอย่างน้อย 1 คน ลบผู้ดูแลระบบคนสุดท้ายไม่ได้', adminErrorMODULE_LOCKED: 'เปลี่ยนโหมดโมดูลนี้ไม่ได้', adminErrorPERSON_NOT_ACTIVE: 'บุคลากรนี้ไม่ได้อยู่ในสถานะปฏิบัติงาน', adminErrorNOT_FOUND: 'ไม่พบรายการนี้', adminErrorFORBIDDEN: 'เฉพาะผู้ดูแลระบบเท่านั้น', adminErrorGENERIC: 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง',
   adminAuditTitle: 'บันทึกของผู้ดูแล', adminAuditCopy: 'การเปลี่ยนโหมดโมดูลและการให้/ถอนสิทธิทั้งหมด', adminAuditActor: 'ผู้ดำเนินการ', adminAuditTarget: 'รายการ', adminNoAudit: 'ยังไม่มีบันทึก', adminYou: '(คุณ)',
   auditAdminModuleEnabled: 'เปิดการใช้งานโมดูล', auditAdminModuleDisabled: 'ปิดการใช้งานโมดูล', auditAdminRoleGranted: 'ให้สิทธิ', auditAdminRoleRevoked: 'ถอนสิทธิ',
+  hrPeopleSearch: 'ค้นหารายชื่อ', hrPeopleSearchHint: 'ชื่อ นามสกุล หรือรหัสบุคลากร', hrPeopleFilter: 'ค้นหาบุคลากร', hrPeopleApplyFilter: 'ค้นหา', hrPeopleClearFilter: 'ล้างตัวกรอง', hrAllPositions: 'ทุกตำแหน่ง', hrAllEmploymentTypes: 'ทุกประเภทการจ้าง', hrAllOrganizations: 'ทุกหน่วยงาน', hrNoPeopleMatch: 'ไม่พบบุคลากรที่ตรงกับเงื่อนไข',
 } as const;
 
 export type MessageKey = keyof typeof th;
