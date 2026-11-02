@@ -10,7 +10,7 @@ export function useSectionSaved(): () => void {
   return useContext(SectionSaved);
 }
 
-/** The แก้ไขข้อมูล button of one profile box. It opens that box's form in a popup, closed by ×, Esc, the backdrop or a save. */
+/** The แก้ไขข้อมูล button of one profile box. It opens that box's form in a popup, closed only by ×, its buttons or a save. */
 export function SectionEditor({ title, children }: { title: string; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   return <>
@@ -29,8 +29,7 @@ function SectionDialog({ title, onClose, children }: { title: string; onClose: (
     dialog.querySelector<HTMLElement>('.form-dialog-body :is(input, select, textarea):not([type=hidden]):not(:disabled)')?.focus();
   }, []);
   return <dialog ref={ref} className="action-dialog form-dialog form-dialog-wide" aria-labelledby={titleId}
-    onCancel={(event) => { event.preventDefault(); onClose(); }}
-    onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    onCancel={(event) => event.preventDefault()}>
     <div className="action-dialog-panel">
       <header className="action-dialog-header">
         <h2 id={titleId}>{title}</h2>
