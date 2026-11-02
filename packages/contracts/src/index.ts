@@ -14,4 +14,5 @@ export * from './leave.ts';
 export * from './official-travel.ts';
 export * from './fleet.ts';
 export * from './admin.ts';
+export * from './support-chat.ts';
 export * from './setup.ts';
