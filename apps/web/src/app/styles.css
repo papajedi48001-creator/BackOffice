@@ -561,3 +561,8 @@ video.inventory-camera { display: block; flex-basis: 100%; width: 100%; max-widt
 .admin-subheading { margin: 12px 0 6px; font-size: .95rem; }
 .admin-role-options.is-testers { margin-top: 12px; }
 .launcher-grid { margin-top: 24px; }
+
+.filter-bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin-bottom: 8px; }
+.filter-bar label { display: grid; gap: 4px; min-width: 180px; flex: 1 1 180px; }
+.filter-bar label:first-child { flex: 2 1 260px; }
+.filter-count { color: var(--muted, #5b6b66); margin: 4px 0 12px; }
