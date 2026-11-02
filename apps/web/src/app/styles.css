@@ -203,6 +203,13 @@ a.module-tile:hover .module-go { color: var(--accent); transform: translateX(2px
 /* Profile chip, top right of every page: photo or initials, name, ตำแหน่งงาน and the unread count. */
 .app-topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 24px; }
 .app-topbar .permission-notice { margin: 0; }
+.topbar-lead { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+.request-action { display: inline-flex; align-items: center; gap: 12px; border-radius: 12px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line), 0 1px 3px rgb(0 0 0 / 8%); color: var(--ink); font-size: 1.05rem; font-weight: 700; padding: 8px 18px 8px 8px; text-decoration: none; transition: transform .15s ease, box-shadow .15s ease; }
+.request-action-icon { display: inline-grid; place-items: center; width: 48px; height: 48px; border-radius: 8px; background: var(--accent); color: #fff; }
+.request-action:hover { transform: translateY(-2px); box-shadow: inset 0 0 0 1px var(--accent), 0 6px 14px rgb(0 0 0 / 12%); }
+.request-action:hover .request-action-icon { background: var(--accent-strong); }
+.request-action:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .request-action { transition: none; } .request-action:hover { transform: none; } }
 .count-badge { display: inline-block; min-width: 22px; height: 22px; margin-left: 8px; border-radius: 999px; background: var(--alert-count); color: #fff; font-size: .8rem; font-weight: 700; line-height: 22px; padding: 0 6px; text-align: center; vertical-align: middle; }
 .profile-menu { position: relative; flex: none; }
 .app-main .profile-chip { display: flex; align-items: center; gap: 10px; min-height: 52px; max-width: min(340px, 60vw); border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); box-shadow: var(--shadow-sm); padding: 5px 10px 5px 6px; font-weight: 400; text-align: left; }
@@ -439,7 +446,7 @@ video.inventory-camera { display: block; flex-basis: 100%; width: 100%; max-widt
 .travel-print-signature { margin-top: 28px; text-align: right; }
 .travel-detail-links { display: flex; gap: 8px; }
 @media print {
-  .sidebar, .app-topbar, .module-subnav, .travel-print-actions { display: none !important; }
+  .sidebar, .app-topbar, .request-action, .module-subnav, .travel-print-actions { display: none !important; }
   .app-shell, .app-main { display: block; padding: 0; margin: 0; background: #fff; }
   @page { size: A4 portrait; margin: 18mm 16mm; }
   .travel-print { max-width: none; font-family: 'TH Sarabun New', var(--font-body, sans-serif); color: #000; }

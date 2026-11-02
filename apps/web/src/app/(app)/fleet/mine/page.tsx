@@ -9,7 +9,7 @@ export default async function MyFleetRequestsPage() {
   if (!context.ok) return <FleetPageMessage titleKey="fleetMine" reason={context.reason} />;
   const items = await context.queries.mine(context.session.personId);
   return <section>
-    <div className="page-heading"><h2>{t('fleetMine')}</h2><div className="page-actions"><Link className="button-link" href="/fleet/new">{t('fleetNew')}</Link></div></div>
+    <div className="page-heading"><h2>{t('fleetMine')}</h2></div>
     {items.length === 0 ? <p>{t('fleetNoRequests')}</p> : <div className="leave-table-scroll"><table>
       <thead><tr><th>{t('fleetReference')}</th><th>{t('fleetPurpose')}</th><th>{t('fleetDestination')}</th><th>{t('fleetTimes')}</th><th>{t('status')}</th></tr></thead>
       <tbody>{items.map((item) => <tr key={item.id}>
