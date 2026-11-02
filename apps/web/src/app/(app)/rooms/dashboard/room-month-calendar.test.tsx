@@ -5,7 +5,7 @@ import { RoomMonthCalendar, type MonthEntryView } from './room-month-calendar';
 
 const grid = monthGrid({ month: '2026-11' }, '2026-11-02');
 const entry: MonthEntryView = { bookingId: 'b1', reference: 'RB-2569-0007', roomName: 'ห้องประชุมใหญ่', roomPlace: 'อาคารอำนวยการ ชั้น 2', date: '2026-11-05', startsAt: '2026-11-05T02:00:00.000Z', endsAt: '2026-11-05T05:00:00.000Z', status: 'APPROVED', title: 'ประชุมกรรมการบริหาร', bookerName: 'สมใจ ใจดี', bookerOrganizationName: 'งานการพยาบาล', canOpen: false };
-const dayHref = (date: string) => `/rooms/calendar?view=day&date=${date}`;
+const dayHref = '/rooms/calendar?view=day&date={date}';
 
 it('shows who booked which room under each day of the month', () => {
   render(<RoomMonthCalendar grid={grid} entries={[entry]} dayHref={dayHref} />);

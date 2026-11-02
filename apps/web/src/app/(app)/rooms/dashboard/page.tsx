@@ -26,7 +26,7 @@ export default async function RoomDashboardPage({ searchParams }: { searchParams
   const scope = new AuthorizationService().organizationScope({ authenticated: true, personId: actor.personId, roles: actor.roles, dataOwnerModules: [] }, 'room.booking.decide');
   const pending = scope === 'all' || scope.length > 0 ? (await queries.pendingForApprover(actor)).length : null;
   const monthLink = (month: string) => `/rooms/dashboard?month=${month}${selectedRoom ? `&roomId=${encodeURIComponent(selectedRoom)}` : ''}`;
-  const dayHref = (date: string) => `/rooms/calendar?view=day&date=${date}${selectedRoom ? `&roomId=${encodeURIComponent(selectedRoom)}` : ''}`;
+  const dayHref = `/rooms/calendar?view=day&date={date}${selectedRoom ? `&roomId=${encodeURIComponent(selectedRoom)}` : ''}`;
   const counts: [string, number][] = [
     [t('roomCountToday'), entries.filter((entry) => entry.date === today).length],
     [t('roomCountMonth'), entries.filter((entry) => entry.date.startsWith(grid.month)).length],
