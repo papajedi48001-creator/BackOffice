@@ -5,7 +5,7 @@
 - Data Owner has approved the release and maintenance window.
 - A successful encrypted backup is less than 24 hours old.
 - The release images have been scanned and use the approved immutable release tag.
-- `/etc/backoffice/production.env` and every referenced secret file are owned by the operator, mode `0600`, and are outside Git.
+- `/etc/backoffice/production.env` and every referenced secret file are owned by the operator, mode `0600`, and are outside Git. The database URL is not one of them by default: the first-run setup page saves it in the `backoffice-config` volume (see "First-run setup").
 - The SeaweedFS S3 keys and identities file exist as described in "Attachment storage and virus scanning" below, mode `0600`; never put the keys in an environment file, image, log, or Git.
 - The Caddy internal CA is trusted on managed client devices, or the Caddy TLS policy has been replaced by an approved certificate policy.
 
@@ -148,6 +148,23 @@ infra/scripts/staging-release-guard.sh active \
 Only after all three commands report `*_OK` may the operator run migrations
 and recreate `web` and `worker`. A guard failure means stop: do not switch
 services, and retain the prior release for rollback.
+
+## First-run setup
+
+A new production install has no database URL. Until one exists, the web app answers every page with the setup page `/setup`, every other API with `503 setup_required`, and `/api/health` with `{"status":"setup-required"}`; the worker logs `backoffice.worker.waiting_for_database_config` and waits.
+
+1. Create every other secret first (session secret, both national ID keys, S3 keys). The setup page names any that are missing and refuses to save without them.
+2. Prepare the database. Either run the SQL script for the server as `root` (it creates the `backoffice` database, an application user with `SELECT, INSERT, UPDATE, DELETE`, and every migration), or give the application user `CREATE, ALTER, INDEX, REFERENCES` as well so the setup page can migrate an empty database. Prefer an application user over `root`.
+3. Start the stack. For MariaDB outside Compose (for example `192.168.1.254`), add the override so web and worker can reach it and the bundled `mariadb` does not start:
+   `docker compose --env-file /etc/backoffice/production.env -f infra/compose/docker-compose.production.yml -f infra/compose/docker-compose.external-db.yml up -d`
+   Allow the Docker host to reach the database port through the hospital firewall.
+4. Read the one-time setup code: `docker compose ... logs web | grep backoffice.setup.code`. Five wrong tries replace it with a new line in the log; a restart issues a new one.
+5. Open `https://<PUBLIC_HOSTNAME>/setup`, type the code and the database details, press **ทดสอบการเชื่อมต่อ**, then fill the first **ผู้ดูแลระบบ** and press **บันทึกและสร้างบัญชี**. The page migrates if needed, creates the account with the `admin` role in one transaction (audit `system.setup.completed`), saves the URL to `/var/lib/backoffice/config/database_url` (mode `0600`), and closes for good. The worker starts within ten seconds.
+6. Sign in as that ผู้ดูแลระบบ and grant other roles from `/admin/grants`.
+
+The setup page refuses a database that already has accounts. To point a new web container at an existing database, or to change the database password later, write the URL into the volume yourself and restart web and worker:
+`printf '%s\n' 'mysql://user:pass@host:3306/backoffice' | docker compose ... exec -T web sh -c 'umask 077; cat > /var/lib/backoffice/config/database_url'`
+Operators who prefer an operator-managed secret file add `-f infra/compose/docker-compose.database-url-secret.yml` and set `DATABASE_URL_FILE` in the environment file, as before; the setup page then never opens. Existing installs that already use `DATABASE_URL_FILE` must add that override before upgrading, or they will start in setup mode. Staging keeps the secret file.
 
 ## Deploy to production
 

@@ -1,5 +1,8 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { runMigrations } from './migrate';
+import { migrationVersions, pendingMigrations, runMigrations } from './migrate';
 import type { Database } from './client';
 
 describe('runMigrations', () => {
@@ -104,5 +107,34 @@ describe('runMigrations', () => {
     expect(recorded.has('0009_hr_command_chain.sql')).toBe(true);
     expect(recorded.has('0010_hr_staff_profile.sql')).toBe(true);
     expect(recorded.has('0011_leave.sql')).toBe(true);
+  });
+});
+
+describe('runMigrations options', () => {
+  it('reads migration files from the given directory and returns the versions it ran', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'backoffice-migrations-'));
+    for (const version of migrationVersions) writeFileSync(join(directory, version), `CREATE TABLE IF NOT EXISTS t_${version.slice(0, 4)} (id INT)`);
+    const executed: string[] = [];
+    const database = { execute: async (sql: string) => { executed.push(sql); }, query: async () => [], transaction: async () => { throw new Error('unused'); }, close: async () => undefined } as unknown as Database;
+
+    const ran = await runMigrations(database, { migrationsDir: directory });
+
+    expect(ran).toEqual([...migrationVersions]);
+    expect(executed).toContain('CREATE TABLE IF NOT EXISTS t_0000 (id INT)');
+    rmSync(directory, { recursive: true, force: true });
+  });
+});
+
+describe('pendingMigrations', () => {
+  it('lists every version when schema_migration does not exist, without creating it', async () => {
+    const queries: string[] = [];
+    const database = { query: async <T extends object>(sql: string) => { queries.push(sql); return [] as T[]; } };
+    expect(await pendingMigrations(database)).toEqual([...migrationVersions]);
+    expect(queries.some((sql) => sql.includes('CREATE'))).toBe(false);
+  });
+
+  it('lists only the versions not yet recorded', async () => {
+    const database = { query: async <T extends object>(sql: string) => (sql.includes('information_schema') ? [{ present: 1 }] : migrationVersions.slice(0, -1).map((version) => ({ version }))) as T[] };
+    expect(await pendingMigrations(database)).toEqual([migrationVersions.at(-1)]);
   });
 });

@@ -1,5 +1,6 @@
 export { createDatabase, type Database, type TransactionOptions } from './client.ts';
-export { runMigrations } from './migrate.ts';
+export { migrationVersions, pendingMigrations, runMigrations } from './migrate.ts';
+export { databaseConfigFilePath, readDatabaseUrl, readRuntimeValue } from './runtime-env.ts';
 
 export async function seedPerson(db: import('./client.ts').Database, input: { personId: string; nationalIdCiphertext: string; nationalIdLookup: string }): Promise<void> {
   await db.execute('INSERT INTO person (id, national_id_ciphertext, national_id_lookup, created_at) VALUES (?, ?, ?, UTC_TIMESTAMP())', [input.personId, input.nationalIdCiphertext, input.nationalIdLookup]);

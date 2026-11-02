@@ -33,9 +33,11 @@ jobs:
       - run: pnpm test
         env:
           DATABASE_URL: mysql://backoffice:ci-only-password@127.0.0.1:3306/backoffice
+          DATABASE_ADMIN_URL: mysql://root:ci-only-root-password@127.0.0.1:3306/backoffice
       - run: pnpm test:integration
         env:
           DATABASE_URL: mysql://backoffice:ci-only-password@127.0.0.1:3306/backoffice
+          DATABASE_ADMIN_URL: mysql://root:ci-only-root-password@127.0.0.1:3306/backoffice
       - run: pnpm --filter @backoffice/db migrate
         env:
           DATABASE_URL: mysql://backoffice:ci-only-password@127.0.0.1:3306/backoffice

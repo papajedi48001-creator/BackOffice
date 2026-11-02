@@ -2,6 +2,9 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getSharedDatabase } from './lib/database';
 import { gateDecision, moduleForPath, readModuleModes } from './lib/module-gate';
 import { readSession } from './lib/session';
+import { isSetupMode } from './lib/setup-mode';
+
+const openDuringSetup = (pathname: string) => pathname === '/setup' || pathname.startsWith('/api/setup/') || pathname === '/api/health';
 
 /**
  * Refuses, before the route runs, every page and API of a module a ผู้ดูแลระบบ switched off (ตั้งค่าโปรแกรม) and, for anyone but
@@ -10,6 +13,12 @@ import { readSession } from './lib/session';
  */
 export async function proxy(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
+  // Until the first-run setup saves a database URL, only the setup page and the health check answer.
+  if (isSetupMode()) {
+    if (openDuringSetup(pathname)) return NextResponse.next();
+    if (pathname.startsWith('/api/')) return NextResponse.json({ error: 'setup_required' }, { status: 503 });
+    return NextResponse.redirect(new URL('/setup', request.url));
+  }
   if (!moduleForPath(pathname)) return NextResponse.next();
   const database = getSharedDatabase();
   if (!database) return NextResponse.next();

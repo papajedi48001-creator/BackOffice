@@ -25,7 +25,7 @@ bash infra/backup/restore-verify.test.sh
 git diff --check
 ```
 
-Integration suites skip silently without `DATABASE_URL`; say so when reporting results.
+Integration suites skip silently without `DATABASE_URL`; say so when reporting results. The setup and pending-migration suites also need `DATABASE_ADMIN_URL`, an account that may create databases and users (root in CI).
 
 ## Rules that always apply
 
