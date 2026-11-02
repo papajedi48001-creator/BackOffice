@@ -30,6 +30,19 @@ describe('RequestsPage', () => {
     expect(within(screen.getByRole('table', { name: 'คำขอของฉัน' })).getByRole('link', { name: 'REQ-r-9' })).toHaveAttribute('href', '/requests/r-9');
   });
 
+  it('offers no คำขอซ่อมบำรุง box while the maintenance module is not built', async () => {
+    mocks.headers.mockResolvedValue(new Headers());
+    mocks.readSession.mockResolvedValue({ authenticated: true, personId: 'staff', roles: [], dataOwnerModules: [] });
+    mocks.getSharedDatabase.mockReturnValue({ query: mocks.query });
+    mocks.listPendingApprovals.mockResolvedValue([]);
+    mocks.query.mockImplementation(async (sql: string) => sql.includes('employment_assignment') ? [{ organizationId: 'unit-1' }] : []);
+
+    render(await RequestsPage());
+
+    expect(screen.queryByRole('button', { name: 'สร้างคำขอซ่อมบำรุง' })).toBeNull();
+    expect(screen.queryByText('คำขอซ่อมบำรุง')).toBeNull();
+  });
+
   it('says so when nothing waits on me', async () => {
     mocks.headers.mockResolvedValue(new Headers());
     mocks.readSession.mockResolvedValue({ authenticated: true, personId: 'staff', roles: [], dataOwnerModules: [] });
