@@ -30,6 +30,7 @@ Integration suites skip silently without `DATABASE_URL`; say so when reporting r
 ## Rules that always apply
 
 - Read `CONTEXT.md` (domain vocabulary) and `DESIGN.md` (UI rules) before naming things or building UI. Use the Thai terms defined there.
+- Every add/edit/delete form opens in `FormDialog` and every confirmation in `ActionDialog`; popups close only from their buttons, never on Esc or a click outside.
 - Authorization is enforced on the server for every action; the UI is never the security boundary.
 - Never put a national ID, password, token, decision reason, or attachment content in a URL, log, audit metadata, notification, or outbox payload.
 - Workflow transitions, audit events, and outbox events are written in one database transaction.
