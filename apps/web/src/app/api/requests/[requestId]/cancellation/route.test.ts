@@ -76,4 +76,13 @@ describe('POST /api/requests/[requestId]/cancellation', () => {
     expect(log).toHaveBeenCalledWith('backoffice.request_lifecycle_failed', { code });
     expect(JSON.stringify(log.mock.calls)).not.toContain(reason);
   });
+
+  it('sends a room booking คำขอ to the room booking routes', async () => {
+    ready();
+    mocks.getSharedDatabase.mockReturnValue({ query: vi.fn().mockResolvedValue([{ moduleCode: 'room-booking', requestorPersonId: 'person-a' }]), execute: vi.fn(), transaction: vi.fn() });
+    const response = await cancel();
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'room_booking_request_route' });
+    expect(mocks.cancelRequest).not.toHaveBeenCalled();
+  });
 });

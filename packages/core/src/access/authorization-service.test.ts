@@ -41,9 +41,11 @@ describe('AuthorizationService room booking permissions', () => {
     await expect(authorization.canAccess({ ...approver, roles: [{ name: 'room-manager', organizationId: null }] }, 'room.manage', { moduleCode: 'room-booking', organizationId: 'unit-b' })).resolves.toEqual({ allowed: true, reason: 'allowed' });
   });
 
-  it('does not let a room manager decide bookings', async () => {
+  it('lets the room module manager give the final approval on bookings, within their unit', async () => {
     const authorization = new AuthorizationService();
-    await expect(authorization.canAccess({ ...approver, roles: [{ name: 'room-manager', organizationId: null }] }, 'room.booking.decide', { moduleCode: 'room-booking', organizationId: 'unit-a' })).resolves.toEqual({ allowed: false, reason: 'permission_denied' });
+    const manager = { ...approver, roles: [{ name: 'room-manager', organizationId: 'unit-a' }] };
+    await expect(authorization.canAccess(manager, 'room.booking.decide', { moduleCode: 'room-booking', organizationId: 'unit-a' })).resolves.toEqual({ allowed: true, reason: 'allowed' });
+    await expect(authorization.canAccess(manager, 'room.booking.decide', { moduleCode: 'room-booking', organizationId: 'unit-b' })).resolves.toMatchObject({ allowed: false });
   });
 });
 

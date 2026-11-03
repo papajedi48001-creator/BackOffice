@@ -17,4 +17,4 @@ export function roomErrorMessage(code: unknown): string {
   return key in messagesWithErrors ? t(key as MessageKey) : t('roomActionFailed');
 }
 
-const messagesWithErrors = Object.fromEntries((['INVALID_INPUT', 'INVALID_DATES', 'INVALID_TIME_RANGE', 'OUTSIDE_BOOKING_WINDOW', 'OVER_CAPACITY', 'INVALID_ADDON', 'REASON_REQUIRED', 'FORBIDDEN', 'CONFLICT_OF_INTEREST', 'ROOM_NOT_FOUND', 'BOOKING_NOT_FOUND', 'ROOM_NOT_BOOKABLE', 'BOOKING_NOT_PENDING', 'CANCEL_NOT_ALLOWED', 'NOTHING_TO_RELEASE', 'BOOKING_CONFLICT'] as const).map((code) => [`roomError${code}`, true]));
+const messagesWithErrors = Object.fromEntries((['INVALID_INPUT', 'INVALID_DATES', 'INVALID_TIME_RANGE', 'OUTSIDE_BOOKING_WINDOW', 'OVER_CAPACITY', 'INVALID_ADDON', 'REASON_REQUIRED', 'FORBIDDEN', 'CONFLICT_OF_INTEREST', 'ROOM_NOT_FOUND', 'BOOKING_NOT_FOUND', 'ROOM_NOT_BOOKABLE', 'BOOKING_NOT_PENDING', 'CANCEL_NOT_ALLOWED', 'NOTHING_TO_RELEASE', 'BOOKING_CONFLICT', 'NO_ORGANIZATION', 'NO_APPROVER'] as const).map((code) => [`roomError${code}`, true]));

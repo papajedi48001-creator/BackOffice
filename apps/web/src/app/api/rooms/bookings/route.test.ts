@@ -51,4 +51,14 @@ describe('/api/rooms/bookings', () => {
     expect(response.status).toBe(200);
     expect(mocks.myBookings).toHaveBeenCalledWith('person-a');
   });
+
+  it('tells the booker in Thai-mappable codes when no head or unit can be found', async () => {
+    mocks.requireActor.mockResolvedValue({ personId: 'person-a', roles: [] });
+    mocks.submit.mockRejectedValueOnce(new Error('NO_APPROVER'));
+    expect(await (await post({})).json()).toEqual({ error: 'NO_APPROVER' });
+    mocks.submit.mockRejectedValueOnce(new Error('NO_ORGANIZATION'));
+    const response = await post({});
+    expect(response.status).toBe(422);
+    expect(await response.json()).toEqual({ error: 'NO_ORGANIZATION' });
+  });
 });

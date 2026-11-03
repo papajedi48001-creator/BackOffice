@@ -29,7 +29,7 @@ export default async function RoomBookingDetailPage({ params }: { params: Promis
       <div><dt>{t('bookingDays')}</dt><dd><ul className="plain-list">{booking.days.map((day) => <li key={day.id}>{formatBangkokDate(day.date)} {formatMinutes(booking.startMinute)}–{formatMinutes(booking.endMinute)}{day.status === 'RELEASED' ? ` (${t('roomDayReleased')})` : ''}</li>)}</ul></dd></div>
       {booking.addons.length > 0 && <div><dt>{t('bookingAddons')}</dt><dd><ul className="plain-list">{booking.addons.map((addon) => <li key={addon.addonName}>{addon.addonName} {addon.quantity} {addon.addonUnit}{addon.note ? ` — ${addon.note}` : ''}</li>)}</ul></dd></div>}
     </dl>
-    <BookingActions bookingId={booking.id} canDecide={canDecide} cancelAction={cancelAction} cancelByAdmin={!booking.viewerIsBooker} />
+    <BookingActions bookingId={booking.id} canDecide={canDecide} cancelAction={cancelAction} cancelByAdmin={!booking.viewerIsBooker} headRequestId={booking.viewerCanHeadDecide && !expired ? booking.requestId : null} />
     <h3>{t('bookingHistory')}</h3>
     <ol className="booking-history">{booking.history.map((entry, index) => <li key={index}><time dateTime={entry.createdAt.toISOString()}>{formatBangkokDate(bangkokToday(entry.createdAt))} {formatBangkokTime(entry.createdAt)}</time> {historyActionLabel(entry.action)} — {entry.actorName ?? ''}{entry.reason ? <p>{t('bookingReason')}: {entry.reason}</p> : null}</li>)}</ol>
   </section>;

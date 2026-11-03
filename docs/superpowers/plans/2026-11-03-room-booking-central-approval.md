@@ -1,6 +1,6 @@
 # Room booking through the central approval chain: Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans. Steps use checkbox (`- [ ]`) syntax.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans. Steps use checkbox (`- [x]`) syntax.
 
 **Goal:** A room booking first goes to the booker's head in คำขอ. After the head เห็นชอบ, ผู้จัดการห้องประชุม (`room-manager`) gives the final approval.
 
@@ -35,8 +35,8 @@
 
 **Produces:** `onRequestDecided?(request: SubmittedRequestRow, status: RequestStatus, decision: ApprovalAction, actorPersonId: string): Promise<void>`. It is called before `saveRequest`, and a throw rolls the decision back.
 
-- [ ] Failing unit test: the hook is called with the final status. A throwing hook leaves nothing saved.
-- [ ] Implement, pass, commit.
+- [x] Failing unit test: the hook is called with the final status. A throwing hook leaves nothing saved.
+- [x] Implement, pass, commit.
 
 ### Task 2: room service and workflow hook for room-booking
 **Files:**
@@ -45,14 +45,14 @@
 - Integration tests in `database-room-booking-repository.integration.test.ts`
 
 What the tests must prove:
-- [ ] A submit creates a booking in `HEAD_REVIEW` with a `request_id` and a pending head step. The slots are held.
-- [ ] A head APPROVE moves the booking to `PENDING`, notifies the room managers, and writes `HEAD_APPROVED` history.
-- [ ] A head REJECT moves the booking to `REJECTED` and frees the slots.
-- [ ] A head RETURN is refused and the request is still `IN_REVIEW`.
-- [ ] A manager cannot decide a `HEAD_REVIEW` booking.
-- [ ] A `room-manager` can decide a `PENDING` booking.
-- [ ] When the booker cancels during `HEAD_REVIEW`, the request is cancelled too.
-- [ ] Implement, pass, commit.
+- [x] A submit creates a booking in `HEAD_REVIEW` with a `request_id` and a pending head step. The slots are held.
+- [x] A head APPROVE moves the booking to `PENDING`, notifies the room managers, and writes `HEAD_APPROVED` history.
+- [x] A head REJECT moves the booking to `REJECTED` and frees the slots.
+- [x] A head RETURN is refused and the request is still `IN_REVIEW`.
+- [x] A manager cannot decide a `HEAD_REVIEW` booking.
+- [x] A `room-manager` can decide a `PENDING` booking.
+- [x] When the booker cancels during `HEAD_REVIEW`, the request is cancelled too.
+- [x] Implement, pass, commit.
 
 ### Task 3: queries and web
 **Files:**
@@ -64,12 +64,12 @@ What the tests must prove:
 - The resolver is wired into the booking API routes
 
 Steps:
-- [ ] Failing tests:
+- [x] Failing tests:
   - by-request redirects to the booking
   - the head sees เห็นชอบ/ไม่เห็นชอบ
   - `HEAD_REVIEW` reads รอหัวหน้าเห็นชอบ
   - the central routes refuse room-booking
-- [ ] Implement, pass, commit.
+- [x] Implement, pass, commit.
 
 ### Verification
 - `pnpm lint && pnpm typecheck && pnpm test`
