@@ -65,6 +65,11 @@ test('the line-webhook profile opens 80 and 443 to the public host only when ask
   assert.equal(services['line-webhook'].environment.BACKOFFICE_WEB_PORT, '3011');
 });
 
+test('the line-webhook HTTPS port moves off 443 when another system holds it', { skip: !hasDocker && 'docker compose not available' }, () => {
+  const { services } = renderCompose({ LINE_WEBHOOK_HOST: 'notify.example.go.th', LINE_WEBHOOK_HTTPS_PORT: '8444' }, ['line-webhook']);
+  assert.deepEqual(publishedPorts(services['line-webhook']), ['80:80', '8444:443']);
+});
+
 test('the public Caddyfile passes on only the LINE webhook and answers 404 to everything else', () => {
   const caddyfile = readFileSync(new URL('../infra/compose/Caddyfile.line-webhook', import.meta.url), 'utf8');
   assert.match(caddyfile, /^\{\$LINE_WEBHOOK_HOST\} \{$/m);

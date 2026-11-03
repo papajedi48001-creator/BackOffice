@@ -50,11 +50,14 @@ LINE ต้องเรียก `https://<โดเมนสาธารณะ>
 ใช้เมื่อมีโดเมน เช่น `notify-waritch-hosp.moph.go.th` ชี้ไป public IP ของโรงพยาบาล
 
 1. งานเครือข่ายตั้ง NAT/port forward ที่ firewall: public IP พอร์ต TCP **443** และ **80** ไปที่เครื่องที่รันระบบ พอร์ตเดียวกัน (80 ใช้ขอใบรับรอง ถ้าเปิดได้แค่ 443 Caddy ก็ขอผ่าน 443 ได้)
+   - ถ้าเครื่องมีระบบอื่นใช้พอร์ต 443 อยู่แล้ว ให้ NAT public 443 ไปที่พอร์ตอื่นของเครื่อง เช่น 8444 (ใน Sophos ตั้ง Translated service เป็น TCP 8444) แล้วใส่ `LINE_WEBHOOK_HTTPS_PORT=8444` ใน `.env` พอร์ต 80 ยังต้องส่งตรงพอร์ต 80 เพื่อขอใบรับรอง
 2. อนุญาตพอร์ตใน Windows firewall (PowerShell แบบ Administrator):
 
    ```powershell
-   New-NetFirewallRule -DisplayName "BackOffice LINE webhook" -Direction Inbound -Protocol TCP -LocalPort 80,443 -Action Allow
+   New-NetFirewallRule -DisplayName "BackOffice LINE webhook" -Direction Inbound -Protocol TCP -LocalPort 80,443 -Action Allow -Profile Any
    ```
+
+   ถ้าใช้ `LINE_WEBHOOK_HTTPS_PORT` ให้ใส่พอร์ตนั้นแทน 443 ใช้ `-Profile Any` เพราะการ์ดเครือข่ายมักตั้งเป็น Public
 
 3. เพิ่มใน `.env`: `LINE_WEBHOOK_HOST=notify-waritch-hosp.moph.go.th` และตรวจว่า `BACKOFFICE_WEB_PORT` ตรงกับพอร์ตที่เว็บรันจริง
 4. รัน `node scripts/setup-local.mjs line-webhook` Caddy จะขอใบรับรอง Let's Encrypt เอง และส่งต่อเฉพาะ `POST /api/line/webhook` ไปที่เว็บ เส้นทางอื่นทั้งหมดตอบ 404 คนนอกจึงเปิดหน้าระบบไม่ได้ หน้าเว็บใน LAN (`:8443`) ไม่เปลี่ยน
