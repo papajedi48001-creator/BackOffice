@@ -33,7 +33,7 @@ export class ApprovalService {
       const actorTitle = (await repository.getPositionTitle?.(decisionInput.actorPersonId))?.trim() || 'ผู้อนุมัติ';
       // A return or rejection also reaches whoever else must act on it, such as the หัวหน้าคณะ who resubmits a trip.
       const followers = decisionInput.decision === 'APPROVE' ? [] : (await repository.getFollowers?.(request.id) ?? []).filter((personId) => personId !== request.requestorPersonId);
-      const notices = [{ recipientPersonId: request.requestorPersonId, subject: `${action} > ${actorTitle}` }, ...followers.map((recipientPersonId) => ({ recipientPersonId, subject: `${action} > ${actorTitle}` })), ...(nextStep ? [{ recipientPersonId: nextStep.assigneeSnapshot.personId, subject: 'มีคำขอรอพิจารณา' }] : [])];
+      const notices = [{ recipientPersonId: request.requestorPersonId, subject: `${action} > ${actorTitle}` }, ...followers.map((recipientPersonId) => ({ recipientPersonId, subject: `${action} > ${actorTitle}` })), ...(nextStep ? [{ recipientPersonId: nextStep.assigneeSnapshot.personId, subject: 'มีคำขอรอพิจารณา', actionRequired: true }] : [])];
       // The module locks its own row before any plain read of it, so a concurrent change fails cleanly rather than on a stale snapshot.
       await repository.onRequestDecided?.({ request, status, decision: decisionInput.decision, reason: decisionInput.reason ?? null, actorPersonId: decisionInput.actorPersonId });
       // Only the final approval reaches watchers; the deciding head already has the decision notice above, so is not told twice.
@@ -47,11 +47,11 @@ export class ApprovalService {
       await repository.saveDecision(decision);
       await repository.saveRequest({ ...request, status });
       await repository.saveOutbox(outbox);
-      for (const { recipientPersonId, subject } of notices) {
-        await repository.saveOutbox({ id: this.createId(), type: 'notification.in_app', idempotencyKey: `notification.in_app:request-decided:${decision.id}:recipient:${recipientPersonId}`, payload: notificationEventPayloadSchema.parse({ ...notificationTarget(request.moduleCode, request.id), recipientPersonId, requestId: request.id, subject }), occurredAt: new Date().toISOString(), processedAt: null });
+      for (const { recipientPersonId, subject, ...flags } of notices as Array<{ recipientPersonId: string; subject: string; actionRequired?: boolean }>) {
+        await repository.saveOutbox({ id: this.createId(), type: 'notification.in_app', idempotencyKey: `notification.in_app:request-decided:${decision.id}:recipient:${recipientPersonId}`, payload: notificationEventPayloadSchema.parse({ ...notificationTarget(request.moduleCode, request.id), recipientPersonId, requestId: request.id, subject, ...flags }), occurredAt: new Date().toISOString(), processedAt: null });
       }
-      for (const { personId, subject, targetPath } of watchers) {
-        await repository.saveOutbox({ id: this.createId(), type: 'notification.in_app', idempotencyKey: `notification.in_app:request-approved:${decision.id}:recipient:${personId}`, payload: notificationEventPayloadSchema.parse({ ...notificationTarget(request.moduleCode, request.id), targetPath, recipientPersonId: personId, requestId: request.id, subject }), occurredAt: new Date().toISOString(), processedAt: null });
+      for (const { personId, subject, targetPath, actionRequired } of watchers) {
+        await repository.saveOutbox({ id: this.createId(), type: 'notification.in_app', idempotencyKey: `notification.in_app:request-approved:${decision.id}:recipient:${personId}`, payload: notificationEventPayloadSchema.parse({ ...notificationTarget(request.moduleCode, request.id), targetPath, recipientPersonId: personId, requestId: request.id, subject, ...(actionRequired ? { actionRequired } : {}) }), occurredAt: new Date().toISOString(), processedAt: null });
       }
       await new AuditService({ append: (event) => repository.appendAudit(event) }, this.createId).recordAudit({ actorPersonId: decision.actorPersonId, action: 'workflow.request.decided', targetType: 'request', targetId: request.id, result: decision.decision, metadata: { moduleCode: request.moduleCode, requestReference: request.reference, status, organizationId: request.organizationSnapshot.organizationId } });
       return decision;

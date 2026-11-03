@@ -123,7 +123,7 @@ describe('opening balance', () => {
     await service.decideOpening(supervisor, { decision: 'RETURN', reason: 'จำนวนถุงมือไม่ตรงกับบัญชี' });
 
     expect(repository.outbox.map((event) => event.payload)).toEqual([
-      { recipientPersonId: 'supervisor', moduleCode: 'inventory', targetPath: '/inventory/opening', subject: 'มียอดยกมารอรับรอง (OB-2569-0001)' },
+      { recipientPersonId: 'supervisor', moduleCode: 'inventory', targetPath: '/inventory/opening', subject: 'มียอดยกมารอรับรอง (OB-2569-0001)', actionRequired: true },
       { recipientPersonId: 'officer', moduleCode: 'inventory', targetPath: '/inventory/opening', subject: 'ยอดยกมาถูกส่งกลับแก้ไข (OB-2569-0001)' }
     ]);
     expect(repository.outbox[0]!.idempotencyKey).toMatch(/^notification\.in_app:inventory:id-\d+:supervisor$/);

@@ -107,7 +107,7 @@ describe('ApprovalService', () => {
     expect(repository.steps).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'step-1', status: 'APPROVED' }), expect.objectContaining({ id: 'step-2', status: 'PENDING' })]));
     expect(repository.outbox).toEqual(expect.arrayContaining([expect.objectContaining({
       type: 'notification.in_app',
-      payload: { recipientPersonId: 'manager-b', requestId: 'request-1', moduleCode: 'requests', subject: 'มีคำขอรอพิจารณา' }
+      payload: { recipientPersonId: 'manager-b', requestId: 'request-1', moduleCode: 'requests', subject: 'มีคำขอรอพิจารณา', actionRequired: true }
     })]));
     expect(repository.outbox).toEqual(expect.arrayContaining([expect.objectContaining({
       type: 'notification.in_app',

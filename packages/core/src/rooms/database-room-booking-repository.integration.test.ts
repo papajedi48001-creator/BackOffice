@@ -172,7 +172,7 @@ describeWithDatabase('room booking on MariaDB', () => {
 
       expect(await bookingStatus(booking.id)).toBe('PENDING');
       const notices = await database.query<{ payload: string }>("SELECT payload FROM outbox_event WHERE type = 'notification.in_app' AND payload LIKE ?", [`%/rooms/bookings/${booking.id}%`]);
-      expect(notices.map((row) => JSON.parse(row.payload)).filter((payload) => payload.subject.startsWith('มีการจองห้องรออนุมัติ')).map((payload) => payload.recipientPersonId)).toContain(approverId);
+      expect(notices.map((row) => JSON.parse(row.payload)).filter((payload) => payload.subject.startsWith('มีการจองห้องรออนุมัติ') && payload.actionRequired === true).map((payload) => payload.recipientPersonId)).toContain(approverId);
       await expect(service().decide(manager, { bookingId: booking.id, decision: 'APPROVE' })).resolves.toMatchObject({ status: 'APPROVED' });
     });
 

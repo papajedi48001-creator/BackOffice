@@ -7,8 +7,8 @@ const trip = (id: string) => `/fleet/trips/${id}`;
 describe('noticesFor', () => {
   it('tells every fleet manager but the requester that a ใบ from ไปราชการ waits for a car', () => {
     expect(noticesFor('waiting', { fleetRequestId: 'f1', actorPersonId: 'req', managerPersonIds: ['m1', 'req', 'm2'] })).toEqual([
-      { recipientPersonId: 'm1', subject: 'มีใบขอใช้รถรอจัดรถ', targetPath: request('f1') },
-      { recipientPersonId: 'm2', subject: 'มีใบขอใช้รถรอจัดรถ', targetPath: request('f1') }
+      { recipientPersonId: 'm1', subject: 'มีใบขอใช้รถรอจัดรถ', targetPath: request('f1'), actionRequired: true },
+      { recipientPersonId: 'm2', subject: 'มีใบขอใช้รถรอจัดรถ', targetPath: request('f1'), actionRequired: true }
     ]);
   });
 

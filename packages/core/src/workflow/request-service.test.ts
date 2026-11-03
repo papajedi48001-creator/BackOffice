@@ -41,7 +41,7 @@ describe('RequestService', () => {
       expect.objectContaining({
         type: 'notification.in_app',
         idempotencyKey: 'notification.in_app:request-submitted:request-1:step:step-1',
-        payload: { recipientPersonId: 'manager-a', requestId: 'request-1', moduleCode: 'requests', subject: 'มีคำขอรอพิจารณา' }
+        payload: { recipientPersonId: 'manager-a', requestId: 'request-1', moduleCode: 'requests', subject: 'มีคำขอรอพิจารณา', actionRequired: true }
       })
     ]));
     expect(repository.outbox.find((event) => event.type === 'notification.in_app')?.payload).not.toHaveProperty('reason');
@@ -152,7 +152,7 @@ describe('RequestService', () => {
       expect(repository.steps.get('request-1')?.find((step) => step.id === newStep.id)?.status).toBe('PENDING');
       expect(repository.outbox).toEqual([
         expect.objectContaining({ type: 'workflow.request.resubmitted', payload: { requestId: 'request-1', moduleCode: 'maintenance' } }),
-        expect.objectContaining({ type: 'notification.in_app', idempotencyKey: `notification.in_app:request-resubmitted:request-1:step:${newStep.id}`, payload: { recipientPersonId: 'manager-c', requestId: 'request-1', moduleCode: 'requests', subject: 'มีคำขอรอพิจารณา' } })
+        expect.objectContaining({ type: 'notification.in_app', idempotencyKey: `notification.in_app:request-resubmitted:request-1:step:${newStep.id}`, payload: { recipientPersonId: 'manager-c', requestId: 'request-1', moduleCode: 'requests', subject: 'มีคำขอรอพิจารณา', actionRequired: true } })
       ]);
       expect(repository.auditEvents).toEqual([expect.objectContaining({ actorPersonId: 'person-a', action: 'workflow.request.resubmitted', targetId: 'request-1', result: 'SUCCESS' })]);
     });

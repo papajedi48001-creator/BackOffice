@@ -22,7 +22,7 @@ export class DatabaseWorkflowRepository implements WorkflowRepository {
   async saveCancellation(cancellation: RequestCancellation): Promise<void> { await this.database.execute('INSERT INTO request_cancellation (id, request_id, actor_person_id, reason, created_at) VALUES (?, ?, ?, ?, UTC_TIMESTAMP())', [cancellation.id, cancellation.requestId, cancellation.actorPersonId, cancellation.reason]); }
   async saveOutbox(event: OutboxEvent): Promise<void> { await this.database.execute('INSERT INTO outbox_event (id, type, idempotency_key, payload, occurred_at, processed_at) VALUES (?, ?, ?, ?, ?, ?)', [event.id, event.type, event.idempotencyKey, JSON.stringify(event.payload), toMariaDbDatetime(event.occurredAt), event.processedAt ? toMariaDbDatetime(event.processedAt) : null]); }
   async getFollowers(requestId: string): Promise<string[]> { return (await this.database.query<{ personId: string }>('SELECT t.leader_person_id AS personId FROM official_travel_member m JOIN official_travel t ON t.id = m.travel_id WHERE m.request_id = ?', [requestId])).map((row) => row.personId); }
-  async getApprovalWatchers(request: { id: string; moduleCode: string }): Promise<Array<{ personId: string; subject: string; targetPath: string }>> {
+  async getApprovalWatchers(request: { id: string; moduleCode: string }): Promise<Array<{ personId: string; subject: string; targetPath: string; actionRequired?: boolean }>> {
     if (request.moduleCode === ROOM_BOOKING_MODULE) return roomBookingWatchers(this.database, request.id);
     if (request.moduleCode !== FLEET_MODULE) return [];
     return (await fleetManagerPersonIds(this.database)).map((personId) => ({ personId, subject: 'มีใบขอใช้รถรอจัดรถ', targetPath: `/fleet/requests/by-request/${request.id}` }));

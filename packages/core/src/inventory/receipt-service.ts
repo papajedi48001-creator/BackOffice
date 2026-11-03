@@ -54,7 +54,7 @@ export class InventoryReceiptService {
       await repository.updateReceipt(opening.id, { status: 'SUBMITTED' });
       const historyId = await this.record(repository, submitted, actor, 'SUBMITTED', null, 'inventory.opening.submitted', lines.length);
       const supervisors = (await repository.findHospitalWideRoleHolders('inventory-supervisor')).filter((personId) => personId !== actor.personId);
-      for (const personId of supervisors) await this.notify(repository, historyId, personId, `มียอดยกมารอรับรอง (${opening.reference})`);
+      for (const personId of supervisors) await this.notify(repository, historyId, personId, `มียอดยกมารอรับรอง (${opening.reference})`, true);
       return submitted;
     });
   }
@@ -184,8 +184,8 @@ export class InventoryReceiptService {
     return historyId;
   }
 
-  private async notify(repository: InventoryRepository, historyId: string, recipientPersonId: string, subject: string): Promise<void> {
-    const payload = notificationEventPayloadSchema.parse({ recipientPersonId, moduleCode: INVENTORY_MODULE, targetPath: openingPath, subject });
+  private async notify(repository: InventoryRepository, historyId: string, recipientPersonId: string, subject: string, actionRequired = false): Promise<void> {
+    const payload = notificationEventPayloadSchema.parse({ recipientPersonId, moduleCode: INVENTORY_MODULE, targetPath: openingPath, subject, ...(actionRequired ? { actionRequired } : {}) });
     await repository.saveOutbox({ id: this.createId(), type: 'notification.in_app', idempotencyKey: `notification.in_app:inventory:${historyId}:${recipientPersonId}`, payload, occurredAt: this.now().toISOString(), processedAt: null });
   }
 }
