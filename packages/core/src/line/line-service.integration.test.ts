@@ -14,6 +14,7 @@ describeWithDatabase('LineService against MariaDB', () => {
   const service = new LineService(database);
   const [admin, nurse, clerk] = [randomUUID(), randomUUID(), randomUUID()];
   const people = [admin, nurse, clerk];
+  const moduleCode = `line-test-${randomUUID().slice(0, 8)}`;
   const audits = (action: string, targetId: string) => database.query<{ metadata: string; actor: string | null }>('SELECT metadata, actor_person_id AS actor FROM audit_event WHERE action = ? AND target_id = ?', [action, targetId]);
 
   beforeAll(async () => {
@@ -23,7 +24,7 @@ describeWithDatabase('LineService against MariaDB', () => {
   afterAll(async () => {
     await database.execute(`DELETE FROM line_link_code WHERE person_id IN (?, ?, ?)`, people);
     await database.execute(`DELETE FROM line_account_link WHERE person_id IN (?, ?, ?)`, people);
-    await database.execute("DELETE FROM line_module_route WHERE module_code = 'line-test'");
+    await database.execute('DELETE FROM line_module_route WHERE module_code = ?', [moduleCode]);
     await database.close();
   });
 
@@ -66,21 +67,21 @@ describeWithDatabase('LineService against MariaDB', () => {
 
   it('records groups the bot joins and leaves, and routes a module only to a known group', async () => {
     const group = lineGroup();
-    await expect(service.setRoute(admin, 'line-test', group)).resolves.toEqual({ ok: false, code: 'NOT_FOUND' });
+    await expect(service.setRoute(admin, moduleCode, group)).resolves.toEqual({ ok: false, code: 'NOT_FOUND' });
     await service.groupJoined(group, 'หัวหน้างาน');
     await service.groupJoined(group, 'หัวหน้างาน');
-    await expect(service.setRoute(admin, 'line-test', group)).resolves.toEqual({ ok: true });
-    expect(await service.routeFor('line-test')).toEqual({ groupId: group });
+    await expect(service.setRoute(admin, moduleCode, group)).resolves.toEqual({ ok: true });
+    expect(await service.routeFor(moduleCode)).toEqual({ groupId: group });
     await service.groupLeft(group);
-    expect(await service.routeFor('line-test')).toBeNull();
+    expect(await service.routeFor(moduleCode)).toBeNull();
     await service.groupJoined(group, null);
-    expect(await service.routeFor('line-test')).toEqual({ groupId: group });
+    expect(await service.routeFor(moduleCode)).toEqual({ groupId: group });
     const overview = await service.overview();
     expect(overview.groups.find((row) => row.groupId === group)).toMatchObject({ displayName: 'หัวหน้างาน', source: 'WEBHOOK', active: true });
-    expect(overview.routes['line-test']).toBe(group);
-    await expect(service.setRoute(admin, 'line-test', null)).resolves.toEqual({ ok: true });
-    expect(await service.routeFor('line-test')).toBeNull();
-    expect(await audits('line.route.changed', 'line-test')).toHaveLength(2);
+    expect(overview.routes[moduleCode]).toBe(group);
+    await expect(service.setRoute(admin, moduleCode, null)).resolves.toEqual({ ok: true });
+    expect(await service.routeFor(moduleCode)).toBeNull();
+    expect(await audits('line.route.changed', moduleCode)).toHaveLength(2);
     expect(await audits('line.group.joined', group)).toHaveLength(3);
   });
 
