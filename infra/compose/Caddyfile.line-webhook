@@ -1,0 +1,16 @@
+# การแจ้งเตือน LINE: the one door from the internet (docs/runbooks/line-alert.md, "NAT ตรง").
+# Caddy gets a real Let's Encrypt certificate for the public host (LINE refuses self-signed ones)
+# and passes on only LINE's webhook POST. Every other path answers 404, so no page of the system
+# is reachable from outside. The LAN keeps using Caddyfile.lan on port 8443.
+{$LINE_WEBHOOK_HOST} {
+	@webhook {
+		method POST
+		path /api/line/webhook
+	}
+	handle @webhook {
+		reverse_proxy host.docker.internal:{$BACKOFFICE_WEB_PORT}
+	}
+	handle {
+		respond 404
+	}
+}
