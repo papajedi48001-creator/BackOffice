@@ -19,7 +19,7 @@ export interface WorkflowRepository {
   /** Others who must act when a คำขอ is returned or rejected, such as a trip's หัวหน้าคณะ; optional, none by default. */
   getFollowers?(requestId: string): Promise<string[]>;
   /** Others to tell when a คำขอ is fully approved, such as the dispatchers who must now assign a car; optional, none by default. Each gets one in-app notice. */
-  getApprovalWatchers?(request: { id: string; moduleCode: string }): Promise<Array<{ personId: string; subject: string; targetPath: string }>>;
+  getApprovalWatchers?(request: { id: string; moduleCode: string }): Promise<Array<{ personId: string; subject: string; targetPath: string; actionRequired?: boolean }>>;
   /**
    * Lets the module behind a คำขอ follow a decision in the same transaction, as an การจองห้อง moves on when the head decides.
    * Called before anything is saved; a throw refuses the decision. Optional, nothing by default.
@@ -45,7 +45,7 @@ export class RequestService {
       for (const step of approvalSteps) await repository.saveStep(step);
       await repository.saveOutbox({ id: this.createId(), type: 'workflow.request.submitted', idempotencyKey: `workflow.request.submitted:${requestId}`, payload: { requestId, moduleCode: request.moduleCode }, occurredAt: new Date().toISOString(), processedAt: null });
       const firstStep = approvalSteps[0]!;
-      await repository.saveOutbox({ id: this.createId(), type: 'notification.in_app', idempotencyKey: `notification.in_app:request-submitted:${requestId}:step:${firstStep.id}`, payload: notificationEventPayloadSchema.parse({ ...notificationTarget(request.moduleCode, requestId), recipientPersonId: firstStep.assigneeSnapshot.personId, requestId, subject: 'มีคำขอรอพิจารณา' }), occurredAt: new Date().toISOString(), processedAt: null });
+      await repository.saveOutbox({ id: this.createId(), type: 'notification.in_app', idempotencyKey: `notification.in_app:request-submitted:${requestId}:step:${firstStep.id}`, payload: notificationEventPayloadSchema.parse({ ...notificationTarget(request.moduleCode, requestId), recipientPersonId: firstStep.assigneeSnapshot.personId, requestId, subject: 'มีคำขอรอพิจารณา', actionRequired: true }), occurredAt: new Date().toISOString(), processedAt: null });
       await new AuditService({ append: (event) => repository.appendAudit(event) }, this.createId).recordAudit({ actorPersonId: request.requestorPersonId, action: 'workflow.request.submitted', targetType: 'request', targetId: request.id, result: 'SUCCESS', metadata: { moduleCode: request.moduleCode, requestReference: request.reference, status: request.status, organizationId: request.organizationSnapshot.organizationId } });
       return { ...request, approvalSteps };
     });
@@ -92,7 +92,7 @@ export class RequestService {
       for (const step of newSteps) await repository.saveStep(step);
       const firstStep = newSteps[0]!;
       await repository.saveOutbox({ id: this.createId(), type: 'workflow.request.resubmitted', idempotencyKey: `workflow.request.resubmitted:${request.id}:step:${firstStep.id}`, payload: { requestId: request.id, moduleCode: request.moduleCode }, occurredAt: new Date().toISOString(), processedAt: null });
-      await repository.saveOutbox({ id: this.createId(), type: 'notification.in_app', idempotencyKey: `notification.in_app:request-resubmitted:${request.id}:step:${firstStep.id}`, payload: notificationEventPayloadSchema.parse({ ...notificationTarget(request.moduleCode, request.id), recipientPersonId: firstStep.assigneeSnapshot.personId, requestId: request.id, subject: 'มีคำขอรอพิจารณา' }), occurredAt: new Date().toISOString(), processedAt: null });
+      await repository.saveOutbox({ id: this.createId(), type: 'notification.in_app', idempotencyKey: `notification.in_app:request-resubmitted:${request.id}:step:${firstStep.id}`, payload: notificationEventPayloadSchema.parse({ ...notificationTarget(request.moduleCode, request.id), recipientPersonId: firstStep.assigneeSnapshot.personId, requestId: request.id, subject: 'มีคำขอรอพิจารณา', actionRequired: true }), occurredAt: new Date().toISOString(), processedAt: null });
       await new AuditService({ append: (event) => repository.appendAudit(event) }, this.createId).recordAudit({ actorPersonId: validInput.actorPersonId, action: 'workflow.request.resubmitted', targetType: 'request', targetId: request.id, result: 'SUCCESS', metadata: { moduleCode: request.moduleCode, requestReference: request.reference, status: resubmitted.status, organizationId: request.organizationSnapshot.organizationId } });
       return { ...resubmitted, approvalSteps: [...existingSteps, ...newSteps] };
     });

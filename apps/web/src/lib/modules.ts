@@ -150,6 +150,7 @@ export const moduleRegistry: readonly ModuleEntry[] = [
     { href: '/admin/connections', labelKey: 'adminConnections', visible: isAdmin },
     { href: '/admin/modules', labelKey: 'adminModules', visible: isAdmin },
     { href: '/admin/grants', labelKey: 'adminGrants', visible: isAdmin },
+    { href: '/admin/line', labelKey: 'adminLine', visible: isAdmin },
     { href: '/admin/audit', labelKey: 'adminAudit', visible: isAdmin }
   ]),
   planned('attendance', '/attendance', 'moduleAttendance', 'moduleAttendanceDescription', 'clock'),

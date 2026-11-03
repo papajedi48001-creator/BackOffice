@@ -11,6 +11,7 @@
     "start": "node --experimental-transform-types src/main.ts"
   },
   "devDependencies": {
+    "@backoffice/i18n": "workspace:*",
     "@types/node": "^24.0.0",
     "vitest": "^3.2.0"
   }

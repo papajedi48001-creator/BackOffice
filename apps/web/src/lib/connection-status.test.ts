@@ -13,7 +13,7 @@ describe('checkConnections', () => {
     const tcp = vi.fn(async (host: string) => { if (host === 'clamav') throw new Error('ECONNREFUSED'); });
     const rows = await checkConnections((name) => env[name], { database: async () => undefined, tcp });
     expect(rows.map((row) => [row.key, row.configured, row.status])).toEqual([
-      ['database', true, 'ok'], ['redis', true, 'ok'], ['storage', true, 'ok'], ['scanner', true, 'failed'], ['mail', false, 'not_checked']
+      ['database', true, 'ok'], ['redis', true, 'ok'], ['storage', true, 'ok'], ['scanner', true, 'failed'], ['mail', false, 'not_checked'], ['line', false, 'not_checked']
     ]);
     expect(tcp).toHaveBeenCalledWith('cache', 6379);
     expect(tcp).toHaveBeenCalledWith('minio', 9000);
@@ -28,5 +28,13 @@ describe('checkConnections', () => {
     expect(rows.find((row) => row.key === 'database')?.status).toBe('failed');
     expect(rows.filter((row) => row.key !== 'database').every((row) => !row.configured && row.status === 'not_checked')).toBe(true);
     expect(tcp).not.toHaveBeenCalled();
+  });
+
+  it('checks that LINE can be reached once its token and secret are set, never showing them', async () => {
+    const tcp = vi.fn(async () => undefined);
+    const rows = await checkConnections((name) => ({ LINE_CHANNEL_ACCESS_TOKEN: 'line-token-value', LINE_CHANNEL_SECRET: 'line-secret-value' } as Record<string, string>)[name], { database: async () => undefined, tcp });
+    expect(rows.find((row) => row.key === 'line')).toEqual({ key: 'line', variables: ['LINE_CHANNEL_ACCESS_TOKEN', 'LINE_CHANNEL_SECRET', 'LINE_BOT_BASIC_ID', 'BACKOFFICE_PUBLIC_URL'], configured: true, status: 'ok' });
+    expect(tcp).toHaveBeenCalledWith('api.line.me', 443);
+    expect(JSON.stringify(rows)).not.toContain('line-token-value');
   });
 });

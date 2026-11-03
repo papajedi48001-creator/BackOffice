@@ -24,3 +24,4 @@ export * from './schema/official-travel.ts';
 export * from './schema/fleet.ts';
 export * from './schema/admin.ts';
 export * from './schema/support-chat.ts';
+export * from './schema/line.ts';

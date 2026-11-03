@@ -23,12 +23,12 @@ export async function followRoomBookingDecision(database: Executor, input: { req
 }
 
 /** Once the head has agreed, the room managers for the room's unit are told the booking waits for them. */
-export async function roomBookingWatchers(database: Pick<Database, 'query'>, requestId: string): Promise<Array<{ personId: string; subject: string; targetPath: string }>> {
+export async function roomBookingWatchers(database: Pick<Database, 'query'>, requestId: string): Promise<Array<{ personId: string; subject: string; targetPath: string; actionRequired: boolean }>> {
   const [booking] = await database.query<{ id: string; reference: string; ownerOrganizationId: string; bookerPersonId: string }>(
     'SELECT b.id, b.reference, r.owner_organization_id AS ownerOrganizationId, b.booker_person_id AS bookerPersonId FROM room_booking b JOIN room r ON r.id = b.room_id WHERE b.request_id = ? LIMIT 1', [requestId]);
   if (!booking) return [];
   const rows = await database.query<{ personId: string; roleName: string }>(
     'SELECT DISTINCT a.person_id AS personId, r.name AS roleName FROM role_assignment a JOIN role r ON r.id = a.role_id WHERE (a.organization_id IS NULL OR a.organization_id = ?)', [booking.ownerOrganizationId]);
   const managers = [...new Set(rows.filter((row) => roleGrantsPermission(row.roleName, 'room.booking.decide')).map((row) => row.personId))].filter((personId) => personId !== booking.bookerPersonId).sort();
-  return managers.map((personId) => ({ personId, subject: `มีการจองห้องรออนุมัติ (${booking.reference})`, targetPath: `/rooms/bookings/${booking.id}` }));
+  return managers.map((personId) => ({ personId, subject: `มีการจองห้องรออนุมัติ (${booking.reference})`, targetPath: `/rooms/bookings/${booking.id}`, actionRequired: true }));
 }

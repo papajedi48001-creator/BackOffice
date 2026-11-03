@@ -10,7 +10,9 @@ export const notificationEventPayloadSchema = z.object({
   requestId: z.string().min(1).optional(),
   targetPath: notificationTargetPathSchema.optional(),
   moduleCode: notificationModuleCodeSchema.optional(),
-  subject: z.string().trim().min(1).max(255)
+  subject: z.string().trim().min(1).max(255),
+  // The recipient has to decide or handle something; only these notices also go to the module's LINE group.
+  actionRequired: z.boolean().optional()
 }).refine((payload) => payload.requestId !== undefined || payload.targetPath !== undefined, { message: 'requestId or targetPath is required', path: ['requestId'] });
 export type NotificationEventPayload = z.infer<typeof notificationEventPayloadSchema>;
 export interface NotificationMessage { eventId: string; recipientPersonId: string; channel: NotificationChannel; requestId: string | null; targetPath: string | null; moduleCode: string | null; subject: string; }

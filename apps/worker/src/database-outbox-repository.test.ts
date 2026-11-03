@@ -25,8 +25,8 @@ describe('DatabaseOutboxRepository', () => {
     expect(fake.queries[0]).toContain('processed_at IS NULL');
     expect(fake.queries[0]).toContain('dead_lettered_at IS NULL');
     expect(fake.queries[0]).toContain('(next_attempt_at IS NULL OR next_attempt_at <= UTC_TIMESTAMP())');
-    expect(fake.queries[0]).toContain('type IN (?, ?)');
-    expect(fake.queryParameters[0]).toEqual(['notification.email', 'notification.in_app']);
+    expect(fake.queries[0]).toContain('type IN (?, ?, ?)');
+    expect(fake.queryParameters[0]).toEqual(['notification.email', 'notification.in_app', 'notification.line']);
     expect(fake.writes[0]).toContain('processed_at = UTC_TIMESTAMP()');
   });
 

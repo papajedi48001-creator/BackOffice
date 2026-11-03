@@ -4,7 +4,7 @@ import { checkConnections, tcpProbe, type ConnectionCheck, type ConnectionKey } 
 import { readRuntimeValue } from '../../../../lib/runtime-env';
 import { AdminMessage } from '../admin-message';
 
-const names: Record<ConnectionKey, MessageKey> = { database: 'adminConnectionDatabase', redis: 'adminConnectionRedis', storage: 'adminConnectionStorage', scanner: 'adminConnectionScanner', mail: 'adminConnectionMail' };
+const names: Record<ConnectionKey, MessageKey> = { database: 'adminConnectionDatabase', redis: 'adminConnectionRedis', storage: 'adminConnectionStorage', scanner: 'adminConnectionScanner', mail: 'adminConnectionMail', line: 'adminConnectionLine' };
 const statuses: Record<ConnectionCheck['status'], { key: MessageKey; tone: string }> = { ok: { key: 'adminStatusOk', tone: 'approved' }, failed: { key: 'adminStatusFailed', tone: 'rejected' }, not_checked: { key: 'adminStatusNotChecked', tone: 'cancelled' } };
 
 export const dynamic = 'force-dynamic';

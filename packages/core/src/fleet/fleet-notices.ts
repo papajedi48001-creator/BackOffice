@@ -15,7 +15,7 @@ export interface FleetNoticeContext {
   registration?: string;
 }
 
-export interface FleetNotice { recipientPersonId: string; subject: string; targetPath: string }
+export interface FleetNotice { recipientPersonId: string; subject: string; targetPath: string; actionRequired?: true }
 
 const requestPath = (id: string | undefined) => `/fleet/requests/${id}`;
 const tripPath = (id: string | undefined) => `/fleet/trips/${id}`;
@@ -27,7 +27,7 @@ export function noticesFor(event: FleetEvent, ctx: FleetNoticeContext): FleetNot
   const all = ((): FleetNotice[] => {
     const to = (ids: ReadonlyArray<string | null | undefined> | undefined, subject: string, targetPath: string) => people(ids).map((recipientPersonId) => ({ recipientPersonId, subject, targetPath }));
     switch (event) {
-      case 'waiting': return to(ctx.managerPersonIds, 'มีใบขอใช้รถรอจัดรถ', requestPath(ctx.fleetRequestId));
+      case 'waiting': return to(ctx.managerPersonIds, 'มีใบขอใช้รถรอจัดรถ', requestPath(ctx.fleetRequestId)).map((notice) => ({ ...notice, actionRequired: true as const }));
       case 'assigned': return [...to(ctx.requesterPersonIds, `จัดรถแล้ว > ${ctx.registration}`, requestPath(ctx.fleetRequestId)), ...to([ctx.driverPersonId], 'มีงานขับใหม่', tripPath(ctx.tripId))];
       case 'declined': return to(ctx.requesterPersonIds, 'ไม่จัดรถ', requestPath(ctx.fleetRequestId));
       case 'changed': return [

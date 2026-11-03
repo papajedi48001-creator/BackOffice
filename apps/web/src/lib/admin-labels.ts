@@ -33,7 +33,7 @@ export function roleNeedsHrDataOwner(role: string): boolean {
   return role === 'hr-manager' || role === 'leave-manager' || role === 'travel-manager';
 }
 
-const errorKeys: Record<string, MessageKey> = { LAST_ADMIN: 'adminErrorLAST_ADMIN', MODULE_LOCKED: 'adminErrorMODULE_LOCKED', PERSON_NOT_ACTIVE: 'adminErrorPERSON_NOT_ACTIVE', NOT_FOUND: 'adminErrorNOT_FOUND', forbidden: 'adminErrorFORBIDDEN' };
+const errorKeys: Record<string, MessageKey> = { LAST_ADMIN: 'adminErrorLAST_ADMIN', MODULE_LOCKED: 'adminErrorMODULE_LOCKED', PERSON_NOT_ACTIVE: 'adminErrorPERSON_NOT_ACTIVE', NOT_FOUND: 'adminErrorNOT_FOUND', forbidden: 'adminErrorFORBIDDEN', LINE_REFUSED: 'adminErrorLINE_REFUSED', LINE_NOT_CONFIGURED: 'adminErrorLINE_NOT_CONFIGURED', invalid_input: 'adminErrorINVALID_INPUT' };
 
 export function adminErrorMessage(code: string | null): string {
   return t(code && errorKeys[code] ? errorKeys[code] : 'adminErrorGENERIC');

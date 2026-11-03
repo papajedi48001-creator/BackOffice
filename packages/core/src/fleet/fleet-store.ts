@@ -90,8 +90,8 @@ export async function insertHistory(db: Writer, entry: { fleetRequestId: string;
 }
 
 /** One in-app notice through the outbox, keyed `notification.in_app:fleet:<event>:<id>:<recipient>`. */
-export async function writeFleetNotice(db: Writer, notice: { event: FleetEvent; id: string; recipientPersonId: string; subject: string; targetPath: string }): Promise<void> {
-  const payload = notificationEventPayloadSchema.parse({ recipientPersonId: notice.recipientPersonId, subject: notice.subject, targetPath: notice.targetPath, moduleCode: FLEET_MODULE });
+export async function writeFleetNotice(db: Writer, notice: { event: FleetEvent; id: string; recipientPersonId: string; subject: string; targetPath: string; actionRequired?: true }): Promise<void> {
+  const payload = notificationEventPayloadSchema.parse({ recipientPersonId: notice.recipientPersonId, subject: notice.subject, targetPath: notice.targetPath, moduleCode: FLEET_MODULE, ...(notice.actionRequired ? { actionRequired: true } : {}) });
   await db.execute('INSERT INTO outbox_event (id, type, idempotency_key, payload, occurred_at, processed_at) VALUES (?, ?, ?, ?, UTC_TIMESTAMP(), NULL)', [randomUUID(), 'notification.in_app', `notification.in_app:fleet:${notice.event}:${notice.id}:${notice.recipientPersonId}`, JSON.stringify(payload)]);
 }
 
