@@ -45,6 +45,25 @@ BACKOFFICE_PUBLIC_URL=https://192.168.1.20:8443
 
 LINE ต้องเรียก `https://<โดเมนสาธารณะ>/api/line/webhook` ด้วยใบรับรอง HTTPS ที่เชื่อถือได้ (ใบรับรองของ CA ภายในที่ใช้ใน LAN ใช้ไม่ได้) เลือกทางใดทางหนึ่ง
 
+### 3T. Tailscale Funnel (ใช้อยู่ที่ รพ.วาริชภูมิ: ไม่ต้องเปิดพอร์ต ไม่ต้องมีโดเมน)
+
+ใช้เมื่อเปิดพอร์ตขาเข้าจากอินเทอร์เน็ตไม่ได้ เช่น เครือข่ายต้นทางกั้นทราฟฟิกจากต่างประเทศ (Let's Encrypt และ LINE เรียกมาจากต่างประเทศ) เครื่องที่รันระบบต่อออกไปหา Tailscale เอง และได้ URL ถาวรพร้อมใบรับรองจริง
+
+1. สมัครบัญชีที่ <https://login.tailscale.com> แล้วเปิด **MagicDNS** และ **HTTPS Certificates** ที่ <https://login.tailscale.com/admin/dns>
+2. ติดตั้ง Tailscale บนเครื่องที่รันระบบ (PowerShell แบบ Administrator: `winget install --id Tailscale.Tailscale -e`) แล้วล็อกอินจากไอคอนที่ถาด
+3. ใน **Machines** ของ admin console เลือกเครื่องนี้ แล้วกด **Disable key expiry** ไม่อย่างนั้นเครื่องจะหลุดจาก tailnet เมื่อครบ 180 วัน และ webhook จะหยุดทำงาน
+4. เปิดเฉพาะเส้นทาง webhook (รันใน PowerShell ไม่ใช่ Git Bash เพราะ Git Bash แปลง `/api/...` เป็นพาธของ Windows):
+
+   ```powershell
+   & "C:\Program Files\Tailscale\tailscale.exe" funnel --bg --set-path=/api/line/webhook http://127.0.0.1:3000/api/line/webhook
+   ```
+
+   ครั้งแรก Tailscale จะแสดงลิงก์ให้กดอนุญาต Funnel ใน tailnet ค่าที่ตั้งจะถูกเก็บไว้และกลับมาเองหลังรีสตาร์ทเครื่อง เปลี่ยน `3000` ให้ตรงกับพอร์ตที่เว็บรันจริง
+5. ตรวจ: `tailscale funnel status` ต้องมีแค่ `/api/line/webhook` เปิด `https://<เครื่อง>.<tailnet>.ts.net/` ต้องได้ 404 และ `curl.exe -X POST -d "{}" https://<เครื่อง>.<tailnet>.ts.net/api/line/webhook` ต้องได้ 401 (ไม่มีลายเซ็น)
+6. ใน LINE Developers ใส่ **Webhook URL** = `https://<เครื่อง>.<tailnet>.ts.net/api/line/webhook` กด **Verify** แล้วเปิด **Use webhook**
+
+ปิด: `tailscale funnel reset`
+
 ### 3A. NAT ตรง (มีโดเมนและ public IP ของโรงพยาบาลแล้ว)
 
 ใช้เมื่อมีโดเมน เช่น `notify-waritch-hosp.moph.go.th` ชี้ไป public IP ของโรงพยาบาล
