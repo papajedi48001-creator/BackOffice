@@ -102,4 +102,13 @@ describe('MyProfilePage', () => {
     await MyProfilePage();
     expect(mocks.redirect).toHaveBeenCalledWith('/');
   });
+
+  it('offers เชื่อมต่อ LINE next to changing the password', async () => {
+    mocks.headers.mockResolvedValue(new Headers());
+    mocks.readSession.mockResolvedValue(staff);
+    mocks.getSharedDatabase.mockReturnValue({ query: vi.fn() });
+    mocks.get.mockResolvedValue({ work, private: personal, access: { viewWork: true, viewPrivate: true, editProfile: false, editContact: true }, history: [] });
+    render(await MyProfilePage());
+    expect(screen.getByRole('button', { name: 'เชื่อมต่อ LINE' })).toBeInTheDocument();
+  });
 });
