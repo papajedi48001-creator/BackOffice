@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { lineAlertModuleCodes } from '@backoffice/contracts';
 import { th } from '@backoffice/i18n';
 import { buildLineAlertMessage, LineAlertConsumer, lineModuleLabels } from './line-alert-consumer';
 
@@ -24,6 +25,7 @@ describe('buildLineAlertMessage', () => {
   });
 
   it('uses the same module names as the web app', () => {
+    expect(Object.keys(lineModuleLabels)).toEqual([...lineAlertModuleCodes]);
     expect(lineModuleLabels).toEqual({ requests: th.requests, 'room-booking': th.moduleRoomBooking, leave: th.moduleLeave, 'official-travel': th.moduleTravel, inventory: th.moduleInventory, fleet: th.moduleFleet });
   });
 });
