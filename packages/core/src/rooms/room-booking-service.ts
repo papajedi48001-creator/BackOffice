@@ -35,20 +35,22 @@ export class RoomBookingService {
       const conflicts = await repository.findConflicts(room.id, ranges);
       if (conflicts.length > 0) throw new BookingConflictError(conflicts);
 
+      const bookerOrganizationId = await repository.currentOrganizationId(actor.personId);
+      if (!bookerOrganizationId) throw new Error('NO_ORGANIZATION');
+      // The head เห็นชอบ first in คำขอ; the workflow hook moves the booking on to the room managers.
+      const requestId = await repository.openHeadRequest({ requestorPersonId: actor.personId, organizationId: bookerOrganizationId });
       const id = this.createId();
       const sequence = await repository.nextSequence(buddhistYear(now));
       const booking: RoomBookingRecord = {
         id, reference: `RB-${buddhistYear(now)}-${String(sequence).padStart(4, '0')}`, roomId: room.id, bookerPersonId: actor.personId,
-        bookerOrganizationId: await repository.currentOrganizationId(actor.personId), title: valid.title, attendeeCount: valid.attendeeCount,
-        startMinute: valid.startMinute, endMinute: valid.endMinute, status: 'PENDING', decidedByPersonId: null
+        bookerOrganizationId, title: valid.title, attendeeCount: valid.attendeeCount,
+        startMinute: valid.startMinute, endMinute: valid.endMinute, status: 'HEAD_REVIEW', decidedByPersonId: null, requestId
       };
       const days: RoomBookingDayRecord[] = ranges.map((range) => ({ id: this.createId(), bookingId: id, roomId: room.id, bookingDate: range.date, startsAt: range.startsAt, endsAt: range.endsAt, status: 'ACTIVE' }));
       const addons = valid.addons.map((addon) => ({ id: this.createId(), bookingId: id, addonId: addon.addonId, addonName: activeAddons.get(addon.addonId)!.name, addonUnit: activeAddons.get(addon.addonId)!.unit, quantity: addon.quantity, note: addon.note || null }));
       await repository.insertBooking(booking, days, addons);
       const historyId = await this.record(repository, booking, actor.personId, 'SUBMITTED', null, 'room_booking.submitted', days.length);
-      await this.notify(repository, booking, historyId, actor.personId, `ยื่นจองห้องแล้ว รออนุมัติ (${booking.reference})`);
-      const approvers = (await repository.findApproverPersonIds(room.ownerOrganizationId)).filter((personId) => personId !== actor.personId);
-      for (const personId of approvers) await this.notify(repository, booking, historyId, personId, `มีการจองห้องรออนุมัติ (${booking.reference})`);
+      await this.notify(repository, booking, historyId, actor.personId, `ยื่นจองห้องแล้ว รอหัวหน้าเห็นชอบ (${booking.reference})`);
       return booking;
     });
   }
@@ -83,7 +85,7 @@ export class RoomBookingService {
       const isBooker = locked.booking.bookerPersonId === actor.personId;
       const isApprover = await this.isAllowed(actor, 'room.booking.decide', locked.room);
       if (!isBooker && !isApprover) throw new Error('BOOKING_NOT_FOUND');
-      if (locked.booking.status !== 'PENDING' && locked.booking.status !== 'APPROVED') throw new Error('CANCEL_NOT_ALLOWED');
+      if (locked.booking.status !== 'HEAD_REVIEW' && locked.booking.status !== 'PENDING' && locked.booking.status !== 'APPROVED') throw new Error('CANCEL_NOT_ALLOWED');
       const now = this.now();
       const activeDays = locked.days.filter((day) => day.status === 'ACTIVE');
       const started = activeDays.some((day) => day.startsAt <= now);
@@ -96,6 +98,8 @@ export class RoomBookingService {
         booking = { ...booking, status: 'CANCELLED' };
         await repository.updateBookingStatus(booking.id, booking.status, booking.decidedByPersonId);
         historyId = await this.record(repository, booking, actor.personId, 'CANCELLED', valid.reason, 'room_booking.cancelled', activeDays.length);
+        // The head's คำขอ goes with it, so it leaves their inbox.
+        if (locked.booking.status === 'HEAD_REVIEW' && booking.requestId) await repository.cancelHeadRequest({ requestId: booking.requestId, actorPersonId: actor.personId, reason: valid.reason });
       } else {
         const futureDays = activeDays.filter((day) => day.startsAt > now);
         if (futureDays.length === 0) throw new Error('NOTHING_TO_RELEASE');

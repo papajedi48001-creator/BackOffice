@@ -1,6 +1,8 @@
-import type { AuditEvent, OutboxEvent, RoomBookingStatus } from '@backoffice/contracts';
+import { ROOM_BOOKING_MODULE, type AuditEvent, type OutboxEvent, type RoomBookingStatus } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { roleGrantsPermission } from '../access/policy';
+import { DatabaseWorkflowRepository } from '../workflow/database-workflow-repository';
+import { RequestService, type ApproverResolver } from '../workflow/request-service';
 import type { TimeRange } from './booking-days';
 import type { LockedRoomBooking, RoomBookingAddonRecord, RoomBookingDayRecord, RoomBookingHistoryEntry, RoomBookingRecord, RoomBookingRepository, RoomRecord } from './room-booking-repository';
 import type { RoomAddonDetails, RoomCatalogRepository, RoomDetails } from './room-catalog-service';
@@ -24,14 +26,15 @@ export function fromMariaDbDate(value: Date | string): string {
 }
 
 const roomColumns = 'id, name, capacity, owner_organization_id AS ownerOrganizationId, is_bookable AS isBookable';
-const bookingColumns = 'id, reference, room_id AS roomId, booker_person_id AS bookerPersonId, booker_organization_id AS bookerOrganizationId, title, attendee_count AS attendeeCount, start_minute AS startMinute, end_minute AS endMinute, status, decided_by_person_id AS decidedByPersonId';
+const bookingColumns = 'id, reference, room_id AS roomId, booker_person_id AS bookerPersonId, booker_organization_id AS bookerOrganizationId, title, attendee_count AS attendeeCount, start_minute AS startMinute, end_minute AS endMinute, status, decided_by_person_id AS decidedByPersonId, request_id AS requestId';
 
 export class DatabaseRoomBookingRepository implements RoomBookingRepository {
-  constructor(private readonly database: Database) {}
+  /** `approvers` finds the booker's head for the คำขอ opened on submit; only submitting needs it. */
+  constructor(private readonly database: Database, private readonly approvers?: ApproverResolver) {}
 
   transaction<T>(work: (repository: RoomBookingRepository) => Promise<T>): Promise<T> {
     // Concurrent submits lock the room and the shared sequence row after other bookings commit; see TransactionOptions.
-    return this.database.transaction((database) => work(new DatabaseRoomBookingRepository(database)), { isolationLevel: 'READ COMMITTED' });
+    return this.database.transaction((database) => work(new DatabaseRoomBookingRepository(database, this.approvers)), { isolationLevel: 'READ COMMITTED' });
   }
 
   async lockRoom(roomId: string): Promise<RoomRecord | null> {
@@ -49,7 +52,7 @@ export class DatabaseRoomBookingRepository implements RoomBookingRepository {
     const overlap = ranges.map(() => '(d.starts_at < ? AND d.ends_at > ?)').join(' OR ');
     const rows = await this.database.query<{ startsAt: Date | string; endsAt: Date | string }>(
       `SELECT d.starts_at AS startsAt, d.ends_at AS endsAt FROM room_booking_day d JOIN room_booking b ON b.id = d.booking_id
-       WHERE d.room_id = ? AND d.status = 'ACTIVE' AND b.status IN ('PENDING', 'APPROVED') AND (${overlap}) ORDER BY d.starts_at`,
+       WHERE d.room_id = ? AND d.status = 'ACTIVE' AND b.status IN ('HEAD_REVIEW', 'PENDING', 'APPROVED') AND (${overlap}) ORDER BY d.starts_at`,
       [roomId, ...ranges.flatMap((range) => [toMariaDbDatetime(range.endsAt), toMariaDbDatetime(range.startsAt)])]
     );
     return rows.map((row) => ({ startsAt: fromMariaDbDatetime(row.startsAt), endsAt: fromMariaDbDatetime(row.endsAt) }));
@@ -76,10 +79,23 @@ export class DatabaseRoomBookingRepository implements RoomBookingRepository {
     return [...new Set(rows.filter((row) => roleGrantsPermission(row.roleName, 'room.booking.decide')).map((row) => row.personId))].sort();
   }
 
+  async openHeadRequest(input: { requestorPersonId: string; organizationId: string }): Promise<string> {
+    if (!this.approvers) throw new Error('NO_APPROVER');
+    const request = await new RequestService(new DatabaseWorkflowRepository(this.database), this.approvers).submitRequest({ moduleCode: ROOM_BOOKING_MODULE, requestorPersonId: input.requestorPersonId, organizationSnapshot: { organizationId: input.organizationId }, target: 'NEAREST_HEAD' });
+    return request.id;
+  }
+
+  async cancelHeadRequest(input: { requestId: string; actorPersonId: string; reason: string }): Promise<void> {
+    const [request] = await this.database.query<{ status: string }>('SELECT status FROM request WHERE id = ? LIMIT 1', [input.requestId]);
+    if (request?.status !== 'IN_REVIEW') return;
+    // A room manager may cancel too; the room module has already checked who may.
+    await new RequestService(new DatabaseWorkflowRepository(this.database), { resolve: async () => [] }).cancelRequest({ requestId: input.requestId, actorPersonId: input.actorPersonId, reason: input.reason }, { actorAuthorized: true });
+  }
+
   async insertBooking(booking: RoomBookingRecord, days: RoomBookingDayRecord[], addons: RoomBookingAddonRecord[]): Promise<void> {
     await this.database.execute(
-      'INSERT INTO room_booking (id, reference, room_id, booker_person_id, booker_organization_id, title, attendee_count, start_minute, end_minute, status, decided_by_person_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())',
-      [booking.id, booking.reference, booking.roomId, booking.bookerPersonId, booking.bookerOrganizationId, booking.title, booking.attendeeCount, booking.startMinute, booking.endMinute, booking.status, booking.decidedByPersonId]
+      'INSERT INTO room_booking (id, reference, room_id, booker_person_id, booker_organization_id, title, attendee_count, start_minute, end_minute, status, decided_by_person_id, request_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())',
+      [booking.id, booking.reference, booking.roomId, booking.bookerPersonId, booking.bookerOrganizationId, booking.title, booking.attendeeCount, booking.startMinute, booking.endMinute, booking.status, booking.decidedByPersonId, booking.requestId]
     );
     for (const day of days) {
       await this.database.execute('INSERT INTO room_booking_day (id, booking_id, room_id, booking_date, starts_at, ends_at, status) VALUES (?, ?, ?, ?, ?, ?, ?)', [day.id, day.bookingId, day.roomId, day.bookingDate, toMariaDbDatetime(day.startsAt), toMariaDbDatetime(day.endsAt), day.status]);

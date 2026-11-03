@@ -270,6 +270,6 @@ describe('ApprovalService module hook', () => {
     expect(saved).toEqual([]);
 
     await service.decideRequest({ requestId: 'request-1', actorPersonId: 'head-a', decision: 'APPROVE' });
-    expect(decided.at(-1)).toEqual({ request, status: 'APPROVED', decision: 'APPROVE', actorPersonId: 'head-a' });
+    expect(decided.at(-1)).toEqual({ request, status: 'APPROVED', decision: 'APPROVE', reason: null, actorPersonId: 'head-a' });
   });
 });

@@ -24,7 +24,7 @@ export interface WorkflowRepository {
    * Lets the module behind a คำขอ follow a decision in the same transaction, as an การจองห้อง moves on when the head decides.
    * Called before anything is saved; a throw refuses the decision. Optional, nothing by default.
    */
-  onRequestDecided?(input: { request: Omit<SubmittedRequest, 'approvalSteps'>; status: RequestStatus; decision: ApprovalAction; actorPersonId: string }): Promise<void>;
+  onRequestDecided?(input: { request: Omit<SubmittedRequest, 'approvalSteps'>; status: RequestStatus; decision: ApprovalAction; reason: string | null; actorPersonId: string }): Promise<void>;
 }
 
 export interface ApproverResolver { resolve(input: { moduleCode: string; requestorPersonId: string; organizationId: string; target?: CommandChainTarget }): Promise<ApproverSnapshot[]>; }

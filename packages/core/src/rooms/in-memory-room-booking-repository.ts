@@ -15,17 +15,25 @@ export class InMemoryRoomBookingRepository implements RoomBookingRepository {
   sequences = new Map<number, number>();
   organizations = new Map<string, string>();
   approvers: { personId: string; organizationId: string | null }[] = [];
+  headRequests: { id: string; requestorPersonId: string; organizationId: string; status: 'IN_REVIEW' | 'APPROVED' | 'REJECTED' | 'CANCELLED' }[] = [];
+
+  /** Stands in for the head's เห็นชอบ in คำขอ, which the workflow hook applies on MariaDB. */
+  headApprove(bookingId: string) { const booking = this.bookings.get(bookingId)!; this.bookings.set(bookingId, { ...booking, status: 'PENDING' }); const request = this.headRequests.find((entry) => entry.id === booking.requestId); if (request) request.status = 'APPROVED'; }
 
   async transaction<T>(work: (repository: RoomBookingRepository) => Promise<T>): Promise<T> { return work(this); }
   async lockRoom(roomId: string) { return this.rooms.get(roomId) ?? null; }
   async findActiveAddons(addonIds: string[]) { return addonIds.map((id) => this.addons.get(id)).filter((addon) => addon?.isActive).map((addon) => ({ id: addon!.id, name: addon!.name, unit: addon!.unit })); }
   async findConflicts(roomId: string, ranges: TimeRange[]) {
-    return this.days.filter((day) => day.roomId === roomId && day.status === 'ACTIVE' && ['PENDING', 'APPROVED'].includes(this.bookings.get(day.bookingId)?.status ?? '') && ranges.some((range) => rangesOverlap(day, range)))
+    return this.days.filter((day) => day.roomId === roomId && day.status === 'ACTIVE' && ['HEAD_REVIEW', 'PENDING', 'APPROVED'].includes(this.bookings.get(day.bookingId)?.status ?? '') && ranges.some((range) => rangesOverlap(day, range)))
       .map(({ startsAt, endsAt }) => ({ startsAt, endsAt }));
   }
   async nextSequence(year: number) { const next = (this.sequences.get(year) ?? 0) + 1; this.sequences.set(year, next); return next; }
-  async currentOrganizationId(personId: string) { return this.organizations.get(personId) ?? null; }
+  /** Everyone else belongs to some unit unless a test says otherwise. */
+  defaultOrganization: string | null = 'other-unit';
+  async currentOrganizationId(personId: string) { return this.organizations.get(personId) ?? this.defaultOrganization; }
   async findApproverPersonIds(organizationId: string) { return [...new Set(this.approvers.filter((approver) => approver.organizationId === null || approver.organizationId === organizationId).map((approver) => approver.personId))]; }
+  async openHeadRequest(input: { requestorPersonId: string; organizationId: string }) { const id = `request-${this.headRequests.length + 1}`; this.headRequests.push({ id, ...input, status: 'IN_REVIEW' }); return id; }
+  async cancelHeadRequest(input: { requestId: string }) { const request = this.headRequests.find((entry) => entry.id === input.requestId); if (request?.status === 'IN_REVIEW') request.status = 'CANCELLED'; }
   async insertBooking(booking: RoomBookingRecord, days: RoomBookingDayRecord[], addons: RoomBookingAddonRecord[]) { this.bookings.set(booking.id, { ...booking }); this.days.push(...days.map((day) => ({ ...day }))); this.bookingAddons.push(...addons); }
   async getBookingForUpdate(bookingId: string) {
     const booking = this.bookings.get(bookingId);

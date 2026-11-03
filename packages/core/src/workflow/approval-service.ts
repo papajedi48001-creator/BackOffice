@@ -36,7 +36,7 @@ export class ApprovalService {
       const notices = [{ recipientPersonId: request.requestorPersonId, subject: `${action} > ${actorTitle}` }, ...followers.map((recipientPersonId) => ({ recipientPersonId, subject: `${action} > ${actorTitle}` })), ...(nextStep ? [{ recipientPersonId: nextStep.assigneeSnapshot.personId, subject: 'มีคำขอรอพิจารณา' }] : [])];
       // Only the final approval reaches watchers; the deciding head already has the decision notice above, so is not told twice.
       const watchers = status === 'APPROVED' ? (await repository.getApprovalWatchers?.({ id: request.id, moduleCode: request.moduleCode }) ?? []).filter((watcher) => watcher.personId !== decisionInput.actorPersonId) : [];
-      await repository.onRequestDecided?.({ request, status, decision: decisionInput.decision, actorPersonId: decisionInput.actorPersonId });
+      await repository.onRequestDecided?.({ request, status, decision: decisionInput.decision, reason: decisionInput.reason ?? null, actorPersonId: decisionInput.actorPersonId });
       await repository.saveStep({ ...step, status: stepStatus });
       if (decisionInput.decision !== 'APPROVE') {
         for (const leftover of steps.slice(stepIndex + 1)) {

@@ -2,11 +2,13 @@ import { FLEET_MODULE } from '../fleet/fleet-module';
 import { LEAVE_MODULE } from '../leave/leave-module';
 import { OFFICIAL_TRAVEL_MODULE } from '../official-travel/travel-module';
 import { REQUESTS_MODULE } from './requests-module';
+import { ROOM_BOOKING_MODULE } from '@backoffice/contracts';
 
-/** Where an in-app notice about a คำขอ is filed and where it opens: leave, travel and fleet requests open their own pages, the rest stay in คำขอ. */
+/** Where an in-app notice about a คำขอ is filed and where it opens: leave, travel, fleet and room-booking requests open their own pages, the rest stay in คำขอ. */
 export function notificationTarget(moduleCode: string, requestId: string): { moduleCode: string; targetPath?: string } {
   if (moduleCode === LEAVE_MODULE) return { moduleCode: LEAVE_MODULE, targetPath: `/leave/requests/${requestId}` };
   if (moduleCode === OFFICIAL_TRAVEL_MODULE) return { moduleCode: OFFICIAL_TRAVEL_MODULE, targetPath: `/travel/requests/${requestId}` };
   if (moduleCode === FLEET_MODULE) return { moduleCode: FLEET_MODULE, targetPath: `/fleet/requests/by-request/${requestId}` };
+  if (moduleCode === ROOM_BOOKING_MODULE) return { moduleCode: ROOM_BOOKING_MODULE, targetPath: `/rooms/bookings/by-request/${requestId}` };
   return { moduleCode: REQUESTS_MODULE };
 }
