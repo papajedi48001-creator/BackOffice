@@ -2,7 +2,7 @@ import type { AuditEvent, OutboxEvent, RoomBookingDayStatus, RoomBookingHistoryA
 import type { TimeRange } from './booking-days';
 
 export interface RoomRecord { id: string; name: string; capacity: number; ownerOrganizationId: string; isBookable: boolean; }
-export interface RoomBookingRecord { id: string; reference: string; roomId: string; bookerPersonId: string; bookerOrganizationId: string | null; title: string; attendeeCount: number; startMinute: number; endMinute: number; status: RoomBookingStatus; decidedByPersonId: string | null; }
+export interface RoomBookingRecord { id: string; reference: string; roomId: string; bookerPersonId: string; bookerOrganizationId: string | null; title: string; attendeeCount: number; startMinute: number; endMinute: number; status: RoomBookingStatus; decidedByPersonId: string | null; requestId: string | null; }
 export interface RoomBookingDayRecord { id: string; bookingId: string; roomId: string; bookingDate: string; startsAt: Date; endsAt: Date; status: RoomBookingDayStatus; }
 export interface RoomBookingAddonRecord { id: string; bookingId: string; addonId: string; addonName: string; addonUnit: string; quantity: number; note: string | null; }
 export interface RoomBookingHistoryEntry { id: string; bookingId: string; actorPersonId: string; action: RoomBookingHistoryAction; reason: string | null; }
@@ -16,6 +16,10 @@ export interface RoomBookingRepository {
   nextSequence(year: number): Promise<number>;
   currentOrganizationId(personId: string): Promise<string | null>;
   findApproverPersonIds(organizationId: string): Promise<string[]>;
+  /** Opens the คำขอ for the booker's head (central workflow, NEAREST_HEAD) and returns its id; throws NO_APPROVER when nobody can be found. */
+  openHeadRequest(input: { requestorPersonId: string; organizationId: string }): Promise<string>;
+  /** Cancels that คำขอ while the head has not decided, telling the head. */
+  cancelHeadRequest(input: { requestId: string; actorPersonId: string; reason: string }): Promise<void>;
   insertBooking(booking: RoomBookingRecord, days: RoomBookingDayRecord[], addons: RoomBookingAddonRecord[]): Promise<void>;
   getBookingForUpdate(bookingId: string): Promise<LockedRoomBooking | null>;
   updateBookingStatus(bookingId: string, status: RoomBookingStatus, decidedByPersonId: string | null): Promise<void>;

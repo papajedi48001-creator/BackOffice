@@ -7,7 +7,7 @@ import type { WorkflowRepository } from './request-service';
 export interface ActiveDelegationFinder { findActiveFor(delegatorPersonId: string, delegatePersonId: string, moduleCode: string): Promise<Pick<Delegation, 'delegatorPersonId' | 'delegatePersonId' | 'moduleCode'> | null>; }
 
 export class ApprovalService {
-  constructor(private readonly repository: Pick<WorkflowRepository, 'transaction' | 'getRequestForUpdate' | 'getSteps' | 'saveRequest' | 'saveStep' | 'saveDecision' | 'saveOutbox' | 'appendAudit' | 'getPositionTitle' | 'getFollowers' | 'getApprovalWatchers'>, private readonly delegations: ActiveDelegationFinder, private readonly createId: () => string = randomUUID) {}
+  constructor(private readonly repository: Pick<WorkflowRepository, 'transaction' | 'getRequestForUpdate' | 'getSteps' | 'saveRequest' | 'saveStep' | 'saveDecision' | 'saveOutbox' | 'appendAudit' | 'getPositionTitle' | 'getFollowers' | 'getApprovalWatchers' | 'onRequestDecided'>, private readonly delegations: ActiveDelegationFinder, private readonly createId: () => string = randomUUID) {}
 
   async decideRequest(input: Parameters<typeof decideRequestInputSchema.parse>[0]): Promise<ApprovalDecision> {
     const decisionInput = decideRequestInputSchema.parse(input);
@@ -34,6 +34,8 @@ export class ApprovalService {
       // A return or rejection also reaches whoever else must act on it, such as the หัวหน้าคณะ who resubmits a trip.
       const followers = decisionInput.decision === 'APPROVE' ? [] : (await repository.getFollowers?.(request.id) ?? []).filter((personId) => personId !== request.requestorPersonId);
       const notices = [{ recipientPersonId: request.requestorPersonId, subject: `${action} > ${actorTitle}` }, ...followers.map((recipientPersonId) => ({ recipientPersonId, subject: `${action} > ${actorTitle}` })), ...(nextStep ? [{ recipientPersonId: nextStep.assigneeSnapshot.personId, subject: 'มีคำขอรอพิจารณา' }] : [])];
+      // The module locks its own row before any plain read of it, so a concurrent change fails cleanly rather than on a stale snapshot.
+      await repository.onRequestDecided?.({ request, status, decision: decisionInput.decision, reason: decisionInput.reason ?? null, actorPersonId: decisionInput.actorPersonId });
       // Only the final approval reaches watchers; the deciding head already has the decision notice above, so is not told twice.
       const watchers = status === 'APPROVED' ? (await repository.getApprovalWatchers?.({ id: request.id, moduleCode: request.moduleCode }) ?? []).filter((watcher) => watcher.personId !== decisionInput.actorPersonId) : [];
       await repository.saveStep({ ...step, status: stepStatus });

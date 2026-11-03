@@ -48,3 +48,22 @@ it('shows the Thai error in the popup when the server refuses', async () => {
   expect(await screen.findByRole('alert')).toHaveTextContent('ไม่สามารถยกเลิกการจองนี้ได้แล้ว');
   expect(screen.getByRole('dialog')).toBeInTheDocument();
 });
+
+it('lets the booker\'s head agree to the booking in คำขอ', async () => {
+  const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 200 }));
+  render(<BookingActions bookingId="b1" canDecide={false} cancelAction={null} headRequestId="r1" />);
+  expect(screen.queryByRole('button', { name: 'อนุมัติ' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'เห็นชอบ' }));
+  fireEvent.click(screen.getByRole('button', { name: 'ยืนยัน' }));
+  await waitFor(() => expect(refresh).toHaveBeenCalled());
+  expect(fetchMock).toHaveBeenCalledWith('/api/requests/r1/decisions', expect.objectContaining({ method: 'POST', body: JSON.stringify({ decision: 'APPROVE' }) }));
+});
+
+it('asks the head for a reason before not agreeing', async () => {
+  const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 200 }));
+  render(<BookingActions bookingId="b1" canDecide={false} cancelAction={null} headRequestId="r1" />);
+  fireEvent.click(screen.getByRole('button', { name: 'ไม่เห็นชอบ' }));
+  fireEvent.change(screen.getByLabelText('เหตุผล'), { target: { value: 'ไม่ใช่งานของหน่วย' } });
+  fireEvent.click(screen.getByRole('button', { name: 'ยืนยัน' }));
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/requests/r1/decisions', expect.objectContaining({ body: JSON.stringify({ decision: 'REJECT', reason: 'ไม่ใช่งานของหน่วย' }) })));
+});

@@ -12,10 +12,10 @@ export default async function MyRoomBookingsPage() {
   if (!database) return <section><h2>{t('myRoomBookings')}</h2><p role="alert">{t('roomActionFailed')}</p></section>;
   const bookings = await new RoomBookingQueries(database).myBookings(actor.personId);
   const now = new Date();
-  const isUpcoming = (booking: (typeof bookings)[number]) => (booking.status === 'PENDING' || booking.status === 'APPROVED') && booking.lastEndsAt !== null && booking.lastEndsAt > now;
+  const isUpcoming = (booking: (typeof bookings)[number]) => (booking.status === 'HEAD_REVIEW' || booking.status === 'PENDING' || booking.status === 'APPROVED') && booking.lastEndsAt !== null && booking.lastEndsAt > now;
   return <section>
     <div className="page-heading"><h2>{t('myRoomBookings')}</h2></div>
     <h3>{t('upcomingBookings')}</h3><BookingTable bookings={bookings.filter(isUpcoming).reverse()} />
-    <h3>{t('pastBookings')}</h3><BookingTable bookings={bookings.filter((booking) => !isUpcoming(booking)).map((booking) => ({ ...booking, expired: booking.status === 'PENDING' }))} />
+    <h3>{t('pastBookings')}</h3><BookingTable bookings={bookings.filter((booking) => !isUpcoming(booking)).map((booking) => ({ ...booking, expired: booking.status === 'HEAD_REVIEW' || booking.status === 'PENDING' }))} />
   </section>;
 }

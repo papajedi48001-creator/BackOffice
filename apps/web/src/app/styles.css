@@ -107,7 +107,7 @@ th { background: var(--accent-soft); color: var(--accent-strong); font-size: .92
 tbody tr:hover td { background: color-mix(in srgb, var(--accent) 3%, white); }
 tr:last-child td { border-bottom: 0; }
 .status { display: inline-block; border-radius: 999px; padding: 5px 10px; font-weight: 700; }
-.status-pending { background: #fff4ce; color: #714d00; }
+.status-pending, .status-head_review { background: #fff4ce; color: #714d00; }
 .status-approved { background: var(--success-soft); color: var(--success); }
 .status-in_review { background: #fff4ce; color: #714d00; }
 .status-rejected { background: #fde8e1; color: #9a3412; }
@@ -631,7 +631,7 @@ video.inventory-camera { display: block; flex-basis: 100%; width: 100%; max-widt
 .app-main .room-month-entry { display: block; box-sizing: border-box; width: 100%; min-width: 0; overflow: hidden; border: 1px solid transparent; border-left: 4px solid var(--accent); border-radius: 8px; background: var(--accent-tint); color: var(--ink); font-size: .8rem; font-weight: 600; line-height: 1.35; padding: 5px 7px; text-align: left; }
 .app-main .room-month .room-month-entry:hover:not(:disabled) { background: var(--accent); color: var(--surface); }
 .app-main .room-month-entry:focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
-.app-main .room-month-entry-pending { border: 1px dashed var(--accent); border-left: 4px dashed var(--accent); background: var(--surface); }
+.app-main .room-month-entry-pending, .app-main .room-month-entry-head_review { border: 1px dashed var(--accent); border-left: 4px dashed var(--accent); background: var(--surface); }
 .room-month-entry-time { font-family: ui-monospace, 'Cascadia Mono', monospace; font-weight: 700; }
 .room-month-entry-time { margin-right: 6px; }
 .room-month-fulldate { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

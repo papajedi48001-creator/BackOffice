@@ -17,6 +17,10 @@ export interface RoomBookingDetail extends RoomBookingSummary {
   addons: { addonName: string; addonUnit: string; quantity: number; note: string | null }[];
   history: { action: RoomBookingHistoryAction; actorName: string | null; reason: string | null; createdAt: Date }[];
   viewerIsBooker: boolean; viewerCanDecide: boolean;
+  /** The head's คำขอ, null for bookings made before it existed. */
+  requestId: string | null;
+  /** The viewer is a head on that คำขอ; `viewerCanHeadDecide` when it is waiting on them now. */
+  viewerIsHead: boolean; viewerCanHeadDecide: boolean;
 }
 
 type SummaryRow = Omit<RoomBookingSummary, 'firstDate' | 'lastDate' | 'lastEndsAt' | 'activeDayCount' | 'startMinute' | 'endMinute'> & { firstDate: Date | string; lastDate: Date | string; lastEndsAt: Date | string | null; activeDayCount: number | string; startMinute: number | string; endMinute: number | string };
@@ -39,7 +43,7 @@ export class RoomBookingQueries {
     const rows = await this.database.query<Omit<RoomListItem, 'isBookable' | 'upcomingBookingCount'> & { isBookable: number; upcomingBookingCount: number | string }>(
       `SELECT r.id, r.name, r.place, r.capacity, r.equipment, r.owner_organization_id AS ownerOrganizationId, r.is_bookable AS isBookable, o.name AS ownerOrganizationName,
          (SELECT COUNT(DISTINCT b.id) FROM room_booking b JOIN room_booking_day d ON d.booking_id = b.id
-          WHERE b.room_id = r.id AND b.status IN ('PENDING', 'APPROVED') AND d.status = 'ACTIVE' AND d.ends_at > ?) AS upcomingBookingCount
+          WHERE b.room_id = r.id AND b.status IN ('HEAD_REVIEW', 'PENDING', 'APPROVED') AND d.status = 'ACTIVE' AND d.ends_at > ?) AS upcomingBookingCount
        FROM room r LEFT JOIN organization o ON o.id = r.owner_organization_id ${options.bookableOnly ? 'WHERE r.is_bookable = 1' : ''} ORDER BY r.name`,
       [toMariaDbDatetime(now)]
     );
@@ -68,7 +72,7 @@ export class RoomBookingQueries {
          b.booker_person_id AS bookerPersonId, p.display_name AS bookerName, o.name AS bookerOrganizationName
        FROM room_booking_day d JOIN room_booking b ON b.id = d.booking_id JOIN room r ON r.id = d.room_id
        LEFT JOIN person p ON p.id = b.booker_person_id LEFT JOIN organization o ON o.id = b.booker_organization_id
-       WHERE d.status = 'ACTIVE' AND b.status IN ('PENDING', 'APPROVED') AND d.starts_at < ? AND d.ends_at > ? ${roomId ? 'AND d.room_id = ?' : ''}
+       WHERE d.status = 'ACTIVE' AND b.status IN ('HEAD_REVIEW', 'PENDING', 'APPROVED') AND d.starts_at < ? AND d.ends_at > ? ${roomId ? 'AND d.room_id = ?' : ''}
        ORDER BY d.starts_at, r.name`,
       [toMariaDbDatetime(to), toMariaDbDatetime(from), ...(roomId ? [roomId] : [])]
     );
@@ -90,28 +94,41 @@ export class RoomBookingQueries {
     )).map(toSummary);
   }
 
-  /** Full booking for its booker or an approver in scope; `null` for anyone else so the page answers not-found. */
+  /** Full booking for its booker, a head on its คำขอ, or an approver in scope; `null` for anyone else so the page answers not-found. */
   async detail(bookingId: string, actor: RoomActor): Promise<RoomBookingDetail | null> {
-    const row = (await this.database.query<SummaryRow & { roomId: string; roomPlace: string; attendeeCount: number; bookerPersonId: string; ownerOrganizationId: string }>(
-      `${summarySelect.replace('SELECT b.id,', 'SELECT b.id, r.id AS roomId, r.place AS roomPlace, b.attendee_count AS attendeeCount, b.booker_person_id AS bookerPersonId, r.owner_organization_id AS ownerOrganizationId,')} WHERE b.id = ? ${summaryGroup}, r.id, r.place, b.attendee_count, b.booker_person_id, r.owner_organization_id`,
+    const row = (await this.database.query<SummaryRow & { roomId: string; roomPlace: string; attendeeCount: number; bookerPersonId: string; ownerOrganizationId: string; requestId: string | null }>(
+      `${summarySelect.replace('SELECT b.id,', 'SELECT b.id, r.id AS roomId, r.place AS roomPlace, b.attendee_count AS attendeeCount, b.booker_person_id AS bookerPersonId, r.owner_organization_id AS ownerOrganizationId, b.request_id AS requestId,')} WHERE b.id = ? ${summaryGroup}, r.id, r.place, b.attendee_count, b.booker_person_id, r.owner_organization_id, b.request_id`,
       [bookingId]
     ))[0];
     if (!row) return null;
     const viewerIsBooker = row.bookerPersonId === actor.personId;
     const viewerCanDecide = (await this.authorizer.canAccess(this.subject(actor), 'room.booking.decide', { moduleCode: 'room-booking', organizationId: row.ownerOrganizationId })).allowed;
-    if (!viewerIsBooker && !viewerCanDecide) return null;
+    // The head on the คำขอ, or an active ผู้แทน of the step waiting now, as ApprovalService accepts their decision.
+    const headSteps = row.requestId ? await this.database.query<{ status: string; isViewer: number }>(
+      `SELECT s.status, (JSON_VALUE(s.assignee_snapshot, '$.personId') = ?
+         OR (s.status = 'PENDING' AND JSON_VALUE(s.assignee_snapshot, '$.personId') IN (SELECT delegator_person_id FROM delegation WHERE delegate_person_id = ? AND module_code = 'room-booking' AND effective_from <= UTC_TIMESTAMP() AND effective_until > UTC_TIMESTAMP()))) AS isViewer
+       FROM approval_step s WHERE s.request_id = ?`,
+      [actor.personId, actor.personId, row.requestId]) : [];
+    const viewerIsHead = headSteps.some((step) => Number(step.isViewer) === 1);
+    const viewerCanHeadDecide = row.status === 'HEAD_REVIEW' && !viewerIsBooker && headSteps.some((step) => step.status === 'PENDING' && Number(step.isViewer) === 1);
+    if (!viewerIsBooker && !viewerCanDecide && !viewerIsHead) return null;
     const days = await this.database.query<{ id: string; date: Date | string; startsAt: Date | string; endsAt: Date | string; status: RoomBookingDayStatus }>('SELECT id, booking_date AS date, starts_at AS startsAt, ends_at AS endsAt, status FROM room_booking_day WHERE booking_id = ? ORDER BY starts_at', [bookingId]);
     const addons = await this.database.query<{ addonName: string; addonUnit: string; quantity: number; note: string | null }>('SELECT addon_name AS addonName, addon_unit AS addonUnit, quantity, note FROM room_booking_addon WHERE booking_id = ? ORDER BY addon_name', [bookingId]);
     const history = await this.database.query<{ action: RoomBookingHistoryAction; actorName: string | null; reason: string | null; createdAt: Date | string }>('SELECT h.action, p.display_name AS actorName, h.reason, h.created_at AS createdAt FROM room_booking_history h LEFT JOIN person p ON p.id = h.actor_person_id WHERE h.booking_id = ? ORDER BY h.created_at', [bookingId]);
-    const { ownerOrganizationId: _owner, ...rest } = row;
+    const { ownerOrganizationId: _owner, requestId, ...rest } = row;
     void _owner;
     return {
       ...toSummary(rest), roomId: row.roomId, roomPlace: row.roomPlace, attendeeCount: Number(row.attendeeCount), bookerPersonId: row.bookerPersonId,
       days: days.map((day) => ({ ...day, date: fromMariaDbDate(day.date), startsAt: fromMariaDbDatetime(day.startsAt), endsAt: fromMariaDbDatetime(day.endsAt) })),
       addons: addons.map((addon) => ({ ...addon, quantity: Number(addon.quantity) })),
       history: history.map((entry) => ({ ...entry, createdAt: fromMariaDbDatetime(entry.createdAt) })),
-      viewerIsBooker, viewerCanDecide
+      viewerIsBooker, viewerCanDecide, requestId: requestId ?? null, viewerIsHead, viewerCanHeadDecide
     };
+  }
+
+  /** The booking behind a head's คำขอ, for links from คำขอ and notices. */
+  async bookingIdForRequest(requestId: string): Promise<string | null> {
+    return (await this.database.query<{ id: string }>('SELECT id FROM room_booking WHERE request_id = ? LIMIT 1', [requestId]))[0]?.id ?? null;
   }
 
   private subject(actor: RoomActor) { return { authenticated: true, personId: actor.personId, roles: actor.roles, dataOwnerModules: [] }; }

@@ -40,4 +40,13 @@ describe('bookingViewState', () => {
   it('ignores released days', () => {
     expect(bookingViewState(booking({ days: [today, day('2026-11-07T02:00:00Z', '2026-11-07T09:00:00Z', 'RELEASED')] }), now).cancelAction).toBeNull();
   });
+
+  it('lets the booker cancel a booking still waiting on their head, but no manager decides it yet', () => {
+    expect(bookingViewState(booking({ status: 'HEAD_REVIEW', viewerIsBooker: true, viewerCanDecide: false }), now).cancelAction).toBe('cancel');
+    expect(bookingViewState(booking({ status: 'HEAD_REVIEW' }), now).canDecide).toBe(false);
+  });
+
+  it('marks a booking still waiting on the head as expired once its days have ended', () => {
+    expect(bookingViewState(booking({ status: 'HEAD_REVIEW', days: [past] }), now)).toEqual({ expired: true, canDecide: false, cancelAction: null });
+  });
 });

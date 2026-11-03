@@ -54,11 +54,11 @@ describe('module registry', () => {
     expect(visibleModules(subject()).find((entry) => entry.code === 'room-booking')).toMatchObject({ status: 'live', group: 'services' });
   });
 
-  it('splits room booking into sections, with approvals and room management by role', () => {
+  it('splits room booking into sections, with approvals for the approver or module manager and room management by role', () => {
     const sections = (roles: { name: string; organizationId: string | null }[]) => moduleRegistry.find((entry) => entry.code === 'room-booking')!.sections!.filter((section) => section.visible(subject({ roles }))).map((section) => section.href);
     expect(sections([])).toEqual(['/rooms/dashboard', '/rooms/calendar', '/rooms/bookings']);
     expect(sections([{ name: 'room-booking-approver', organizationId: null }])).toContain('/rooms/approvals');
-    expect(sections([{ name: 'room-manager', organizationId: null }])).toEqual(['/rooms/dashboard', '/rooms/calendar', '/rooms/bookings', '/rooms/manage']);
+    expect(sections([{ name: 'room-manager', organizationId: null }])).toEqual(['/rooms/dashboard', '/rooms/calendar', '/rooms/bookings', '/rooms/approvals', '/rooms/manage']);
   });
 
   it('badges the room approvals tab with what waits for the approver', async () => {

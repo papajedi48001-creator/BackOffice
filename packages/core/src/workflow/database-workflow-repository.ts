@@ -1,7 +1,8 @@
-import type { ApprovalDecision, ApprovalStep, AuditEvent, OutboxEvent, RequestCancellation, SubmittedRequest } from '@backoffice/contracts';
+import { ROOM_BOOKING_MODULE, type ApprovalAction, type RequestStatus, type ApprovalDecision, ApprovalStep, AuditEvent, OutboxEvent, RequestCancellation, SubmittedRequest } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { FLEET_MODULE } from '../fleet/fleet-module';
 import { fleetManagerPersonIds } from '../fleet/fleet-managers';
+import { followRoomBookingDecision, roomBookingWatchers } from '../rooms/room-request-hook';
 import type { WorkflowRepository } from './request-service';
 
 type StoredRequest = { id: string; reference: string; moduleCode: string; requestorPersonId: string; organizationSnapshot: string; status: SubmittedRequest['status'] };
@@ -22,8 +23,12 @@ export class DatabaseWorkflowRepository implements WorkflowRepository {
   async saveOutbox(event: OutboxEvent): Promise<void> { await this.database.execute('INSERT INTO outbox_event (id, type, idempotency_key, payload, occurred_at, processed_at) VALUES (?, ?, ?, ?, ?, ?)', [event.id, event.type, event.idempotencyKey, JSON.stringify(event.payload), toMariaDbDatetime(event.occurredAt), event.processedAt ? toMariaDbDatetime(event.processedAt) : null]); }
   async getFollowers(requestId: string): Promise<string[]> { return (await this.database.query<{ personId: string }>('SELECT t.leader_person_id AS personId FROM official_travel_member m JOIN official_travel t ON t.id = m.travel_id WHERE m.request_id = ?', [requestId])).map((row) => row.personId); }
   async getApprovalWatchers(request: { id: string; moduleCode: string }): Promise<Array<{ personId: string; subject: string; targetPath: string }>> {
+    if (request.moduleCode === ROOM_BOOKING_MODULE) return roomBookingWatchers(this.database, request.id);
     if (request.moduleCode !== FLEET_MODULE) return [];
     return (await fleetManagerPersonIds(this.database)).map((personId) => ({ personId, subject: 'มีใบขอใช้รถรอจัดรถ', targetPath: `/fleet/requests/by-request/${request.id}` }));
+  }
+  async onRequestDecided(input: { request: Omit<SubmittedRequest, 'approvalSteps'>; status: RequestStatus; decision: ApprovalAction; reason: string | null; actorPersonId: string }): Promise<void> {
+    if (input.request.moduleCode === ROOM_BOOKING_MODULE) await followRoomBookingDecision(this.database, { requestId: input.request.id, status: input.status, decision: input.decision, reason: input.reason, actorPersonId: input.actorPersonId });
   }
   async getPositionTitle(personId: string): Promise<string | null> { return (await this.database.query<{ title: string | null }>('SELECT position_title AS title FROM person WHERE id = ? LIMIT 1', [personId]))[0]?.title ?? null; }
   async appendAudit(event: AuditEvent): Promise<void> { await this.database.execute('INSERT INTO audit_event (id, actor_person_id, action, target_type, target_id, result, metadata, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())', [event.id, event.actorPersonId ?? null, event.action, event.targetType, event.targetId, event.result, event.metadata]); }

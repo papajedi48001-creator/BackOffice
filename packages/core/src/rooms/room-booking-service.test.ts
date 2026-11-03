@@ -20,6 +20,14 @@ function setup(clock: { now: Date } = { now }) {
   return { repository, service, clock };
 }
 
+/** As `setup`, but every submission has already passed the head's เห็นชอบ, so it waits for the room manager. */
+function setupApproved(clock: { now: Date } = { now }) {
+  const context = setup(clock);
+  const submit = context.service.submit.bind(context.service);
+  context.service.submit = async (actor, input) => { const booking = await submit(actor, input); context.repository.headApprove(booking.id); return context.repository.bookings.get(booking.id)!; };
+  return context;
+}
+
 const submission = { roomId: 'room-1', dates: ['2026-11-05', '2026-11-06', '2026-11-07'], startMinute: 540, endMinute: 720, title: 'อบรมพยาบาลใหม่', attendeeCount: 15, addons: [{ addonId: 'projector', quantity: 1, note: 'ต่อ HDMI' }] };
 const notifications = (repository: InMemoryRoomBookingRepository) => repository.outbox.filter((event) => event.type === 'notification.in_app').map((event) => event.payload);
 
@@ -29,7 +37,7 @@ describe('RoomBookingService.submit', () => {
 
     const booking = await service.submit(booker, submission);
 
-    expect(booking).toMatchObject({ reference: 'RB-2569-0001', status: 'PENDING', bookerPersonId: 'booker', bookerOrganizationId: 'nursing-unit', title: 'อบรมพยาบาลใหม่', decidedByPersonId: null });
+    expect(booking).toMatchObject({ reference: 'RB-2569-0001', status: 'HEAD_REVIEW', bookerPersonId: 'booker', bookerOrganizationId: 'nursing-unit', title: 'อบรมพยาบาลใหม่', decidedByPersonId: null });
     expect(repository.days.map((day) => [day.bookingDate, day.startsAt.toISOString(), day.status])).toEqual([
       ['2026-11-05', '2026-11-05T02:00:00.000Z', 'ACTIVE'], ['2026-11-06', '2026-11-06T02:00:00.000Z', 'ACTIVE'], ['2026-11-07', '2026-11-07T02:00:00.000Z', 'ACTIVE']
     ]);
@@ -37,31 +45,19 @@ describe('RoomBookingService.submit', () => {
     expect(repository.history).toEqual([expect.objectContaining({ bookingId: booking.id, actorPersonId: 'booker', action: 'SUBMITTED', reason: null })]);
     expect(repository.audit).toHaveLength(1);
     expect(repository.audit[0]).toMatchObject({ action: 'room_booking.submitted', targetType: 'room_booking', targetId: booking.id, result: 'SUCCESS', actorPersonId: 'booker' });
-    expect(JSON.parse(repository.audit[0]!.metadata)).toEqual({ bookingReference: 'RB-2569-0001', roomId: 'room-1', status: 'PENDING', dayCount: 3 });
+    expect(JSON.parse(repository.audit[0]!.metadata)).toEqual({ bookingReference: 'RB-2569-0001', roomId: 'room-1', status: 'HEAD_REVIEW', dayCount: 3 });
   });
 
-  it('notifies the booker and every approver in scope without exposing the meeting title', async () => {
+  it('tells the booker without exposing the meeting title', async () => {
     const { repository, service } = setup();
 
     const booking = await service.submit(booker, submission);
 
     expect(notifications(repository)).toEqual([
-      { recipientPersonId: 'booker', subject: 'ยื่นจองห้องแล้ว รออนุมัติ (RB-2569-0001)', targetPath: `/rooms/bookings/${booking.id}`, moduleCode: 'room-booking' },
-      { recipientPersonId: 'approver', subject: 'มีการจองห้องรออนุมัติ (RB-2569-0001)', targetPath: `/rooms/bookings/${booking.id}`, moduleCode: 'room-booking' },
-      { recipientPersonId: 'approver-2', subject: 'มีการจองห้องรออนุมัติ (RB-2569-0001)', targetPath: `/rooms/bookings/${booking.id}`, moduleCode: 'room-booking' }
+      { recipientPersonId: 'booker', subject: 'ยื่นจองห้องแล้ว รอหัวหน้าเห็นชอบ (RB-2569-0001)', targetPath: `/rooms/bookings/${booking.id}`, moduleCode: 'room-booking' }
     ]);
     expect(JSON.stringify(repository.outbox)).not.toContain('อบรมพยาบาลใหม่');
     expect(JSON.stringify(repository.outbox)).not.toContain('HDMI');
-  });
-
-  it('does not tell an approver that their own booking is waiting for approval', async () => {
-    const { repository, service } = setup();
-
-    await service.submit(approver, submission);
-
-    expect(notifications(repository).map((payload) => [payload.recipientPersonId, payload.subject])).toEqual([
-      ['approver', 'ยื่นจองห้องแล้ว รออนุมัติ (RB-2569-0001)'], ['approver-2', 'มีการจองห้องรออนุมัติ (RB-2569-0001)']
-    ]);
   });
 
   it('numbers bookings in sequence within the Buddhist year', async () => {
@@ -102,13 +98,13 @@ describe('RoomBookingService.submit', () => {
   it('accepts a booking that starts exactly when another one ends', async () => {
     const { service } = setup();
     await service.submit(booker, { ...submission, dates: ['2026-11-06'], startMinute: 540, endMinute: 720 });
-    await expect(service.submit(booker, { ...submission, dates: ['2026-11-06'], startMinute: 720, endMinute: 780 })).resolves.toMatchObject({ status: 'PENDING' });
+    await expect(service.submit(booker, { ...submission, dates: ['2026-11-06'], startMinute: 720, endMinute: 780 })).resolves.toMatchObject({ status: 'HEAD_REVIEW' });
   });
 });
 
 describe('RoomBookingService.decide', () => {
   it('approves a pending booking and tells the booker', async () => {
-    const { repository, service } = setup();
+    const { repository, service } = setupApproved();
     const booking = await service.submit(booker, submission);
     repository.outbox = [];
 
@@ -122,7 +118,7 @@ describe('RoomBookingService.decide', () => {
   });
 
   it('keeps the rejection reason in the booking history only', async () => {
-    const { repository, service } = setup();
+    const { repository, service } = setupApproved();
     const booking = await service.submit(booker, submission);
 
     await service.decide(approver, { bookingId: booking.id, decision: 'REJECT', reason: 'ห้องปิดปรับปรุงช่วงนั้น' });
@@ -134,20 +130,20 @@ describe('RoomBookingService.decide', () => {
   });
 
   it('frees the rejected days for other bookings', async () => {
-    const { service } = setup();
+    const { service } = setupApproved();
     const booking = await service.submit(booker, submission);
     await service.decide(approver, { bookingId: booking.id, decision: 'REJECT', reason: 'ไม่ผ่าน' });
     await expect(service.submit({ personId: 'someone-else', roles: [] }, submission)).resolves.toMatchObject({ status: 'PENDING' });
   });
 
   it('requires a reason to reject', async () => {
-    const { service } = setup();
+    const { service } = setupApproved();
     const booking = await service.submit(booker, submission);
     await expect(service.decide(approver, { bookingId: booking.id, decision: 'REJECT' })).rejects.toThrow('REASON_REQUIRED');
   });
 
   it('does not let an approver decide their own booking', async () => {
-    const { service } = setup();
+    const { service } = setupApproved();
     const booking = await service.submit(approver, submission);
     await expect(service.decide(approver, { bookingId: booking.id, decision: 'APPROVE' })).rejects.toThrow('CONFLICT_OF_INTEREST');
   });
@@ -156,31 +152,31 @@ describe('RoomBookingService.decide', () => {
     ['without the approver role', booker],
     ['scoped to another organization', { personId: 'other-unit-approver', roles: [{ name: 'room-booking-approver', organizationId: 'other-unit' }] }]
   ])('answers not found to a decision by someone %s', async (_label, actor) => {
-    const { service } = setup();
+    const { service } = setupApproved();
     const booking = await service.submit({ personId: 'someone-else', roles: [] }, submission);
     await expect(service.decide(actor, { bookingId: booking.id, decision: 'APPROVE' })).rejects.toThrow('BOOKING_NOT_FOUND');
   });
 
   it('forbids the booker from deciding without the approver role', async () => {
-    const { service } = setup();
+    const { service } = setupApproved();
     const booking = await service.submit(booker, submission);
     await expect(service.decide(booker, { bookingId: booking.id, decision: 'APPROVE' })).rejects.toThrow('FORBIDDEN');
   });
 
   it('reports an unknown booking as not found', async () => {
-    const { service } = setup();
+    const { service } = setupApproved();
     await expect(service.decide(approver, { bookingId: 'missing', decision: 'APPROVE' })).rejects.toThrow('BOOKING_NOT_FOUND');
   });
 
   it('refuses to decide twice', async () => {
-    const { service } = setup();
+    const { service } = setupApproved();
     const booking = await service.submit(booker, submission);
     await service.decide(approver, { bookingId: booking.id, decision: 'APPROVE' });
     await expect(service.decide(approver, { bookingId: booking.id, decision: 'REJECT', reason: 'เปลี่ยนใจ' })).rejects.toThrow('BOOKING_NOT_PENDING');
   });
 
   it('refuses to decide after the last day has ended', async () => {
-    const { service, clock } = setup();
+    const { service, clock } = setupApproved();
     const booking = await service.submit(booker, submission);
     clock.now = new Date('2026-11-07T05:00:00Z');
     await expect(service.decide(approver, { bookingId: booking.id, decision: 'APPROVE' })).rejects.toThrow('BOOKING_NOT_PENDING');
@@ -196,7 +192,7 @@ describe('RoomBookingService.cancel', () => {
   }
 
   it('lets the booker cancel a pending booking before it starts', async () => {
-    const { repository, service } = setup();
+    const { repository, service } = setupApproved();
     const booking = await service.submit(booker, submission);
     repository.outbox = [];
 
@@ -211,7 +207,7 @@ describe('RoomBookingService.cancel', () => {
   });
 
   it('tells the approver who approved it when the booker cancels an approved booking', async () => {
-    const context = setup();
+    const context = setupApproved();
     const booking = await approvedBooking(context);
 
     await context.service.cancel(booker, { bookingId: booking.id, reason: 'เลื่อนการอบรม' });
@@ -221,7 +217,7 @@ describe('RoomBookingService.cancel', () => {
   });
 
   it('releases only the days that have not started once the booking is under way', async () => {
-    const context = setup();
+    const context = setupApproved();
     const booking = await approvedBooking(context);
     context.clock.now = new Date('2026-11-06T03:00:00Z'); // 10:00 on day two
 
@@ -235,21 +231,21 @@ describe('RoomBookingService.cancel', () => {
   });
 
   it('tells the booker there is nothing left to release on the last day', async () => {
-    const context = setup();
+    const context = setupApproved();
     const booking = await approvedBooking(context);
     context.clock.now = new Date('2026-11-07T03:00:00Z');
     await expect(context.service.cancel(booker, { bookingId: booking.id, reason: 'จบแล้ว' })).rejects.toThrow('NOTHING_TO_RELEASE');
   });
 
   it('does not let the booker cancel a pending booking that has already started', async () => {
-    const { service, clock } = setup();
+    const { service, clock } = setupApproved();
     const booking = await service.submit(booker, submission);
     clock.now = new Date('2026-11-06T03:00:00Z');
     await expect(service.cancel(booker, { bookingId: booking.id, reason: 'ไม่ใช้แล้ว' })).rejects.toThrow('CANCEL_NOT_ALLOWED');
   });
 
   it('lets an approver release the remaining days and tells the booker', async () => {
-    const context = setup();
+    const context = setupApproved();
     const booking = await approvedBooking(context);
     context.clock.now = new Date('2026-11-05T04:00:00Z');
 
@@ -260,34 +256,71 @@ describe('RoomBookingService.cancel', () => {
   });
 
   it('lets an approver cancel an approved booking before it starts', async () => {
-    const context = setup();
+    const context = setupApproved();
     const booking = await approvedBooking(context);
     await expect(context.service.cancel(approver, { bookingId: booking.id, reason: 'ห้องเสีย' })).resolves.toMatchObject({ booking: { status: 'CANCELLED' } });
   });
 
   it('does not cancel a booking that has already ended', async () => {
-    const context = setup();
+    const context = setupApproved();
     const booking = await approvedBooking(context);
     context.clock.now = new Date('2026-11-08T03:00:00Z');
     await expect(context.service.cancel(approver, { bookingId: booking.id, reason: 'ย้อนหลัง' })).rejects.toThrow('CANCEL_NOT_ALLOWED');
   });
 
   it('does not cancel a rejected booking', async () => {
-    const { service } = setup();
+    const { service } = setupApproved();
     const booking = await service.submit(booker, submission);
     await service.decide(approver, { bookingId: booking.id, decision: 'REJECT', reason: 'ไม่ผ่าน' });
     await expect(service.cancel(booker, { bookingId: booking.id, reason: 'ยกเลิก' })).rejects.toThrow('CANCEL_NOT_ALLOWED');
   });
 
   it('answers not found to someone who is neither the booker nor an approver', async () => {
-    const { service } = setup();
+    const { service } = setupApproved();
     const booking = await service.submit(booker, submission);
     await expect(service.cancel({ personId: 'someone-else', roles: [] }, { bookingId: booking.id, reason: 'แกล้ง' })).rejects.toThrow('BOOKING_NOT_FOUND');
   });
 
   it('requires a reason', async () => {
-    const { service } = setup();
+    const { service } = setupApproved();
     const booking = await service.submit(booker, submission);
     await expect(service.cancel(booker, { bookingId: booking.id, reason: '' })).rejects.toThrow();
+  });
+});
+
+describe('RoomBookingService and the head\'s เห็นชอบ in คำขอ', () => {
+  it('opens a คำขอ to the booker\'s head and waits for it before the room manager', async () => {
+    const { repository, service } = setup();
+
+    const booking = await service.submit(booker, submission);
+
+    expect(booking).toMatchObject({ status: 'HEAD_REVIEW', requestId: 'request-1' });
+    expect(repository.headRequests).toEqual([{ id: 'request-1', requestorPersonId: 'booker', organizationId: 'nursing-unit', status: 'IN_REVIEW' }]);
+    // The head hears from คำขอ; the room managers only once the head has agreed.
+    expect(notifications(repository).map((payload) => payload.recipientPersonId)).toEqual(['booker']);
+    await expect(service.decide(approver, { bookingId: booking.id, decision: 'APPROVE' })).rejects.toThrow('BOOKING_NOT_PENDING');
+  });
+
+  it('holds the slots while the head decides', async () => {
+    const { service } = setup();
+    await service.submit(booker, submission);
+    await expect(service.submit({ personId: 'someone', roles: [] }, { ...submission, dates: ['2026-11-06'] })).rejects.toThrow('BOOKING_CONFLICT');
+  });
+
+  it('needs the booker to belong to a unit, so a head can be found', async () => {
+    const { repository, service } = setup();
+    repository.organizations.delete('booker');
+    repository.defaultOrganization = null;
+    await expect(service.submit(booker, submission)).rejects.toThrow('NO_ORGANIZATION');
+  });
+
+  it('cancels the คำขอ with the booking while the head has not decided', async () => {
+    const { repository, service } = setup();
+    const booking = await service.submit(booker, submission);
+
+    await service.cancel(booker, { bookingId: booking.id, reason: 'เลื่อนประชุม' });
+
+    expect(repository.bookings.get(booking.id)?.status).toBe('CANCELLED');
+    expect(repository.headRequests[0]).toMatchObject({ status: 'CANCELLED' });
   });
 });

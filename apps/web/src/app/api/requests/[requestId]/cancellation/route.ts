@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { DatabaseWorkflowRepository, FLEET_MODULE, OFFICIAL_TRAVEL_MODULE, RequestService } from '@backoffice/core';
+import { ROOM_BOOKING_MODULE } from '@backoffice/contracts';
 import { getSharedDatabase } from '../../../../../lib/database';
 import { DatabaseApproverResolver } from '../../../../../lib/database-approver-resolver';
 import { requireAuthorized } from '../../../../../lib/require-authorized';
@@ -17,6 +18,8 @@ export async function POST(request: Request, context: { params: Promise<{ reques
     if (owned?.moduleCode === OFFICIAL_TRAVEL_MODULE) return NextResponse.json({ error: 'travel_request_route' }, { status: 400 });
     // A ใบขอใช้รถ is cancelled through /api/fleet, which also frees its เที่ยวรถ.
     if (owned?.moduleCode === FLEET_MODULE) return NextResponse.json({ error: 'fleet_request_route' }, { status: 400 });
+    // A room booking's คำขอ follows the booking: the booker cancels it at /api/rooms, and it is never sent back to resubmit.
+    if (owned?.moduleCode === ROOM_BOOKING_MODULE) return NextResponse.json({ error: 'room_booking_request_route' }, { status: 400 });
     const cancelled = await new RequestService(new DatabaseWorkflowRepository(database), new DatabaseApproverResolver(database)).cancelRequest({ requestId, actorPersonId: session.personId!, reason: typeof body?.reason === 'string' ? body.reason : '' });
     return NextResponse.json({ status: cancelled.status });
   } catch (error) {

@@ -52,4 +52,16 @@ describe('RequestDetailPage access', () => {
     expect(mocks.redirect).toHaveBeenCalledWith('/fleet/requests/by-request/request-1');
     expect(mocks.load).not.toHaveBeenCalled();
   });
+
+  it('sends a room booking คำขอ to its booking page', async () => {
+    mocks.headers.mockResolvedValue(new Headers());
+    mocks.readSession.mockReturnValue({ authenticated: true, personId: 'person-head', roles: [] });
+    mocks.readRuntimeValue.mockReturnValue('mysql://test');
+    mocks.query.mockResolvedValueOnce([{ id: 'request-2', reference: 'REQ-2', requestorPersonId: 'person-requestor', moduleCode: 'room-booking', status: 'IN_REVIEW' }]);
+    mocks.createDatabase.mockReturnValue({ query: mocks.query, close: mocks.close });
+
+    await RequestDetailPage({ params: Promise.resolve({ requestId: 'request-2' }) });
+    expect(mocks.redirect).toHaveBeenCalledWith('/rooms/bookings/by-request/request-2');
+    expect(mocks.load).not.toHaveBeenCalled();
+  });
 });

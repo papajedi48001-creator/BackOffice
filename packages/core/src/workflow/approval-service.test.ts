@@ -250,3 +250,26 @@ class DecisionWorkflowRepository implements WorkflowRepository {
   onWatchers: (request: { id: string; moduleCode: string }) => void = () => undefined;
   async getApprovalWatchers(request: { id: string; moduleCode: string }): Promise<Array<{ personId: string; subject: string; targetPath: string }>> { this.onWatchers(request); return this.watchers; }
 }
+
+describe('ApprovalService module hook', () => {
+  it('tells the requesting module about the decision inside the transaction, and a refusal saves nothing', async () => {
+    const request = { id: 'request-1', reference: 'REQ-1', moduleCode: 'room-booking', requestorPersonId: 'person-a', organizationSnapshot: { organizationId: 'unit-a' }, status: 'IN_REVIEW' as const };
+    const saved: string[] = [];
+    const decided: unknown[] = [];
+    const repository: WorkflowRepository = {
+      transaction: async (work) => work(repository),
+      getRequest: async () => request, getRequestForUpdate: async () => request,
+      getSteps: async () => [{ id: 'step-1', requestId: 'request-1', sequence: 1, assigneeSnapshot: { personId: 'head-a', organizationId: 'unit-a' }, status: 'PENDING' }],
+      saveRequest: async () => { saved.push('request'); }, saveStep: async () => { saved.push('step'); }, saveDecision: async () => { saved.push('decision'); },
+      saveCancellation: async () => undefined, saveOutbox: async () => { saved.push('outbox'); }, appendAudit: async () => undefined,
+      onRequestDecided: async (input) => { decided.push(input); if (input.decision === 'RETURN') throw new Error('RETURN_NOT_ALLOWED'); }
+    };
+    const service = new ApprovalService(repository, { findActiveFor: async () => null }, () => 'decision-1');
+
+    await expect(service.decideRequest({ requestId: 'request-1', actorPersonId: 'head-a', decision: 'RETURN', reason: 'แก้เวลา' })).rejects.toThrow('RETURN_NOT_ALLOWED');
+    expect(saved).toEqual([]);
+
+    await service.decideRequest({ requestId: 'request-1', actorPersonId: 'head-a', decision: 'APPROVE' });
+    expect(decided.at(-1)).toEqual({ request, status: 'APPROVED', decision: 'APPROVE', reason: null, actorPersonId: 'head-a' });
+  });
+});
