@@ -103,9 +103,14 @@ export class RoomBookingQueries {
     if (!row) return null;
     const viewerIsBooker = row.bookerPersonId === actor.personId;
     const viewerCanDecide = (await this.authorizer.canAccess(this.subject(actor), 'room.booking.decide', { moduleCode: 'room-booking', organizationId: row.ownerOrganizationId })).allowed;
-    const headSteps = row.requestId ? await this.database.query<{ personId: string; status: string }>("SELECT JSON_VALUE(assignee_snapshot, '$.personId') AS personId, status FROM approval_step WHERE request_id = ? ORDER BY CAST(sequence AS UNSIGNED)", [row.requestId]) : [];
-    const viewerIsHead = headSteps.some((step) => step.personId === actor.personId);
-    const viewerCanHeadDecide = row.status === 'HEAD_REVIEW' && !viewerIsBooker && headSteps.find((step) => step.status === 'PENDING')?.personId === actor.personId;
+    // The head on the คำขอ, or an active ผู้แทน of the step waiting now, as ApprovalService accepts their decision.
+    const headSteps = row.requestId ? await this.database.query<{ status: string; isViewer: number }>(
+      `SELECT s.status, (JSON_VALUE(s.assignee_snapshot, '$.personId') = ?
+         OR (s.status = 'PENDING' AND JSON_VALUE(s.assignee_snapshot, '$.personId') IN (SELECT delegator_person_id FROM delegation WHERE delegate_person_id = ? AND module_code = 'room-booking' AND effective_from <= UTC_TIMESTAMP() AND effective_until > UTC_TIMESTAMP()))) AS isViewer
+       FROM approval_step s WHERE s.request_id = ?`,
+      [actor.personId, actor.personId, row.requestId]) : [];
+    const viewerIsHead = headSteps.some((step) => Number(step.isViewer) === 1);
+    const viewerCanHeadDecide = row.status === 'HEAD_REVIEW' && !viewerIsBooker && headSteps.some((step) => step.status === 'PENDING' && Number(step.isViewer) === 1);
     if (!viewerIsBooker && !viewerCanDecide && !viewerIsHead) return null;
     const days = await this.database.query<{ id: string; date: Date | string; startsAt: Date | string; endsAt: Date | string; status: RoomBookingDayStatus }>('SELECT id, booking_date AS date, starts_at AS startsAt, ends_at AS endsAt, status FROM room_booking_day WHERE booking_id = ? ORDER BY starts_at', [bookingId]);
     const addons = await this.database.query<{ addonName: string; addonUnit: string; quantity: number; note: string | null }>('SELECT addon_name AS addonName, addon_unit AS addonUnit, quantity, note FROM room_booking_addon WHERE booking_id = ? ORDER BY addon_name', [bookingId]);

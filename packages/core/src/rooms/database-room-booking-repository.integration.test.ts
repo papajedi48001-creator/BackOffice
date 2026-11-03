@@ -202,6 +202,20 @@ describeWithDatabase('room booking on MariaDB', () => {
       expect((await queries.calendar(new Date('2026-12-06T17:00:00Z'), new Date('2026-12-07T17:00:00Z'), room.id)).map((entry) => entry.status)).toEqual(['PENDING']);
     });
 
+    it('opens the booking to an active ผู้แทน of the head, who may decide it for them', async () => {
+      const room = await createRoom();
+      const booking = await service().submit(booker, input(room.id, ['2026-12-08']));
+      const deputyId = randomUUID();
+      const lapsedId = randomUUID();
+      for (const id of [deputyId, lapsedId]) await database.execute('INSERT INTO person (id, national_id_ciphertext, national_id_lookup, display_name, created_at) VALUES (?, ?, ?, ?, UTC_TIMESTAMP())', [id, 'ciphertext', randomUUID(), 'ผู้แทน ทดสอบ']);
+      await database.execute("INSERT INTO delegation (id, delegator_person_id, delegate_person_id, module_code, reason, effective_from, effective_until, created_at) VALUES (UUID(), ?, ?, 'room-booking', 'ลาพักร้อน', UTC_TIMESTAMP() - INTERVAL 1 DAY, UTC_TIMESTAMP() + INTERVAL 1 DAY, UTC_TIMESTAMP())", [headId, deputyId]);
+      await database.execute("INSERT INTO delegation (id, delegator_person_id, delegate_person_id, module_code, reason, effective_from, effective_until, created_at) VALUES (UUID(), ?, ?, 'room-booking', 'เก่า', UTC_TIMESTAMP() - INTERVAL 3 DAY, UTC_TIMESTAMP() - INTERVAL 1 DAY, UTC_TIMESTAMP())", [headId, lapsedId]);
+      const queries = new RoomBookingQueries(database);
+
+      await expect(queries.detail(booking.id, { personId: deputyId, roles: [] })).resolves.toMatchObject({ viewerIsHead: true, viewerCanHeadDecide: true });
+      await expect(queries.detail(booking.id, { personId: lapsedId, roles: [] })).resolves.toBeNull();
+    });
+
     it('shows a booking waiting for its head on the calendar', async () => {
       const room = await createRoom();
       await service().submit(booker, input(room.id, ['2026-12-08']));
