@@ -1,8 +1,8 @@
 import { t, type MessageKey } from '@backoffice/i18n';
 import type { RoomBookingHistoryAction, RoomBookingStatus } from '@backoffice/contracts';
 
-const statusLabel: Record<RoomBookingStatus, MessageKey> = { PENDING: 'roomStatusPending', APPROVED: 'roomStatusApproved', REJECTED: 'roomStatusRejected', CANCELLED: 'roomStatusCancelled' };
-const historyLabel: Record<RoomBookingHistoryAction, MessageKey> = { SUBMITTED: 'historySubmitted', APPROVED: 'historyApproved', REJECTED: 'historyRejected', CANCELLED: 'historyCancelled', DAYS_RELEASED: 'historyDaysReleased' };
+const statusLabel: Record<RoomBookingStatus, MessageKey> = { HEAD_REVIEW: 'roomStatusHeadReview', PENDING: 'roomStatusPending', APPROVED: 'roomStatusApproved', REJECTED: 'roomStatusRejected', CANCELLED: 'roomStatusCancelled' };
+const historyLabel: Record<RoomBookingHistoryAction, MessageKey> = { SUBMITTED: 'historySubmitted', HEAD_APPROVED: 'historyHeadApproved', HEAD_REJECTED: 'historyHeadRejected', APPROVED: 'historyApproved', REJECTED: 'historyRejected', CANCELLED: 'historyCancelled', DAYS_RELEASED: 'historyDaysReleased' };
 
 /** `expired` marks a pending booking whose days have all ended without a decision. */
 export function RoomStatusBadge({ status, expired = false }: { status: RoomBookingStatus; expired?: boolean }) {

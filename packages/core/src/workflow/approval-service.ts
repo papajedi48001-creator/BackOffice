@@ -7,7 +7,7 @@ import type { WorkflowRepository } from './request-service';
 export interface ActiveDelegationFinder { findActiveFor(delegatorPersonId: string, delegatePersonId: string, moduleCode: string): Promise<Pick<Delegation, 'delegatorPersonId' | 'delegatePersonId' | 'moduleCode'> | null>; }
 
 export class ApprovalService {
-  constructor(private readonly repository: Pick<WorkflowRepository, 'transaction' | 'getRequestForUpdate' | 'getSteps' | 'saveRequest' | 'saveStep' | 'saveDecision' | 'saveOutbox' | 'appendAudit' | 'getPositionTitle' | 'getFollowers' | 'getApprovalWatchers'>, private readonly delegations: ActiveDelegationFinder, private readonly createId: () => string = randomUUID) {}
+  constructor(private readonly repository: Pick<WorkflowRepository, 'transaction' | 'getRequestForUpdate' | 'getSteps' | 'saveRequest' | 'saveStep' | 'saveDecision' | 'saveOutbox' | 'appendAudit' | 'getPositionTitle' | 'getFollowers' | 'getApprovalWatchers' | 'onRequestDecided'>, private readonly delegations: ActiveDelegationFinder, private readonly createId: () => string = randomUUID) {}
 
   async decideRequest(input: Parameters<typeof decideRequestInputSchema.parse>[0]): Promise<ApprovalDecision> {
     const decisionInput = decideRequestInputSchema.parse(input);
@@ -36,6 +36,7 @@ export class ApprovalService {
       const notices = [{ recipientPersonId: request.requestorPersonId, subject: `${action} > ${actorTitle}` }, ...followers.map((recipientPersonId) => ({ recipientPersonId, subject: `${action} > ${actorTitle}` })), ...(nextStep ? [{ recipientPersonId: nextStep.assigneeSnapshot.personId, subject: 'มีคำขอรอพิจารณา' }] : [])];
       // Only the final approval reaches watchers; the deciding head already has the decision notice above, so is not told twice.
       const watchers = status === 'APPROVED' ? (await repository.getApprovalWatchers?.({ id: request.id, moduleCode: request.moduleCode }) ?? []).filter((watcher) => watcher.personId !== decisionInput.actorPersonId) : [];
+      await repository.onRequestDecided?.({ request, status, decision: decisionInput.decision, actorPersonId: decisionInput.actorPersonId });
       await repository.saveStep({ ...step, status: stepStatus });
       if (decisionInput.decision !== 'APPROVE') {
         for (const leftover of steps.slice(stepIndex + 1)) {

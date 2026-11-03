@@ -107,7 +107,7 @@ th { background: var(--accent-soft); color: var(--accent-strong); font-size: .92
 tbody tr:hover td { background: color-mix(in srgb, var(--accent) 3%, white); }
 tr:last-child td { border-bottom: 0; }
 .status { display: inline-block; border-radius: 999px; padding: 5px 10px; font-weight: 700; }
-.status-pending { background: #fff4ce; color: #714d00; }
+.status-pending, .status-head_review { background: #fff4ce; color: #714d00; }
 .status-approved { background: var(--success-soft); color: var(--success); }
 .status-in_review { background: #fff4ce; color: #714d00; }
 .status-rejected { background: #fde8e1; color: #9a3412; }

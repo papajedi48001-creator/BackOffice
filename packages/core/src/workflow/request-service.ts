@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { cancelRequestInputSchema, notificationEventPayloadSchema, resubmitRequestInputSchema, submitRequestInputSchema, type ApprovalDecision, type ApprovalStep, type ApproverSnapshot, type AuditEvent, type CommandChainTarget, type OutboxEvent, type RequestCancellation, type SubmittedRequest } from '@backoffice/contracts';
+import { cancelRequestInputSchema, notificationEventPayloadSchema, resubmitRequestInputSchema, submitRequestInputSchema, type ApprovalDecision, type ApprovalStep, type ApproverSnapshot, type AuditEvent, type CommandChainTarget, type OutboxEvent, type RequestCancellation, type RequestStatus, type SubmittedRequest, type ApprovalAction } from '@backoffice/contracts';
 import { AuditService } from '../audit/audit-service';
 import { notificationTarget } from './module-notification';
 
@@ -20,6 +20,11 @@ export interface WorkflowRepository {
   getFollowers?(requestId: string): Promise<string[]>;
   /** Others to tell when a คำขอ is fully approved, such as the dispatchers who must now assign a car; optional, none by default. Each gets one in-app notice. */
   getApprovalWatchers?(request: { id: string; moduleCode: string }): Promise<Array<{ personId: string; subject: string; targetPath: string }>>;
+  /**
+   * Lets the module behind a คำขอ follow a decision in the same transaction, as an การจองห้อง moves on when the head decides.
+   * Called before anything is saved; a throw refuses the decision. Optional, nothing by default.
+   */
+  onRequestDecided?(input: { request: Omit<SubmittedRequest, 'approvalSteps'>; status: RequestStatus; decision: ApprovalAction; actorPersonId: string }): Promise<void>;
 }
 
 export interface ApproverResolver { resolve(input: { moduleCode: string; requestorPersonId: string; organizationId: string; target?: CommandChainTarget }): Promise<ApproverSnapshot[]>; }

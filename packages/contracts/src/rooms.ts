@@ -6,10 +6,10 @@ export const ROOM_BOOKING_MODULE = 'room-booking';
 // Times are stored in UTC; Asia/Bangkok has no daylight saving, so a fixed offset is exact.
 export const roomBookingPolicy = { openMinute: 7 * 60, closeMinute: 20 * 60, slotMinutes: 30, maxAdvanceDays: 90, maxDays: 14, utcOffsetMinutes: 7 * 60 } as const;
 
-export const roomBookingStatusSchema = z.enum(['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED']);
+export const roomBookingStatusSchema = z.enum(['HEAD_REVIEW', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED']);
 export type RoomBookingStatus = z.infer<typeof roomBookingStatusSchema>;
 export type RoomBookingDayStatus = 'ACTIVE' | 'RELEASED';
-export type RoomBookingHistoryAction = 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'DAYS_RELEASED';
+export type RoomBookingHistoryAction = 'SUBMITTED' | 'HEAD_APPROVED' | 'HEAD_REJECTED' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'DAYS_RELEASED';
 
 const bookingDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const minuteOfDaySchema = z.number().int().min(0).max(24 * 60);
