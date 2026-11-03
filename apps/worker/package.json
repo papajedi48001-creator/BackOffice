@@ -1,7 +1,10 @@
 {
   "name": "@backoffice/worker",
   "private": true,
-  "dependencies": { "@backoffice/contracts": "workspace:*", "@backoffice/db": "workspace:*" },
+  "dependencies": {
+    "@backoffice/contracts": "workspace:*",
+    "@backoffice/db": "workspace:*"
+  },
   "scripts": {
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
@@ -12,6 +15,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
-    "vitest": "^3.2.0"
+    "vitest": "^3.2.0",
+    "@backoffice/i18n": "workspace:*"
   }
 }
