@@ -1,6 +1,6 @@
 import { connect } from 'node:net';
 
-export type ConnectionKey = 'database' | 'redis' | 'storage' | 'scanner' | 'mail';
+export type ConnectionKey = 'database' | 'redis' | 'storage' | 'scanner' | 'mail' | 'line';
 /** One row of ตั้งค่าการเชื่อมต่อ. Never carries a value from the environment: only which variables it needs and whether it answered. */
 export interface ConnectionCheck { key: ConnectionKey; configured: boolean; status: 'ok' | 'failed' | 'not_checked'; variables: readonly string[] }
 export interface ConnectionProbes { database(): Promise<void>; tcp(host: string, port: number): Promise<void> }
@@ -11,8 +11,11 @@ const services: ReadonlyArray<{ key: ConnectionKey; variables: readonly string[]
   { key: 'storage', variables: ['S3_ENDPOINT', 'S3_BUCKET', 'S3_ACCESS_KEY_ID', 'S3_SECRET_ACCESS_KEY'], target: (env) => hostPort(env('S3_ENDPOINT'), 443) },
   { key: 'scanner', variables: ['CLAMD_HOST', 'CLAMD_PORT'], target: (env) => env('CLAMD_HOST') ? { host: env('CLAMD_HOST')!, port: Number(env('CLAMD_PORT') ?? 3310) } : null },
   // No mail sender exists yet; the row shows that the settings are not there rather than hiding the gap.
-  { key: 'mail', variables: ['SMTP_HOST', 'SMTP_PORT'], target: (env) => env('SMTP_HOST') ? { host: env('SMTP_HOST')!, port: Number(env('SMTP_PORT') ?? 587) } : null }
+  { key: 'mail', variables: ['SMTP_HOST', 'SMTP_PORT'], target: (env) => env('SMTP_HOST') ? { host: env('SMTP_HOST')!, port: Number(env('SMTP_PORT') ?? 587) } : null },
+  // การแจ้งเตือน LINE: the bot id and the public URL are optional; reaching api.line.me is what the row checks.
+  { key: 'line', variables: ['LINE_CHANNEL_ACCESS_TOKEN', 'LINE_CHANNEL_SECRET', 'LINE_BOT_BASIC_ID', 'BACKOFFICE_PUBLIC_URL'], target: () => ({ host: 'api.line.me', port: 443 }) }
 ];
+const optional = new Set(['CLAMD_PORT', 'SMTP_PORT', 'LINE_BOT_BASIC_ID', 'BACKOFFICE_PUBLIC_URL']);
 
 function hostPort(url: string | undefined, fallbackPort: number): { host: string; port: number } | null {
   if (!url) return null;
@@ -22,10 +25,10 @@ function hostPort(url: string | undefined, fallbackPort: number): { host: string
   } catch { return null; }
 }
 
-/** Checks each configured connection once; the optional variable (CLAMD_PORT) does not count towards "configured". */
+/** Checks each configured connection once; optional variables (ports, the LINE bot id and public URL) do not count towards "configured". */
 export async function checkConnections(env: (name: string) => string | undefined, probes: ConnectionProbes): Promise<ConnectionCheck[]> {
   return Promise.all(services.map(async ({ key, variables, target }) => {
-    const required = variables.filter((name) => name !== 'CLAMD_PORT' && name !== 'SMTP_PORT');
+    const required = variables.filter((name) => !optional.has(name));
     const configured = required.every((name) => Boolean(env(name)));
     const where = configured ? target(env) : null;
     if (!where) return { key, variables, configured, status: 'not_checked' as const };

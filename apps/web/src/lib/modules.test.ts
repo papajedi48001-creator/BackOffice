@@ -253,7 +253,7 @@ describe('admin module', () => {
     expect(hrefs(subject())).not.toContain('/admin');
     expect(hrefs(subject({ roles: [{ name: 'hr-manager', organizationId: null }] }))).not.toContain('/admin');
     expect(hrefs(admin)).toContain('/admin');
-    expect(sectionHrefs('admin', admin)).toEqual(['/admin/connections', '/admin/modules', '/admin/grants', '/admin/audit']);
+    expect(sectionHrefs('admin', admin)).toEqual(['/admin/connections', '/admin/modules', '/admin/grants', '/admin/line', '/admin/audit']);
   });
 
   it('gives an admin every manager section of other modules', () => {
