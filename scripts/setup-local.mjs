@@ -192,7 +192,9 @@ function lineWebhook() {
   }
   step(`Starting the public HTTPS door for ${host} (LINE webhook only)`);
   run('docker', ['compose', '-f', composeFile, '--profile', 'line-webhook', 'up', '-d', 'line-webhook'], { env: { ...env, LINE_WEBHOOK_HOST: host } });
-  console.log(`\nOK LINE can call https://${host}/api/line/webhook once the NAT and the firewall pass TCP 443 (and 80) to this machine.`);
+  const httpsPort = process.env.LINE_WEBHOOK_HTTPS_PORT ?? env.LINE_WEBHOOK_HTTPS_PORT ?? '443';
+  const httpPort = process.env.LINE_WEBHOOK_HTTP_PORT ?? env.LINE_WEBHOOK_HTTP_PORT ?? '80';
+  console.log(`\nOK LINE can call https://${host}/api/line/webhook once the NAT sends public 443 (and 80) to this machine's TCP ${httpsPort} (and ${httpPort}) and the firewall lets them in.`);
   console.log('  Every other path answers 404. Logs: docker compose -f infra/compose/docker-compose.dev.yml logs line-webhook');
 }
 
