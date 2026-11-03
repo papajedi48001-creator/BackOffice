@@ -39,6 +39,8 @@ export class LineService {
       const [found] = await tx.query<{ personId: string }>('SELECT person_id AS personId FROM line_link_code WHERE code_hash = ? AND expires_at > UTC_TIMESTAMP() FOR UPDATE', [hashLinkCode(code)]);
       if (!found) return { ok: false as const };
       await tx.execute('DELETE FROM line_link_code WHERE person_id = ?', [found.personId]);
+      const previous = await tx.query<{ personId: string }>('SELECT person_id AS personId FROM line_account_link WHERE line_user_id = ? AND person_id <> ? FOR UPDATE', [userId, found.personId]);
+      for (const { personId } of previous) await this.audit(tx, found.personId, 'line.account.unlinked', 'person', personId, { reason: 'MOVED' });
       await tx.execute('DELETE FROM line_account_link WHERE line_user_id = ? OR person_id = ?', [userId, found.personId]);
       await tx.execute('INSERT INTO line_account_link (person_id, line_user_id, linked_at) VALUES (?, ?, UTC_TIMESTAMP())', [found.personId, userId]);
       await this.audit(tx, found.personId, 'line.account.linked', 'person', found.personId);
@@ -54,6 +56,24 @@ export class LineService {
       await this.audit(tx, personId, 'line.account.unlinked', 'person', personId);
       return true;
     });
+  }
+
+  /** Webhook `unfollow`: the person blocked the bot, so they are no longer @mentioned. */
+  async unlinkLineUser(lineUserId: string): Promise<boolean> {
+    const userId = lineUserIdSchema.parse(lineUserId);
+    return this.database.transaction(async (tx) => {
+      const [held] = await tx.query<{ personId: string }>('SELECT person_id AS personId FROM line_account_link WHERE line_user_id = ? FOR UPDATE', [userId]);
+      if (!held) return false;
+      await tx.execute('DELETE FROM line_account_link WHERE line_user_id = ?', [userId]);
+      await this.audit(tx, null, 'line.account.unlinked', 'person', held.personId, { reason: 'UNFOLLOWED' });
+      return true;
+    });
+  }
+
+  /** Whether a group is known and the bot is still in it. */
+  async isActiveGroup(groupId: string): Promise<boolean> {
+    const rows = await this.database.query<{ groupId: string }>('SELECT group_id AS groupId FROM line_group WHERE group_id = ? AND left_at IS NULL', [groupId]);
+    return rows.length === 1;
   }
 
   async linkStatus(personId: string): Promise<{ linkedAt: string } | null> {

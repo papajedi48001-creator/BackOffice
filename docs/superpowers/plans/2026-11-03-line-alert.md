@@ -36,10 +36,10 @@
 
 **Produces:** `lineGroupIdSchema`, `lineUserIdSchema`, `lineRouteInputSchema {groupId: string|null}`, `lineGroupInputSchema {groupId, displayName}`, `notificationEventPayloadSchema.actionRequired?: boolean`, `lineAlertPayloadSchema {recipientPersonId, moduleCode, targetPath}`.
 
-- [ ] Test: schemas accept `C`+32 hex, reject uppercase/short; payload keeps `actionRequired: true`
-- [ ] Run `pnpm --filter @backoffice/contracts test` → FAIL
-- [ ] Implement schemas, migration (4 tables per spec), Drizzle schema
-- [ ] Run tests → PASS; commit `feat(line): add LINE alert schema and contracts`
+- [x] Test: schemas accept `C`+32 hex, reject uppercase/short; payload keeps `actionRequired: true`
+- [x] Run `pnpm --filter @backoffice/contracts test` → FAIL
+- [x] Implement schemas, migration (4 tables per spec), Drizzle schema
+- [x] Run tests → PASS; commit `feat(line): add LINE alert schema and contracts`
 
 ### Task 2: Core `LineService` + code helpers
 
@@ -50,9 +50,9 @@
 - `verifyLineSignature(secret: string, rawBody: string, signature: string | null): boolean`
 - `class LineService(database)`: `createLinkCode(personId): Promise<{code, expiresAt}>`, `linkByCode(code, lineUserId): Promise<{ok:true; personId} | {ok:false}>`, `unlink(personId): Promise<boolean>`, `linkStatus(personId): Promise<{linkedAt: string} | null>`, `groupJoined(groupId, displayName|null)`, `groupLeft(groupId)`, `addGroup(actor, input)`, `setRoute(actor, moduleCode, groupId|null)`, `overview(): {groups, routes, linkedCount}`
 
-- [ ] Unit tests: code alphabet/length, normalize (`abcd-2345 ` → `ABCD2345`, `hello` → null), signature valid/invalid/null
-- [ ] Integration tests (skip without DB): link, expired code refused, reused code refused, userId moves between people, join/leave, route to unknown group refused, audits written
-- [ ] Implement; tests PASS; commit `feat(line): link LINE accounts and groups in core`
+- [x] Unit tests: code alphabet/length, normalize (`abcd-2345 ` → `ABCD2345`, `hello` → null), signature valid/invalid/null
+- [x] Integration tests (skip without DB): link, expired code refused, reused code refused, userId moves between people, join/leave, route to unknown group refused, audits written
+- [x] Implement; tests PASS; commit `feat(line): link LINE accounts and groups in core`
 
 ### Task 3: Worker — enqueue and push
 
@@ -60,34 +60,34 @@
 
 **Produces:** `NotificationConsumer(store, email, inApp, lineQueue?, lineAlerts?)`; `LineAlertConsumer(store, client, publicUrl)`; `buildLineAlertMessage(moduleLabel, lineUserId, link|null)`; `LineClient.push(to, messages, retryKey)` throws `LINE_PUSH_FAILED`.
 
-- [ ] Tests: in_app with actionRequired enqueues once; without it does not; `notification.line` dispatched to LineAlertConsumer; consumer skips without route/link/left group; sends textV2 with `{m}` substitution and retry key; 409 = ok; 500 throws
-- [ ] Implement; PASS; commit `feat(worker): push action alerts to the module's LINE group`
+- [x] Tests: in_app with actionRequired enqueues once; without it does not; `notification.line` dispatched to LineAlertConsumer; consumer skips without route/link/left group; sends textV2 with `{m}` substitution and retry key; 409 = ok; 500 throws
+- [x] Implement; PASS; commit `feat(worker): push action alerts to the module's LINE group`
 
 ### Task 4: Producers set `actionRequired`
 
 **Files:** `packages/core/src/workflow/request-service.ts`, `rooms/room-booking-service.ts`, `inventory/receipt-service.ts`, `fleet/fleet-notices.ts` + `fleet-store.ts`; their tests
 
-- [ ] Tests assert payload `actionRequired: true` for the 4 spec subjects and absent for info subjects
-- [ ] Implement; PASS; commit `feat(line): mark notices that need the recipient to act`
+- [x] Tests assert payload `actionRequired: true` for the 4 spec subjects and absent for info subjects
+- [x] Implement; PASS; commit `feat(line): mark notices that need the recipient to act`
 
 ### Task 5: Web — webhook + link API + `/hr/me` popup
 
 **Files:** Create `apps/web/src/app/api/line/webhook/route.ts`, `api/line/link-code/route.ts`, `api/line/link/route.ts`, `apps/web/src/lib/line-api.ts`, `apps/web/src/components/line-link-dialog.tsx`, tests; Modify `app/(app)/hr/me/page.tsx`, `packages/i18n/src/th.ts`
 
-- [ ] Tests: webhook 401 bad signature, 503 no secret, join stores group, code message links + replies, unknown code replies refusal; link-code requires session; dialog shows code and add-friend link
-- [ ] Implement; PASS; commit `feat(web): connect a LINE account from my profile`
+- [x] Tests: webhook 401 bad signature, 503 no secret, join stores group, code message links + replies, unknown code replies refusal; link-code requires session; dialog shows code and add-friend link
+- [x] Implement; PASS; commit `feat(web): connect a LINE account from my profile`
 
 ### Task 6: Web — `/admin/line`
 
 **Files:** Create `app/(app)/admin/line/page.tsx`, `line-settings.tsx`, `api/admin/line/groups/route.ts`, `api/admin/line/groups/[groupId]/test/route.ts`, `api/admin/line/routes/[code]/route.ts`; Modify `lib/modules.ts` (section), `lib/connection-status.ts` (LINE row), i18n
 
-- [ ] Tests: non-admin 403, add group invalid id 400, route set, connections row lists LINE variables
-- [ ] Implement; PASS; commit `feat(admin): choose each module's LINE group`
+- [x] Tests: non-admin 403, add group invalid id 400, route set, connections row lists LINE variables
+- [x] Implement; PASS; commit `feat(admin): choose each module's LINE group`
 
 ### Task 7: Docs + verification
 
 **Files:** `CONTEXT.md`, `.env.example`, `docs/runbooks/line-alert.md`
 
-- [ ] Write runbook (OA setup, tunnel, env, steps)
-- [ ] Run `pnpm lint && pnpm typecheck && pnpm test`, `git diff --check`; report integration suites as skipped if no DB
-- [ ] Commit `docs(line): runbook for LINE alerts`
+- [x] Write runbook (OA setup, tunnel, env, steps)
+- [x] Run `pnpm lint && pnpm typecheck && pnpm test`, `git diff --check`; report integration suites as skipped if no DB
+- [x] Commit `docs(line): runbook for LINE alerts`

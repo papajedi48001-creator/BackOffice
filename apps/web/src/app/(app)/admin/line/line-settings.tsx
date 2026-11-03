@@ -65,7 +65,7 @@ export function LineSettings({ groups, modules }: { groups: LineGroupRow[]; modu
     </table></div>
 
     <div className="page-heading"><h3>{t('adminLineGroups')}</h3>
-      <FormDialog title={t('adminLineAddGroup')} triggerLabel={t('adminLineAddGroup')} triggerClassName="button-secondary" submitLabel={t('adminSave')} error={error} ready={Boolean(newGroup.groupId.trim() && newGroup.displayName.trim())} onSubmit={() => addGroup()}>
+      <FormDialog onOpenChange={(next) => { if (next) setError(null); }} title={t('adminLineAddGroup')} triggerLabel={t('adminLineAddGroup')} triggerClassName="button-secondary" submitLabel={t('adminSave')} error={error} ready={Boolean(newGroup.groupId.trim() && newGroup.displayName.trim())} onSubmit={() => addGroup()}>
         <p className="admin-note">{t('adminLineAddGroupHint')}</p>
         <label>{t('adminLineGroupId')}<input value={newGroup.groupId} required pattern="C[0-9a-f]{32}" onChange={(event) => setNewGroup({ ...newGroup, groupId: event.target.value })} /></label>
         <label>{t('adminLineGroupName')}<input value={newGroup.displayName} required maxLength={120} onChange={(event) => setNewGroup({ ...newGroup, displayName: event.target.value })} /></label>

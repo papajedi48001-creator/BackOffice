@@ -1,11 +1,11 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ readSession: vi.fn(), getSharedDatabase: vi.fn(), readRuntimeValue: vi.fn(), fetch: vi.fn(), addGroup: vi.fn(), setRoute: vi.fn(), overview: vi.fn() }));
+const mocks = vi.hoisted(() => ({ readSession: vi.fn(), getSharedDatabase: vi.fn(), readRuntimeValue: vi.fn(), fetch: vi.fn(), addGroup: vi.fn(), setRoute: vi.fn(), overview: vi.fn(), isActiveGroup: vi.fn() }));
 vi.mock('../../../../lib/session', () => ({ readSession: mocks.readSession }));
 vi.mock('../../../../lib/database', () => ({ getSharedDatabase: mocks.getSharedDatabase }));
 vi.mock('../../../../lib/runtime-env', () => ({ readRuntimeValue: mocks.readRuntimeValue }));
-vi.mock('@backoffice/core', async (importOriginal) => ({ ...await importOriginal<typeof import('@backoffice/core')>(), LineService: class { addGroup = mocks.addGroup; setRoute = mocks.setRoute; overview = mocks.overview; } }));
+vi.mock('@backoffice/core', async (importOriginal) => ({ ...await importOriginal<typeof import('@backoffice/core')>(), LineService: class { addGroup = mocks.addGroup; setRoute = mocks.setRoute; overview = mocks.overview; isActiveGroup = mocks.isActiveGroup; } }));
 
 import { POST as ADD_GROUP } from './groups/route';
 import { POST as TEST } from './groups/[groupId]/test/route';
@@ -53,6 +53,9 @@ describe('ตั้งค่า LINE API', () => {
 
   it('sends a test message to a group and says when LINE refuses or is not set up', async () => {
     ready();
+    mocks.isActiveGroup.mockImplementation(async (id: string) => id === group);
+    expect((await TEST(json('POST'), params({ groupId: `C${'ef'.repeat(16)}` }))).status).toBe(404);
+    expect(mocks.fetch).not.toHaveBeenCalled();
     mocks.fetch.mockResolvedValueOnce(new Response('{}', { status: 200 })).mockResolvedValueOnce(new Response('{}', { status: 400 }));
     expect((await TEST(json('POST'), params({ groupId: group }))).status).toBe(200);
     const body = JSON.parse(String((mocks.fetch.mock.calls[0]![1] as RequestInit).body)) as { to: string; messages: Array<{ text: string }> };

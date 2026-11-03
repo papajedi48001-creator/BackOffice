@@ -57,12 +57,21 @@ describeWithDatabase('LineService against MariaDB', () => {
     await service.linkByCode((await service.createLinkCode(clerk)).code, shared);
     expect(await service.lineUserIdOf(admin)).toBeNull();
     expect(await service.lineUserIdOf(clerk)).toBe(shared);
+    expect(await audits('line.account.unlinked', admin)).toHaveLength(1);
     const next = lineUser();
     await service.linkByCode((await service.createLinkCode(clerk)).code, next);
     expect(await service.lineUserIdOf(clerk)).toBe(next);
     await expect(service.unlink(clerk)).resolves.toBe(true);
     await expect(service.unlink(clerk)).resolves.toBe(false);
     expect(await audits('line.account.unlinked', clerk)).toHaveLength(1);
+  });
+
+  it('unlinks the person whose LINE user blocked the bot', async () => {
+    const user = lineUser();
+    await service.linkByCode((await service.createLinkCode(nurse)).code, user);
+    await expect(service.unlinkLineUser(user)).resolves.toBe(true);
+    expect(await service.lineUserIdOf(nurse)).toBeNull();
+    await expect(service.unlinkLineUser(user)).resolves.toBe(false);
   });
 
   it('records groups the bot joins and leaves, and routes a module only to a known group', async () => {
@@ -79,6 +88,8 @@ describeWithDatabase('LineService against MariaDB', () => {
     const overview = await service.overview();
     expect(overview.groups.find((row) => row.groupId === group)).toMatchObject({ displayName: 'หัวหน้างาน', source: 'WEBHOOK', active: true });
     expect(overview.routes[moduleCode]).toBe(group);
+    expect(await service.isActiveGroup(group)).toBe(true);
+    expect(await service.isActiveGroup(lineGroup())).toBe(false);
     await expect(service.setRoute(admin, moduleCode, null)).resolves.toEqual({ ok: true });
     expect(await service.routeFor(moduleCode)).toBeNull();
     expect(await audits('line.route.changed', moduleCode)).toHaveLength(2);

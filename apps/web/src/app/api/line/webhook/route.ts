@@ -13,7 +13,7 @@ const REFUSED = 'รหัสไม่ถูกต้องหรือหมด
 
 /**
  * LINE Messaging API webhook: the one route that needs no session, so every body must carry LINE's signature.
- * Handles join/leave of a group and a รหัสเชื่อมต่อ LINE sent in chat. Bodies and chat text are never logged.
+ * Handles join/leave of a group, unfollow, and a รหัสเชื่อมต่อ LINE sent in the private chat with the bot. Bodies and chat text are never logged.
  */
 export async function POST(request: Request): Promise<Response> {
   const settings = lineSettings();
@@ -30,7 +30,12 @@ export async function POST(request: Request): Promise<Response> {
       await service.groupJoined(groupId.data, settings.accessToken ? await lineGroupName(settings.accessToken, groupId.data) : null);
     } else if (event.type === 'leave' && groupId.success) {
       await service.groupLeft(groupId.data);
-    } else if (event.type === 'message' && event.message?.type === 'text' && typeof event.message.text === 'string') {
+    } else if (event.type === 'unfollow' && event.source?.type === 'user') {
+      // The person blocked the bot: stop @mentioning them until they link again.
+      const userId = lineUserIdSchema.safeParse(event.source.userId);
+      if (userId.success) await service.unlinkLineUser(userId.data);
+    } else if (event.type === 'message' && event.source?.type === 'user' && event.message?.type === 'text' && typeof event.message.text === 'string') {
+      // Codes count only in the private chat with the bot, so group chat is never read as a code or answered.
       const code = normalizeLinkCode(event.message.text);
       const userId = lineUserIdSchema.safeParse(event.source?.userId);
       if (!code || !userId.success) continue;

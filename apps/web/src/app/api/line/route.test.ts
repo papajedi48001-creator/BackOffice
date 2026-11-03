@@ -4,14 +4,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   readSession: vi.fn(), getSharedDatabase: vi.fn(), readRuntimeValue: vi.fn(), fetch: vi.fn(),
-  createLinkCode: vi.fn(), linkByCode: vi.fn(), unlink: vi.fn(), linkStatus: vi.fn(), groupJoined: vi.fn(), groupLeft: vi.fn()
+  createLinkCode: vi.fn(), linkByCode: vi.fn(), unlink: vi.fn(), unlinkLineUser: vi.fn(), linkStatus: vi.fn(), groupJoined: vi.fn(), groupLeft: vi.fn()
 }));
 vi.mock('../../../lib/session', () => ({ readSession: mocks.readSession }));
 vi.mock('../../../lib/database', () => ({ getSharedDatabase: mocks.getSharedDatabase }));
 vi.mock('../../../lib/runtime-env', () => ({ readRuntimeValue: mocks.readRuntimeValue }));
 vi.mock('@backoffice/core', async (importOriginal) => ({
   ...await importOriginal<typeof import('@backoffice/core')>(),
-  LineService: class { createLinkCode = mocks.createLinkCode; linkByCode = mocks.linkByCode; unlink = mocks.unlink; linkStatus = mocks.linkStatus; groupJoined = mocks.groupJoined; groupLeft = mocks.groupLeft; }
+  LineService: class { createLinkCode = mocks.createLinkCode; linkByCode = mocks.linkByCode; unlink = mocks.unlink; unlinkLineUser = mocks.unlinkLineUser; linkStatus = mocks.linkStatus; groupJoined = mocks.groupJoined; groupLeft = mocks.groupLeft; }
 }));
 
 import { POST as WEBHOOK } from './webhook/route';
@@ -59,6 +59,21 @@ describe('LINE webhook', () => {
     const replies = mocks.fetch.mock.calls.map(([, init]) => JSON.parse(String((init as RequestInit).body)) as { messages: Array<{ text: string }> });
     expect(replies[0]!.messages[0]!.text).toBe('เชื่อมต่อบัญชี LINE กับ Back Office แล้ว');
     expect(replies[1]!.messages[0]!.text).toBe('รหัสไม่ถูกต้องหรือหมดอายุ กรุณาสร้างรหัสใหม่ในระบบ');
+  });
+
+  it('never reads group chat as a code, even when it looks like one, and says nothing in the group', async () => {
+    const response = await WEBHOOK(signed({ events: [
+      { type: 'message', replyToken: 'r', source: { type: 'group', groupId: group, userId: user }, message: { type: 'text', text: 'ABCD2345' } },
+      { type: 'message', replyToken: 'r', source: { type: 'group', groupId: group, userId: user }, message: { type: 'text', text: 'Thursday' } }
+    ] }));
+    expect(response.status).toBe(200);
+    expect(mocks.linkByCode).not.toHaveBeenCalled();
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+
+  it('unlinks a person who blocks the bot', async () => {
+    expect((await WEBHOOK(signed({ events: [{ type: 'unfollow', source: { type: 'user', userId: user } }] }))).status).toBe(200);
+    expect(mocks.unlinkLineUser).toHaveBeenCalledWith(user);
   });
 
   it('ignores chat that is not a code and still answers 200 when a reply fails', async () => {

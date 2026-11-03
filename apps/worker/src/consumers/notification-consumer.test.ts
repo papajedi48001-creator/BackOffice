@@ -42,10 +42,12 @@ describe('NotificationConsumer', () => {
       const consumer = new NotificationConsumer({ claim: async () => { steps.push('claim'); return true; } }, { deliverEmail: async () => undefined }, { deliverInApp: async () => undefined }, { enqueue: async (eventId, payload) => { steps.push('enqueue'); queued.push({ eventId, payload }); } });
       await consumer.consume(inApp({ recipientPersonId: 'person-1', moduleCode: 'leave', targetPath: '/leave/requests/r-1', subject: 'มีคำขอรอพิจารณา', actionRequired: true }));
       await consumer.consume(inApp({ recipientPersonId: 'person-1', requestId: 'r-2', subject: 'มีคำขอรอพิจารณา', actionRequired: true }));
-      expect(steps).toEqual(['enqueue', 'claim', 'enqueue', 'claim']);
+      await consumer.consume(inApp({ recipientPersonId: 'person-1', moduleCode: 'requests', requestId: 'r-3', subject: 'มีคำขอรอพิจารณา', actionRequired: true }));
+      // Without a module there is no กลุ่มแจ้งเตือน to send to, so the second notice is not queued.
+      expect(steps).toEqual(['enqueue', 'claim', 'claim', 'enqueue', 'claim']);
       expect(queued).toEqual([
         { eventId: 'event-9', payload: { recipientPersonId: 'person-1', moduleCode: 'leave', targetPath: '/leave/requests/r-1' } },
-        { eventId: 'event-9', payload: { recipientPersonId: 'person-1', moduleCode: 'requests', targetPath: '/requests/r-2' } }
+        { eventId: 'event-9', payload: { recipientPersonId: 'person-1', moduleCode: 'requests', targetPath: '/requests/r-3' } }
       ]);
     });
 

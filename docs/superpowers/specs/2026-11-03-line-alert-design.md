@@ -88,7 +88,8 @@ LINE ──► POST /api/line/webhook (ตรวจลายเซ็น X-Line-
 - ตรวจ `X-Line-Signature` = base64(HMAC-SHA256(channel secret, raw body)) แบบ timing-safe ไม่ผ่าน → 401 ไม่ได้ตั้ง secret → 503
 - `join` จากกลุ่ม → upsert `line_group` (`source=WEBHOOK`, `left_at=NULL`, ชื่อจาก `GET /v2/bot/group/{id}/summary` ถ้าดึงได้) audit `line.group.joined`
 - `leave` → ตั้ง `left_at` audit `line.group.left`
-- `message` ข้อความที่ (ตัดช่องว่างและขีด, ตัวพิมพ์ใหญ่) ตรงรูปรหัส 8 ตัว → หา hash ที่ยังไม่หมดอายุ
+- `unfollow` (บล็อกบอท) → ยกเลิกการเชื่อมต่อของ LINE user นั้น audit `line.account.unlinked`
+- `message` จากแชตส่วนตัวกับบอทเท่านั้น (`source.type = user`; ข้อความในกลุ่มไม่อ่าน) ข้อความที่ (ตัดช่องว่างและขีด, ตัวพิมพ์ใหญ่) ตรงรูปรหัส 8 ตัว → หา hash ที่ยังไม่หมดอายุ
   - พบ: ลบรหัส, ผูกบัญชี (ถ้า userId นี้ผูกกับคนอื่นอยู่ ย้ายมาคนนี้; ถ้าคนนี้มีบัญชีเก่า แทนที่) audit `line.account.linked` ใน transaction เดียวกัน แล้ว reply "เชื่อมต่อบัญชี LINE กับ Back Office แล้ว"
   - ไม่พบ: reply "รหัสไม่ถูกต้องหรือหมดอายุ กรุณาสร้างรหัสใหม่ในระบบ"
 - เหตุการณ์อื่นไม่ทำอะไร ตอบ 200 เสมอเมื่อลายเซ็นถูก (การ reply ล้มเหลวไม่ทำให้ตอบ error)

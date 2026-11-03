@@ -18,9 +18,9 @@ export class NotificationConsumer {
     if (!recipientPersonId) throw new Error('INVALID_NOTIFICATION_EVENT');
     const message: NotificationMessage = { eventId: event.id, recipientPersonId, channel, requestId: inAppPayload?.data.requestId ?? null, targetPath: inAppPayload?.data.targetPath ?? null, moduleCode: inAppPayload?.data.moduleCode ?? null, subject: inAppPayload?.data.subject ?? (typeof event.payload.subject === 'string' ? event.payload.subject : 'มีงานในระบบ Back Office') };
     // Queued before the claim: both steps are idempotent, so a retry after a failure in between still queues the alert.
-    if (inAppPayload?.data.actionRequired && this.lineQueue) {
+    if (inAppPayload?.data.actionRequired && message.moduleCode && this.lineQueue) {
       const targetPath = message.targetPath ?? (message.requestId ? `/requests/${message.requestId}` : null);
-      if (targetPath) await this.lineQueue.enqueue(event.id, { recipientPersonId, moduleCode: message.moduleCode ?? 'requests', targetPath });
+      if (targetPath) await this.lineQueue.enqueue(event.id, { recipientPersonId, moduleCode: message.moduleCode, targetPath });
     }
     if (!(await this.store.claim(message))) return;
     if (channel === 'email') await this.email.deliverEmail(message); else await this.inApp.deliverInApp(message);
