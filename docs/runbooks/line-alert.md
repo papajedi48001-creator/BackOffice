@@ -53,8 +53,12 @@ LINE ต้องเรียก `https://<โดเมนสาธารณะ>
 2. อนุญาตพอร์ตใน Windows firewall (PowerShell แบบ Administrator):
 
    ```powershell
-   New-NetFirewallRule -DisplayName "BackOffice LINE webhook" -Direction Inbound -Protocol TCP -LocalPort 80,443 -Action Allow
+   New-NetFirewallRule -DisplayName "BackOffice LINE webhook" -Direction Inbound -Protocol TCP -LocalPort 80,443 -Action Allow -Profile Any
    ```
+
+   `-Profile Any` เพราะการ์ดแลนของเครื่องอาจถูกตั้งเป็นเครือข่ายแบบ Public ซึ่งกฎแบบ Private ไม่ครอบคลุม
+
+   ถ้าเครื่องนี้มีระบบอื่นใช้พอร์ต 80 หรือ 443 อยู่แล้ว (ตรวจด้วย `netstat -ano | findstr LISTENING | findstr ":80 :443"`) ให้เลือกพอร์ตอื่น เช่น 8081 และ 8444 ตั้ง NAT ให้ public 80 → 8081 และ public 443 → 8444 ใส่ `LINE_WEBHOOK_HTTP_PORT=8081` และ `LINE_WEBHOOK_HTTPS_PORT=8444` ใน `.env` และเปิด firewall ที่ `-LocalPort 8081,8444` แทน ภายนอกยังเรียกด้วย `https://<โดเมน>/` พอร์ต 443 ตามปกติ
 
 3. เพิ่มใน `.env`: `LINE_WEBHOOK_HOST=notify-waritch-hosp.moph.go.th` และตรวจว่า `BACKOFFICE_WEB_PORT` ตรงกับพอร์ตที่เว็บรันจริง
 4. รัน `node scripts/setup-local.mjs line-webhook` Caddy จะขอใบรับรอง Let's Encrypt เอง และส่งต่อเฉพาะ `POST /api/line/webhook` ไปที่เว็บ เส้นทางอื่นทั้งหมดตอบ 404 คนนอกจึงเปิดหน้าระบบไม่ได้ หน้าเว็บใน LAN (`:8443`) ไม่เปลี่ยน

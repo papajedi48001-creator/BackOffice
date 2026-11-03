@@ -44,7 +44,8 @@ services:
     environment:
       LINE_WEBHOOK_HOST: ${LINE_WEBHOOK_HOST:-localhost}
       BACKOFFICE_WEB_PORT: ${BACKOFFICE_WEB_PORT:-3000}
-    ports: ["80:80", "443:443"]
+    # Move the host side when 80/443 are taken here; the NAT then sends public 80/443 to these ports.
+    ports: ["${LINE_WEBHOOK_HTTP_PORT:-80}:80", "${LINE_WEBHOOK_HTTPS_PORT:-443}:443"]
     extra_hosts: ["host.docker.internal:host-gateway"]
     volumes: ["./Caddyfile.line-webhook:/etc/caddy/Caddyfile:ro", "caddy-line-webhook-data:/data"]
 volumes:
