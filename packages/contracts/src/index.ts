@@ -8,6 +8,7 @@ export * from './audit.ts';
 export * from './outbox.ts';
 export * from './files.ts';
 export * from './notifications.ts';
+export * from './line.ts';
 export * from './rooms.ts';
 export * from './inventory.ts';
 export * from './leave.ts';

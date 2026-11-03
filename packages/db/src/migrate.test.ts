@@ -30,7 +30,7 @@ describe('runMigrations', () => {
     await runMigrations(database);
 
     expect(queried.some((sql) => sql.includes('CREATE TABLE IF NOT EXISTS schema_migration'))).toBe(false);
-    expect(queried.filter((sql) => sql.includes('SELECT version FROM schema_migration'))).toHaveLength(28);
+    expect(queried.filter((sql) => sql.includes('SELECT version FROM schema_migration'))).toHaveLength(29);
     expect(executed.some((sql) => sql.startsWith('ALTER TABLE notification'))).toBe(true);
     expect(executed.some((sql) => sql.includes('IF NOT EXISTS'))).toBe(true);
     expect(executed.some((sql) => sql.startsWith('INSERT IGNORE INTO schema_migration') && sql.endsWith('|["0001_in_app_notifications.sql"]'))).toBe(true);
@@ -87,6 +87,10 @@ describe('runMigrations', () => {
     expect(executed.some((sql) => sql.startsWith('INSERT IGNORE INTO schema_migration') && sql.endsWith('|["0026_support_chat.sql"]'))).toBe(true);
     expect(executed.some((sql) => sql.startsWith('ALTER TABLE room_booking ADD COLUMN IF NOT EXISTS request_id'))).toBe(true);
     expect(executed.some((sql) => sql.startsWith('INSERT IGNORE INTO schema_migration') && sql.endsWith('|["0027_room_booking_request.sql"]'))).toBe(true);
+    for (const table of ['line_account_link', 'line_link_code', 'line_group', 'line_module_route']) {
+      expect(executed.some((sql) => sql.startsWith(`CREATE TABLE IF NOT EXISTS ${table} (`))).toBe(true);
+    }
+    expect(executed.some((sql) => sql.startsWith('INSERT IGNORE INTO schema_migration') && sql.endsWith('|["0028_line_alert.sql"]'))).toBe(true);
     expect(executed.some((sql) => sql.includes('CREATE TABLE IF NOT EXISTS organization'))).toBe(false);
   });
 
