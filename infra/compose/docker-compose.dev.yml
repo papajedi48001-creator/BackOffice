@@ -35,9 +35,22 @@ services:
     ports: ["${BACKOFFICE_LAN_PORT:-8443}:8443"]
     extra_hosts: ["host.docker.internal:host-gateway"]
     volumes: ["./Caddyfile.lan:/etc/caddy/Caddyfile:ro", "caddy-lan-data:/data"]
+  # Optional: the public HTTPS door for LINE's webhook only, when the hospital NATs a public IP to this machine.
+  # See docs/runbooks/line-alert.md.
+  line-webhook:
+    image: caddy:2.8
+    profiles: ["line-webhook"]
+    restart: unless-stopped
+    environment:
+      LINE_WEBHOOK_HOST: ${LINE_WEBHOOK_HOST:-localhost}
+      BACKOFFICE_WEB_PORT: ${BACKOFFICE_WEB_PORT:-3000}
+    ports: ["80:80", "443:443"]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    volumes: ["./Caddyfile.line-webhook:/etc/caddy/Caddyfile:ro", "caddy-line-webhook-data:/data"]
 volumes:
   mariadb-data:
   redis-data:
   seaweedfs-data:
   clamav-data:
   caddy-lan-data:
+  caddy-line-webhook-data:

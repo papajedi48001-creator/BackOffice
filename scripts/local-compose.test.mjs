@@ -56,3 +56,21 @@ test('the LAN Caddyfile serves its certificate to clients that connect by IP', (
   // Browsers send no SNI for https://<ip>:8443; without default_sni the TLS handshake fails.
   assert.match(caddyfile, /^\s*default_sni \{\$BACKOFFICE_LAN_HOST\}\s*$/m);
 });
+
+test('the line-webhook profile opens 80 and 443 to the public host only when asked for', { skip: !hasDocker && 'docker compose not available' }, () => {
+  assert.equal(renderCompose({}).services['line-webhook'], undefined);
+  const { services } = renderCompose({ LINE_WEBHOOK_HOST: 'notify.example.go.th', BACKOFFICE_WEB_PORT: '3011' }, ['line-webhook']);
+  assert.deepEqual(publishedPorts(services['line-webhook']), ['80:80', '443:443']);
+  assert.equal(services['line-webhook'].environment.LINE_WEBHOOK_HOST, 'notify.example.go.th');
+  assert.equal(services['line-webhook'].environment.BACKOFFICE_WEB_PORT, '3011');
+});
+
+test('the public Caddyfile passes on only the LINE webhook and answers 404 to everything else', () => {
+  const caddyfile = readFileSync(new URL('../infra/compose/Caddyfile.line-webhook', import.meta.url), 'utf8');
+  assert.match(caddyfile, /^\{\$LINE_WEBHOOK_HOST\} \{$/m);
+  assert.match(caddyfile, /@webhook \{\s*method POST\s*path \/api\/line\/webhook\s*\}/);
+  assert.match(caddyfile, /handle @webhook \{\s*reverse_proxy host\.docker\.internal:\{\$BACKOFFICE_WEB_PORT\}\s*\}/);
+  assert.match(caddyfile, /handle \{\s*respond 404\s*\}/);
+  assert.doesNotMatch(caddyfile, /tls internal/);
+  assert.equal((caddyfile.match(/reverse_proxy/g) ?? []).length, 1);
+});

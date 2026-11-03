@@ -6,6 +6,7 @@
 //   node scripts/setup-local.mjs web      build and start the web app on port 3000, plus the outbox worker (--no-worker to skip)
 //   node scripts/setup-local.mjs worker   start only the outbox worker with .env loaded
 //   node scripts/setup-local.mjs lan      serve the web app over HTTPS to the LAN (port 8443)
+//   node scripts/setup-local.mjs line-webhook  open only LINE's webhook to the internet on 80/443 (needs LINE_WEBHOOK_HOST and a NAT)
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { networkInterfaces } from 'node:os';
@@ -182,7 +183,20 @@ function lan() {
   console.log('  The web app must be running (`node scripts/setup-local.mjs web`), and the firewall must allow inbound TCP on that port.');
 }
 
-const commands = { setup, web, worker, lan };
+function lineWebhook() {
+  const env = loadEnv();
+  const host = process.env.LINE_WEBHOOK_HOST ?? env.LINE_WEBHOOK_HOST;
+  if (!host) {
+    console.error('x Set LINE_WEBHOOK_HOST in .env to the public host name that points at this machine (see docs/runbooks/line-alert.md).');
+    process.exit(1);
+  }
+  step(`Starting the public HTTPS door for ${host} (LINE webhook only)`);
+  run('docker', ['compose', '-f', composeFile, '--profile', 'line-webhook', 'up', '-d', 'line-webhook'], { env: { ...env, LINE_WEBHOOK_HOST: host } });
+  console.log(`\nOK LINE can call https://${host}/api/line/webhook once the NAT and the firewall pass TCP 443 (and 80) to this machine.`);
+  console.log('  Every other path answers 404. Logs: docker compose -f infra/compose/docker-compose.dev.yml logs line-webhook');
+}
+
+const commands = { setup, web, worker, lan, 'line-webhook': lineWebhook };
 const command = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'setup';
 if (!commands[command]) {
   console.error(`Unknown command "${command}". Use one of: ${Object.keys(commands).join(', ')}`);

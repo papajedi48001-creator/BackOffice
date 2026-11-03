@@ -15,7 +15,7 @@ https://192.168.1.20:8443/rooms/bookings/…
 
 1. สร้างบัญชีที่ <https://manager.line.biz> (LINE Official Account Manager) เช่น "Back Office รพ.วาริชภูมิ"
 2. ใน **ตั้งค่า > Messaging API** กด **ใช้ Messaging API** แล้วเลือกหรือสร้าง Provider
-3. ใน **ตั้งค่า > การตอบกลับ** ปิด **ข้อความตอบกลับอัตโนมัติ** และ **ข้อความต้อนรับ** เปิด **Webhook**
+3. ใน **ตั้งค่า > การตอบกลับ** ปิด **ข้อความทักทายเพื่อนใหม่** และเลือก **แชทแบบแมนนวล** (ไม่มีข้อความตอบกลับอัตโนมัติ) ช่อง **Webhook** จะเปิดได้หลังใส่ Webhook URL ในข้อ 3
 4. ใน **ตั้งค่า > บัญชี** เปิด **อนุญาตให้บัญชีเข้าร่วมกลุ่มแชทได้**
 5. เปิด <https://developers.line.biz/console/> เลือก channel เดียวกัน
    - แท็บ **Basic settings**: คัดลอก **Channel secret**
@@ -41,9 +41,29 @@ BACKOFFICE_PUBLIC_URL=https://192.168.1.20:8443
 
 ไม่ใส่ `LINE_CHANNEL_ACCESS_TOKEN` = ระบบทำงานตามเดิม แค่ไม่ส่ง LINE
 
-## 3. เปิด webhook ให้ LINE เรียกเข้ามา (Cloudflare Tunnel)
+## 3. เปิด webhook ให้ LINE เรียกเข้ามา
 
-LINE ต้องเรียก `https://<โดเมนสาธารณะ>/api/line/webhook` เพื่อบอกว่าบอทถูกเชิญเข้ากลุ่มไหน และเพื่อรับรหัสเชื่อมต่อจากบุคลากร ระบบเราอยู่ใน LAN จึงใช้ Cloudflare Tunnel เปิดเฉพาะเส้นทางนี้ เส้นทางนี้รับเฉพาะข้อความที่ LINE ลงลายเซ็นด้วย Channel secret
+LINE ต้องเรียก `https://<โดเมนสาธารณะ>/api/line/webhook` ด้วยใบรับรอง HTTPS ที่เชื่อถือได้ (ใบรับรองของ CA ภายในที่ใช้ใน LAN ใช้ไม่ได้) เลือกทางใดทางหนึ่ง
+
+### 3A. NAT ตรง (มีโดเมนและ public IP ของโรงพยาบาลแล้ว)
+
+ใช้เมื่อมีโดเมน เช่น `notify-waritch-hosp.moph.go.th` ชี้ไป public IP ของโรงพยาบาล
+
+1. งานเครือข่ายตั้ง NAT/port forward ที่ firewall: public IP พอร์ต TCP **443** และ **80** ไปที่เครื่องที่รันระบบ พอร์ตเดียวกัน (80 ใช้ขอใบรับรอง ถ้าเปิดได้แค่ 443 Caddy ก็ขอผ่าน 443 ได้)
+2. อนุญาตพอร์ตใน Windows firewall (PowerShell แบบ Administrator):
+
+   ```powershell
+   New-NetFirewallRule -DisplayName "BackOffice LINE webhook" -Direction Inbound -Protocol TCP -LocalPort 80,443 -Action Allow
+   ```
+
+3. เพิ่มใน `.env`: `LINE_WEBHOOK_HOST=notify-waritch-hosp.moph.go.th` และตรวจว่า `BACKOFFICE_WEB_PORT` ตรงกับพอร์ตที่เว็บรันจริง
+4. รัน `node scripts/setup-local.mjs line-webhook` Caddy จะขอใบรับรอง Let's Encrypt เอง และส่งต่อเฉพาะ `POST /api/line/webhook` ไปที่เว็บ เส้นทางอื่นทั้งหมดตอบ 404 คนนอกจึงเปิดหน้าระบบไม่ได้ หน้าเว็บใน LAN (`:8443`) ไม่เปลี่ยน
+5. ตรวจ: เปิด `https://<โดเมน>/` จากมือถือที่ปิด Wi-Fi ต้องได้ 404 พร้อมใบรับรองที่ถูกต้อง ดู log ด้วย `docker compose -f infra/compose/docker-compose.dev.yml logs line-webhook`
+6. ใน LINE Developers ใส่ **Webhook URL** = `https://<โดเมน>/api/line/webhook` กด **Verify** แล้วเปิด **Use webhook** จากนั้นช่อง **Webhook** ในหน้าตั้งค่าการตอบกลับของ OA จะเปิดได้
+
+### 3B. Cloudflare Tunnel (มีโดเมนใน Cloudflare แต่ไม่มี NAT)
+
+LINE ต้องเรียก `https://<โดเมนสาธารณะ>/api/line/webhook` เพื่อบอกว่าบอทถูกเชิญเข้ากลุ่มไหน และเพื่อรับรหัสเชื่อมต่อจากบุคลากร ใช้ Cloudflare Tunnel เปิดเฉพาะเส้นทางนี้โดยไม่ต้องเปิดพอร์ตขาเข้า เส้นทางนี้รับเฉพาะข้อความที่ LINE ลงลายเซ็นด้วย Channel secret
 
 ต้องมีบัญชี Cloudflare และโดเมนที่จัดการใน Cloudflare
 
@@ -59,7 +79,7 @@ LINE ต้องเรียก `https://<โดเมนสาธารณะ>
    ingress:
      - hostname: line.<โดเมนของคุณ>
        path: ^/api/line/webhook$
-       service: http://localhost:3000
+       service: http://localhost:<BACKOFFICE_WEB_PORT>
      - service: http_status:404
    ```
 
