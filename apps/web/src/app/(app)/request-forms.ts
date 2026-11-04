@@ -3,7 +3,7 @@
 import { LeaveQueries, OfficialTravelQueries, RoomBookingQueries } from '@backoffice/core';
 import { pageActor } from '../../lib/actor';
 import { attachmentsEnabled } from '../../lib/attachments';
-import { bangkokToday } from '../../lib/bangkok-time';
+import { addDays, bangkokToday } from '../../lib/bangkok-time';
 import { getSharedDatabase } from '../../lib/database';
 import { travelPrefill } from './fleet/fleet-page';
 import { leaveSession } from './leave/leave-page';
@@ -12,12 +12,14 @@ import type { FleetFormValues } from './fleet/new/fleet-form';
 import type { BookableRoom, SelectableAddon } from './rooms/bookings/new/booking-form';
 import { leaderOf } from './travel/travel-leader';
 import type { TravelPerson } from './travel/new/travel-form';
+import { loadHolidayNames } from '@backoffice/core';
+import type { HolidayView } from '../../lib/holidays';
 
 export type RequestFormData =
   | { module: 'leave'; types: LeaveFormType[]; attachments: boolean }
   | { module: 'official-travel'; leader: TravelPerson; attachments: boolean }
-  | { module: 'fleet'; fromTravel: boolean; initial?: FleetFormValues; officialTravelId?: string }
-  | { module: 'room-booking'; rooms: BookableRoom[]; addons: SelectableAddon[]; today: string }
+  | { module: 'fleet'; fromTravel: boolean; initial?: FleetFormValues; officialTravelId?: string; holidays: HolidayView[] }
+  | { module: 'room-booking'; rooms: BookableRoom[]; addons: SelectableAddon[]; today: string; holidays: HolidayView[] }
   | { module: 'none' }
   | { module: 'unavailable' };
 
@@ -32,8 +34,8 @@ export async function loadRequestForm(module: string, travelId?: string): Promis
     const database = getSharedDatabase();
     if (!database) return { module: 'unavailable' };
     const queries = new RoomBookingQueries(database);
-    const [rooms, addons] = await Promise.all([queries.listRooms({ bookableOnly: true }), queries.listAddons({ activeOnly: true })]);
-    return { module, rooms: rooms.map(({ id, name, capacity, place }) => ({ id, name, capacity, place })), addons: addons.map(({ id, name, unit }) => ({ id, name, unit })), today: bangkokToday() };
+    const [rooms, addons, holidays] = await Promise.all([queries.listRooms({ bookableOnly: true }), queries.listAddons({ activeOnly: true }), upcomingHolidays(database)]);
+    return { module, rooms: rooms.map(({ id, name, capacity, place }) => ({ id, name, capacity, place })), addons: addons.map(({ id, name, unit }) => ({ id, name, unit })), today: bangkokToday(), holidays };
   }
   if (module !== 'leave' && module !== 'official-travel' && module !== 'fleet') return { module: 'none' };
   const session = await leaveSession();
@@ -47,5 +49,12 @@ export async function loadRequestForm(module: string, travelId?: string): Promis
   }
   if (module === 'official-travel') return { module, leader: await leaderOf(database, session.personId), attachments: attachmentsEnabled() };
   const travel = travelId ? await new OfficialTravelQueries(database).detail(travelId, session) : null;
-  return travel ? { module, fromTravel: true, initial: travelPrefill(travel), officialTravelId: travel.travelId } : { module, fromTravel: false };
+  const holidays = await upcomingHolidays(database);
+  return travel ? { module, fromTravel: true, initial: travelPrefill(travel), officialTravelId: travel.travelId, holidays } : { module, fromTravel: false, holidays };
+}
+
+/** วันหยุด from today to a year ahead, so booking pickers can grey and refuse them; the server checks again. */
+export async function upcomingHolidays(database: Parameters<typeof loadHolidayNames>[0]): Promise<HolidayView[]> {
+  const today = bangkokToday();
+  return [...(await loadHolidayNames(database, today, addDays(today, 400)))].map(([date, name]) => ({ date, name }));
 }

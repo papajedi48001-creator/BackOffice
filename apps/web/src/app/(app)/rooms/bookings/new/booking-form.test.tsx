@@ -58,3 +58,17 @@ it('limits the end date to 14 days and 90 days ahead, and refuses a longer range
   expect(screen.getByRole('alert')).toHaveTextContent('เลือกได้ถึง พุธ 18 พ.ย. 2569');
   expect(screen.getByLabelText('วันที่สิ้นสุด')).toBeInvalid();
 });
+
+it('leaves a วันหยุด out of the days, names it, and shows the server refusal naming the holiday', async () => {
+  const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ error: 'BOOKING_ON_HOLIDAY', holidays: [{ date: '2026-11-07', name: 'วันหยุดพิเศษ' }] }), { status: 409 }));
+  render(<BookingForm rooms={rooms} addons={addons} today="2026-11-01" holidays={[{ date: '2026-11-06', name: 'วันหยุดชดเชย' }]} />);
+  fireEvent.change(screen.getByLabelText('วันที่เริ่ม'), { target: { value: '2026-11-05' } });
+  fireEvent.change(screen.getByLabelText('วันที่สิ้นสุด'), { target: { value: '2026-11-07' } });
+  fireEvent.change(screen.getByLabelText('หัวข้อการประชุม'), { target: { value: 'ประชุม' } });
+  const holiday = screen.getByRole('checkbox', { name: /ศุกร์ 6 พ.ย. 2569\s*· วันหยุด วันหยุดชดเชย/ }) as HTMLInputElement;
+  expect(holiday.disabled).toBe(true);
+  expect(holiday.checked).toBe(false);
+  fireEvent.click(screen.getByRole('button', { name: 'ยื่นจองห้อง' }));
+  await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('จองไม่ได้ เพราะ เสาร์ 7 พ.ย. 2569 เป็นวันหยุด (วันหยุดพิเศษ)'));
+  expect(JSON.parse(String(fetchMock.mock.calls[0]![1]!.body)).dates).toEqual(['2026-11-05', '2026-11-07']);
+});
