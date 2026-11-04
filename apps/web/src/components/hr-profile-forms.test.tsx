@@ -225,3 +225,58 @@ describe('own profile popups', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 });
+
+describe('ProfileForm รูปประจำตัว', () => {
+  const ok = (status = 200) => new Response(JSON.stringify({ ok: true }), { status });
+  const dialog = () => screen.getByRole('dialog');
+
+  it('shows the photo picker above คำนำหน้า, then uploads the chosen photo before saving the profile', async () => {
+    const fetchMock = vi.fn(async (url: string) => (url.endsWith('/photo') ? ok(201) : ok()));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<ProfileForm personId="p1" values={values} employmentTypes={[]} units={units} photo={{ url: null, uploadsEnabled: true }} />);
+    openProfile();
+    const picker = within(dialog()).getByLabelText('เลือกรูป');
+    const prefix = within(dialog()).getByLabelText('คำนำหน้า');
+    expect(picker.compareDocumentPosition(prefix) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    fireEvent.change(picker, { target: { files: [new File([new Uint8Array([1])], 'face.png', { type: 'image/png' })] } });
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'บันทึกข้อมูล' }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    const [photoCall, profileCall] = fetchMock.mock.calls as unknown as [string, RequestInit][];
+    expect(photoCall[0]).toBe('/api/hr/people/p1/photo');
+    expect(photoCall[1].method).toBe('POST');
+    expect(photoCall[1].body).toBeInstanceOf(FormData);
+    expect(profileCall[0]).toBe('/api/hr/people/p1/profile');
+  });
+
+  it('refuses a file that is not an image without sending anything, and keeps the popup open on a photo error', async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ error: 'FILE_INFECTED' }), { status: 422 }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<ProfileForm personId="p1" values={values} employmentTypes={[]} units={units} photo={{ url: null, uploadsEnabled: true }} />);
+    openProfile();
+    fireEvent.change(within(dialog()).getByLabelText('เลือกรูป'), { target: { files: [new File(['x'], 'a.pdf', { type: 'application/pdf' })] } });
+    expect(within(dialog()).getByText('รองรับเฉพาะไฟล์ JPEG, PNG หรือ WebP')).toBeInTheDocument();
+    fireEvent.change(within(dialog()).getByLabelText('เลือกรูป'), { target: { files: [new File([new Uint8Array([1])], 'face.png', { type: 'image/png' })] } });
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'บันทึกข้อมูล' }));
+    expect(await within(dialog()).findByText('ไฟล์นี้ไม่ใช่รูปที่ถูกต้อง หรือไม่ผ่านการตรวจไวรัส')).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('removes the current photo when ลบรูป is ticked', async () => {
+    const fetchMock = vi.fn(async () => ok());
+    vi.stubGlobal('fetch', fetchMock);
+    render(<ProfileForm personId="p1" values={values} employmentTypes={[]} units={units} photo={{ url: '/api/hr/people/p1/photo?v=a', uploadsEnabled: true }} />);
+    openProfile();
+    expect(within(dialog()).getByRole('img', { name: 'รูปประจำตัว' })).toHaveAttribute('src', '/api/hr/people/p1/photo?v=a');
+    fireEvent.click(within(dialog()).getByRole('checkbox', { name: 'ลบรูป' }));
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'บันทึกข้อมูล' }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect((fetchMock.mock.calls[0] as unknown as [string, RequestInit])).toEqual(['/api/hr/people/p1/photo', { method: 'DELETE' }]);
+  });
+
+  it('says photos cannot be uploaded yet when object storage is not set up', () => {
+    render(<ProfileForm personId="p1" values={values} employmentTypes={[]} units={units} photo={{ url: null, uploadsEnabled: false }} />);
+    openProfile();
+    expect(within(dialog()).getByText('ยังอัปโหลดรูปไม่ได้ เพราะระบบยังไม่ได้ตั้งค่าที่เก็บไฟล์')).toBeInTheDocument();
+    expect(within(dialog()).queryByLabelText('เลือกรูป')).toBeNull();
+  });
+});

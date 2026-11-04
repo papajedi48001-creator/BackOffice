@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { HrProfileService } from '@backoffice/core';
 import { attachmentService, attachmentsEnabled } from '../../../../../../lib/attachments';
-import { withSessionAndDatabase } from '../../../profile-route';
+import { receiveProfilePhoto } from '../../../../../../lib/photo-upload';
+import { profilePhotoUrl } from '../../../../../../lib/profile-photo';
+import { resultResponse, withSessionAndDatabase } from '../../../profile-route';
 
 /** A บุคลากร's current profile photo, shown to any signed-in colleague. Only the file that is the person's photo now can be opened here. */
 export async function GET(request: Request, context: { params: Promise<{ personId: string }> }): Promise<Response> {
@@ -18,5 +20,25 @@ export async function GET(request: Request, context: { params: Promise<{ personI
       if (error instanceof Error && error.message === 'NOT_FOUND') return NextResponse.json({ error: 'not_found' }, { status: 404 });
       return NextResponse.json({ error: 'photo_failed' }, { status: 500 });
     }
+  });
+}
+
+/** HR uploads another person's profile photo (multipart field `file`); the service checks that the actor may edit that person's profile. */
+export async function POST(request: Request, context: { params: Promise<{ personId: string }> }): Promise<Response> {
+  return withSessionAndDatabase(request, async (session, database) => {
+    const { personId } = await context.params;
+    const received = await receiveProfilePhoto(request, database, session.personId);
+    if (received instanceof Response) return received;
+    const result = await new HrProfileService(database).setPersonPhoto(personId, received.attachmentId, session);
+    if (!result.ok) return resultResponse(result);
+    return NextResponse.json({ photoUrl: profilePhotoUrl(personId, received.attachmentId) }, { status: 201 });
+  });
+}
+
+/** HR removes another person's profile photo. */
+export async function DELETE(request: Request, context: { params: Promise<{ personId: string }> }): Promise<Response> {
+  return withSessionAndDatabase(request, async (session, database) => {
+    const { personId } = await context.params;
+    return resultResponse(await new HrProfileService(database).setPersonPhoto(personId, null, session));
   });
 }

@@ -251,6 +251,29 @@ describeWithDatabase('HrProfileService writes against MariaDB', () => {
     expect(await service.photoAttachmentOf(noProfile)).toBe(second);
   });
 
+  it('lets HR set and remove another person\'s photo they uploaded, audited as HR', async () => {
+    const id = await person(await organization());
+    const photo = await attachment(manager.personId!);
+    expect(await service.setPersonPhoto(id, photo, manager)).toEqual({ ok: true });
+    expect(await service.photoAttachmentOf(id)).toBe(photo);
+    expect(await service.setPersonPhoto(id, null, manager)).toEqual({ ok: true });
+    expect(await service.photoAttachmentOf(id)).toBeNull();
+    const events = await audits(id);
+    expect(events.map((event) => event.action)).toEqual(['hr.person.photo.update', 'hr.person.photo.update']);
+    expect(JSON.parse(events[0]!.metadata)).toEqual({ changedFields: ['photo'] });
+  });
+
+  it('refuses an HR photo from someone who cannot edit the profile, a file by someone else or a PDF', async () => {
+    const unit = await organization();
+    const id = await person(unit);
+    const reader: AccessSubject = { authenticated: true, personId: await person(null), roles: [{ name: 'hr-reader', organizationId: unit }], dataOwnerModules: [] };
+    expect(await service.setPersonPhoto(id, await attachment(reader.personId!), reader)).toEqual({ ok: false, code: 'FORBIDDEN' });
+    expect(await service.setPersonPhoto(id, await attachment(id), manager)).toEqual({ ok: false, code: 'INVALID_PHOTO' });
+    expect(await service.setPersonPhoto(id, await attachment(manager.personId!, 'application/pdf'), manager)).toEqual({ ok: false, code: 'INVALID_PHOTO' });
+    expect(await service.setPersonPhoto(randomUUID(), null, manager)).toEqual({ ok: false, code: 'NOT_FOUND' });
+    expect(await service.photoAttachmentOf(id)).toBeNull();
+  });
+
   it('refuses a photo for someone else, a file uploaded by another person, a PDF or one over 2 MB', async () => {
     const id = await person(await organization());
     const self: AccessSubject = { authenticated: true, personId: id, roles: [], dataOwnerModules: [] };

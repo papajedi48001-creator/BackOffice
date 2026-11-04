@@ -53,8 +53,11 @@ function initialUnitNames(units: ProfileFormUnit[], organizationId: string | nul
 
 export interface ProfileFormPosition { name: string; allowedLevels: readonly string[]; }
 
-export function ProfileForm({ personId, values, employmentTypes, units, positions = [], organizationName = null }: { personId: string; values: ProfileFormValues; employmentTypes: { id: string; name: string }[]; units: ProfileFormUnit[]; positions?: ProfileFormPosition[]; organizationName?: string | null }) {
+export function ProfileForm({ personId, values, employmentTypes, units, positions = [], organizationName = null, photo }: { personId: string; values: ProfileFormValues; employmentTypes: { id: string; name: string }[]; units: ProfileFormUnit[]; positions?: ProfileFormPosition[]; organizationName?: string | null; photo?: { url: string | null; uploadsEnabled: boolean } }) {
   const { save, error, saved, reset } = useSave(`/api/hr/people/${personId}/profile`);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [removePhoto, setRemovePhoto] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [form, setForm] = useState(() => Object.fromEntries(Object.entries(values).map(([key, value]) => [key, value ?? ''])) as Record<keyof ProfileFormValues, string>);
   const [initialUnit] = useState(() => initialUnitNames(units, values.organizationId, organizationName));
   const [unitNames, setUnitNames] = useState(initialUnit);
@@ -102,11 +105,38 @@ export function ProfileForm({ personId, values, employmentTypes, units, position
     const unit = chosenUnit();
     if (unit !== null && typeof unit === 'object') { setClientError(t(unit.error)); return false; }
     setClientError(null);
+    if (photoFile || (removePhoto && photo?.url)) {
+      try {
+        const body = photoFile ? (() => { const data = new FormData(); data.append('file', photoFile); return data; })() : null;
+        const response = await fetch(`/api/hr/people/${personId}/photo`, body ? { method: 'POST', body } : { method: 'DELETE' });
+        if (!response.ok) {
+          const code = ((await response.json().catch(() => ({}))) as { error?: string }).error;
+          setClientError(t(code && photoErrorKeys[code] ? photoErrorKeys[code] : 'hrPhotoFailed'));
+          return false;
+        }
+      } catch { setClientError(t('hrPhotoFailed')); return false; }
+    }
     const { gender, ...rest } = form;
     return save({ ...Object.fromEntries(Object.entries(rest).filter(([key]) => key !== 'organizationId').map(([key, value]) => [key, orNull(value)])), gender: gender === '' ? null : gender, ...(unit === undefined ? {} : { organizationId: unit }) });
   }
+  function choosePhoto(chosen: File | undefined) {
+    setClientError(null); setPhotoFile(null); setPhotoPreview(null);
+    if (!chosen) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(chosen.type)) { setClientError(t('hrPhotoWrongType')); return; }
+    if (chosen.size > 2 * 1024 * 1024) { setClientError(t('hrPhotoTooLarge')); return; }
+    setPhotoFile(chosen); setRemovePhoto(false);
+    if (typeof URL.createObjectURL === 'function') setPhotoPreview(URL.createObjectURL(chosen));
+  }
   const text = (field: keyof ProfileFormValues, label: MessageKey, max: number) => <label>{t(label)}<input value={form[field]} onChange={set(field)} maxLength={max} /></label>;
-  return <div className="profile-form">{saved}<FormDialog triggerLabel={t('hrEditSection')} triggerAriaLabel={t('hrEditProfile')} triggerClassName="button-secondary section-edit" title={t('hrEditProfile')} submitLabel={t('hrSaveProfile')} wide error={clientError ?? error} onOpenChange={(open) => { reset(open); setClientError(null); }} onSubmit={submit}>
+  return <div className="profile-form">{saved}<FormDialog triggerLabel={t('hrEditSection')} triggerAriaLabel={t('hrEditProfile')} triggerClassName="button-secondary section-edit" title={t('hrEditProfile')} submitLabel={t('hrSaveProfile')} wide error={clientError ?? error} onOpenChange={(open) => { reset(open); setClientError(null); setPhotoFile(null); setRemovePhoto(false); setPhotoPreview(null); }} onSubmit={submit}>
+    {photo ? <div className="profile-photo-field">
+      {photoPreview ?? (removePhoto ? null : photo.url) ? <img className="profile-avatar" src={(photoPreview ?? photo.url)!} alt={t('hrFieldPhoto')} width={72} height={72} /> : <span className="profile-avatar profile-initials" aria-hidden="true">{(values.firstName ?? '').slice(0, 1)}</span>}
+      {photo.uploadsEnabled ? <div>
+        <label>{t('hrPhotoChoose')}<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => choosePhoto(event.target.files?.[0])} /></label>
+        <p className="form-hint">{t('hrPhotoHint')}</p>
+        {photo.url && !photoFile ? <label className="checkbox"><input type="checkbox" checked={removePhoto} onChange={(event) => setRemovePhoto(event.target.checked)} />{t('hrPhotoRemove')}</label> : null}
+      </div> : <p className="form-hint">{t('hrPhotoUnavailable')}</p>}
+    </div> : null}
     <label>{t('hrFieldNamePrefix')}<input value={form.namePrefix} onChange={changePrefix} maxLength={32} /></label>
     {text('firstName', 'hrFieldFirstName', 120)}
     {text('lastName', 'hrFieldLastName', 120)}
