@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { LeaveBalance, LeaveCounting, LeaveWarning } from '@backoffice/contracts';
 import { t } from '@backoffice/i18n';
 import { AttachmentField, type AttachedFile } from '../../../../components/attachment-field';
+import { endFollowingStart } from '../../../../lib/date-range';
 import { leaveDaysLabel, leaveErrorMessage, leaveWarningText } from '../../../../lib/leave-labels';
 import { ThaiDateInput } from '../../../../components/thai-date-input';
 
@@ -66,7 +67,7 @@ export function LeaveForm({ types, requestId, initial, attachments = false, init
         {types.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}
       </select></div>
     <div className="form-row">
-      <div className="form-field"><label htmlFor="leave-start">{t('leaveStartDate')}</label><ThaiDateInput id="leave-start" value={form.startDate} required onChange={(value) => set({ startDate: value, endDate: form.endDate && form.endDate >= value ? form.endDate : value })} /></div>
+      <div className="form-field"><label htmlFor="leave-start">{t('leaveStartDate')}</label><ThaiDateInput id="leave-start" value={form.startDate} required onChange={(value) => set({ startDate: value, endDate: endFollowingStart(value, form.endDate) })} /></div>
       <div className="form-field"><label htmlFor="leave-start-half">{t('leaveStartHalf')}</label>
         <select id="leave-start-half" value={form.startHalf} onChange={(event) => set({ startHalf: event.target.value as LeaveFormValues['startHalf'] })}>
           <option value="FULL">{t('leaveHalfFull')}</option><option value="AFTERNOON" disabled={oneDay && form.endHalf === 'MORNING'}>{t('leaveHalfAfternoon')}</option>

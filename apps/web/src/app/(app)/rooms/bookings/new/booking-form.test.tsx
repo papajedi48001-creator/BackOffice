@@ -47,6 +47,13 @@ it('shows the Thai message for a rule the server rejects', async () => {
   expect(await screen.findByRole('alert')).toHaveTextContent('จำนวนผู้เข้าประชุมเกินความจุห้อง');
 });
 
+it('moves the end date to the start date when the start is picked after it', () => {
+  render(<BookingForm rooms={rooms} addons={addons} today="2026-11-01" />);
+  fireEvent.change(screen.getByLabelText('วันที่เริ่ม'), { target: { value: '2026-12-03' } });
+  expect(screen.getByLabelText('วันที่สิ้นสุด')).toHaveValue('03/12/2569');
+  expect(screen.getAllByRole('checkbox', { name: /ธ\.ค\. 2569/ })).toHaveLength(1);
+});
+
 it('limits the end date to 14 days and 90 days ahead, and refuses a longer range instead of cutting it short', () => {
   render(<BookingForm rooms={rooms} addons={addons} today="2026-11-01" />);
   fireEvent.change(screen.getByLabelText('วันที่เริ่ม'), { target: { value: '2026-11-05' } });

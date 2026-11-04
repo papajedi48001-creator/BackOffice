@@ -6,6 +6,7 @@ import { t } from '@backoffice/i18n';
 import { AttachmentField, type AttachedFile } from '../../../../components/attachment-field';
 import { TRAVEL_FUNDING, TRAVEL_TYPES, TRAVEL_VEHICLES, formatBaht, travelErrorMessage, travelFundingLabel, travelTypeLabel, travelVehicleLabel } from '../../../../lib/travel-labels';
 import { ThaiDateInput } from '../../../../components/thai-date-input';
+import { endFollowingStart } from '../../../../lib/date-range';
 
 export interface TravelPerson { personId: string; displayName: string | null; organizationName: string | null }
 export interface TravelFormValues {
@@ -79,7 +80,7 @@ export function TravelForm({ leader, travelId, initial, fixedMembers, attachment
       <div className="form-field"><label htmlFor="travel-province">{t('travelProvince')}</label><input id="travel-province" value={form.province} maxLength={100} required onChange={(event) => set({ province: event.target.value })} /></div>
     </div>
     <div className="form-row">
-      <div className="form-field"><label htmlFor="travel-start">{t('leaveStartDate')}</label><ThaiDateInput id="travel-start" value={form.startDate} required onChange={(value) => set({ startDate: value, endDate: form.endDate && form.endDate >= value ? form.endDate : value })} /></div>
+      <div className="form-field"><label htmlFor="travel-start">{t('leaveStartDate')}</label><ThaiDateInput id="travel-start" value={form.startDate} required onChange={(value) => set({ startDate: value, endDate: endFollowingStart(value, form.endDate) })} /></div>
       <div className="form-field"><label htmlFor="travel-start-half">{t('leaveStartHalf')}</label>
         <select id="travel-start-half" value={form.startHalf} onChange={(event) => set({ startHalf: event.target.value as TravelFormValues['startHalf'] })}>
           <option value="FULL">{t('leaveHalfFull')}</option><option value="AFTERNOON" disabled={oneDay && form.endHalf === 'MORNING'}>{t('leaveHalfAfternoon')}</option>

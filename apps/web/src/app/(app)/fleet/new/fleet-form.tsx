@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { t } from '@backoffice/i18n';
 import { fleetErrorMessage, fromBangkokLocal, sendFleet } from '../../../../lib/fleet-labels';
+import { returnFollowingDepart } from '../../../../lib/date-range';
 import type { HolidayView } from '../../../../lib/holidays';
 import { ThaiDateTimeInput } from '../../../../components/thai-date-input';
 
@@ -46,7 +47,7 @@ export function FleetForm({ initial, officialTravelId, fleetRequestId, holidays 
       <div className="form-field"><label htmlFor="fleet-province">{t('fleetProvince')}</label><input id="fleet-province" value={form.province} maxLength={100} required onChange={(event) => set({ province: event.target.value })} /></div>
     </div>
     <div className="form-row">
-      <div className="form-field"><label htmlFor="fleet-depart">{t('fleetDepartAt')}</label><ThaiDateTimeInput holidays={holidays} blockHolidays id="fleet-depart" label={t('fleetDepartAt')} value={form.departAt} required onChange={(value) => set({ departAt: value })} /></div>
+      <div className="form-field"><label htmlFor="fleet-depart">{t('fleetDepartAt')}</label><ThaiDateTimeInput holidays={holidays} blockHolidays id="fleet-depart" label={t('fleetDepartAt')} value={form.departAt} required onChange={(value) => set({ departAt: value, returnAt: value ? returnFollowingDepart(value, form.returnAt) : form.returnAt })} /></div>
       <div className="form-field"><label htmlFor="fleet-return">{t('fleetReturnAt')}</label><ThaiDateTimeInput holidays={holidays} blockHolidays id="fleet-return" label={t('fleetReturnAt')} min={form.departAt || undefined} value={form.returnAt} required onChange={(value) => set({ returnAt: value })} /></div>
     </div>
     <div className="form-row">

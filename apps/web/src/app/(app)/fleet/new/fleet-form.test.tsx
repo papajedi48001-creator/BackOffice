@@ -12,6 +12,13 @@ const initial = { purpose: 'ประชุมวิชาการ', destinatio
 afterEach(() => { vi.clearAllMocks(); vi.unstubAllGlobals(); });
 
 describe('FleetForm', () => {
+  it('moves the return day to the departure day when the departure is picked after it, keeping the return time', () => {
+    render(<FleetForm initial={initial} />);
+    fireEvent.change(screen.getByLabelText('เวลาออก'), { target: { value: '2026-11-20' } });
+    expect(screen.getByLabelText('เวลากลับ')).toHaveValue('20/11/2569');
+    expect(screen.getByLabelText('เวลา เวลากลับ')).toHaveValue('12:00');
+  });
+
   it('sends Bangkok times as UTC and the trip it was filed from, then opens the ใบ', async () => {
     const fetchMock = vi.fn(async () => json({ ok: true, fleetRequestId: 'f1' }, 201));
     vi.stubGlobal('fetch', fetchMock);
