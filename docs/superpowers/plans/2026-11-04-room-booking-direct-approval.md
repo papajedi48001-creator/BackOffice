@@ -8,3 +8,8 @@
 - [x] `RoomBookingService.submit` creates PENDING and notifies approvers; `decide` accepts HEAD_REVIEW and calls `cancelHeadRequest`; drop `openHeadRequest` and the resolver argument.
 - [x] `RoomBookingQueries.pendingForApprover` includes HEAD_REVIEW; `bookingViewState.canDecide` includes HEAD_REVIEW.
 - [x] Verify: `pnpm lint && pnpm typecheck && pnpm test`, `pnpm test:integration` on a fresh DB, `pnpm --filter @backoffice/web build`, `git diff --check`.
+
+### Task 2: managers and admins book outright
+- [x] Failing tests in `room-booking-service.test.ts` (manager → APPROVED with SUBMITTED+APPROVED history/audit and one notice; admin → APPROVED; manager of another unit → PENDING; conflict still refused) and an integration test on MariaDB.
+- [x] `RoomBookingService.submit`: `isAllowed(actor, 'room.booking.decide', room)` → APPROVED.
+- [x] Verify with the same commands as Task 1.

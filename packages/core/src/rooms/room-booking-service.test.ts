@@ -326,3 +326,37 @@ describe('RoomBookingService without the head step', () => {
     expect(context.repository.headRequests[0]).toMatchObject({ status: 'CANCELLED' });
   });
 });
+
+describe('RoomBookingService for someone who may approve bookings of the room', () => {
+  const manager: RoomActor = { personId: 'manager', roles: [{ name: 'room-manager', organizationId: 'admin-unit' }] };
+  const admin: RoomActor = { personId: 'admin', roles: [{ name: 'admin', organizationId: null }] };
+
+  it('books the room outright for a room manager, with no one else to ask', async () => {
+    const { repository, service } = setup();
+
+    const booking = await service.submit(manager, submission);
+
+    expect(booking).toMatchObject({ status: 'APPROVED', decidedByPersonId: 'manager' });
+    expect(repository.history.map((entry) => entry.action)).toEqual(['SUBMITTED', 'APPROVED']);
+    expect(repository.audit.map((event) => event.action)).toEqual(['room_booking.submitted', 'room_booking.approved']);
+    expect(notifications(repository)).toEqual([
+      { recipientPersonId: 'manager', subject: 'จองห้องสำเร็จ (RB-2569-0001)', targetPath: `/rooms/bookings/${booking.id}`, moduleCode: 'room-booking' }
+    ]);
+  });
+
+  it('books the room outright for an admin too', async () => {
+    const { service } = setup();
+    await expect(service.submit(admin, submission)).resolves.toMatchObject({ status: 'APPROVED', decidedByPersonId: 'admin' });
+  });
+
+  it('still waits for approval when the manager looks after another unit\'s rooms', async () => {
+    const { service } = setup();
+    await expect(service.submit({ personId: 'elsewhere', roles: [{ name: 'room-manager', organizationId: 'other-unit' }] }, submission)).resolves.toMatchObject({ status: 'PENDING' });
+  });
+
+  it('still refuses a slot that is already taken', async () => {
+    const { service } = setup();
+    await service.submit(booker, submission);
+    await expect(service.submit(manager, { ...submission, dates: ['2026-11-06'] })).rejects.toThrow('BOOKING_CONFLICT');
+  });
+});
