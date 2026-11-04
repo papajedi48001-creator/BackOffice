@@ -1,15 +1,28 @@
+import { t } from '@backoffice/i18n';
+import { BrandLogo } from '../components/brand-logo';
 import { LocalSignInForm } from './local-sign-in-form';
 
 export default function HomePage() {
   return (
     <main className="welcome-shell">
-      <section aria-labelledby="page-title" className="welcome-panel">
-        <p className="eyebrow">โรงพยาบาลวาริชภูมิ</p>
-        <h1 id="page-title">ระบบ Back Office</h1>
-        <p className="welcome-copy">พื้นที่กลางสำหรับจัดการคำขอ ทรัพยากร และงานสนับสนุนภายในองค์กร</p>
-        <p className="welcome-status" role="status">กำลังเตรียมระบบพื้นฐานสำหรับโครงการนำร่อง</p>
-        <LocalSignInForm />
-      </section>
+      <div className="login-card">
+        <section className="login-hero" aria-label={t('hospitalName')}>
+          <BrandLogo size={88} className="login-hero-logo" />
+          <p className="login-hero-hospital">{t('hospitalName')}</p>
+          <p className="login-hero-system">{t('appName')}</p>
+          <p className="login-hero-copy">พื้นที่กลางสำหรับจัดการคำขอ ทรัพยากร และงานสนับสนุนภายในองค์กร</p>
+          <ul className="login-pills" aria-label="โมดูลหลัก">
+            {['การลา', 'ไปราชการ', 'จองห้องประชุม', 'ยานพาหนะ', 'คลังพัสดุ', 'งานบุคคล'].map((name) => <li key={name}>{name}</li>)}
+          </ul>
+        </section>
+        <section aria-labelledby="page-title" className="welcome-panel">
+          <div className="login-mobile-brand"><BrandLogo size={48} decorative /><p className="eyebrow">{t('hospitalName')}</p></div>
+          <h1 id="page-title">{t('appName')}</h1>
+          <p className="welcome-status" role="status">กำลังเตรียมระบบพื้นฐานสำหรับโครงการนำร่อง</p>
+          <LocalSignInForm />
+          <p className="login-help">ลืมรหัสผ่าน ติดต่อกลุ่มงานเทคโนโลยีสารสนเทศ</p>
+        </section>
+      </div>
     </main>
   );
 }
