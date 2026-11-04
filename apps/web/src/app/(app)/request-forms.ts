@@ -12,7 +12,7 @@ import type { FleetFormValues } from './fleet/new/fleet-form';
 import type { BookableRoom, SelectableAddon } from './rooms/bookings/new/booking-form';
 import { leaderOf } from './travel/travel-leader';
 import type { TravelPerson } from './travel/new/travel-form';
-import { loadHolidayNames } from '@backoffice/core';
+import { holidayMap } from '../../lib/holiday-data';
 import type { HolidayView } from '../../lib/holidays';
 
 export type RequestFormData =
@@ -54,7 +54,7 @@ export async function loadRequestForm(module: string, travelId?: string): Promis
 }
 
 /** วันหยุด from today to a year ahead, so booking pickers can grey and refuse them; the server checks again. */
-export async function upcomingHolidays(database: Parameters<typeof loadHolidayNames>[0]): Promise<HolidayView[]> {
+export async function upcomingHolidays(database: Parameters<typeof holidayMap>[0]): Promise<HolidayView[]> {
   const today = bangkokToday();
-  return [...(await loadHolidayNames(database, today, addDays(today, 400)))].map(([date, name]) => ({ date, name }));
+  return Object.entries(await holidayMap(database, today, addDays(today, 400))).map(([date, name]) => ({ date, name }));
 }
