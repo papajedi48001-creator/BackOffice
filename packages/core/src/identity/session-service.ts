@@ -1,12 +1,14 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type { AccessSubject, Session } from '@backoffice/contracts';
+import { canChooseRole, resolveActiveRole } from '../access/active-role';
 
-export interface ActiveSessionRecord { id: string; personId: string; idleSeconds: number; expired: boolean; revoked: boolean; /** The account still has a reset or HR-chosen password. */ mustChangePassword?: boolean; }
+export interface ActiveSessionRecord { id: string; personId: string; idleSeconds: number; expired: boolean; revoked: boolean; /** The account still has a reset or HR-chosen password. */ mustChangePassword?: boolean; /** The role chosen for this session, if any. */ activeRole?: string | null; }
 export interface SessionRepository {
   insert(session: { id: string; tokenHash: string; personId: string; lifetimeSeconds: number }): Promise<void>;
   findByTokenHash(tokenHash: string): Promise<ActiveSessionRecord | null>;
   touch(sessionId: string): Promise<void>;
   revoke(sessionId: string): Promise<void>;
+  setActiveRole(sessionId: string, role: string): Promise<void>;
 }
 export interface AccessSubjectLoader { load(personId: string): Promise<Pick<AccessSubject, 'roles' | 'dataOwnerModules' | 'hospitalWideDataOwnerModules'>>; }
 export interface SessionServiceOptions { idleTimeoutSeconds?: number; absoluteTimeoutSeconds?: number; touchIntervalSeconds?: number; createId?: () => string; createToken?: () => string; }
@@ -38,7 +40,20 @@ export class SessionService {
     if (!session || session.mustChangePassword) return null;
     if (session.idleSeconds >= this.touchIntervalSeconds) await this.sessions.touch(session.id);
     const access = await this.access.load(session.personId);
-    return { authenticated: true, personId: session.personId, roles: access.roles, dataOwnerModules: access.dataOwnerModules, hospitalWideDataOwnerModules: access.hospitalWideDataOwnerModules ?? [] };
+    // Only the active role's assignments take effect; while a choice is pending the session holds no role at all.
+    const active = resolveActiveRole(access.roles, session.activeRole);
+    return { authenticated: true, personId: session.personId, roles: active.roles, dataOwnerModules: access.dataOwnerModules, hospitalWideDataOwnerModules: access.hospitalWideDataOwnerModules ?? [], activeRole: active.activeRole, roleChoices: active.roleChoices, roleSelectionRequired: active.roleSelectionRequired };
+  }
+
+  /** Saves the role this session works in; refuses a role the person does not hold (`ROLE_NOT_HELD`). Null for no live session. */
+  async chooseRole(token: string, role: string): Promise<{ personId: string; role: string; previousRole: string | null } | null> {
+    const session = await this.findActive(token);
+    if (!session || session.mustChangePassword) return null;
+    const access = await this.access.load(session.personId);
+    if (!canChooseRole(access.roles, role)) throw new Error('ROLE_NOT_HELD');
+    const previousRole = session.activeRole ?? null;
+    await this.sessions.setActiveRole(session.id, role);
+    return { personId: session.personId, role, previousRole };
   }
 
   /** The person of a signed-in session that must change its password first, else null. */

@@ -11,15 +11,19 @@ export class DatabaseSessionRepository implements SessionRepository {
   }
 
   async findByTokenHash(tokenHash: string): Promise<ActiveSessionRecord | null> {
-    const row = (await this.database.query<{ id: string; personId: string; idleSeconds: number | string; expired: number | string; revoked: number | string; mustChange: number | string | null }>(
-      `SELECT s.id, s.person_id AS personId, TIMESTAMPDIFF(SECOND, s.last_seen_at, UTC_TIMESTAMP()) AS idleSeconds, s.expires_at <= UTC_TIMESTAMP() AS expired, s.revoked_at IS NOT NULL AS revoked,
+    const row = (await this.database.query<{ id: string; personId: string; idleSeconds: number | string; expired: number | string; revoked: number | string; mustChange: number | string | null; activeRole: string | null }>(
+      `SELECT s.id, s.person_id AS personId, TIMESTAMPDIFF(SECOND, s.last_seen_at, UTC_TIMESTAMP()) AS idleSeconds, s.expires_at <= UTC_TIMESTAMP() AS expired, s.revoked_at IS NOT NULL AS revoked, s.active_role AS activeRole,
          (SELECT MAX(a.must_change_password) FROM local_account a WHERE a.person_id = s.person_id) AS mustChange
        FROM user_session s WHERE s.token_hash = ? LIMIT 1`, [tokenHash]))[0];
-    return row ? { id: row.id, personId: row.personId, idleSeconds: Number(row.idleSeconds), expired: Number(row.expired) === 1, revoked: Number(row.revoked) === 1, mustChangePassword: Number(row.mustChange ?? 0) === 1 } : null;
+    return row ? { id: row.id, personId: row.personId, idleSeconds: Number(row.idleSeconds), expired: Number(row.expired) === 1, revoked: Number(row.revoked) === 1, mustChangePassword: Number(row.mustChange ?? 0) === 1, activeRole: row.activeRole ?? null } : null;
   }
 
   async touch(sessionId: string): Promise<void> {
     await this.database.execute('UPDATE user_session SET last_seen_at = UTC_TIMESTAMP() WHERE id = ? AND revoked_at IS NULL', [sessionId]);
+  }
+
+  async setActiveRole(sessionId: string, role: string): Promise<void> {
+    await this.database.execute('UPDATE user_session SET active_role = ? WHERE id = ? AND revoked_at IS NULL', [role, sessionId]);
   }
 
   async revoke(sessionId: string): Promise<void> {

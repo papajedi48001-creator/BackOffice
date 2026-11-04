@@ -1,3 +1,4 @@
+import { insertAuditEvent } from '../audit/audit-sql';
 import { type AuditEvent, type OutboxEvent, type RoomBookingStatus } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { roleGrantsPermission } from '../access/policy';
@@ -135,7 +136,7 @@ export class DatabaseRoomBookingRepository implements RoomBookingRepository {
   }
 
   async appendAudit(event: AuditEvent): Promise<void> {
-    await this.database.execute('INSERT INTO audit_event (id, actor_person_id, action, target_type, target_id, result, metadata, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())', [event.id, event.actorPersonId ?? null, event.action, event.targetType, event.targetId, event.result, event.metadata]);
+    await insertAuditEvent(this.database, event);
   }
 }
 
@@ -162,6 +163,6 @@ export class DatabaseRoomCatalogRepository implements RoomCatalogRepository {
     await this.database.execute('INSERT INTO room_addon (id, name, unit, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE name = VALUES(name), unit = VALUES(unit), is_active = VALUES(is_active), updated_at = UTC_TIMESTAMP()', [addon.id, addon.name, addon.unit, addon.isActive ? 1 : 0]);
   }
   async appendAudit(event: AuditEvent): Promise<void> {
-    await this.database.execute('INSERT INTO audit_event (id, actor_person_id, action, target_type, target_id, result, metadata, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())', [event.id, event.actorPersonId ?? null, event.action, event.targetType, event.targetId, event.result, event.metadata]);
+    await insertAuditEvent(this.database, event);
   }
 }

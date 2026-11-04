@@ -1,4 +1,5 @@
 export * from './access/authorization-service';
+export * from './access/active-role';
 export * from './crypto/national-id';
 export * from './hr/organization-service';
 export * from './hr/person-service';

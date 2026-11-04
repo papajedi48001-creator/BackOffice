@@ -5,11 +5,11 @@ import { getSharedDatabase } from './database';
 
 const cookieName = 'backoffice_session';
 
-function sessionService(database: Database): SessionService {
+export function sessionService(database: Database): SessionService {
   return new SessionService(new DatabaseSessionRepository(database), new DatabaseAccessSubjectLoader(database));
 }
 
-function readSessionToken(request: Request): string | null {
+export function readSessionToken(request: Request): string | null {
   return request.headers.get('cookie')?.split(';').map((value) => value.trim()).find((value) => value.startsWith(`${cookieName}=`))?.slice(cookieName.length + 1) || null;
 }
 
