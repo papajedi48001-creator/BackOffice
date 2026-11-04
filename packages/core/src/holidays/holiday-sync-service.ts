@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import type { Database } from '@backoffice/db';
-import { AuditService } from '../audit/audit-service';
-import { DatabaseAuditRepository } from '../audit/database-audit-repository';
-import { mapHolidayRows, resolveHolidayColumns } from './holiday-rows';
-import type { HosxpConnection } from './hosxp-settings-service';
+import { AuditService } from '../audit/audit-service.ts';
+import { DatabaseAuditRepository } from '../audit/database-audit-repository.ts';
+import { mapHolidayRows, resolveHolidayColumns } from './holiday-rows.ts';
+import type { HosxpConnection } from './hosxp-settings-service.ts';
 
 export type HolidaySyncResult = { ok: true; count: number } | { ok: false; code: 'NOT_CONFIGURED' | 'CONNECTION_FAILED' | 'COLUMNS_NOT_FOUND' };
 /** Reads HOSxP `holiday` read-only (a single SELECT); see `readHosxpHolidays`. */

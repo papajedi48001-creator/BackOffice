@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ConnectionSecretBox } from './connection-secret-box';
+import { ConnectionSecretBox } from './connection-secret-box.ts';
 
 const key = 'ab'.repeat(32);
 describe('ConnectionSecretBox', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bangkokDatesOfRange, holidayConflicts } from './holiday-days';
+import { bangkokDatesOfRange, holidayConflicts } from './holiday-days.ts';
 
 describe('holiday days', () => {
   it('lists every Bangkok date a UTC range touches', () => {

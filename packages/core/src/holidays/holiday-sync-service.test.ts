@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Database } from '@backoffice/db';
-import { HolidaySyncService } from './holiday-sync-service';
+import { HolidaySyncService } from './holiday-sync-service.ts';
 
 function fakeDatabase() {
   const executed: Array<{ sql: string; parameters: unknown[] }> = [];

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mapHolidayRows, resolveHolidayColumns } from './holiday-rows';
+import { mapHolidayRows, resolveHolidayColumns } from './holiday-rows.ts';
 
 describe('HOSxP holiday rows', () => {
   it('reads the usual holiday_date and day_name columns', () => {

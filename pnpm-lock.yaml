@@ -93,6 +93,9 @@ importers:
       '@backoffice/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@backoffice/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@backoffice/db':
         specifier: workspace:*
         version: link:../../packages/db

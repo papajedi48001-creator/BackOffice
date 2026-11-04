@@ -1,5 +1,5 @@
 import type { Database } from '@backoffice/db';
-import type { HolidayEntry } from './holiday-rows';
+import type { HolidayEntry } from './holiday-rows.ts';
 
 const BANGKOK_MS = 7 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;

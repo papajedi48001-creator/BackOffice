@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import type { Database } from '@backoffice/db';
-import { AuditService } from '../audit/audit-service';
-import { DatabaseAuditRepository } from '../audit/database-audit-repository';
-import type { ConnectionSecretBox } from './connection-secret-box';
+import { AuditService } from '../audit/audit-service.ts';
+import { DatabaseAuditRepository } from '../audit/database-audit-repository.ts';
+import type { ConnectionSecretBox } from './connection-secret-box.ts';
 
 /** Everything needed to read HOSxP `holiday`. Only server code holds this; it never goes to a browser, log or audit row. */
 export interface HosxpConnection { host: string; port: number; database: string; user: string; password: string; dateColumn: string; nameColumn: string }

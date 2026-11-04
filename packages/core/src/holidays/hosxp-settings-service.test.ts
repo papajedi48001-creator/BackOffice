@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Database } from '@backoffice/db';
-import { ConnectionSecretBox } from './connection-secret-box';
-import { HosxpSettingsService, parseHosxpUrl } from './hosxp-settings-service';
+import { ConnectionSecretBox } from './connection-secret-box.ts';
+import { HosxpSettingsService, parseHosxpUrl } from './hosxp-settings-service.ts';
 
 const box = new ConnectionSecretBox('ab'.repeat(32));
 function store() {

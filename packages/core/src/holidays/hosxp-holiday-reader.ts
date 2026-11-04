@@ -1,6 +1,6 @@
 import { createDatabase } from '@backoffice/db';
-import type { HosxpHolidayReader } from './holiday-sync-service';
-import type { HosxpConnection } from './hosxp-settings-service';
+import type { HosxpHolidayReader } from './holiday-sync-service.ts';
+import type { HosxpConnection } from './hosxp-settings-service.ts';
 
 /** The URL is built in memory only; it holds the password, so it is never logged or returned. */
 const urlOf = (connection: HosxpConnection) => `mysql://${encodeURIComponent(connection.user)}:${encodeURIComponent(connection.password)}@${connection.host}:${connection.port}/${encodeURIComponent(connection.database)}?connectTimeout=5000&connectionLimit=1&dateStrings=true`;
