@@ -9,7 +9,7 @@ export class NotificationService {
   async deliver(event: OutboxEvent): Promise<void> {
     const recipientPersonId = typeof event.payload.recipientPersonId === 'string' ? event.payload.recipientPersonId : null;
     if (!recipientPersonId) throw new Error('INVALID_NOTIFICATION_EVENT');
-    const subject = typeof event.payload.subject === 'string' ? event.payload.subject : 'มีงานในระบบ Back Office';
+    const subject = typeof event.payload.subject === 'string' ? event.payload.subject : 'มีงานในระบบสนับสนุนการทำงานภายในองค์กร (Back Office)';
     const channel = event.type === 'notification.email' ? 'email' : 'in_app';
     if (!(await this.store.claim(event.id, channel, recipientPersonId))) return;
     const message: NotificationMessage = { eventId: event.id, recipientPersonId, channel, requestId: typeof event.payload.requestId === 'string' ? event.payload.requestId : null, targetPath: typeof event.payload.targetPath === 'string' ? event.payload.targetPath : null, moduleCode: typeof event.payload.moduleCode === 'string' ? event.payload.moduleCode : null, subject };

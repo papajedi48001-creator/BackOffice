@@ -10,7 +10,7 @@ describe('HomePage', () => {
   it('renders the Thai Back Office title', () => {
     render(<HomePage />);
 
-    expect(screen.getByRole('heading', { name: 'ระบบ Back Office' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'ระบบสนับสนุนการทำงานภายในองค์กร (Back Office)' })).toBeInTheDocument();
   });
 
   it('shows the WR logo and hospital name', () => {
