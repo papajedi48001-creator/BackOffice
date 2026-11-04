@@ -67,12 +67,14 @@ describe('LeaveForm', () => {
     expect(screen.getByRole('link', { name: 'ใบรับรองแพทย์.pdf' })).toHaveAttribute('href', '/api/attachments/att-1/download');
     fireEvent.click(screen.getByRole('button', { name: 'แก้ไขและส่งใหม่' }));
     await waitFor(() => expect(mocks.refresh).toHaveBeenCalledTimes(1));
-    let [, init] = fetchMock.mock.calls.at(-1)! as unknown as [string, RequestInit];
+    // A preview can land after the save, so read the last save, not the last call.
+    const lastSave = () => (fetchMock.mock.calls as unknown as [string, RequestInit][]).filter(([url]) => url !== '/api/leave/preview').at(-1)!;
+    let [, init] = lastSave();
     expect(JSON.parse(init.body as string).attachmentId).toBe('att-1');
     fireEvent.click(screen.getByRole('button', { name: 'นำไฟล์ออก' }));
     fireEvent.click(screen.getByRole('button', { name: 'แก้ไขและส่งใหม่' }));
     await waitFor(() => expect(mocks.refresh).toHaveBeenCalledTimes(2));
-    [, init] = fetchMock.mock.calls.at(-1)! as unknown as [string, RequestInit];
+    [, init] = lastSave();
     expect(JSON.parse(init.body as string).attachmentId).toBeNull();
   });
 

@@ -14,12 +14,12 @@ const baht = (value: number | null) => value === null ? t('notAssigned') : value
 const historyValue = (field: string, value: string | null) => value === null ? t('notAssigned') : dateFields.has(field) ? formatBangkokDate(value) : value;
 
 /** One person's profile boxes. Private boxes render only when the server returned private details. */
-export function HrProfileView({ view, contactEndpoint, personalEndpoint, photo, employmentTypes = [], units = [], positions = [], uploadsEnabled = false }: { view: ProfileView; contactEndpoint: string; personalEndpoint?: string; photo?: { url: string | null; uploadsEnabled: boolean }; employmentTypes?: { id: string; name: string }[]; units?: ProfileFormUnit[]; positions?: ProfileFormPosition[]; uploadsEnabled?: boolean }) {
+export function HrProfileView({ view, contactEndpoint, personalEndpoint, photo, personPhoto, employmentTypes = [], units = [], positions = [], uploadsEnabled = false }: { view: ProfileView; contactEndpoint: string; personalEndpoint?: string; photo?: { url: string | null; uploadsEnabled: boolean }; personPhoto?: { url: string | null; uploadsEnabled: boolean }; employmentTypes?: { id: string; name: string }[]; units?: ProfileFormUnit[]; positions?: ProfileFormPosition[]; uploadsEnabled?: boolean }) {
   const { work, private: personal, access, history } = view;
   const rows = (entries: [string, React.ReactNode][]) => <dl className="profile-summary">{entries.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>;
   // `form` is shown in a popup from the box's แก้ไขข้อมูล button; `popup` is a form that already is its own popup with that button.
   const heading = (title: string, form: React.ReactNode, popup?: React.ReactNode) => <div className="profile-box-header"><h3>{title}</h3>{popup ?? (form ? <SectionEditor title={title}>{form}</SectionEditor> : null)}</div>;
-  const profileForm = access.editProfile && personal ? <ProfileForm personId={work.personId} employmentTypes={employmentTypes} units={units} positions={positions} organizationName={work.organizationName} values={{
+  const profileForm = access.editProfile && personal ? <ProfileForm personId={work.personId} employmentTypes={employmentTypes} units={units} positions={positions} organizationName={work.organizationName} photo={personPhoto} values={{
     namePrefix: personal.namePrefix, firstName: personal.firstName, lastName: personal.lastName, gender: personal.gender, birthDate: personal.birthDate,
     employmentTypeId: work.employmentTypeId, appointedOn: work.appointedOn, positionTitle: work.positionTitle, positionLevel: work.positionLevel, organizationId: work.organizationId
   }} /> : null;

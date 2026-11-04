@@ -284,18 +284,29 @@ export class HrProfileService {
   /** Sets (or with null removes) the person's own photo: an image they uploaded themself, of an allowed type and size. */
   async setOwnPhoto(personId: string, attachmentId: string | null, actor: AccessSubject): Promise<SetPhotoResult> {
     if (!isSelf(actor, personId)) return { ok: false, code: 'FORBIDDEN' };
+    return this.applyPhoto(personId, attachmentId, personId, () => true);
+  }
+
+  /** HR (แก้ไขข้อมูลงาน) sets or removes another person's photo: an image the HR person uploaded, of an allowed type and size. */
+  async setPersonPhoto(personId: string, attachmentId: string | null, actor: AccessSubject): Promise<SetPhotoResult> {
+    if (!actor.personId) return { ok: false, code: 'FORBIDDEN' };
+    return this.applyPhoto(personId, attachmentId, actor.personId, (subject) => profileAccess(actor, subject).editProfile);
+  }
+
+  private applyPhoto(personId: string, attachmentId: string | null, uploaderId: string, allowed: (subject: NonNullable<Awaited<ReturnType<typeof lockProfileSubject>>>) => boolean): Promise<SetPhotoResult> {
     return this.database.transaction(async (database): Promise<SetPhotoResult> => {
       const subject = await lockProfileSubject(database, personId);
       if (!subject) return { ok: false, code: 'NOT_FOUND' };
+      if (!allowed(subject)) return { ok: false, code: 'FORBIDDEN' };
       if (attachmentId !== null) {
         const [file] = await database.query<{ contentType: string; sizeBytes: string; createdBy: string }>('SELECT content_type AS contentType, size_bytes AS sizeBytes, created_by_person_id AS createdBy FROM attachment WHERE id = ?', [attachmentId]);
-        if (!file || file.createdBy !== personId || !profilePhotoContentTypeSchema.safeParse(file.contentType).success || Number(file.sizeBytes) > MAX_PROFILE_PHOTO_BYTES) return { ok: false, code: 'INVALID_PHOTO' };
+        if (!file || file.createdBy !== uploaderId || !profilePhotoContentTypeSchema.safeParse(file.contentType).success || Number(file.sizeBytes) > MAX_PROFILE_PHOTO_BYTES) return { ok: false, code: 'INVALID_PHOTO' };
       }
       const [current] = await database.query<{ photo: string | null }>('SELECT photo_attachment_id AS photo FROM hr_person_profile WHERE person_id = ?', [personId]);
       if ((current?.photo ?? null) === attachmentId) return { ok: true };
       await database.execute(`INSERT INTO hr_person_profile (person_id, photo_attachment_id, updated_at) VALUES (?, ?, UTC_TIMESTAMP())
         ON DUPLICATE KEY UPDATE photo_attachment_id = VALUES(photo_attachment_id), updated_at = VALUES(updated_at)`, [personId, attachmentId]);
-      await recordProfileAudit(database, 'hr.person.photo.update', personId, personId, { changedFields: ['photo'], workChanges: {} }, this.createId);
+      await recordProfileAudit(database, 'hr.person.photo.update', personId, uploaderId, { changedFields: ['photo'], workChanges: {} }, this.createId);
       return { ok: true };
     }, { isolationLevel: 'READ COMMITTED' });
   }
