@@ -1,4 +1,4 @@
-import { insertAuditEvent } from './audit-sql';
+import { insertAuditEvent } from './audit-sql.ts';
 import type { AuditEvent } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import type { AuditRepository } from './audit-service.ts';
