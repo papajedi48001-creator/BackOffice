@@ -5,8 +5,10 @@ import { RolePicker } from './role-picker';
 const push = vi.fn();
 const refresh = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push, refresh }) }));
+const hardNavigate = vi.fn();
+vi.mock('../../lib/hard-navigate', () => ({ hardNavigate: (href: string) => hardNavigate(href) }));
 
-afterEach(() => { vi.restoreAllMocks(); push.mockReset(); refresh.mockReset(); });
+afterEach(() => { vi.restoreAllMocks(); push.mockReset(); refresh.mockReset(); hardNavigate.mockReset(); });
 
 const choices = [
   { code: 'admin', name: 'ผู้ดูแลระบบ', description: 'ตั้งค่าระบบ' },
@@ -22,11 +24,13 @@ test('lists every role as a button with its Thai name and description and marks 
   expect(screen.getByRole('button', { name: /บุคลากรทั่วไป/ })).toBeInTheDocument();
 });
 
-test('saves the chosen role on the server and goes to หน้าหลัก', async () => {
+test('saves the chosen role and loads หน้าหลัก fresh, so the first press gets in without a refresh', async () => {
   const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ activeRole: 'admin' }), { status: 200 }));
   render(<RolePicker choices={choices} current={null} />);
   fireEvent.click(screen.getByRole('button', { name: /ผู้ดูแลระบบ/ }));
-  await waitFor(() => expect(push).toHaveBeenCalledWith('/dashboard'));
+  await waitFor(() => expect(hardNavigate).toHaveBeenCalledWith('/dashboard'));
+  // A client push reused the router's cached redirect to /choose-role from before the role was saved.
+  expect(push).not.toHaveBeenCalled();
   expect(fetchMock).toHaveBeenCalledWith('/api/auth/role', expect.objectContaining({ method: 'POST', body: JSON.stringify({ role: 'admin' }) }));
 });
 

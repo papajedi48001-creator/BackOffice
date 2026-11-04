@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { t } from '@backoffice/i18n';
+import { hardNavigate } from '../../lib/hard-navigate';
 
 export interface RoleChoice { code: string; name: string; description: string; }
 
@@ -17,8 +18,8 @@ export function RolePicker({ choices, current }: { choices: RoleChoice[]; curren
     try {
       const response = await fetch('/api/auth/role', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ role: code }) });
       if (response.ok) {
-        router.push('/dashboard');
-        router.refresh();
+        // Not router.push: the router still holds /dashboard's redirect to /choose-role from before the choice.
+        hardNavigate('/dashboard');
         return;
       }
       if (response.status === 401) { router.push('/'); return; }
