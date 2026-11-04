@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './styles.css';
 
 export const metadata: Metadata = {
-  title: 'ระบบ Back Office | โรงพยาบาลวาริชภูมิ',
+  title: 'ระบบสนับสนุนการทำงานภายในองค์กร (Back Office) | โรงพยาบาลวาริชภูมิ',
   description: 'ระบบบริหารงานภายในโรงพยาบาลวาริชภูมิ'
 };
 
