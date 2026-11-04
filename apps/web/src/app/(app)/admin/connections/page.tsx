@@ -3,16 +3,19 @@ import { adminPage } from '../../../../lib/admin-page';
 import { checkConnections, tcpProbe, type ConnectionCheck, type ConnectionKey } from '../../../../lib/connection-status';
 import { readRuntimeValue } from '../../../../lib/runtime-env';
 import { AdminMessage } from '../admin-message';
+import { hosxpSettings } from '../../../../lib/hosxp';
+import { HosxpSettings } from './hosxp-settings';
 
 const names: Record<ConnectionKey, MessageKey> = { database: 'adminConnectionDatabase', redis: 'adminConnectionRedis', storage: 'adminConnectionStorage', scanner: 'adminConnectionScanner', mail: 'adminConnectionMail', line: 'adminConnectionLine' };
 const statuses: Record<ConnectionCheck['status'], { key: MessageKey; tone: string }> = { ok: { key: 'adminStatusOk', tone: 'approved' }, failed: { key: 'adminStatusFailed', tone: 'rejected' }, not_checked: { key: 'adminStatusNotChecked', tone: 'cancelled' } };
 
 export const dynamic = 'force-dynamic';
 
-/** ตั้งค่าการเชื่อมต่อ: read-only. Settings live in the server environment (docs/runbooks/deploy.md); no value is ever shown. */
+/** ตั้งค่าการเชื่อมต่อ: environment rows are read-only (docs/runbooks/deploy.md); HOSxP is set here. No secret is ever shown. */
 export default async function AdminConnectionsPage() {
   const context = await adminPage();
   if (!context.ok) return <AdminMessage titleKey="adminConnectionsTitle" reason={context.reason} />;
+  const hosxp = await hosxpSettings(context.database).view();
   const rows = await checkConnections(readRuntimeValue, { database: async () => { await context.database.query('SELECT 1 AS ok'); }, tcp: (host, port) => tcpProbe(host, port) });
   return <section className="admin-page">
     <h2>{t('adminConnectionsTitle')}</h2>
@@ -26,5 +29,6 @@ export default async function AdminConnectionsPage() {
         <td><code className="admin-variables">{row.variables.join(', ')}</code></td>
       </tr>)}</tbody>
     </table></div>
+    <HosxpSettings view={hosxp} />
   </section>;
 }

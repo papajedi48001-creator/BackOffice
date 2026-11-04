@@ -8,6 +8,7 @@ import { t, type MessageKey } from '@backoffice/i18n';
 import { genderLabelKeys } from '../lib/hr-profile-labels';
 import { ActionDialog } from './action-dialog';
 import { FormDialog } from './form-dialog';
+import { ThaiDateInput } from './thai-date-input';
 
 const errorKeys: Record<string, MessageKey> = {
   GENDER_REQUIRED: 'hrProfileGenderRequired', INACTIVE_EMPLOYMENT_TYPE: 'hrProfileInactiveType', UNKNOWN_EMPLOYMENT_TYPE: 'hrProfileUnknownType',
@@ -116,14 +117,14 @@ export function ProfileForm({ personId, values, employmentTypes, units, position
         {(Object.keys(genderLabelKeys) as Gender[]).map((gender) => <option key={gender} value={gender}>{t(genderLabelKeys[gender])}</option>)}
       </select>
     </label>
-    <label>{t('hrFieldBirthDate')}<input type="date" value={form.birthDate} onChange={set('birthDate')} /></label>
+    <label>{t('hrFieldBirthDate')}<ThaiDateInput value={form.birthDate} onChange={(value) => setForm((current) => ({ ...current, ['birthDate']: value }))} /></label>
     <label>{t('hrFieldEmploymentType')}
       <select value={form.employmentTypeId} onChange={set('employmentTypeId')}>
         <option value="">{t('notAssigned')}</option>
         {employmentTypes.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}
       </select>
     </label>
-    <label>{t('hrFieldAppointedOn')}<input type="date" value={form.appointedOn} onChange={set('appointedOn')} /></label>
+    <label>{t('hrFieldAppointedOn')}<ThaiDateInput value={form.appointedOn} onChange={(value) => setForm((current) => ({ ...current, ['appointedOn']: value }))} /></label>
     <label>{t('hrFieldPositionTitle')}<input list={`positions-${personId}`} value={form.positionTitle} maxLength={255} onChange={changePosition} /></label>
     <datalist id={`positions-${personId}`}>{positions.map((position) => <option key={position.name} value={position.name} />)}</datalist>
     <label>{t('hrFieldPositionLevel')}<input list={`levels-${personId}`} value={form.positionLevel} maxLength={120} onChange={set('positionLevel')} /></label>
@@ -161,7 +162,7 @@ export function PersonalForm({ endpoint, values }: { endpoint: string; values: P
         {(Object.keys(genderLabelKeys) as Gender[]).map((gender) => <option key={gender} value={gender}>{t(genderLabelKeys[gender])}</option>)}
       </select>
     </label>
-    <label>{t('hrFieldBirthDate')}<input type="date" value={form.birthDate} onChange={set('birthDate')} /></label>
+    <label>{t('hrFieldBirthDate')}<ThaiDateInput value={form.birthDate} onChange={(value) => setForm((current) => ({ ...current, ['birthDate']: value }))} /></label>
     <p className="form-hint">{t('hrPersonalWorkNote')}</p>
   </FormDialog></div>;
 }

@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { RoomBookingStatus } from '@backoffice/contracts';
-import { t, type MessageKey } from '@backoffice/i18n';
-import { formatBangkokDate, formatBangkokTime, formatWeekday } from '../../../../lib/bangkok-time';
+import { t } from '@backoffice/i18n';
+import { formatBangkokDate, formatBangkokTime, weekdayHeaders } from '../../../../lib/bangkok-time';
 import type { MonthGrid } from '../month-grid';
 import { RoomStatusBadge } from '../room-display';
 
@@ -12,7 +12,6 @@ import { RoomStatusBadge } from '../room-display';
 export interface MonthEntryView { bookingId: string; reference: string; roomName: string; roomPlace: string; date: string; startsAt: string; endsAt: string; status: RoomBookingStatus; title: string; bookerName: string | null; bookerOrganizationName: string | null; canOpen: boolean; }
 
 const SHOWN_PER_DAY = 3;
-const weekdayKeys: MessageKey[] = ['roomWeekdayMon', 'roomWeekdayTue', 'roomWeekdayWed', 'roomWeekdayThu', 'roomWeekdayFri', 'roomWeekdaySat', 'roomWeekdaySun'];
 const timeRange = (entry: MonthEntryView) => `${formatBangkokTime(entry.startsAt)}–${formatBangkokTime(entry.endsAt)}`;
 const booker = (entry: MonthEntryView) => [entry.bookerName, entry.bookerOrganizationName].filter(Boolean).join(' · ');
 
@@ -20,7 +19,7 @@ const booker = (entry: MonthEntryView) => [entry.bookerName, entry.bookerOrganiz
  * Month dashboard: every day of whole Mon–Sun weeks with its bookings; a booking opens its details in a popup.
  * `dayHref` is a link template with `{date}`, because a server page cannot hand a function to a client component.
  */
-export function RoomMonthCalendar({ grid, entries, dayHref }: { grid: MonthGrid; entries: MonthEntryView[]; dayHref: string }) {
+export function RoomMonthCalendar({ grid, entries, dayHref, holidays = {} }: { grid: MonthGrid; entries: MonthEntryView[]; dayHref: string; holidays?: Record<string, string> }) {
   const [selected, setSelected] = useState<MonthEntryView | null>(null);
   // The popup is removed rather than closed, so focus goes back to the booking that opened it by hand.
   const opener = useRef<HTMLButtonElement | null>(null);
@@ -28,12 +27,14 @@ export function RoomMonthCalendar({ grid, entries, dayHref }: { grid: MonthGrid;
   const byDate = new Map<string, MonthEntryView[]>();
   for (const entry of entries) byDate.set(entry.date, [...(byDate.get(entry.date) ?? []), entry]);
   return <div className="room-month">
-    <div className="room-month-weekdays" aria-hidden="true">{weekdayKeys.map((key) => <span key={key}>{t(key)}</span>)}</div>
+    <div className="room-month-weekdays" aria-hidden="true">{weekdayHeaders().map((day) => <span key={day}>{day}</span>)}</div>
     <div className="room-month-grid">{grid.weeks.flat().map((day) => {
       const dayEntries = byDate.get(day.date) ?? [];
-      const classes = ['room-month-day', day.inMonth ? '' : 'is-outside', day.isPast ? 'is-past' : '', day.isToday ? 'is-today' : '', dayEntries.length === 0 ? 'is-empty' : ''].filter(Boolean).join(' ');
-      return <div key={day.date} role="group" className={classes} aria-label={formatBangkokDate(day.date)} aria-current={day.isToday ? 'date' : undefined}>
-        <h3><span className="room-month-number" aria-hidden="true">{Number(day.date.slice(8))}</span><span className="room-month-fulldate">{formatWeekday(day.date)} {formatBangkokDate(day.date)}</span>{day.isToday && <span className="room-month-today">{t('roomToday')}</span>}</h3>
+      const holiday = holidays[day.date];
+      const classes = ['room-month-day', day.inMonth ? '' : 'is-outside', day.isPast ? 'is-past' : '', day.isToday ? 'is-today' : '', holiday ? 'is-holiday' : '', dayEntries.length === 0 ? 'is-empty' : ''].filter(Boolean).join(' ');
+      return <div key={day.date} role="group" className={classes} aria-label={`${formatBangkokDate(day.date)}${holiday ? ` วันหยุด ${holiday}` : ''}`} aria-current={day.isToday ? 'date' : undefined}>
+        <h3><span className="room-month-number" aria-hidden="true">{Number(day.date.slice(8))}</span><span className="room-month-fulldate">{formatBangkokDate(day.date)}</span>{day.isToday && <span className="room-month-today">{t('roomToday')}</span>}</h3>
+        {holiday && <p className="calendar-holiday-name">{holiday}</p>}
         {dayEntries.length > 0 && <ul>
           {dayEntries.slice(0, SHOWN_PER_DAY).map((entry) => <li key={`${entry.bookingId}-${entry.date}`}>
             <button type="button" className={`room-month-entry room-month-entry-${entry.status.toLowerCase()}`} aria-label={`${timeRange(entry)} ${entry.roomName} ${entry.title} — ${booker(entry)}`} onClick={(event) => { opener.current = event.currentTarget; setSelected(entry); }}>

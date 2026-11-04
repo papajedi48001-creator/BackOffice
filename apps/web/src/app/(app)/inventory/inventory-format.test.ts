@@ -7,5 +7,5 @@ describe('inventory formatting', () => {
     expect(formatBaht('1234.5')).toBe('1,234.50');
     expect(formatBaht('9999999990000.00')).toBe('9,999,999,990,000.00');
   });
-  it('shows a Bangkok date in the Buddhist calendar', () => { expect(formatThaiDate('2026-10-22')).toBe('22 ต.ค. 2569'); });
+  it('shows a Bangkok date in the Buddhist calendar', () => { expect(formatThaiDate('2026-10-22')).toBe('พฤหัสบดี 22 ต.ค. 2569'); });
 });

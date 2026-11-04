@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { BookingConflictError } from '@backoffice/core';
+import { BookingConflictError, HolidayBookingError } from '@backoffice/core';
 import { AuthorizationError } from '../../../lib/require-authorized';
 
 const statusByCode: Record<string, number> = {
@@ -13,6 +13,7 @@ const statusByCode: Record<string, number> = {
 
 export function roomErrorResponse(error: unknown): Response {
   if (error instanceof AuthorizationError) return NextResponse.json({ error: error.status === 401 ? 'unauthenticated' : 'FORBIDDEN' }, { status: error.status });
+  if (error instanceof HolidayBookingError) return NextResponse.json({ error: 'BOOKING_ON_HOLIDAY', holidays: error.holidays }, { status: 409 });
   if (error instanceof BookingConflictError) return NextResponse.json({ error: 'BOOKING_CONFLICT', conflicts: error.conflicts.map((range) => ({ startsAt: range.startsAt.toISOString(), endsAt: range.endsAt.toISOString() })) }, { status: 409 });
   if (error instanceof Error && error.name === 'ZodError') return NextResponse.json({ error: 'INVALID_INPUT' }, { status: 400 });
   if (error instanceof SyntaxError) return NextResponse.json({ error: 'INVALID_INPUT' }, { status: 400 });

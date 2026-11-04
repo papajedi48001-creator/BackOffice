@@ -1,7 +1,7 @@
 {
   "name": "@backoffice/worker",
   "private": true,
-  "dependencies": { "@backoffice/contracts": "workspace:*", "@backoffice/db": "workspace:*" },
+  "dependencies": { "@backoffice/contracts": "workspace:*", "@backoffice/core": "workspace:*", "@backoffice/db": "workspace:*" },
   "scripts": {
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",

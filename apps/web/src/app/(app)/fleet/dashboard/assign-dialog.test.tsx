@@ -42,8 +42,10 @@ describe('AssignDialog', () => {
     const vehicle = screen.getByLabelText('รถราชการ');
     expect(within(vehicle).getAllByRole('option').map((option) => option.textContent)).toEqual(['เลือก', 'กข 1234 · Toyota Commuter · ตู้ 12 ที่นั่ง']);
     expect(within(screen.getByLabelText('พนักงานขับรถ')).getAllByRole('option').map((option) => option.textContent)).toEqual(['เลือก', 'นายขับ ดี']);
-    expect(screen.getByLabelText('เริ่มเที่ยวรถ')).toHaveValue('2026-11-10T08:00');
-    expect(screen.getByLabelText('สิ้นสุดเที่ยวรถ')).toHaveValue('2026-11-10T16:00');
+    expect(screen.getByLabelText('เริ่มเที่ยวรถ')).toHaveValue('10/11/2569');
+    expect(screen.getByLabelText('สิ้นสุดเที่ยวรถ')).toHaveValue('10/11/2569');
+    expect(screen.getByLabelText('เวลา เริ่มเที่ยวรถ')).toHaveValue('08:00');
+    expect(screen.getByLabelText('เวลา สิ้นสุดเที่ยวรถ')).toHaveValue('16:00');
     fireEvent.change(vehicle, { target: { value: 'v1' } });
     fireEvent.change(screen.getByLabelText('พนักงานขับรถ'), { target: { value: 'd1' } });
     fireEvent.change(screen.getByLabelText('สิ้นสุดเที่ยวรถ'), { target: { value: '2026-11-10T17:00' } });

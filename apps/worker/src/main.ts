@@ -1,3 +1,4 @@
+import { connectionSecretBoxFrom, HolidaySyncService, HosxpSettingsService, readHosxpHolidays } from '@backoffice/core/holidays';
 import { createDatabase, readRuntimeValue } from '@backoffice/db';
 import { LineAlertConsumer } from './consumers/line-alert-consumer.ts';
 import { NotificationConsumer } from './consumers/notification-consumer.ts';
@@ -8,6 +9,7 @@ import { createLineClient } from './line-client.ts';
 import { DatabaseOutboxRepository } from './database-outbox-repository.ts';
 import { createWorkerRuntime } from './worker-runtime.ts';
 import { waitForDatabaseUrl } from './database-config.ts';
+import { createHolidaySyncJob } from './holiday-sync-job.ts';
 
 const databaseUrl = await waitForDatabaseUrl();
 
@@ -30,9 +32,20 @@ const runtime = createWorkerRuntime({
 });
 
 runtime.start();
+// วันหยุดจาก HOSxP: read-only, daily; settings from ตั้งค่าการเชื่อมต่อ, else HOSXP_DATABASE_URL. Nothing happens until one is set.
+const hosxpSettings = new HosxpSettingsService(database, connectionSecretBoxFrom(readRuntimeValue('CONNECTION_SECRET_KEY')), readRuntimeValue);
+const holidaySync = new HolidaySyncService(database, () => hosxpSettings.resolve(), readHosxpHolidays);
+const holidayJob = createHolidaySyncJob({
+  sync: (actor) => holidaySync.sync(actor),
+  intervalMs: Number(process.env.HOLIDAY_SYNC_INTERVAL_MS ?? String(24 * 60 * 60 * 1000)),
+  initialDelayMs: 60_000,
+  log: (event, detail) => console.info(event, detail)
+});
+holidayJob.start();
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, () => {
     runtime.stop();
+    holidayJob.stop();
     void database.close().finally(() => process.exit(0));
   });
 }

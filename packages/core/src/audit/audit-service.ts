@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { auditInputSchema, type AuditEvent, type AuditInput } from '@backoffice/contracts';
-import { redactAuditMetadata } from './redact';
+import { redactAuditMetadata } from './redact.ts';
 
 export interface AuditRepository { append(event: AuditEvent): Promise<void>; }
 

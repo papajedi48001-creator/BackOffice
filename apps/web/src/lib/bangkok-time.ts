@@ -7,11 +7,16 @@ const timeFormatter = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Bangkok
 
 const utcDate = (date: string) => new Date(`${date}T00:00:00Z`);
 
-/** `2026-11-05` → `5 พ.ย. 2569`. Booking dates are already Bangkok calendar dates. */
-export function formatBangkokDate(date: string): string { return dateFormatter.format(utcDate(date)); }
-export function formatWeekday(date: string): string { return weekdayFormatter.format(utcDate(date)); }
+/** `2026-11-09` → `9 พ.ย. 2569`, for places that already show the weekday beside it (calendar column heads). */
+export function formatBangkokDateOnly(date: string): string { return dateFormatter.format(utcDate(date)); }
+/** `2026-11-09` → `จันทร์`: the full Thai weekday name without the leading `วัน`. */
+export function formatWeekday(date: string): string { return weekdayFormatter.format(utcDate(date)).replace(/^วัน/, ''); }
+/** `2026-11-09` → `จันทร์ 9 พ.ย. 2569`. Every date in the system is shown this way. Dates are already Bangkok calendar dates. */
+export function formatBangkokDate(date: string): string { return `${formatWeekday(date)} ${formatBangkokDateOnly(date)}`; }
+/** Calendar column heads, Monday first, in full: จันทร์ … อาทิตย์. */
+export function weekdayHeaders(): string[] { return datesBetween('2026-11-02', '2026-11-08').map(formatWeekday); }
 export function formatBangkokTime(instant: Date | string): string { return timeFormatter.format(new Date(instant)); }
-/** An instant shown as `26 ต.ค. 2569 10:00` in Bangkok time. */
+/** An instant shown as `จันทร์ 26 ต.ค. 2569 10:00` in Bangkok time. */
 export function formatBangkokDateTime(instant: Date | string): string { return `${formatBangkokDate(bangkokToday(new Date(instant)))} ${formatBangkokTime(instant)}`; }
 export function formatMinutes(minutes: number): string { return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`; }
 export function addDays(date: string, days: number): string { return new Date(utcDate(date).getTime() + days * dayMs).toISOString().slice(0, 10); }

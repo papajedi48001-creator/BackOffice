@@ -17,9 +17,17 @@
   --shadow-sm: 0 1px 2px rgba(15, 30, 70, .06), 0 1px 3px rgba(15, 30, 70, .04);
   --shadow-md: 0 8px 24px rgba(15, 30, 70, .08);
   --accent: var(--brand);
+  /* ฟอนต์ของระบบ: one variable, so changing the system font is a one-line swap. */
+  --font-family: Tahoma, 'Noto Sans Thai', sans-serif;
+  /* วันหยุด on every calendar and date picker. */
+  --holiday-bg: #e5e7eb;
+  --holiday-ink: #4b5563;
+  --calendar-day-size: 1.25rem;
+  --topbar-height: 84px;
+  --main-pad: clamp(18px, 3vw, 36px);
   color: var(--ink);
   background: var(--page);
-  font-family: "Kanit", "Prompt", "Noto Sans Thai", "Leelawadee UI", system-ui, sans-serif;
+  font-family: var(--font-family);
   scrollbar-color: var(--line-strong) transparent;
   scrollbar-width: thin;
 }
@@ -124,7 +132,7 @@ h1 { margin: 0; font-size: clamp(2rem, 6vw, 3.25rem); line-height: 1.15; letter-
 .sign-out-button { width: 100%; border: 1px solid rgba(255, 255, 255, .28); border-radius: 10px; background: transparent; color: #e7f3ec; cursor: pointer; font-weight: 700; padding: 10px 12px; }
 .sign-out-button:hover:not(:disabled) { background: rgba(255, 255, 255, .08); }
 .sign-out-button:disabled { cursor: not-allowed; opacity: .7; }
-.app-main { min-width: 0; border-top: 3px solid var(--accent); padding: clamp(18px, 3vw, 36px); }
+.app-main { min-width: 0; border-top: 3px solid var(--accent); padding: var(--main-pad); padding-top: 0; }
 .permission-notice { display: inline-flex; margin: 0 0 24px; border-radius: 999px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); color: var(--muted); font-size: .85rem; padding: 4px 12px; }
 .app-main h2 { margin: 0 0 12px; color: var(--brand-deep); font-size: clamp(1.35rem, 3vw, 1.75rem); font-weight: 600; }
 .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-top: 28px; }
@@ -167,7 +175,7 @@ section > .organization-tree { padding-left: 0; border-left: 0; }
 .calendar-toolbar select, .room-form select, .room-form input, .room-form textarea, .booking-actions textarea { min-height: 44px; border: 1px solid var(--line-strong); border-radius: 8px; background: #fff; color: var(--ink); padding: 9px 12px; }
 .room-calendar { display: grid; gap: 12px; }
 .room-day { border: 1px solid var(--line); border-left: 5px solid var(--accent); border-radius: 12px; background: #fff; padding: 14px 18px; }
-.room-day h3 { margin: 0 0 10px; font-size: 1.05rem; }
+.room-day h3 { margin: 0 0 10px; font-size: var(--calendar-day-size); }
 .room-day ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .room-day-empty { margin: 0; color: var(--muted); }
 .room-slot { display: grid; grid-template-columns: 7.5rem minmax(8rem, .6fr) 1fr auto; align-items: center; gap: 4px 14px; border-top: 1px solid var(--line-soft); padding-top: 8px; }
@@ -232,6 +240,10 @@ a.module-tile:hover .module-go { color: var(--accent); transform: translateX(2px
 .nav-badge { display: inline-block; min-width: 22px; height: 22px; margin-left: auto; border-radius: 999px; background: var(--alert-count); color: #fff; font-size: .8rem; font-weight: 700; line-height: 22px; padding: 0 6px; text-align: center; }
 /* Profile chip, top right of every page: photo or initials, name, ตำแหน่งงาน and the unread count. */
 .app-topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 24px; }
+/* หัวโมดูลตรึงด้านบน: the request button, permission pill and profile chip stay put while the page scrolls; the module tabs stick just below. */
+.app-topbar { position: sticky; top: 0; z-index: 30; box-sizing: border-box; min-height: var(--topbar-height); margin-inline: calc(-1 * var(--main-pad)); padding: 10px var(--main-pad); background: var(--page); border-bottom: 1px solid var(--line); box-shadow: 0 2px 6px rgb(16 38 29 / 6%); }
+.module-subnav { position: sticky; top: var(--topbar-height); z-index: 29; background: var(--page); }
+@media (max-width: 960px) { .module-subnav { position: static; } }
 .app-topbar .permission-notice { margin: 0; }
 .topbar-lead { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
 .request-action { display: inline-flex; align-items: center; gap: 12px; border-radius: 12px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line), 0 1px 3px rgb(0 0 0 / 8%); color: var(--ink); font-size: 1.05rem; font-weight: 700; padding: 8px 18px 8px 8px; text-decoration: none; transition: transform .15s ease, box-shadow .15s ease; }
@@ -497,7 +509,7 @@ video.inventory-camera { display: block; flex-basis: 100%; width: 100%; max-widt
 .fleet-queue-reference a { white-space: nowrap; }
 .fleet-assign-new .form-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .fleet-assign-new input, .fleet-assign-new select { width: 100%; min-width: 0; }
-.fleet-assign-new input[type="datetime-local"] { padding-inline: 8px; }
+.fleet-assign-new .thai-date-time select { padding-inline: 8px; }
 .leave-calendar.fleet-calendar table { min-width: 0; table-layout: fixed; }
 .leave-calendar.fleet-calendar th:first-child, .leave-calendar.fleet-calendar td:first-child { width: 8.5rem; min-width: 0; overflow-wrap: anywhere; }
 .fleet-calendar th, .fleet-calendar td { overflow-wrap: anywhere; }
@@ -648,8 +660,8 @@ video.inventory-camera { display: block; flex-basis: 100%; width: 100%; max-widt
 .room-month-weekdays span { padding: 10px 4px; }
 .room-month-day { display: grid; align-content: start; gap: 6px; min-height: 128px; border-top: 1px solid var(--line); border-left: 1px solid var(--line); padding: 8px; }
 .room-month-day:nth-child(7n + 1) { border-left: 0; }
-.room-month-day h3 { display: flex; align-items: center; gap: 6px; margin: 0; font-size: .95rem; }
-.room-month-number { display: inline-grid; place-items: center; min-width: 28px; height: 28px; border-radius: 999px; }
+.room-month-day h3 { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 1rem; }
+.room-month-number { display: inline-grid; place-items: center; min-width: 36px; height: 36px; border-radius: 999px; font-size: var(--calendar-day-size); font-weight: 700; }
 .room-month-day.is-outside { background: var(--page); }
 .room-month-day.is-outside .room-month-number { color: var(--muted); font-weight: 400; }
 .room-month-day.is-past { background: var(--line-soft); }
@@ -754,3 +766,35 @@ h2.chat-window-title { cursor: default; }
 .admin-line-facts > div { display: grid; grid-template-columns: minmax(12rem, 18rem) 1fr; gap: 0.75rem; align-items: baseline; }
 .admin-line-facts dd { margin: 0; display: grid; gap: 0.25rem; }
 @media (max-width: 640px) { .admin-line-facts > div { grid-template-columns: 1fr; gap: 0.25rem; } }
+
+/* วันหยุด: grey with its name, on every calendar. Status is also in text, never colour alone. */
+.room-month-day.is-holiday, .room-day.is-holiday, .leave-calendar .is-holiday, .fleet-calendar .is-holiday { background: var(--holiday-bg); color: var(--holiday-ink); }
+.room-month-day.is-holiday .room-month-number { color: var(--holiday-ink); }
+.calendar-holiday-name { display: block; margin: 0; color: var(--holiday-ink); font-size: .8rem; font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; }
+.calendar-day-number { font-size: var(--calendar-day-size); font-weight: 700; line-height: 1.2; }
+.leave-calendar thead th .leave-weekday { display: block; color: var(--muted); font-size: .7rem; font-weight: 400; }
+.room-days label.is-holiday { color: var(--holiday-ink); text-decoration: line-through; }
+.room-days label.is-holiday small { text-decoration: none; }
+
+/* Thai date picker (components/thai-date-input.tsx). */
+.thai-date { position: relative; display: inline-grid; gap: 2px; min-width: 0; }
+.thai-date-field { display: flex; align-items: stretch; gap: 4px; }
+.thai-date-field input { min-width: 0; width: 11ch; flex: 1 1 auto; font-variant-numeric: tabular-nums; }
+.app-main .thai-date-toggle, .thai-date-toggle { display: inline-grid; place-items: center; min-width: 44px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); color: var(--accent); padding: 0 8px; }
+.thai-date-toggle:focus-visible, .thai-date-day:focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
+.thai-date-hint::after { content: attr(data-hint); color: var(--muted); font-size: .8rem; }
+.thai-date-popup { position: absolute; top: calc(100% + 4px); left: 0; z-index: 50; width: min(22rem, 92vw); border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-md); padding: 10px; }
+.thai-date-popup-header { display: grid; grid-template-columns: 40px 1fr 40px 40px; align-items: center; gap: 4px; margin-bottom: 6px; text-align: center; }
+.app-main .thai-date-popup-header button, .thai-date-popup-header button { min-height: 40px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font-size: 1.1rem; padding: 0; }
+.thai-date-popup table { width: 100%; table-layout: fixed; border-collapse: collapse; overflow: visible; }
+.thai-date-popup th { padding: 4px 0; color: var(--muted); font-size: .62rem; font-weight: 700; text-align: center; overflow-wrap: anywhere; }
+.thai-date-popup td { padding: 1px; }
+.app-main .thai-date-day, .thai-date-day { display: grid; place-items: center; align-content: center; width: 100%; min-height: 44px; border: 1px solid transparent; border-radius: 8px; background: var(--surface); color: var(--ink); padding: 2px; }
+.thai-date-number { font-size: 1.05rem; font-weight: 600; }
+.thai-date-day.is-outside { color: var(--muted); }
+.thai-date-day.is-today { border-color: var(--accent); }
+.app-main .thai-date-day.is-selected, .thai-date-day.is-selected { background: var(--accent); color: var(--surface); }
+.app-main .thai-date-day.is-holiday, .thai-date-day.is-holiday { background: var(--holiday-bg); color: var(--holiday-ink); }
+.thai-date-holiday { display: block; max-width: 100%; overflow: hidden; font-size: .55rem; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
+.thai-date-day:disabled { cursor: not-allowed; opacity: .6; }
+.thai-date-time { display: inline-flex; flex-wrap: wrap; align-items: flex-start; gap: 6px; }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkDeparture, checkFleetRange, checkReturn, checkTripRange, tripCovers } from './fleet-rules';
+import { checkDeparture, checkFleetRange, checkReturn, checkTripRange, tripCovers, fleetHolidays } from './fleet-rules';
 
 const now = new Date('2026-10-27T03:00:00Z');
 const at = (iso: string) => new Date(iso);
@@ -63,5 +63,15 @@ describe('checkTripRange and tripCovers', () => {
     expect(tripCovers(trip, { departAt: trip.startsAt, returnAt: trip.endsAt })).toBe(true);
     expect(tripCovers(trip, { departAt: at('2026-11-03T00:45:00Z'), returnAt: trip.endsAt })).toBe(false);
     expect(tripCovers(trip, { departAt: trip.startsAt, returnAt: at('2026-11-03T09:15:00Z') })).toBe(false);
+  });
+});
+
+describe('fleetHolidays', () => {
+  const holidays = new Map([['2026-12-05', 'วันพ่อแห่งชาติ'], ['2026-12-07', 'วันหยุดชดเชย']]);
+  it('finds every วันหยุด between leaving and coming back, in Bangkok dates', () => {
+    expect(fleetHolidays(new Date('2026-12-04T01:00:00Z'), new Date('2026-12-07T10:00:00Z'), holidays)).toEqual([{ date: '2026-12-05', name: 'วันพ่อแห่งชาติ' }, { date: '2026-12-07', name: 'วันหยุดชดเชย' }]);
+  });
+  it('passes a trip that stays on working days, even one ending just before a holiday in Bangkok', () => {
+    expect(fleetHolidays(new Date('2026-12-04T01:00:00Z'), new Date('2026-12-04T16:59:00Z'), holidays)).toEqual([]);
   });
 });

@@ -16,7 +16,7 @@ describe('LabelSheet', () => {
     expect(container.querySelectorAll('.inventory-label')).toHaveLength(4);
     expect(screen.getAllByText('LT-2569-000001', { selector: '.inventory-label *' })).toHaveLength(3);
     expect(screen.getAllByText('ถุงมือยาง', { selector: '.inventory-label *' })).toHaveLength(3);
-    expect(screen.getAllByText(/หมดอายุ 30 มิ.ย. 2570/)).toHaveLength(3);
+    expect(screen.getAllByText(/หมดอายุ พุธ 30 มิ.ย. 2570/)).toHaveLength(3);
   });
 
   it('never shows a price or a vendor', () => {

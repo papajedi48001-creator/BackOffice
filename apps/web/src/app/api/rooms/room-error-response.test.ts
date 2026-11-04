@@ -1,10 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
 import { cancelRoomBookingInputSchema } from '@backoffice/contracts';
-import { BookingConflictError } from '@backoffice/core';
+import { BookingConflictError, HolidayBookingError } from '@backoffice/core';
 import { AuthorizationError } from '../../../lib/require-authorized';
 import { roomErrorResponse } from './room-error-response';
 
 describe('roomErrorResponse', () => {
+  it('answers 409 BOOKING_ON_HOLIDAY with the holidays found', async () => {
+    const response = roomErrorResponse(new HolidayBookingError([{ date: '2026-12-07', name: 'วันหยุดชดเชย' }]));
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ error: 'BOOKING_ON_HOLIDAY', holidays: [{ date: '2026-12-07', name: 'วันหยุดชดเชย' }] });
+  });
+
   it.each([
     [new AuthorizationError(401), 401, 'unauthenticated'],
     [new Error('FORBIDDEN'), 403, 'FORBIDDEN'],

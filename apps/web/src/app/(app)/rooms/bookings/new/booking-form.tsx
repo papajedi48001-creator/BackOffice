@@ -6,12 +6,15 @@ import { roomBookingPolicy } from '@backoffice/contracts';
 import { t } from '@backoffice/i18n';
 import { addDays, bangkokToday, datesBetween, formatBangkokDate, formatBangkokTime, timeOptions } from '../../../../../lib/bangkok-time';
 import { roomErrorMessage } from '../../room-display';
+import { holidayBlockedMessage, holidaysOf, type HolidayView } from '../../../../../lib/holidays';
+import { ThaiDateInput } from '../../../../../components/thai-date-input';
 
 export interface BookableRoom { id: string; name: string; capacity: number; place: string; }
 export interface SelectableAddon { id: string; name: string; unit: string; }
 type Conflict = { startsAt: string; endsAt: string };
 
-export function BookingForm({ rooms, addons, today }: { rooms: BookableRoom[]; addons: SelectableAddon[]; today: string }) {
+export function BookingForm({ rooms, addons, today, holidays = [] }: { rooms: BookableRoom[]; addons: SelectableAddon[]; today: string; holidays?: HolidayView[] }) {
+  const holidayNames = useMemo(() => new Map(holidays.map((holiday) => [holiday.date, holiday.name])), [holidays]);
   const router = useRouter();
   const [roomId, setRoomId] = useState(rooms[0]?.id ?? '');
   const [firstDate, setFirstDate] = useState(today);
@@ -46,11 +49,13 @@ export function BookingForm({ rooms, addons, today }: { rooms: BookableRoom[]; a
     try {
       const response = await fetch('/api/rooms/bookings', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ roomId, dates: range.filter((date) => !excluded.has(date)), startMinute, endMinute, title, attendeeCount, addons: Object.entries(chosenAddons).map(([addonId, choice]) => ({ addonId, quantity: choice.quantity, note: choice.note })) })
+        body: JSON.stringify({ roomId, dates: range.filter((date) => !excluded.has(date) && !holidayNames.has(date)), startMinute, endMinute, title, attendeeCount, addons: Object.entries(chosenAddons).map(([addonId, choice]) => ({ addonId, quantity: choice.quantity, note: choice.note })) })
       });
       const body = await response.json() as { id?: string; error?: string; conflicts?: Conflict[] };
       if (response.ok && body.id) { router.push(`/rooms/bookings/${body.id}`); return; }
-      if (body.error === 'BOOKING_CONFLICT') setConflicts(body.conflicts ?? []);
+      const onHolidays = holidaysOf(body);
+      if (onHolidays) setError(holidayBlockedMessage(onHolidays));
+      else if (body.error === 'BOOKING_CONFLICT') setConflicts(body.conflicts ?? []);
       else setError(roomErrorMessage(body.error));
     } catch { setError(t('roomActionFailed')); } finally { setSubmitting(false); }
   }
@@ -58,11 +63,11 @@ export function BookingForm({ rooms, addons, today }: { rooms: BookableRoom[]; a
   return <form className="room-form" onSubmit={submit}>
     <div className="form-field"><label htmlFor="booking-room">{t('roomField')}</label><select id="booking-room" value={roomId} onChange={(event) => setRoomId(event.target.value)}>{rooms.map((room) => <option key={room.id} value={room.id}>{room.name} ({room.place}, {room.capacity} คน)</option>)}</select></div>
     <div className="form-row">
-      <div className="form-field"><label htmlFor="booking-first">{t('bookingStartDate')}</label><input id="booking-first" type="date" min={today} max={lastBookable} value={firstDate} onChange={(event) => setFirstDate(event.target.value)} required /></div>
-      <div className="form-field"><label htmlFor="booking-last">{t('bookingEndDate')}</label><input id="booking-last" type="date" min={firstDate} max={lastAllowed} value={lastDate} onChange={(event) => setLastDate(event.target.value)} required /></div>
+      <div className="form-field"><label htmlFor="booking-first">{t('bookingStartDate')}</label><ThaiDateInput holidays={holidays} blockHolidays id="booking-first" min={today} max={lastBookable} value={firstDate} onChange={(value) => setFirstDate(value)} required /></div>
+      <div className="form-field"><label htmlFor="booking-last">{t('bookingEndDate')}</label><ThaiDateInput holidays={holidays} id="booking-last" min={firstDate} max={lastAllowed} value={lastDate} onChange={(value) => setLastDate(value)} required /></div>
     </div>
     {tooLong && <p role="alert" className="form-error">{t('bookingRangeTooLong')}</p>}
-    <fieldset className="room-days"><legend>{t('bookingDays')}</legend>{range.map((date) => <label key={date}><input type="checkbox" checked={!excluded.has(date)} onChange={() => toggleDay(date)} />{formatBangkokDate(date)}</label>)}</fieldset>
+    <fieldset className="room-days"><legend>{t('bookingDays')}</legend>{range.map((date) => { const holiday = holidayNames.get(date); return <label key={date} className={holiday ? 'is-holiday' : undefined}><input type="checkbox" checked={!holiday && !excluded.has(date)} disabled={Boolean(holiday)} onChange={() => toggleDay(date)} />{formatBangkokDate(date)}{holiday && <small>{` · วันหยุด ${holiday}`}</small>}</label>; })}</fieldset>
     <div className="form-row">
       <div className="form-field"><label htmlFor="booking-start">{t('bookingStartTime')}</label><select id="booking-start" value={startMinute} onChange={(event) => setStartMinute(Number(event.target.value))}>{times.slice(0, -1).map((time) => <option key={time.value} value={time.value}>{time.label}</option>)}</select></div>
       <div className="form-field"><label htmlFor="booking-end">{t('bookingEndTime')}</label><select id="booking-end" value={endMinute} onChange={(event) => setEndMinute(Number(event.target.value))}>{times.slice(1).map((time) => <option key={time.value} value={time.value}>{time.label}</option>)}</select></div>
