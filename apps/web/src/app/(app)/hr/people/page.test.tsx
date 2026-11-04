@@ -26,7 +26,7 @@ describe('PeoplePage', () => {
     expect(mocks.listPeople).toHaveBeenCalledWith({ organizationIds: ['unit-nur'] });
     expect(screen.getByRole('cell', { name: 'นางสาวมาลี ดีงาม' })).toBeInTheDocument();
     expect(screen.getByRole('cell', { name: 'X-XXXX-XXXXX-12-3' })).toBeInTheDocument();
-    expect(screen.getByRole('cell', { name: 'ปฏิบัติงาน' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'คงอยู่' })).toBeInTheDocument();
     expect(screen.getByRole('cell', { name: 'ข้าราชการ' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'นางสาวมาลี ดีงาม' })).toHaveAttribute('href', '/hr/people/p1');
   });
