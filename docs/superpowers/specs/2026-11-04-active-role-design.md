@@ -11,7 +11,7 @@ Request: "ถ้าผู้ใช้มีหลายบทบาทต้อ�
 - The choice is stored on the server session (`user_session.active_role`). On every request the session subject's `roles` are filtered to the active role only, so authorization (`AuthorizationService`), navigation, module visibility and DEVELOPMENT-mode visibility (`canUseModule`) all see baseline + active role and nothing else. While a choice is pending the subject has no roles at all (deny by default even if the proxy is bypassed).
 - The server refuses a role not held (`403 role_not_held`). A stored role that has since been removed is ignored; a person who still has 2+ roles goes back to the picker; with 0–1 left it auto-selects.
 - Data-owner assignments are not choices: they only gate permissions a role already grants, so they stay attached and take effect only through the active role.
-- Profile chip shows the current role and, for people with 2+ roles, a "เปลี่ยนบทบาท" link to the picker. Saving a choice writes audit event `session.role.selected` (metadata: `{ role, previousRole }` — role codes only).
+- Profile chip shows the current role and, for people with 2+ roles, a "เปลี่ยนบทบาท" link to the picker. Saving a choice writes audit event `session.role.selected` (metadata: `{ roleName, previousRoleName }` — role codes only).
 - Every audit event records `audit_event.actor_role`: the active role of the actor's most recently used live session at write time (null for บุคลากรทั่วไป/no session). Known limit: a person with two concurrent sessions in different roles is attributed to the most recently used one.
 - Login page is not restyled (PR #70 owns it); login still goes to `/dashboard` and the proxy forwards to the picker.
 
