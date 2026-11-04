@@ -8,13 +8,15 @@ import { formatBangkokDateTime } from '../lib/bangkok-time';
 import { initialsOf } from '../lib/initials';
 
 export interface BellItem { id: string; moduleLabel: string; module?: string; subject: string; readAt: string | null; createdAt: string; }
+/** The บทบาท this session works in; `canSwitch` when the person holds two or more roles. */
+export interface ShellRole { name: string; canSwitch: boolean; }
 export interface ShellProfile { displayName: string | null; positionTitle: string | null; photoUrl: string | null; }
 
 /**
  * The signed-in person at the top right: photo or initials, name and ตำแหน่งงาน. The menu links to their own profile,
  * lists unread notices (opening one marks it read and goes to its page) and links to the notification centre.
  */
-export function ProfileMenu({ profile, unread, items }: { profile: ShellProfile; unread: number; items: BellItem[] }) {
+export function ProfileMenu({ profile, unread, items, role = null }: { profile: ShellProfile; unread: number; items: BellItem[]; role?: ShellRole | null }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [opened, setOpened] = useState<string[]>([]);
@@ -48,11 +50,12 @@ export function ProfileMenu({ profile, unread, items }: { profile: ShellProfile;
   return <div className="profile-menu" ref={root}>
     <button type="button" className="profile-chip" aria-label={label} aria-expanded={open} aria-controls="profile-panel" onClick={() => setOpen((value) => !value)}>
       <span className="profile-avatar-wrap">{avatar}{count ? <span className="profile-count" aria-hidden="true">{count > 99 ? '99+' : count}</span> : null}</span>
-      <span className="profile-text" aria-hidden="true"><span className="profile-name">{name}</span>{profile.positionTitle ? <span className="profile-position">{profile.positionTitle}</span> : null}</span>
+      <span className="profile-text" aria-hidden="true"><span className="profile-name">{name}</span>{profile.positionTitle ? <span className="profile-position">{profile.positionTitle}</span> : null}{role ? <span className="profile-role">{role.name}</span> : null}</span>
       <svg className="profile-caret" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
     </button>
     {open && <div id="profile-panel" className="profile-panel">
-      <div className="profile-panel-head"><p className="profile-name">{name}</p>{profile.positionTitle ? <p className="profile-position">{profile.positionTitle}</p> : null}</div>
+      <div className="profile-panel-head"><p className="profile-name">{name}</p>{profile.positionTitle ? <p className="profile-position">{profile.positionTitle}</p> : null}{role ? <p className="profile-role">{t('activeRoleLabel')}: {role.name}</p> : null}</div>
+      {role?.canSwitch ? <Link className="profile-link" href="/choose-role" onClick={() => setOpen(false)}>{t('switchRole')}</Link> : null}
       <Link className="profile-link" href="/hr/me" onClick={() => setOpen(false)}>{t('profileMyInfo')}</Link>
       {unreadItems.length ? <>
         <p className="profile-section-title">{t('bellLabel')}</p>

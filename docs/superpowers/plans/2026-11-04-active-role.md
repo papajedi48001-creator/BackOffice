@@ -7,6 +7,6 @@ Spec: `docs/superpowers/specs/2026-11-04-active-role-design.md`.
 - [x] 3. `SessionService.resolve` filters roles / flags `roleSelectionRequired`; `chooseRole` validates. Test: `session-service.test.ts`.
 - [x] 4. `proxy.ts` redirects/403s while pending. Test: `apps/web/src/proxy.test.ts`.
 - [x] 5. `POST /api/auth/role` (+ audit, one transaction). Test: `route.test.ts`.
-- [ ] 6. `/choose-role` picker page + profile menu role and "เปลี่ยนบทบาท". Test: `choose-role/role-picker.test.tsx`.
+- [x] 6. `/choose-role` picker page + profile menu role and "เปลี่ยนบทบาท". Test: `choose-role/role-picker.test.tsx`.
 
 Verify: `pnpm lint && pnpm typecheck && pnpm test`, `git diff --check`, `grep -rn '<<<<<<<'`.

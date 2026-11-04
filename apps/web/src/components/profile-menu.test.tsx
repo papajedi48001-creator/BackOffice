@@ -57,3 +57,14 @@ it('makes initials from a Thai name without its prefix', () => {
   expect(initialsOf('Jane Doe')).toBe('JD');
   expect(initialsOf(null)).toBe('?');
 });
+
+it('shows the current บทบาท and, for several roles, a "เปลี่ยนบทบาท" link to the picker', () => {
+  const { rerender } = render(<ProfileMenu profile={profile} unread={0} items={[]} role={{ name: 'ผู้จัดการการลา', canSwitch: true }} />);
+  const chip = screen.getByRole('button', { name: 'นางสาวสมใจ ดีมาก' });
+  expect(chip).toHaveTextContent('ผู้จัดการการลา');
+  fireEvent.click(chip);
+  expect(screen.getByText('บทบาท: ผู้จัดการการลา')).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'เปลี่ยนบทบาท' })).toHaveAttribute('href', '/choose-role');
+  rerender(<ProfileMenu profile={profile} unread={0} items={[]} role={{ name: 'ผู้ดูแลระบบ', canSwitch: false }} />);
+  expect(screen.queryByRole('link', { name: 'เปลี่ยนบทบาท' })).toBeNull();
+});
