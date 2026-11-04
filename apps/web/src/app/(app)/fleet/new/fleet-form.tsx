@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { t } from '@backoffice/i18n';
 import { fleetErrorMessage, fromBangkokLocal, sendFleet } from '../../../../lib/fleet-labels';
+import { ThaiDateTimeInput } from '../../../../components/thai-date-input';
 
 /** Times are Bangkok datetime-local values (`2026-11-10T08:00`); they become UTC instants only when sent. */
 export interface FleetFormValues { purpose: string; destination: string; province: string; departAt: string; returnAt: string; passengerCount: string; passengerNames: string; contactPhone?: string }
@@ -44,8 +45,8 @@ export function FleetForm({ initial, officialTravelId, fleetRequestId }: { initi
       <div className="form-field"><label htmlFor="fleet-province">{t('fleetProvince')}</label><input id="fleet-province" value={form.province} maxLength={100} required onChange={(event) => set({ province: event.target.value })} /></div>
     </div>
     <div className="form-row">
-      <div className="form-field"><label htmlFor="fleet-depart">{t('fleetDepartAt')}</label><input id="fleet-depart" type="datetime-local" step={900} value={form.departAt} required onChange={(event) => set({ departAt: event.target.value })} /></div>
-      <div className="form-field"><label htmlFor="fleet-return">{t('fleetReturnAt')}</label><input id="fleet-return" type="datetime-local" step={900} min={form.departAt || undefined} value={form.returnAt} required onChange={(event) => set({ returnAt: event.target.value })} /></div>
+      <div className="form-field"><label htmlFor="fleet-depart">{t('fleetDepartAt')}</label><ThaiDateTimeInput id="fleet-depart" label={t('fleetDepartAt')} value={form.departAt} required onChange={(value) => set({ departAt: value })} /></div>
+      <div className="form-field"><label htmlFor="fleet-return">{t('fleetReturnAt')}</label><ThaiDateTimeInput id="fleet-return" label={t('fleetReturnAt')} min={form.departAt || undefined} value={form.returnAt} required onChange={(value) => set({ returnAt: value })} /></div>
     </div>
     <div className="form-row">
       <div className="form-field"><label htmlFor="fleet-passenger-count">{t('fleetPassengerCount')}</label><input id="fleet-passenger-count" type="number" inputMode="numeric" min={1} max={99} step={1} value={form.passengerCount} required onChange={(event) => set({ passengerCount: event.target.value })} /></div>

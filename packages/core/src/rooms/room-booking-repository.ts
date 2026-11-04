@@ -13,6 +13,8 @@ export interface RoomBookingRepository {
   lockRoom(roomId: string): Promise<RoomRecord | null>;
   findActiveAddons(addonIds: string[]): Promise<{ id: string; name: string; unit: string }[]>;
   findConflicts(roomId: string, ranges: TimeRange[]): Promise<TimeRange[]>;
+  /** วันหยุด among the dates, as date → name. */
+  findHolidays(dates: string[]): Promise<Map<string, string>>;
   nextSequence(year: number): Promise<number>;
   currentOrganizationId(personId: string): Promise<string | null>;
   findApproverPersonIds(organizationId: string): Promise<string[]>;

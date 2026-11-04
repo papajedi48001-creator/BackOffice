@@ -6,6 +6,7 @@ import { t } from '@backoffice/i18n';
 import { ActionDialog } from '../../../../../components/action-dialog';
 import { FormDialog } from '../../../../../components/form-dialog';
 import { leaveErrorMessage } from '../../../../../lib/leave-labels';
+import { ThaiDateInput } from '../../../../../components/thai-date-input';
 
 type Decision = 'APPROVE' | 'RETURN' | 'REJECT';
 type LeaveDialog = Decision | 'CANCEL';
@@ -64,11 +65,11 @@ export function LeaveActions({ requestId, canDecide, canCancel, canRequestCancel
       open={cancelDaysOpen} onOpenChange={(next) => { setError(null); setCancelDaysOpen(next); }} isSubmitting={busy} error={error} onSubmit={cancelDays}>
       <p className="permission-notice">{t('leaveCancelDaysHelp')}</p>
       <div className="form-row">
-        <div className="form-field"><label htmlFor="cancel-start">{t('leaveStartDate')}</label><input id="cancel-start" type="date" value={range.startDate} required onChange={(event) => setRange({ ...range, startDate: event.target.value, endDate: range.endDate || event.target.value })} /></div>
+        <div className="form-field"><label htmlFor="cancel-start">{t('leaveStartDate')}</label><ThaiDateInput id="cancel-start" value={range.startDate} required onChange={(value) => setRange({ ...range, startDate: value, endDate: range.endDate || value })} /></div>
         <div className="form-field"><label htmlFor="cancel-start-half">{t('leaveStartHalf')}</label><select id="cancel-start-half" value={range.startHalf} onChange={(event) => setRange({ ...range, startHalf: event.target.value })}><option value="FULL">{t('leaveHalfFull')}</option><option value="AFTERNOON">{t('leaveHalfAfternoon')}</option></select></div>
       </div>
       <div className="form-row">
-        <div className="form-field"><label htmlFor="cancel-end">{t('leaveEndDate')}</label><input id="cancel-end" type="date" value={range.endDate} min={range.startDate || undefined} required onChange={(event) => setRange({ ...range, endDate: event.target.value })} /></div>
+        <div className="form-field"><label htmlFor="cancel-end">{t('leaveEndDate')}</label><ThaiDateInput id="cancel-end" value={range.endDate} min={range.startDate || undefined} required onChange={(value) => setRange({ ...range, endDate: value })} /></div>
         <div className="form-field"><label htmlFor="cancel-end-half">{t('leaveEndHalf')}</label><select id="cancel-end-half" value={range.endHalf} onChange={(event) => setRange({ ...range, endHalf: event.target.value })}><option value="FULL">{t('leaveHalfFull')}</option><option value="MORNING">{t('leaveHalfMorning')}</option></select></div>
       </div>
       <label htmlFor="cancel-reason">{t('leaveCancelDaysReason')}</label>

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { t } from '@backoffice/i18n';
 import { AttachmentField, type AttachedFile } from '../../../../components/attachment-field';
 import { TRAVEL_FUNDING, TRAVEL_TYPES, TRAVEL_VEHICLES, formatBaht, travelErrorMessage, travelFundingLabel, travelTypeLabel, travelVehicleLabel } from '../../../../lib/travel-labels';
+import { ThaiDateInput } from '../../../../components/thai-date-input';
 
 export interface TravelPerson { personId: string; displayName: string | null; organizationName: string | null }
 export interface TravelFormValues {
@@ -78,14 +79,14 @@ export function TravelForm({ leader, travelId, initial, fixedMembers, attachment
       <div className="form-field"><label htmlFor="travel-province">{t('travelProvince')}</label><input id="travel-province" value={form.province} maxLength={100} required onChange={(event) => set({ province: event.target.value })} /></div>
     </div>
     <div className="form-row">
-      <div className="form-field"><label htmlFor="travel-start">{t('leaveStartDate')}</label><input id="travel-start" type="date" value={form.startDate} required onChange={(event) => set({ startDate: event.target.value, endDate: form.endDate && form.endDate >= event.target.value ? form.endDate : event.target.value })} /></div>
+      <div className="form-field"><label htmlFor="travel-start">{t('leaveStartDate')}</label><ThaiDateInput id="travel-start" value={form.startDate} required onChange={(value) => set({ startDate: value, endDate: form.endDate && form.endDate >= value ? form.endDate : value })} /></div>
       <div className="form-field"><label htmlFor="travel-start-half">{t('leaveStartHalf')}</label>
         <select id="travel-start-half" value={form.startHalf} onChange={(event) => set({ startHalf: event.target.value as TravelFormValues['startHalf'] })}>
           <option value="FULL">{t('leaveHalfFull')}</option><option value="AFTERNOON" disabled={oneDay && form.endHalf === 'MORNING'}>{t('leaveHalfAfternoon')}</option>
         </select></div>
     </div>
     <div className="form-row">
-      <div className="form-field"><label htmlFor="travel-end">{t('leaveEndDate')}</label><input id="travel-end" type="date" value={form.endDate} min={form.startDate || undefined} required onChange={(event) => set({ endDate: event.target.value })} /></div>
+      <div className="form-field"><label htmlFor="travel-end">{t('leaveEndDate')}</label><ThaiDateInput id="travel-end" value={form.endDate} min={form.startDate || undefined} required onChange={(value) => set({ endDate: value })} /></div>
       <div className="form-field"><label htmlFor="travel-end-half">{t('leaveEndHalf')}</label>
         <select id="travel-end-half" value={form.endHalf} onChange={(event) => set({ endHalf: event.target.value as TravelFormValues['endHalf'] })}>
           <option value="FULL">{t('leaveHalfFull')}</option><option value="MORNING" disabled={oneDay && form.startHalf === 'AFTERNOON'}>{t('leaveHalfMorning')}</option>

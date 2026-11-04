@@ -6,6 +6,7 @@ import type { InventoryVendorRecord, ScanItem } from '@backoffice/core';
 import { t } from '@backoffice/i18n';
 import { inventoryErrorText } from '../../inventory-errors';
 import { ReceiptLinesEditor, toLineInputs, type EditorLine } from '../../receipt-lines-editor';
+import { ThaiDateInput } from '../../../../../components/thai-date-input';
 
 const draftKey = 'inventory.delivery-draft';
 type Draft = { vendorId: string; documentNo: string; receivedOn: string; lines: EditorLine[] };
@@ -73,7 +74,7 @@ export function DeliveryForm({ vendors, items, today, canBindBarcode }: { vendor
       <div className="form-row">
         <label>{t('inventoryVendors')}<select required value={draft.vendorId} onChange={(event) => setDraft({ ...draft, vendorId: event.target.value })}><option value="">–</option>{activeVendors.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.name}</option>)}</select></label>
         <label>{t('inventoryDocumentNo')}<input value={draft.documentNo} maxLength={60} onChange={(event) => setDraft({ ...draft, documentNo: event.target.value })} /></label>
-        <label>{t('inventoryReceivedOn')}<input type="date" required max={today} value={draft.receivedOn} onChange={(event) => setDraft({ ...draft, receivedOn: event.target.value })} /></label>
+        <label>{t('inventoryReceivedOn')}<ThaiDateInput required max={today} value={draft.receivedOn} onChange={(value) => setDraft({ ...draft, receivedOn: value })} /></label>
       </div>
       <ReceiptLinesEditor lines={draft.lines} onChange={(lines) => setDraft((current) => ({ ...current, lines }))} items={items} canBindBarcode={canBindBarcode} />
       {error ? <p role="alert">{error}</p> : null}

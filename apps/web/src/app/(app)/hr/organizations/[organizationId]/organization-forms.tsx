@@ -6,6 +6,7 @@ import type { OrganizationUnitType } from '@backoffice/contracts';
 import { t } from '@backoffice/i18n';
 import { FormDialog } from '../../../../../components/form-dialog';
 import { headLabelKeys, unitTypeLabelKeys } from '../../../../../lib/organization-unit-type';
+import { ThaiDateInput } from '../../../../../components/thai-date-input';
 
 const errorKeys = { PERSON_NOT_ACTIVE: 'hrHeadPersonNotActive', EFFECTIVE_FROM_BEFORE_CURRENT: 'hrHeadStartsBeforeCurrent', ORGANIZATION_NOT_FOUND: 'hrOrganizationNotFound' } as const;
 
@@ -60,7 +61,7 @@ export function OrganizationForms({ organizationId, unitType, people, today }: {
         </label>
         <datalist id="organization-head-people">{people.map((person) => <option key={person.id} value={person.label} />)}</datalist>
         <label>{t(labels.startDate)}
-          <input type="date" value={effectiveFrom} onChange={(event) => setEffectiveFrom(event.target.value)} required />
+          <ThaiDateInput value={effectiveFrom} onChange={(value) => setEffectiveFrom(value)} required />
         </label>
       </FormDialog>
     </div>

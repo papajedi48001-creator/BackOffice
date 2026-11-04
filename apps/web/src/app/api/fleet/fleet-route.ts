@@ -21,7 +21,8 @@ const statusByCode: Record<string, number> = {
 };
 
 /** A service result as JSON: `{ error: code }` with 409 for a state conflict, 404 when missing, otherwise 400. */
-export function fleetResult(result: { ok: true } | { ok: false; code: string }, extra: Record<string, unknown> = {}, okStatus = 200): Response {
+export function fleetResult(result: { ok: true } | { ok: false; code: string; holidays?: unknown }, extra: Record<string, unknown> = {}, okStatus = 200): Response {
   if (result.ok) return NextResponse.json({ ...result, ...extra }, { status: okStatus });
+  if (result.code === 'BOOKING_ON_HOLIDAY' && 'holidays' in result) return NextResponse.json({ error: result.code, holidays: result.holidays }, { status: 409 });
   return NextResponse.json({ error: result.code }, { status: statusByCode[result.code] ?? 400 });
 }

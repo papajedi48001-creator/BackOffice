@@ -1,6 +1,7 @@
 import type { FleetRequestStatus, TripStatus, VehicleKind, VehicleStatus } from '@backoffice/contracts';
 import { t, type MessageKey } from '@backoffice/i18n';
 import { formatBangkokDate, formatBangkokTime } from './bangkok-time';
+import { holidayBlockedMessage, holidaysOf } from './holidays';
 
 const BANGKOK_MS = 7 * 3_600_000;
 
@@ -60,6 +61,7 @@ export async function sendFleet(url: string, method: 'POST' | 'PUT' | 'PATCH' | 
   try {
     const response = await fetch(url, { method, headers: { 'content-type': 'application/json' }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
     const result = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-    return { error: response.ok ? null : fleetErrorMessage(typeof result.error === 'string' ? result.error : null), result };
+    const holidays = holidaysOf(result);
+    return { error: response.ok ? null : holidays ? holidayBlockedMessage(holidays) : fleetErrorMessage(typeof result.error === 'string' ? result.error : null), result };
   } catch { return { error: fleetErrorMessage(null), result: {} }; }
 }

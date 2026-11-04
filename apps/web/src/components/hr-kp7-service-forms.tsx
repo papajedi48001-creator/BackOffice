@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSectionSaved } from './section-editor';
 import type { GpfStatus } from '@backoffice/contracts';
 import { t, type MessageKey } from '@backoffice/i18n';
+import { ThaiDateInput } from './thai-date-input';
 
 type Message = { kind: 'error' | 'saved'; text: string } | null;
 const orNull = (value: string) => value.trim() === '' ? null : value.trim();
@@ -59,7 +60,7 @@ export function CivilServiceForm({ endpoint, values }: { endpoint: string; value
         <option value="NOT_MEMBER">{t('hrGpfNotMember')}</option>
       </select>
     </label>
-    {civilDates.map(([field, label]) => <label key={field}>{t(label)}<input type="date" value={form[field]} onChange={set(field)} /></label>)}
+    {civilDates.map(([field, label]) => <label key={field}>{t(label)}<ThaiDateInput value={form[field]} onChange={(value) => setForm((current) => ({ ...current, [field]: value }))} /></label>)}
     {civilText.slice(2).map(([field, label, max]) => <label key={field}>{t(label)}<input value={form[field]} maxLength={max} onChange={set(field)} /></label>)}
     <button type="submit" disabled={busy}>{t('hrSaveCivilService')}</button>
   </form>;

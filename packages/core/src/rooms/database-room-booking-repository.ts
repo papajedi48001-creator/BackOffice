@@ -6,6 +6,7 @@ import { RequestService } from '../workflow/request-service';
 import type { TimeRange } from './booking-days';
 import type { LockedRoomBooking, RoomBookingAddonRecord, RoomBookingDayRecord, RoomBookingHistoryEntry, RoomBookingRecord, RoomBookingRepository, RoomRecord } from './room-booking-repository';
 import type { RoomAddonDetails, RoomCatalogRepository, RoomDetails } from './room-catalog-service';
+import { loadHolidayNames } from '../holidays/holiday-days';
 
 type StoredRoom = Omit<RoomRecord, 'isBookable'> & { isBookable: number };
 type StoredDay = Omit<RoomBookingDayRecord, 'startsAt' | 'endsAt'> & { startsAt: Date | string; endsAt: Date | string };
@@ -44,6 +45,12 @@ export class DatabaseRoomBookingRepository implements RoomBookingRepository {
   async findActiveAddons(addonIds: string[]) {
     if (addonIds.length === 0) return [];
     return this.database.query<{ id: string; name: string; unit: string }>(`SELECT id, name, unit FROM room_addon WHERE is_active = 1 AND id IN (${addonIds.map(() => '?').join(', ')})`, addonIds);
+  }
+
+  async findHolidays(dates: string[]): Promise<Map<string, string>> {
+    if (dates.length === 0) return new Map();
+    const sorted = [...dates].sort();
+    return loadHolidayNames(this.database, sorted[0]!, sorted.at(-1)!);
   }
 
   async findConflicts(roomId: string, ranges: TimeRange[]): Promise<TimeRange[]> {

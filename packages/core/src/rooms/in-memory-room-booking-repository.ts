@@ -22,6 +22,8 @@ export class InMemoryRoomBookingRepository implements RoomBookingRepository {
   async transaction<T>(work: (repository: RoomBookingRepository) => Promise<T>): Promise<T> { return work(this); }
   async lockRoom(roomId: string) { return this.rooms.get(roomId) ?? null; }
   async findActiveAddons(addonIds: string[]) { return addonIds.map((id) => this.addons.get(id)).filter((addon) => addon?.isActive).map((addon) => ({ id: addon!.id, name: addon!.name, unit: addon!.unit })); }
+  readonly holidays = new Map<string, string>();
+  async findHolidays(dates: string[]) { return new Map(dates.filter((date) => this.holidays.has(date)).map((date) => [date, this.holidays.get(date)!])); }
   async findConflicts(roomId: string, ranges: TimeRange[]) {
     return this.days.filter((day) => day.roomId === roomId && day.status === 'ACTIVE' && ['HEAD_REVIEW', 'PENDING', 'APPROVED'].includes(this.bookings.get(day.bookingId)?.status ?? '') && ranges.some((range) => rangesOverlap(day, range)))
       .map(({ startsAt, endsAt }) => ({ startsAt, endsAt }));

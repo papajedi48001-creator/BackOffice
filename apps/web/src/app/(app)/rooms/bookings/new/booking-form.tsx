@@ -6,6 +6,8 @@ import { roomBookingPolicy } from '@backoffice/contracts';
 import { t } from '@backoffice/i18n';
 import { addDays, bangkokToday, datesBetween, formatBangkokDate, formatBangkokTime, timeOptions } from '../../../../../lib/bangkok-time';
 import { roomErrorMessage } from '../../room-display';
+import { holidayBlockedMessage, holidaysOf, type HolidayView } from '../../../../../lib/holidays';
+import { ThaiDateInput } from '../../../../../components/thai-date-input';
 
 export interface BookableRoom { id: string; name: string; capacity: number; place: string; }
 export interface SelectableAddon { id: string; name: string; unit: string; }
@@ -50,7 +52,9 @@ export function BookingForm({ rooms, addons, today }: { rooms: BookableRoom[]; a
       });
       const body = await response.json() as { id?: string; error?: string; conflicts?: Conflict[] };
       if (response.ok && body.id) { router.push(`/rooms/bookings/${body.id}`); return; }
-      if (body.error === 'BOOKING_CONFLICT') setConflicts(body.conflicts ?? []);
+      const onHolidays = holidaysOf(body);
+      if (onHolidays) setError(holidayBlockedMessage(onHolidays));
+      else if (body.error === 'BOOKING_CONFLICT') setConflicts(body.conflicts ?? []);
       else setError(roomErrorMessage(body.error));
     } catch { setError(t('roomActionFailed')); } finally { setSubmitting(false); }
   }
@@ -58,8 +62,8 @@ export function BookingForm({ rooms, addons, today }: { rooms: BookableRoom[]; a
   return <form className="room-form" onSubmit={submit}>
     <div className="form-field"><label htmlFor="booking-room">{t('roomField')}</label><select id="booking-room" value={roomId} onChange={(event) => setRoomId(event.target.value)}>{rooms.map((room) => <option key={room.id} value={room.id}>{room.name} ({room.place}, {room.capacity} คน)</option>)}</select></div>
     <div className="form-row">
-      <div className="form-field"><label htmlFor="booking-first">{t('bookingStartDate')}</label><input id="booking-first" type="date" min={today} max={lastBookable} value={firstDate} onChange={(event) => setFirstDate(event.target.value)} required /></div>
-      <div className="form-field"><label htmlFor="booking-last">{t('bookingEndDate')}</label><input id="booking-last" type="date" min={firstDate} max={lastAllowed} value={lastDate} onChange={(event) => setLastDate(event.target.value)} required /></div>
+      <div className="form-field"><label htmlFor="booking-first">{t('bookingStartDate')}</label><ThaiDateInput id="booking-first" min={today} max={lastBookable} value={firstDate} onChange={(value) => setFirstDate(value)} required /></div>
+      <div className="form-field"><label htmlFor="booking-last">{t('bookingEndDate')}</label><ThaiDateInput id="booking-last" min={firstDate} max={lastAllowed} value={lastDate} onChange={(value) => setLastDate(value)} required /></div>
     </div>
     {tooLong && <p role="alert" className="form-error">{t('bookingRangeTooLong')}</p>}
     <fieldset className="room-days"><legend>{t('bookingDays')}</legend>{range.map((date) => <label key={date}><input type="checkbox" checked={!excluded.has(date)} onChange={() => toggleDay(date)} />{formatBangkokDate(date)}</label>)}</fieldset>

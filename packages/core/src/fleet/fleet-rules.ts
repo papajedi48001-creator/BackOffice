@@ -1,3 +1,5 @@
+import { bangkokDatesOfRange, holidayConflicts } from '../holidays/holiday-days';
+import type { HolidayEntry } from '../holidays/holiday-rows';
 import type { FleetErrorCode } from '@backoffice/contracts';
 import { bangkokToday } from '../official-travel/travel-store';
 
@@ -42,4 +44,9 @@ export function checkTripRange(startsAt: Date, endsAt: Date): FleetErrorCode | n
 /** A เที่ยวรถ carries a ใบ only when the ใบ's times sit inside its range, edges included. */
 export function tripCovers(trip: { startsAt: Date; endsAt: Date }, request: { departAt: Date; returnAt: Date }): boolean {
   return trip.startsAt.getTime() <= request.departAt.getTime() && trip.endsAt.getTime() >= request.returnAt.getTime();
+}
+
+/** ห้ามจองในวันหยุด: the วันหยุด a car would be out on, from leaving to coming back, in Bangkok dates. */
+export function fleetHolidays(departAt: Date, returnAt: Date, holidays: ReadonlyMap<string, string>): HolidayEntry[] {
+  return holidayConflicts(bangkokDatesOfRange(departAt, returnAt), holidays);
 }
