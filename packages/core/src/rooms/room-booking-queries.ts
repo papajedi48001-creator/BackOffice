@@ -83,13 +83,13 @@ export class RoomBookingQueries {
     return (await this.database.query<SummaryRow>(`${summarySelect} WHERE b.booker_person_id = ? ${summaryGroup} ORDER BY firstDate DESC, b.reference DESC`, [personId])).map(toSummary);
   }
 
-  /** Pending bookings this approver can still decide: in scope, not their own, and with an active day yet to end. */
+  /** Bookings this approver can still decide (including any still marked as waiting on the head): in scope, not their own, and with an active day yet to end. */
   async pendingForApprover(actor: RoomActor, now: Date = new Date()): Promise<RoomBookingSummary[]> {
     const scope = this.authorizer.organizationScope(this.subject(actor), 'room.booking.decide');
     if (scope !== 'all' && scope.length === 0) return [];
     const scoped = scope === 'all' ? '' : `AND r.owner_organization_id IN (${scope.map(() => '?').join(', ')})`;
     return (await this.database.query<SummaryRow>(
-      `${summarySelect} WHERE b.status = 'PENDING' AND b.booker_person_id <> ? ${scoped} ${summaryGroup} HAVING lastEndsAt > ? ORDER BY firstDate, b.reference`,
+      `${summarySelect} WHERE b.status IN ('HEAD_REVIEW', 'PENDING') AND b.booker_person_id <> ? ${scoped} ${summaryGroup} HAVING lastEndsAt > ? ORDER BY firstDate, b.reference`,
       [actor.personId, ...(scope === 'all' ? [] : scope), toMariaDbDatetime(now)]
     )).map(toSummary);
   }

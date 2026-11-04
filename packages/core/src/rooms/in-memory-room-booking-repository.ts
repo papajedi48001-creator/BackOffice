@@ -18,7 +18,6 @@ export class InMemoryRoomBookingRepository implements RoomBookingRepository {
   headRequests: { id: string; requestorPersonId: string; organizationId: string; status: 'IN_REVIEW' | 'APPROVED' | 'REJECTED' | 'CANCELLED' }[] = [];
 
   /** Stands in for the head's เห็นชอบ in คำขอ, which the workflow hook applies on MariaDB. */
-  headApprove(bookingId: string) { const booking = this.bookings.get(bookingId)!; this.bookings.set(bookingId, { ...booking, status: 'PENDING' }); const request = this.headRequests.find((entry) => entry.id === booking.requestId); if (request) request.status = 'APPROVED'; }
 
   async transaction<T>(work: (repository: RoomBookingRepository) => Promise<T>): Promise<T> { return work(this); }
   async lockRoom(roomId: string) { return this.rooms.get(roomId) ?? null; }
@@ -32,7 +31,6 @@ export class InMemoryRoomBookingRepository implements RoomBookingRepository {
   defaultOrganization: string | null = 'other-unit';
   async currentOrganizationId(personId: string) { return this.organizations.get(personId) ?? this.defaultOrganization; }
   async findApproverPersonIds(organizationId: string) { return [...new Set(this.approvers.filter((approver) => approver.organizationId === null || approver.organizationId === organizationId).map((approver) => approver.personId))]; }
-  async openHeadRequest(input: { requestorPersonId: string; organizationId: string }) { const id = `request-${this.headRequests.length + 1}`; this.headRequests.push({ id, ...input, status: 'IN_REVIEW' }); return id; }
   async cancelHeadRequest(input: { requestId: string }) { const request = this.headRequests.find((entry) => entry.id === input.requestId); if (request?.status === 'IN_REVIEW') request.status = 'CANCELLED'; }
   async insertBooking(booking: RoomBookingRecord, days: RoomBookingDayRecord[], addons: RoomBookingAddonRecord[]) { this.bookings.set(booking.id, { ...booking }); this.days.push(...days.map((day) => ({ ...day }))); this.bookingAddons.push(...addons); }
   async getBookingForUpdate(bookingId: string) {
