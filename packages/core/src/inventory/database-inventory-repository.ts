@@ -1,3 +1,4 @@
+import { insertAuditEvent } from '../audit/audit-sql';
 import type { AuditEvent, InventoryReceiptHistoryAction, OutboxEvent } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { fromMariaDbDate, fromMariaDbDatetime, toMariaDbDatetime } from '../rooms/database-room-booking-repository';
@@ -34,7 +35,7 @@ export const toLot = (row: Row): InventoryLotRecord => ({
 });
 
 async function appendAudit(database: Database, event: AuditEvent): Promise<void> {
-  await database.execute('INSERT INTO audit_event (id, actor_person_id, action, target_type, target_id, result, metadata, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())', [event.id, event.actorPersonId ?? null, event.action, event.targetType, event.targetId, event.result, event.metadata]);
+  await insertAuditEvent(database, event);
 }
 
 export class DatabaseInventoryRepository implements InventoryRepository {

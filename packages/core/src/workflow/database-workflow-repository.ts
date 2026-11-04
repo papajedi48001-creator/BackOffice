@@ -1,3 +1,4 @@
+import { insertAuditEvent } from '../audit/audit-sql';
 import { ROOM_BOOKING_MODULE, type ApprovalAction, type RequestStatus, type ApprovalDecision, ApprovalStep, AuditEvent, OutboxEvent, RequestCancellation, SubmittedRequest } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { FLEET_MODULE } from '../fleet/fleet-module';
@@ -31,7 +32,7 @@ export class DatabaseWorkflowRepository implements WorkflowRepository {
     if (input.request.moduleCode === ROOM_BOOKING_MODULE) await followRoomBookingDecision(this.database, { requestId: input.request.id, status: input.status, decision: input.decision, reason: input.reason, actorPersonId: input.actorPersonId });
   }
   async getPositionTitle(personId: string): Promise<string | null> { return (await this.database.query<{ title: string | null }>('SELECT position_title AS title FROM person WHERE id = ? LIMIT 1', [personId]))[0]?.title ?? null; }
-  async appendAudit(event: AuditEvent): Promise<void> { await this.database.execute('INSERT INTO audit_event (id, actor_person_id, action, target_type, target_id, result, metadata, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())', [event.id, event.actorPersonId ?? null, event.action, event.targetType, event.targetId, event.result, event.metadata]); }
+  async appendAudit(event: AuditEvent): Promise<void> { await insertAuditEvent(this.database, event); }
 }
 
 function toMariaDbDatetime(isoTimestamp: string): string {
