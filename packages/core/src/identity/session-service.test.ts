@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { SessionService, type ActiveSessionRecord, type SessionRepository } from './session-service';
+import { SessionService, type AccessSubjectLoader, type ActiveSessionRecord, type SessionRepository } from './session-service';
 
 class MemorySessionRepository implements SessionRepository {
   readonly rows = new Map<string, ActiveSessionRecord & { tokenHash: string; lifetimeSeconds: number }>();
@@ -16,7 +16,7 @@ class MemorySessionRepository implements SessionRepository {
 
 const access = { load: async (personId: string) => ({ roles: [{ name: 'hr-reader', organizationId: `unit-of-${personId}` }], dataOwnerModules: ['hr'] }) };
 
-function service(repository: MemorySessionRepository, loader = access) {
+function service(repository: MemorySessionRepository, loader: AccessSubjectLoader = access) {
   let counter = 0;
   return new SessionService(repository, loader, { createId: () => `session-${++counter}`, createToken: () => `token-${counter}` });
 }
