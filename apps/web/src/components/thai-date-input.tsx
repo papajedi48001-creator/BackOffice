@@ -33,7 +33,7 @@ export function ThaiDateInput(props: ThaiDateInputProps) {
   const holidayNames = useMemo(() => new Map(holidays.map((holiday) => [holiday.date, holiday.name])), [holidays]);
 
   // Keep the field in step when the value changes from outside (another field, a reset).
-  useEffect(() => { if (parseThaiDateInput(text) !== value) setText(formatThaiDateInput(value)); }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (parseThaiDateInput(text) !== value) setText(formatThaiDateInput(value)); }, [value]);
   useEffect(() => { input.current?.setCustomValidity(problem ?? ''); }, [problem]);
 
   const refusal = (iso: string): string | null => {

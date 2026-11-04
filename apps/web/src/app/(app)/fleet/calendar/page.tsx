@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { CalendarBlock } from '@backoffice/core';
 import { t } from '@backoffice/i18n';
-import { addDays, formatBangkokDate, formatBangkokDateOnly, formatBangkokTime, formatWeekday } from '../../../../lib/bangkok-time';
+import { addDays, formatBangkokDateOnly, formatBangkokTime, formatWeekday } from '../../../../lib/bangkok-time';
 import { fleetStatusTone, toBangkokLocal, tripStatusLabel, vehicleStatusLabel } from '../../../../lib/fleet-labels';
 import { parseWeekStart } from '../../../../lib/fleet-week';
 import { fleetContext, FleetPageMessage } from '../fleet-page';

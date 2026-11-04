@@ -17,3 +17,7 @@ Superpowers skills were followed by hand in this session (brainstorm → spec �
 
 ## Security
 Password and connection URL never appear in logs, audit metadata, URLs or API responses. Only admins with the admin module can read/save settings or trigger sync (server-checked).
+
+## Added during the session
+11. **ช่องกรอกวันที่** every date / date-time field uses one Thai picker (`components/thai-date-input.tsx`): typed วว/ดด/ปปปป พ.ศ. (ISO and ค.ศ. also accepted), popup calendar Monday-first with full Thai weekday and month names, holidays grey and named (refused with `blockHolidays`), keyboard: arrows, Home/End, PageUp/PageDown, Enter, Esc. Values stay ISO (`YYYY-MM-DD`, `YYYY-MM-DDTHH:mm`), so no API changed. Time is a 24-hour quarter-hour select.
+12. **Font** decided: `--font-family: Tahoma, 'Noto Sans Thai', sans-serif`, Noto Sans Thai loaded from Google Fonts in place of Kanit.
