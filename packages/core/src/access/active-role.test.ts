@@ -1,38 +1,46 @@
 import { describe, expect, it } from 'vitest';
-import { EMPLOYEE_ROLE, resolveActiveRole, roleChoices } from './active-role';
+import { ADMIN_TIER, EMPLOYEE_ROLE, MANAGER_TIER, resolveActiveRole, roleChoices } from './active-role';
 import { AuthorizationService } from './authorization-service';
 import { canUseModule } from '../admin/module-managers';
 
-const roles = [{ name: 'leave-manager', organizationId: null }, { name: 'admin', organizationId: null }, { name: 'hr-reader', organizationId: 'unit-a' }, { name: 'hr-reader', organizationId: 'unit-b' }];
+const roles = [{ name: 'leave-manager', organizationId: null }, { name: 'admin', organizationId: null }, { name: 'hr-reader', organizationId: 'unit-a' }, { name: 'hr-reader', organizationId: 'unit-b' }, { name: 'fleet-tester', organizationId: null }];
 
 describe('active role', () => {
-  it('offers each distinct role name once', () => {
-    expect(roleChoices(roles)).toEqual(['admin', 'hr-reader', 'leave-manager']);
+  it('offers at most the two tiers ผู้ดูแลระบบ and ผู้จัดการ, whatever roles are held', () => {
+    expect(roleChoices(roles)).toEqual([ADMIN_TIER, MANAGER_TIER]);
+    expect(roleChoices([{ name: 'hr-manager', organizationId: null }, { name: 'leave-manager', organizationId: null }])).toEqual([MANAGER_TIER]);
+    expect(roleChoices([{ name: 'admin', organizationId: null }])).toEqual([ADMIN_TIER]);
   });
 
-  it('needs a choice for two or more roles and grants no role until then', () => {
-    expect(resolveActiveRole(roles, null)).toEqual({ activeRole: null, roleChoices: ['admin', 'hr-reader', 'leave-manager'], roleSelectionRequired: true, roles: [] });
+  it('needs a choice when both tiers are held and grants no role until then', () => {
+    expect(resolveActiveRole(roles, null)).toEqual({ activeRole: null, roleChoices: [ADMIN_TIER, MANAGER_TIER], roleSelectionRequired: true, roles: [] });
   });
 
-  it('keeps only the chosen role with all its unit scopes', () => {
-    expect(resolveActiveRole(roles, 'hr-reader')).toMatchObject({ activeRole: 'hr-reader', roleSelectionRequired: false, roles: [{ name: 'hr-reader', organizationId: 'unit-a' }, { name: 'hr-reader', organizationId: 'unit-b' }] });
+  it('works as ผู้ดูแลระบบ with every held role', () => {
+    expect(resolveActiveRole(roles, ADMIN_TIER)).toMatchObject({ activeRole: ADMIN_TIER, roleSelectionRequired: false, roles });
   });
 
-  it('lets a person with several roles work as บุคลากรทั่วไป with no role', () => {
+  it('works as ผู้จัดการ with every held role except admin, unit scopes and tester roles kept', () => {
+    expect(resolveActiveRole(roles, MANAGER_TIER)).toMatchObject({ activeRole: MANAGER_TIER, roleSelectionRequired: false, roles: roles.filter((role) => role.name !== 'admin') });
+  });
+
+  it('lets a person with roles work as บุคลากรทั่วไป with no role', () => {
     expect(resolveActiveRole(roles, EMPLOYEE_ROLE)).toMatchObject({ activeRole: EMPLOYEE_ROLE, roleSelectionRequired: false, roles: [] });
   });
 
-  it('sends a stale role back to the picker, or auto-selects when one role is left', () => {
-    expect(resolveActiveRole(roles, 'fleet-manager')).toMatchObject({ activeRole: null, roleSelectionRequired: true, roles: [] });
-    expect(resolveActiveRole([{ name: 'fleet-manager', organizationId: null }], 'admin')).toMatchObject({ activeRole: 'fleet-manager', roleSelectionRequired: false, roles: [{ name: 'fleet-manager', organizationId: null }] });
+  it('sends a choice saved before the tiers back to the picker, and auto-selects a single tier', () => {
+    expect(resolveActiveRole(roles, 'leave-manager')).toMatchObject({ activeRole: null, roleSelectionRequired: true, roles: [] });
+    expect(resolveActiveRole([{ name: 'fleet-manager', organizationId: null }, { name: 'hr-manager', organizationId: null }], null)).toMatchObject({ activeRole: MANAGER_TIER, roleSelectionRequired: false, roles: [{ name: 'fleet-manager', organizationId: null }, { name: 'hr-manager', organizationId: null }] });
     expect(resolveActiveRole([], 'admin')).toEqual({ activeRole: EMPLOYEE_ROLE, roleChoices: [], roleSelectionRequired: false, roles: [] });
   });
 
-  it('authorizes and shows development modules with the active role only', async () => {
-    const asLeave = { authenticated: true, personId: 'p', ...resolveActiveRole([...roles, { name: 'fleet-tester', organizationId: null }], 'leave-manager'), dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: ['hr'] };
+  it('authorizes with the tier chosen: ผู้จัดการ keeps module rights but not ผู้ดูแลระบบ', async () => {
+    const asManager = { authenticated: true, personId: 'p', ...resolveActiveRole(roles, MANAGER_TIER), dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: ['hr'] };
+    const asEmployee = { ...asManager, ...resolveActiveRole(roles, EMPLOYEE_ROLE) };
     const authorization = new AuthorizationService();
-    await expect(authorization.canAccess(asLeave, 'leave.manage', { moduleCode: 'hr', organizationId: 'unit-a' })).resolves.toMatchObject({ allowed: true });
-    await expect(authorization.canAccess(asLeave, 'hr.person.read', { moduleCode: 'hr', organizationId: 'unit-a' })).resolves.toMatchObject({ allowed: false });
-    expect(canUseModule(asLeave, 'fleet', 'DEVELOPMENT')).toBe(false);
+    await expect(authorization.canAccess(asManager, 'leave.manage', { moduleCode: 'hr', organizationId: 'unit-a' })).resolves.toMatchObject({ allowed: true });
+    expect(asManager.roles.some((role) => role.name === 'admin')).toBe(false);
+    expect(canUseModule(asManager, 'fleet', 'DEVELOPMENT')).toBe(true);
+    await expect(authorization.canAccess(asEmployee, 'leave.manage', { moduleCode: 'hr', organizationId: 'unit-a' })).resolves.toMatchObject({ allowed: false });
   });
 });
