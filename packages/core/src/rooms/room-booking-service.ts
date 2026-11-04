@@ -35,19 +35,26 @@ export class RoomBookingService {
       const conflicts = await repository.findConflicts(room.id, ranges);
       if (conflicts.length > 0) throw new BookingConflictError(conflicts);
 
-      // The room managers decide directly; no head step in คำขอ.
+      // The room managers decide directly; no head step in คำขอ. Someone who may approve this room's bookings (a room
+      // manager or approver of its unit, or an admin) needs nobody's approval, so their own booking is approved as it is made.
+      const approvedOutright = await this.isAllowed(actor, 'room.booking.decide', room);
       const bookerOrganizationId = await repository.currentOrganizationId(actor.personId);
       const id = this.createId();
       const sequence = await repository.nextSequence(buddhistYear(now));
       const booking: RoomBookingRecord = {
         id, reference: `RB-${buddhistYear(now)}-${String(sequence).padStart(4, '0')}`, roomId: room.id, bookerPersonId: actor.personId,
         bookerOrganizationId, title: valid.title, attendeeCount: valid.attendeeCount,
-        startMinute: valid.startMinute, endMinute: valid.endMinute, status: 'PENDING', decidedByPersonId: null, requestId: null
+        startMinute: valid.startMinute, endMinute: valid.endMinute, status: approvedOutright ? 'APPROVED' : 'PENDING', decidedByPersonId: approvedOutright ? actor.personId : null, requestId: null
       };
       const days: RoomBookingDayRecord[] = ranges.map((range) => ({ id: this.createId(), bookingId: id, roomId: room.id, bookingDate: range.date, startsAt: range.startsAt, endsAt: range.endsAt, status: 'ACTIVE' }));
       const addons = valid.addons.map((addon) => ({ id: this.createId(), bookingId: id, addonId: addon.addonId, addonName: activeAddons.get(addon.addonId)!.name, addonUnit: activeAddons.get(addon.addonId)!.unit, quantity: addon.quantity, note: addon.note || null }));
       await repository.insertBooking(booking, days, addons);
       const historyId = await this.record(repository, booking, actor.personId, 'SUBMITTED', null, 'room_booking.submitted', days.length);
+      if (approvedOutright) {
+        const approvedId = await this.record(repository, booking, actor.personId, 'APPROVED', null, 'room_booking.approved', days.length);
+        await this.notify(repository, booking, approvedId, actor.personId, `จองห้องสำเร็จ (${booking.reference})`);
+        return booking;
+      }
       await this.notify(repository, booking, historyId, actor.personId, `ยื่นจองห้องแล้ว รออนุมัติ (${booking.reference})`);
       const approvers = (await repository.findApproverPersonIds(room.ownerOrganizationId)).filter((personId) => personId !== actor.personId);
       for (const personId of approvers) await this.notify(repository, booking, historyId, personId, `มีการจองห้องรออนุมัติ (${booking.reference})`);

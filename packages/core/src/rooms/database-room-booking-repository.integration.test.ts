@@ -155,6 +155,15 @@ describeWithDatabase('room booking on MariaDB', () => {
     expect(pending).not.toContain(own.id);
   });
 
+  it('books the room outright for a room manager of its unit, still holding the slot', async () => {
+    const room = await createRoom();
+    const booking = await service().submit(manager, input(room.id, ['2026-12-10']));
+    expect(booking).toMatchObject({ status: 'APPROVED', decidedByPersonId: approverId });
+    const detail = await new RoomBookingQueries(database).detail(booking.id, manager);
+    expect(detail?.history.map((entry) => entry.action)).toEqual(['SUBMITTED', 'APPROVED']);
+    await expect(service().submit(booker, input(room.id, ['2026-12-10']))).rejects.toThrow('BOOKING_CONFLICT');
+  });
+
   describe('bookings filed while the head step existed', () => {
     const requestStatus = async (requestId: string) => (await database.query<{ status: string }>('SELECT status FROM request WHERE id = ?', [requestId]))[0]?.status;
     const bookingStatus = async (bookingId: string) => (await database.query<{ status: string }>('SELECT status FROM room_booking WHERE id = ?', [bookingId]))[0]?.status;
