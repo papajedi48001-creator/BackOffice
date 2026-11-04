@@ -10,14 +10,18 @@ import { DatabaseWorkflowRepository } from '../workflow/database-workflow-reposi
 import { RequestService, type ApproverResolver } from '../workflow/request-service';
 import { fleetManagerPersonIds } from './fleet-managers';
 import { FLEET_MODULE } from './fleet-module';
-import { checkFleetRange } from './fleet-rules';
+import { loadHolidayNames } from '../holidays/holiday-days';
+import type { HolidayEntry } from '../holidays/holiday-rows';
+import { checkFleetRange, fleetHolidays } from './fleet-rules';
 import { canCancel, fleetRequestStatus } from './fleet-status';
 import { auditFleet, cancelTripIfEmpty, insertHistory, lockFleetRequest, lockFleetTrip, nextFleetReference, writeFleetNotices } from './fleet-store';
 
 /** A ใบขอใช้รถ as filed; `passengerNames` defaults to empty. */
 export type FleetRequestDraft = Parameters<typeof fleetRequestInputSchema.parse>[0];
 type Failure<Code extends FleetErrorCode = FleetErrorCode> = { ok: false; code: Code };
-export type FleetSubmitResult = { ok: true; fleetRequestId: string } | Failure;
+export type FleetSubmitResult = { ok: true; fleetRequestId: string } | Failure | HolidayFailure;
+/** ห้ามจองในวันหยุด: the วันหยุด named so the form can say which. */
+export type HolidayFailure = { ok: false; code: 'BOOKING_ON_HOLIDAY'; holidays: HolidayEntry[] };
 
 const fail = <Code extends FleetErrorCode>(code: Code): Failure<Code> => ({ ok: false, code });
 const toDatetime = (iso: string) => new Date(iso).toISOString().slice(0, 19).replace('T', ' ');
@@ -35,6 +39,8 @@ export class FleetRequestService {
     const now = this.now();
     const range = checkFleetRange(new Date(input.departAt), new Date(input.returnAt), now);
     if (range) return fail(range);
+    const onHolidays = await this.holidaysOn(input.departAt, input.returnAt);
+    if (onHolidays) return onHolidays;
     return this.mapNoApprover(() => this.database.transaction(async (database) => {
       // The trip is locked before the person, as ไปราชการ does, so a second ใบ for the same trip waits for this one.
       if (input.officialTravelId) {
@@ -59,7 +65,12 @@ export class FleetRequestService {
   }
 
   /** After the head's ส่งกลับแก้ไข: the requester edits the ใบ and sends the คำขอ up again; the time rules run again. */
-  async resubmit(requesterPersonId: string, fleetRequestId: string, draft: FleetRequestDraft): Promise<{ ok: true } | Failure> {
+  private async holidaysOn(departAt: string, returnAt: string, database: Pick<Database, 'query'> = this.database): Promise<HolidayFailure | null> {
+    const days = fleetHolidays(new Date(departAt), new Date(returnAt), await loadHolidayNames(database, new Date(Date.parse(departAt) - 86_400_000).toISOString().slice(0, 10), new Date(Date.parse(returnAt) + 86_400_000).toISOString().slice(0, 10)));
+    return days.length > 0 ? { ok: false, code: 'BOOKING_ON_HOLIDAY', holidays: days } : null;
+  }
+
+  async resubmit(requesterPersonId: string, fleetRequestId: string, draft: FleetRequestDraft): Promise<{ ok: true } | Failure | HolidayFailure> {
     const input = fleetRequestInputSchema.parse(draft);
     return this.mapNoApprover(() => this.database.transaction(async (database) => {
       await lockPerson(database, requesterPersonId);
@@ -68,6 +79,8 @@ export class FleetRequestService {
       if (!locked.requestId || locked.headStatus !== 'RETURNED') return fail('NOT_RETURNED');
       const range = checkFleetRange(new Date(input.departAt), new Date(input.returnAt), this.now());
       if (range) return fail(range);
+      const onHolidays = await this.holidaysOn(input.departAt, input.returnAt, database);
+      if (onHolidays) return onHolidays;
       await this.update(database, fleetRequestId, input);
       await this.requests(database).resubmitRequest({ requestId: locked.requestId, actorPersonId: requesterPersonId, target: 'NEAREST_HEAD' });
       await insertHistory(database, { fleetRequestId, action: 'RESUBMITTED', actorPersonId: requesterPersonId });

@@ -1,7 +1,7 @@
 import { insertAuditEvent } from './audit-sql';
 import type { AuditEvent } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
-import type { AuditRepository } from './audit-service';
+import type { AuditRepository } from './audit-service.ts';
 
 export class DatabaseAuditRepository implements AuditRepository {
   constructor(private readonly database: Pick<Database, 'execute'>) {}

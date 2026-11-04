@@ -12,4 +12,12 @@ describe('HomePage', () => {
 
     expect(screen.getByRole('heading', { name: 'ระบบสนับสนุนการทำงานภายในองค์กร (Back Office)' })).toBeInTheDocument();
   });
+
+  it('shows the WR logo and hospital name', () => {
+    render(<HomePage />);
+
+    expect(screen.getAllByRole('img', { name: /WR/ }).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('โรงพยาบาลวาริชภูมิ').length).toBeGreaterThan(0);
+    expect(screen.getByText('ลืมรหัสผ่าน ติดต่อกลุ่มงานเทคโนโลยีสารสนเทศ')).toBeInTheDocument();
+  });
 });

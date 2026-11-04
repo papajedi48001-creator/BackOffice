@@ -35,9 +35,10 @@ describe('loadRequestForm', () => {
   });
 
   it('prefills ขอใช้รถ only from a คำขอไปราชการ the person may see', async () => {
-    mocks.leaveSession.mockResolvedValue(session); mocks.getSharedDatabase.mockReturnValue({});
+    mocks.leaveSession.mockResolvedValue(session); mocks.getSharedDatabase.mockReturnValue({ query: vi.fn().mockResolvedValue([{ date: '2026-12-07', name: 'วันหยุดชดเชย' }]) });
     mocks.detail.mockResolvedValue(null);
-    expect(await loadRequestForm('fleet', 'travel-x')).toEqual({ module: 'fleet', fromTravel: false });
+    // Upcoming วันหยุด go to the picker so it can grey and refuse them.
+    expect(await loadRequestForm('fleet', 'travel-x')).toEqual({ module: 'fleet', fromTravel: false, holidays: [{ date: '2026-12-07', name: 'วันหยุดชดเชย' }] });
     expect(mocks.detail).toHaveBeenCalledWith('travel-x', session);
   });
 

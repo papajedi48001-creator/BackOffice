@@ -17,7 +17,7 @@ describe('FleetForm', () => {
     vi.stubGlobal('fetch', fetchMock);
     render(<FleetForm initial={initial} officialTravelId="travel-1" />);
     expect(screen.getByLabelText('ปลายทาง')).toHaveValue('โรงแรมตักสิลา');
-    expect(screen.getByLabelText('เวลาออก')).toHaveAttribute('step', '900');
+    expect(screen.getByLabelText('เวลา เวลาออก').querySelectorAll('option')).toHaveLength(96);
     fireEvent.change(screen.getByLabelText('จำนวนผู้โดยสาร'), { target: { value: '3' } });
     const contact = screen.getByLabelText(/เบอร์ติดต่อระหว่างเดินทาง/);
     expect(contact).not.toBeRequired();

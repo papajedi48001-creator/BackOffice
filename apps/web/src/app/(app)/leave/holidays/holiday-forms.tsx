@@ -7,6 +7,7 @@ import { ActionDialog } from '../../../../components/action-dialog';
 import { FormDialog } from '../../../../components/form-dialog';
 import { formatBangkokDate } from '../../../../lib/bangkok-time';
 import { leaveErrorMessage } from '../../../../lib/leave-labels';
+import { ThaiDateInput } from '../../../../components/thai-date-input';
 
 async function send(url: string, method: string, body?: unknown): Promise<string | null> {
   try {
@@ -30,7 +31,7 @@ export function HolidayAddForm({ year }: { year: number }) {
   }
   return <div className="form-actions">
     <FormDialog title={t('leaveAddHoliday')} triggerLabel={t('leaveAddHoliday')} submitLabel={t('leaveAddHoliday')} error={error} onOpenChange={(open) => { if (open) setError(null); }} onSubmit={submit}>
-      <div className="form-field"><label htmlFor="holiday-date">{t('leaveHolidayDate')}</label><input id="holiday-date" type="date" min={`${year}-01-01`} max={`${year}-12-31`} required value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} /></div>
+      <div className="form-field"><label htmlFor="holiday-date">{t('leaveHolidayDate')}</label><ThaiDateInput id="holiday-date" min={`${year}-01-01`} max={`${year}-12-31`} required value={form.date} onChange={(value) => setForm({ ...form, date: value })} /></div>
       <div className="form-field"><label htmlFor="holiday-name">{t('leaveHolidayName')}</label><input id="holiday-name" maxLength={120} required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></div>
     </FormDialog>
   </div>;
