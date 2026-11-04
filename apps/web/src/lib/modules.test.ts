@@ -191,7 +191,7 @@ describe('moduleLabel', () => {
   });
 
   it('falls back to the system name for an unknown module', () => {
-    expect(moduleLabel('not-registered')).toBe('ระบบ Back Office');
+    expect(moduleLabel('not-registered')).toBe('ระบบสนับสนุนการทำงานภายในองค์กร (Back Office)');
   });
 
   it('opens inventory to hospital-wide supplies roles only, with sections by role', () => {
