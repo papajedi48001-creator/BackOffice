@@ -9,6 +9,8 @@ class MemorySessionRepository implements SessionRepository {
   async insert(input: { id: string; tokenHash: string; personId: string; lifetimeSeconds: number }) { this.rows.set(input.tokenHash, { ...input, idleSeconds: 0, expired: false, revoked: false }); }
   async findByTokenHash(tokenHash: string) { return this.rows.get(tokenHash) ?? null; }
   async touch(id: string) { this.touched.push(id); }
+  readonly chosen: [string, string][] = [];
+  async setActiveRole(id: string, role: string) { this.chosen.push([id, role]); for (const row of this.rows.values()) if (row.id === id) row.activeRole = role; }
   async revoke(id: string) { this.revoked.push(id); for (const row of this.rows.values()) if (row.id === id) row.revoked = true; }
 }
 
@@ -35,7 +37,7 @@ describe('SessionService', () => {
     const sessions = service(repository);
     const { token } = await sessions.start('person-a');
 
-    await expect(sessions.resolve(token)).resolves.toEqual({ authenticated: true, personId: 'person-a', roles: [{ name: 'hr-reader', organizationId: 'unit-of-person-a' }], dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: [] });
+    await expect(sessions.resolve(token)).resolves.toEqual({ authenticated: true, personId: 'person-a', roles: [{ name: 'hr-reader', organizationId: 'unit-of-person-a' }], dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: [], activeRole: 'hr-reader', roleChoices: ['hr-reader'], roleSelectionRequired: false });
 
     const revokedAccess = new SessionService(repository, { load: async () => ({ roles: [], dataOwnerModules: [] }) });
     await expect(revokedAccess.resolve(token)).resolves.toMatchObject({ roles: [], dataOwnerModules: [] });
@@ -94,5 +96,20 @@ describe('SessionService', () => {
     await expect(sessions.resolve(token)).resolves.toBeNull();
     await expect(sessions.pendingPasswordChange(token)).resolves.toEqual({ personId: 'person-a' });
     await expect(sessions.pendingPasswordChange('unknown')).resolves.toBeNull();
+  });
+
+  it('withholds every role until a person with several roles chooses one, then keeps only that role', async () => {
+    const repository = new MemorySessionRepository();
+    const many = { load: async () => ({ roles: [{ name: 'admin', organizationId: null }, { name: 'leave-manager', organizationId: null }], dataOwnerModules: [] }) };
+    const sessions = service(repository, many);
+    const { token } = await sessions.start('person-a');
+
+    await expect(sessions.resolve(token)).resolves.toMatchObject({ authenticated: true, roles: [], activeRole: null, roleChoices: ['admin', 'leave-manager'], roleSelectionRequired: true });
+    await expect(sessions.chooseRole(token, 'fleet-manager')).rejects.toThrow('ROLE_NOT_HELD');
+    await expect(sessions.chooseRole(token, 'leave-manager')).resolves.toEqual({ personId: 'person-a', role: 'leave-manager', previousRole: null });
+    await expect(sessions.resolve(token)).resolves.toMatchObject({ roles: [{ name: 'leave-manager', organizationId: null }], activeRole: 'leave-manager', roleSelectionRequired: false });
+    await expect(sessions.chooseRole(token, 'employee')).resolves.toMatchObject({ role: 'employee', previousRole: 'leave-manager' });
+    await expect(sessions.resolve(token)).resolves.toMatchObject({ roles: [], activeRole: 'employee', roleSelectionRequired: false });
+    await expect(sessions.chooseRole('unknown', 'admin')).resolves.toBeNull();
   });
 });
