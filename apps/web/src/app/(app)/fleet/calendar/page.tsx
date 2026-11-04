@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { CalendarBlock } from '@backoffice/core';
 import { t } from '@backoffice/i18n';
-import { addDays, formatBangkokDate, formatBangkokTime, formatWeekday } from '../../../../lib/bangkok-time';
+import { addDays, formatBangkokDate, formatBangkokDateOnly, formatBangkokTime, formatWeekday } from '../../../../lib/bangkok-time';
 import { fleetStatusTone, toBangkokLocal, tripStatusLabel, vehicleStatusLabel } from '../../../../lib/fleet-labels';
 import { parseWeekStart } from '../../../../lib/fleet-week';
 import { fleetContext, FleetPageMessage } from '../fleet-page';
@@ -32,7 +32,7 @@ export default async function FleetCalendarPage({ searchParams }: { searchParams
     </div>
     <p className="permission-notice">{t('fleetCalendarHelp')}</p>
     {rows.length === 0 ? <p>{t('fleetNoVehicles')}</p> : <div className="leave-calendar fleet-calendar"><table>
-      <thead><tr><th>{t('fleetVehicle')}</th>{days.map((day) => <th key={day}>{formatWeekday(day)}<br /><small>{formatBangkokDate(day)}</small></th>)}</tr></thead>
+      <thead><tr><th>{t('fleetVehicle')}</th>{days.map((day) => <th key={day}>{formatWeekday(day)}<br /><small>{formatBangkokDateOnly(day)}</small></th>)}</tr></thead>
       <tbody>{rows.map(({ vehicle, blocks }) => <tr key={vehicle.id}>
         <th scope="row">{vehicle.registration}<br /><small>{vehicle.makeModel}{vehicle.status !== 'ACTIVE' ? ` · ${vehicleStatusLabel(vehicle.status)}` : ''}</small></th>
         {days.map((day) => <td key={day}>{blocks.filter((block) => onDay(block, day)).map((block, index) => <div key={index} className={`fleet-block status-${fleetStatusTone(block.status)}`}>

@@ -5,6 +5,7 @@ import type { RequestHistoryView } from '@backoffice/core';
 import { t, type MessageKey } from '@backoffice/i18n';
 import { StatusBadge, type RequestDisplayStatus } from '../../../../components/status-badge';
 import { ActionDialog } from '../../../../components/action-dialog';
+import { formatBangkokDateTime } from '../../../../lib/bangkok-time';
 
 type DialogAction = 'APPROVE' | 'REJECT' | 'RETURN' | 'CANCEL' | 'RESUBMIT';
 
@@ -18,7 +19,6 @@ const dialogs: Record<DialogAction, { title: MessageKey; reason: boolean; danger
 type HistoryEntry = RequestHistoryView['entries'][number];
 
 const historyLabel: Record<HistoryEntry['kind'], MessageKey> = { APPROVE: 'auditResultApproved', REJECT: 'auditResultRejected', RETURN: 'auditResultReturned', CANCEL: 'requestHistoryCancelled' };
-const bangkokTime = new Intl.DateTimeFormat('th-TH-u-ca-buddhist', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Bangkok' });
 
 export function RequestDetailPanel({ requestId, reference, requestorName, organizationName, status: initialStatus, history, actions, statusAfterApprove }: {
   requestId: string;
@@ -97,7 +97,7 @@ export function RequestDetailPanel({ requestId, reference, requestorName, organi
     <h3 id="request-history-heading">{t('requestHistory')}</h3>
     {history.length
       ? <ul className="request-history" aria-labelledby="request-history-heading">{history.map((entry, index) => <li key={`${entry.at}-${index}`}>
-          <time dateTime={entry.at}>{bangkokTime.format(new Date(entry.at))}</time>
+          <time dateTime={entry.at}>{formatBangkokDateTime(entry.at)}</time>
           <span><strong>{entry.actorName}</strong> · {t(historyLabel[entry.kind])}</span>
           {entry.reason && <p className="history-reason">{entry.reason}</p>}
         </li>)}</ul>

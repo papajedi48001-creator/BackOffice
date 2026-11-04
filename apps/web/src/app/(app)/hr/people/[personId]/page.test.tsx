@@ -52,7 +52,7 @@ describe('PersonProfilePage', () => {
     expect(mocks.get).toHaveBeenCalledWith('p1', reader);
     expect(screen.getByRole('heading', { name: 'นางสาวมาลี ดีงาม' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'ข้อมูลงาน' })).toBeInTheDocument();
-    expect(screen.getByText('1 เม.ย. 2558')).toBeInTheDocument();
+    expect(screen.getByText('พุธ 1 เม.ย. 2558')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'ข้อมูลส่วนตัว' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'ข้อมูลติดต่อ' })).toBeNull();
     expect(screen.queryByRole('form')).toBeNull();
@@ -60,7 +60,7 @@ describe('PersonProfilePage', () => {
     const row = screen.getByRole('row', { name: /ผู้ดูแล HR/ });
     expect(within(row).getByText(/ระดับตำแหน่ง: ปฏิบัติการ → ชำนาญการ/)).toBeInTheDocument();
     expect(within(row).getByText(/เบอร์โทร/)).toBeInTheDocument();
-    expect(within(row).getByText(/25 ต.ค. 2569 10:00/)).toBeInTheDocument();
+    expect(within(row).getByText(/อาทิตย์ 25 ต.ค. 2569 10:00/)).toBeInTheDocument();
   });
 
   it('shows an hr manager every box with the profile and contact forms', async () => {
@@ -74,7 +74,7 @@ describe('PersonProfilePage', () => {
     expect(Array.from(document.querySelectorAll(`datalist#${list} option`)).map((option) => option.getAttribute('value'))).toEqual(['พยาบาลวิชาชีพ', 'เจ้าพนักงานธุรการ']);
 
     expect(screen.getByRole('heading', { name: 'ข้อมูลส่วนตัว' })).toBeInTheDocument();
-    expect(screen.getByText('17 พ.ค. 2533')).toBeInTheDocument();
+    expect(screen.getByText('พฤหัสบดี 17 พ.ค. 2533')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'ข้อมูลติดต่อ' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'แก้ไขข้อมูลส่วนตัวและข้อมูลงาน' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'แก้ไขข้อมูลติดต่อ' })).toBeInTheDocument();

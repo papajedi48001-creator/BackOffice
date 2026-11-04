@@ -1,6 +1,6 @@
 const grouping = new Intl.NumberFormat('th-TH');
-const thaiDate = new Intl.DateTimeFormat('th-TH', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
-const thaiDateTime = new Intl.DateTimeFormat('th-TH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Bangkok' });
+import { formatBangkokDate, formatBangkokDateTime } from '../../../lib/bangkok-time';
+
 
 export function formatQuantity(quantity: number, unit: string): string {
   return `${grouping.format(quantity)} ${unit}`;
@@ -16,10 +16,9 @@ export function formatBaht(decimal: string): string {
 
 /** `isoDate` is already a Bangkok calendar date, so it is formatted without shifting time zones. */
 export function formatThaiDate(isoDate: string): string {
-  const [year, month, day] = isoDate.split('-').map(Number);
-  return thaiDate.format(new Date(Date.UTC(year!, month! - 1, day!)));
+  return formatBangkokDate(isoDate);
 }
 
 export function formatThaiDateTime(instant: Date | string): string {
-  return thaiDateTime.format(new Date(instant));
+  return formatBangkokDateTime(instant);
 }

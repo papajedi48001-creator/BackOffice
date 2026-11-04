@@ -9,7 +9,7 @@ describe('StockTable', () => {
     render(<StockTable rows={[row, { ...row, itemId: 'item-2', code: 'PA-01', name: 'กระดาษ', onHand: 5, belowReorder: false, nearestExpiry: null, isActive: false }]} />);
     expect(screen.getByText('1,200 ชิ้น', { selector: 'td' })).toBeInTheDocument();
     expect(screen.getAllByText('3,000.00')).toHaveLength(2);
-    expect(screen.getByText('30 มิ.ย. 2570')).toBeInTheDocument();
+    expect(screen.getByText('พุธ 30 มิ.ย. 2570')).toBeInTheDocument();
     expect(screen.getAllByText('ต่ำกว่าจุดสั่งซื้อ')).toHaveLength(1);
     expect(screen.getByText('ปิดใช้')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'ถุงมือยาง' })).toHaveAttribute('href', '/inventory/stock/item-1');

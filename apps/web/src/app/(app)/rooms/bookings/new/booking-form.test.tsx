@@ -22,7 +22,7 @@ function fill() {
 it('submits the chosen range minus the days the booker leaves out', async () => {
   const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ id: 'booking-1', reference: 'RB-2569-0001', status: 'PENDING' }), { status: 201 }));
   fill();
-  fireEvent.click(screen.getByRole('checkbox', { name: /6 พ.ย. 2569/ }));
+  fireEvent.click(screen.getByRole('checkbox', { name: /ศุกร์ 6 พ.ย. 2569/ }));
   fireEvent.click(screen.getByRole('checkbox', { name: 'โปรเจกเตอร์' }));
   fireEvent.click(screen.getByRole('button', { name: 'ยื่นจองห้อง' }));
 
@@ -36,7 +36,7 @@ it('lists the days that clash when the room is taken', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'ยื่นจองห้อง' }));
 
   expect(await screen.findByText('ช่วงเวลานี้มีการจองแล้วในวันต่อไปนี้')).toBeInTheDocument();
-  expect(screen.getByText('6 พ.ย. 2569 10:00–12:00')).toBeInTheDocument();
+  expect(screen.getByText('ศุกร์ 6 พ.ย. 2569 10:00–12:00')).toBeInTheDocument();
   expect(push).not.toHaveBeenCalled();
 });
 

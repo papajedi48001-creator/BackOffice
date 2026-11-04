@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { RoomBookingStatus } from '@backoffice/contracts';
 import { t, type MessageKey } from '@backoffice/i18n';
-import { formatBangkokDate, formatBangkokTime, formatWeekday } from '../../../../lib/bangkok-time';
+import { formatBangkokDate, formatBangkokTime } from '../../../../lib/bangkok-time';
 import type { MonthGrid } from '../month-grid';
 import { RoomStatusBadge } from '../room-display';
 
@@ -33,7 +33,7 @@ export function RoomMonthCalendar({ grid, entries, dayHref }: { grid: MonthGrid;
       const dayEntries = byDate.get(day.date) ?? [];
       const classes = ['room-month-day', day.inMonth ? '' : 'is-outside', day.isPast ? 'is-past' : '', day.isToday ? 'is-today' : '', dayEntries.length === 0 ? 'is-empty' : ''].filter(Boolean).join(' ');
       return <div key={day.date} role="group" className={classes} aria-label={formatBangkokDate(day.date)} aria-current={day.isToday ? 'date' : undefined}>
-        <h3><span className="room-month-number" aria-hidden="true">{Number(day.date.slice(8))}</span><span className="room-month-fulldate">{formatWeekday(day.date)} {formatBangkokDate(day.date)}</span>{day.isToday && <span className="room-month-today">{t('roomToday')}</span>}</h3>
+        <h3><span className="room-month-number" aria-hidden="true">{Number(day.date.slice(8))}</span><span className="room-month-fulldate">{formatBangkokDate(day.date)}</span>{day.isToday && <span className="room-month-today">{t('roomToday')}</span>}</h3>
         {dayEntries.length > 0 && <ul>
           {dayEntries.slice(0, SHOWN_PER_DAY).map((entry) => <li key={`${entry.bookingId}-${entry.date}`}>
             <button type="button" className={`room-month-entry room-month-entry-${entry.status.toLowerCase()}`} aria-label={`${timeRange(entry)} ${entry.roomName} ${entry.title} — ${booker(entry)}`} onClick={(event) => { opener.current = event.currentTarget; setSelected(entry); }}>
