@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { cancelRoomBookingInputSchema, decideRoomBookingInputSchema, notificationEventPayloadSchema, ROOM_BOOKING_MODULE, submitRoomBookingInputSchema, type CancelRoomBookingInput, type DecideRoomBookingInput, type Permission, type RoomActor, type RoomBookingHistoryAction, type SubmitRoomBookingInput } from '@backoffice/contracts';
 import { AuthorizationService } from '../access/authorization-service';
 import { AuditService } from '../audit/audit-service';
+import { holidayConflicts, HolidayBookingError } from '../holidays/holiday-days';
 import { buddhistYear, toBookingRanges, type TimeRange } from './booking-days';
 import type { RoomBookingDayRecord, RoomBookingRecord, RoomBookingRepository, RoomRecord } from './room-booking-repository';
 
@@ -32,6 +33,8 @@ export class RoomBookingService {
       if (requestedAddonIds.length !== valid.addons.length) throw new Error('INVALID_ADDON');
       const activeAddons = new Map((await repository.findActiveAddons(requestedAddonIds)).map((addon) => [addon.id, addon]));
       if (activeAddons.size !== requestedAddonIds.length) throw new Error('INVALID_ADDON');
+      const onHolidays = holidayConflicts(valid.dates, await repository.findHolidays(valid.dates));
+      if (onHolidays.length > 0) throw new HolidayBookingError(onHolidays);
       const conflicts = await repository.findConflicts(room.id, ranges);
       if (conflicts.length > 0) throw new BookingConflictError(conflicts);
 

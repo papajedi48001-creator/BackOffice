@@ -9,21 +9,21 @@ const dayHref = '/rooms/calendar?view=day&date={date}';
 
 it('shows who booked which room under each day of the month', () => {
   render(<RoomMonthCalendar grid={grid} entries={[entry]} dayHref={dayHref} />);
-  const day = screen.getByRole('group', { name: '5 พ.ย. 2569' });
+  const day = screen.getByRole('group', { name: 'พฤหัสบดี 5 พ.ย. 2569' });
   expect(within(day).getByRole('button', { name: /09:00.*ห้องประชุมใหญ่.*สมใจ ใจดี/ })).toBeInTheDocument();
   expect(within(day).getByText('อนุมัติแล้ว')).toBeInTheDocument();
 });
 
 it('marks today and dims the days already past', () => {
   render(<RoomMonthCalendar grid={grid} entries={[]} dayHref={dayHref} />);
-  expect(screen.getByRole('group', { name: '2 พ.ย. 2569' })).toHaveAttribute('aria-current', 'date');
-  expect(screen.getByRole('group', { name: '1 พ.ย. 2569' })).toHaveClass('is-past');
+  expect(screen.getByRole('group', { name: 'จันทร์ 2 พ.ย. 2569' })).toHaveAttribute('aria-current', 'date');
+  expect(screen.getByRole('group', { name: 'อาทิตย์ 1 พ.ย. 2569' })).toHaveClass('is-past');
 });
 
 it('shows the first three bookings of a day and links the rest to the day view', () => {
   const many = Array.from({ length: 5 }, (_, index) => ({ ...entry, bookingId: `b${index}`, title: `ประชุม ${index}` }));
   render(<RoomMonthCalendar grid={grid} entries={many} dayHref={dayHref} />);
-  const day = screen.getByRole('group', { name: '5 พ.ย. 2569' });
+  const day = screen.getByRole('group', { name: 'พฤหัสบดี 5 พ.ย. 2569' });
   expect(within(day).getAllByRole('button')).toHaveLength(3);
   expect(within(day).getByRole('link', { name: '+2 รายการ' })).toHaveAttribute('href', '/rooms/calendar?view=day&date=2026-11-05');
 });
@@ -51,6 +51,16 @@ it('links the booker or an approver to the full booking page', () => {
 
 it('gives each day a heading with its full date', () => {
   render(<RoomMonthCalendar grid={grid} entries={[]} dayHref={dayHref} />);
-  expect(screen.getByRole('heading', { name: /วันพฤหัสบดี 5 พ.ย. 2569/ })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: /พฤหัสบดี 5 พ.ย. 2569/ })).toBeInTheDocument();
   expect(screen.queryAllByRole('region')).toHaveLength(0);
+});
+
+it('heads the weeks with full Thai weekday names and greys a วันหยุด with its name', () => {
+  render(<RoomMonthCalendar grid={grid} entries={[]} dayHref={dayHref} holidays={{ '2026-11-06': 'วันหยุดชดเชย' }} />);
+  expect(screen.getByText('จันทร์')).toBeInTheDocument();
+  expect(screen.getByText('อาทิตย์')).toBeInTheDocument();
+  expect(screen.queryByText('จ.')).toBeNull();
+  const holiday = screen.getByRole('group', { name: 'ศุกร์ 6 พ.ย. 2569 วันหยุด วันหยุดชดเชย' });
+  expect(holiday).toHaveClass('is-holiday');
+  expect(within(holiday).getByText('วันหยุดชดเชย')).toBeInTheDocument();
 });

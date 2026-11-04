@@ -28,7 +28,7 @@ describe('TripEdit', () => {
     expect(vehicle).toHaveValue('v1');
     expect(within(vehicle).getAllByRole('option').map((option) => option.getAttribute('value'))).toEqual(['v1', 'v2']);
     expect(within(screen.getByLabelText('พนักงานขับรถ')).getAllByRole('option').map((option) => option.getAttribute('value'))).toEqual(['d1', 'd2']);
-    expect(screen.getByLabelText('เริ่มเที่ยวรถ')).toHaveValue('2026-11-10T08:00');
+    expect(screen.getByLabelText('เริ่มเที่ยวรถ')).toHaveValue('10/11/2569');
     expect(screen.getByRole('button', { name: 'ยืนยัน' })).toBeDisabled();
     fireEvent.change(screen.getByLabelText('สิ้นสุดเที่ยวรถ'), { target: { value: '2026-11-10T18:00' } });
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/fleet/availability?from=2026-11-10T01%3A00%3A00.000Z&to=2026-11-10T11%3A00%3A00.000Z'));

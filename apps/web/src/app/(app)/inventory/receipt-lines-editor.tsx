@@ -7,6 +7,7 @@ import { t } from '@backoffice/i18n';
 import { formatBaht } from './inventory-format';
 import { inventoryErrorText } from './inventory-errors';
 import { ScanField } from './scan-field';
+import { ThaiDateInput } from '../../../components/thai-date-input';
 
 /** Form state for one receipt line; numbers stay as typed until the line is sent. */
 export interface EditorLine { key: string; item: ScanItem; unitKind: InventoryUnitKind; quantity: string; unitPrice: string; manufacturerLotNo: string; expiryDate: string; }
@@ -115,7 +116,7 @@ export function ReceiptLinesEditor({ lines, onChange, items, canBindBarcode }: {
               <td><select aria-label={`${t('inventoryUnit')} ${line.item.name}`} value={line.unitKind} onChange={(event) => update(line.key, { unitKind: event.target.value === 'PURCHASE' ? 'PURCHASE' : 'ISSUE' })}><option value="ISSUE">{line.item.issueUnit}</option><option value="PURCHASE">{line.item.purchaseUnit}</option></select></td>
               <td className="numeric"><input aria-label={`${t('inventoryUnitPrice')} ${line.item.name}`} type="number" inputMode="decimal" min={0} step="0.01" value={line.unitPrice} onChange={(event) => update(line.key, { unitPrice: event.target.value })} /></td>
               <td><input aria-label={`${t('inventoryManufacturerLot')} ${line.item.name}`} value={line.manufacturerLotNo} maxLength={60} onChange={(event) => update(line.key, { manufacturerLotNo: event.target.value })} /></td>
-              <td>{line.item.tracksExpiry ? <input aria-label={`${t('inventoryExpiry')} ${line.item.name}`} type="date" required value={line.expiryDate} onChange={(event) => update(line.key, { expiryDate: event.target.value })} /> : '–'}</td>
+              <td>{line.item.tracksExpiry ? <ThaiDateInput aria-label={`${t('inventoryExpiry')} ${line.item.name}`} required value={line.expiryDate} onChange={(value) => update(line.key, { expiryDate: value })} /> : '–'}</td>
               <td className="numeric">{lineTotal(line)}</td>
               <td><button type="button" className="button-secondary" onClick={() => onChange(lines.filter((other) => other.key !== line.key))}>{t('inventoryRemoveLine')}</button></td>
             </tr>

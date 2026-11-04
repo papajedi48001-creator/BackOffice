@@ -6,6 +6,7 @@ import type { DriverOption, VehicleOption } from '@backoffice/core';
 import { t } from '@backoffice/i18n';
 import { ActionDialog } from '../../../../../components/action-dialog';
 import { fleetErrorMessage, fromBangkokLocal, sendFleet, toBangkokLocal } from '../../../../../lib/fleet-labels';
+import { ThaiDateTimeInput } from '../../../../../components/thai-date-input';
 
 export interface EditableTrip { id: string; vehicleId: string; registration: string; makeModel: string; driverPersonId: string; driverName: string | null; startsAt: string; endsAt: string }
 
@@ -59,8 +60,8 @@ function TripEditDialog({ trip, onClose }: { trip: EditableTrip; onClose: () => 
   return <ActionDialog title={`${t('fleetEditTrip')} · ${trip.registration}`} confirmLabel={t('confirmAction')} ready={Object.keys(changes).length > 0} isSubmitting={busy} error={error} onConfirm={() => void confirm()} onClose={onClose}>
     <div className="fleet-assign-new">
       <div className="form-row">
-        <div className="form-field"><label htmlFor={`${id}-starts`}>{t('fleetStartsAt')}</label><input id={`${id}-starts`} type="datetime-local" step={900} value={draft.startsAt} onChange={(event) => setDraft({ ...draft, startsAt: event.target.value })} /></div>
-        <div className="form-field"><label htmlFor={`${id}-ends`}>{t('fleetEndsAt')}</label><input id={`${id}-ends`} type="datetime-local" step={900} value={draft.endsAt} onChange={(event) => setDraft({ ...draft, endsAt: event.target.value })} /></div>
+        <div className="form-field"><label htmlFor={`${id}-starts`}>{t('fleetStartsAt')}</label><ThaiDateTimeInput id={`${id}-starts`} label={t('fleetStartsAt')} value={draft.startsAt} onChange={(value) => setDraft({ ...draft, startsAt: value })} /></div>
+        <div className="form-field"><label htmlFor={`${id}-ends`}>{t('fleetEndsAt')}</label><ThaiDateTimeInput id={`${id}-ends`} label={t('fleetEndsAt')} value={draft.endsAt} onChange={(value) => setDraft({ ...draft, endsAt: value })} /></div>
       </div>
       <div className="form-field"><label htmlFor={`${id}-vehicle`}>{t('fleetVehicle')}</label>
         <select id={`${id}-vehicle`} value={draft.vehicleId} onChange={(event) => setDraft({ ...draft, vehicleId: event.target.value })}>{vehicles.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.label}</option>)}</select></div>

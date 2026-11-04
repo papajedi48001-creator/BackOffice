@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { RoomActor } from '@backoffice/contracts';
 import { InMemoryRoomBookingRepository } from './in-memory-room-booking-repository';
+import { HolidayBookingError } from '../holidays/holiday-days';
 import { BookingConflictError, RoomBookingService } from './room-booking-service';
 
 // 2026-11-01 10:00 Bangkok
@@ -24,6 +25,16 @@ const submission = { roomId: 'room-1', dates: ['2026-11-05', '2026-11-06', '2026
 const notifications = (repository: InMemoryRoomBookingRepository) => repository.outbox.filter((event) => event.type === 'notification.in_app').map((event) => event.payload);
 
 describe('RoomBookingService.submit', () => {
+  it('refuses a booking when any chosen day is a วันหยุด, naming it, and holds nothing', async () => {
+    const { repository, service } = setup();
+    repository.holidays.set('2026-11-06', 'วันหยุดชดเชย');
+    const error = await service.submit(booker, submission).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(HolidayBookingError);
+    expect((error as HolidayBookingError).holidays).toEqual([{ date: '2026-11-06', name: 'วันหยุดชดเชย' }]);
+    expect(repository.days).toHaveLength(0);
+    expect(repository.audit).toHaveLength(0);
+  });
+
   it('holds every requested day and records the submission in one transaction', async () => {
     const { repository, service } = setup();
 

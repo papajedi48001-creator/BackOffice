@@ -7,6 +7,7 @@ import { addDays, bangkokToday, formatBangkokDate } from '../../../../lib/bangko
 import { getSharedDatabase } from '../../../../lib/database';
 import { calendarView } from '../calendar-view';
 import { RoomCalendar } from '../room-calendar';
+import { holidayMap } from '../../../../lib/holiday-data';
 
 export default async function RoomCalendarPage({ searchParams }: { searchParams: Promise<{ view?: string; week?: string; date?: string; roomId?: string }> }) {
   const actor = await pageActor();
@@ -20,7 +21,7 @@ export default async function RoomCalendarPage({ searchParams }: { searchParams:
   const queries = new RoomBookingQueries(database);
   const rooms = await queries.listRooms({ bookableOnly: false });
   const selectedRoom = rooms.some((room) => room.id === roomId) ? roomId : undefined;
-  const entries = await queries.calendar(bangkokDayStart(dates[0]!), bangkokDayStart(addDays(dates[dates.length - 1]!, 1)), selectedRoom);
+  const [entries, holidays] = await Promise.all([queries.calendar(bangkokDayStart(dates[0]!), bangkokDayStart(addDays(dates[dates.length - 1]!, 1)), selectedRoom), holidayMap(database, dates[0]!, dates[dates.length - 1]!)]);
   const roomParam = selectedRoom ? `&roomId=${encodeURIComponent(selectedRoom)}` : '';
   const weekLink = (date: string) => `/rooms/calendar?week=${date}${roomParam}`;
   const dayLink = (date: string) => `/rooms/calendar?view=day&date=${date}${roomParam}`;
@@ -37,6 +38,6 @@ export default async function RoomCalendarPage({ searchParams }: { searchParams:
       <Link href={pageLink(view.next)}>{view.view === 'day' ? t('nextDay') : t('nextWeek')}</Link>
       {view.view === 'day' ? <Link href={weekLink(view.anchor)}>{t('weekView')}</Link> : <Link href={dayLink(bangkokToday())}>{t('dayView')}</Link>}
     </form>
-    <RoomCalendar dates={dates} dayHref={view.view === 'week' ? dayLink : undefined} entries={entries.map((entry) => ({ ...entry, startsAt: entry.startsAt.toISOString(), endsAt: entry.endsAt.toISOString() }))} />
+    <RoomCalendar holidays={holidays} dates={dates} dayHref={view.view === 'week' ? dayLink : undefined} entries={entries.map((entry) => ({ ...entry, startsAt: entry.startsAt.toISOString(), endsAt: entry.endsAt.toISOString() }))} />
   </section>;
 }

@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import type { CalendarBlock } from '@backoffice/core';
 import { t } from '@backoffice/i18n';
-import { addDays, formatBangkokDate, formatBangkokTime, formatWeekday } from '../../../../lib/bangkok-time';
+import { addDays, formatBangkokDateOnly, formatBangkokTime, formatWeekday } from '../../../../lib/bangkok-time';
 import { fleetStatusTone, toBangkokLocal, tripStatusLabel, vehicleStatusLabel } from '../../../../lib/fleet-labels';
 import { parseWeekStart } from '../../../../lib/fleet-week';
 import { fleetContext, FleetPageMessage } from '../fleet-page';
+import { holidayMap } from '../../../../lib/holiday-data';
 
 /** The block's times as seen on `day`: a block running past midnight shows its start or end only on the day it happens. */
 function blockTimes(block: CalendarBlock, day: string): string {
@@ -20,8 +21,8 @@ export default async function FleetCalendarPage({ searchParams }: { searchParams
   if (!context.ok) return <FleetPageMessage titleKey="fleetCalendar" reason={context.reason} />;
   const weekParam = (await searchParams).week;
   const week = parseWeekStart(Array.isArray(weekParam) ? weekParam[0] : weekParam, new Date());
-  const rows = await context.queries.calendar(week);
   const days = Array.from({ length: 7 }, (_, index) => addDays(week, index));
+  const [rows, holidays] = await Promise.all([context.queries.calendar(week), holidayMap(context.database, days[0]!, days[6]!)]);
   return <section>
     <div className="page-heading"><h2>{t('fleetCalendar')}</h2>
       <nav className="page-actions fleet-week-nav" aria-label={t('fleetCalendar')}>
@@ -32,10 +33,10 @@ export default async function FleetCalendarPage({ searchParams }: { searchParams
     </div>
     <p className="permission-notice">{t('fleetCalendarHelp')}</p>
     {rows.length === 0 ? <p>{t('fleetNoVehicles')}</p> : <div className="leave-calendar fleet-calendar"><table>
-      <thead><tr><th>{t('fleetVehicle')}</th>{days.map((day) => <th key={day}>{formatWeekday(day)}<br /><small>{formatBangkokDate(day)}</small></th>)}</tr></thead>
+      <thead><tr><th>{t('fleetVehicle')}</th>{days.map((day) => <th key={day} className={holidays[day] ? 'is-holiday' : undefined}><span className="calendar-day-number">{formatWeekday(day)}</span><br /><small>{formatBangkokDateOnly(day)}</small>{holidays[day] && <><br /><span className="calendar-holiday-name">{`วันหยุด ${holidays[day]}`}</span></>}</th>)}</tr></thead>
       <tbody>{rows.map(({ vehicle, blocks }) => <tr key={vehicle.id}>
         <th scope="row">{vehicle.registration}<br /><small>{vehicle.makeModel}{vehicle.status !== 'ACTIVE' ? ` · ${vehicleStatusLabel(vehicle.status)}` : ''}</small></th>
-        {days.map((day) => <td key={day}>{blocks.filter((block) => onDay(block, day)).map((block, index) => <div key={index} className={`fleet-block status-${fleetStatusTone(block.status)}`}>
+        {days.map((day) => <td key={day} className={holidays[day] ? 'is-holiday' : undefined}>{blocks.filter((block) => onDay(block, day)).map((block, index) => <div key={index} className={`fleet-block status-${fleetStatusTone(block.status)}`}>
           <span>{blockTimes(block, day)}</span> <span>{block.province || '—'}</span> <span>{tripStatusLabel(block.status)}</span>
         </div>)}</td>)}
       </tr>)}</tbody>

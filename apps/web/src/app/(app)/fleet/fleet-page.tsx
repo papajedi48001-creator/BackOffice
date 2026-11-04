@@ -7,7 +7,7 @@ import { leaveSession } from '../leave/leave-page';
 import type { FleetFormValues } from './new/fleet-form';
 
 type FleetSession = Session & { personId: string };
-export type FleetContext = { ok: true; session: FleetSession; queries: FleetQueries } | { ok: false; reason: 'none' | 'forbidden' | 'unavailable' };
+export type FleetContext = { ok: true; session: FleetSession; database: NonNullable<ReturnType<typeof getSharedDatabase>>; queries: FleetQueries } | { ok: false; reason: 'none' | 'forbidden' | 'unavailable' };
 
 /** The signed-in session for a fleet page; a visitor without one is sent to sign in. */
 export const fleetSession = leaveSession;
@@ -18,7 +18,7 @@ export async function fleetContext({ manager = false } = {}): Promise<FleetConte
   if (!session) return { ok: false, reason: 'none' };
   if (manager && !canManageFleet(session)) return { ok: false, reason: 'forbidden' };
   const database = getSharedDatabase();
-  return database ? { ok: true, session, queries: new FleetQueries(database) } : { ok: false, reason: 'unavailable' };
+  return database ? { ok: true, session, database, queries: new FleetQueries(database) } : { ok: false, reason: 'unavailable' };
 }
 
 /** The page title and why it cannot show: nothing for a visitor being sent to sign in, otherwise a no-access or load-error notice. */

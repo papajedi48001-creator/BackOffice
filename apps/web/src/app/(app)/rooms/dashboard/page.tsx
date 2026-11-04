@@ -7,6 +7,7 @@ import { addDays, bangkokToday } from '../../../../lib/bangkok-time';
 import { getSharedDatabase } from '../../../../lib/database';
 import { monthGrid } from '../month-grid';
 import { RoomMonthCalendar } from './room-month-calendar';
+import { holidayMap } from '../../../../lib/holiday-data';
 
 const monthFormatter = new Intl.DateTimeFormat('th-TH', { timeZone: 'UTC', month: 'long', year: 'numeric' });
 
@@ -22,7 +23,7 @@ export default async function RoomDashboardPage({ searchParams }: { searchParams
   const queries = new RoomBookingQueries(database);
   const rooms = await queries.listRooms({ bookableOnly: false });
   const selectedRoom = rooms.some((room) => room.id === params.roomId) ? params.roomId : undefined;
-  const entries = await queries.calendarForViewer(bangkokDayStart(grid.first), bangkokDayStart(addDays(grid.last, 1)), actor, selectedRoom);
+  const [entries, holidays] = await Promise.all([queries.calendarForViewer(bangkokDayStart(grid.first), bangkokDayStart(addDays(grid.last, 1)), actor, selectedRoom), holidayMap(database, grid.first, grid.last)]);
   const scope = new AuthorizationService().organizationScope({ authenticated: true, personId: actor.personId, roles: actor.roles, dataOwnerModules: [] }, 'room.booking.decide');
   const pending = scope === 'all' || scope.length > 0 ? (await queries.pendingForApprover(actor)).length : null;
   const monthLink = (month: string) => `/rooms/dashboard?month=${month}${selectedRoom ? `&roomId=${encodeURIComponent(selectedRoom)}` : ''}`;
@@ -52,7 +53,7 @@ export default async function RoomDashboardPage({ searchParams }: { searchParams
         <button type="submit">{t('showCalendar')}</button>
       </form>
     </div>
-    <RoomMonthCalendar grid={grid} dayHref={dayHref} entries={entries.map((entry) => ({ bookingId: entry.bookingId, reference: entry.reference, roomName: entry.roomName, roomPlace: entry.roomPlace, date: entry.date, startsAt: entry.startsAt.toISOString(), endsAt: entry.endsAt.toISOString(), status: entry.status, title: entry.title, bookerName: entry.bookerName, bookerOrganizationName: entry.bookerOrganizationName, canOpen: entry.canOpen }))} />
+    <RoomMonthCalendar grid={grid} dayHref={dayHref} holidays={holidays} entries={entries.map((entry) => ({ bookingId: entry.bookingId, reference: entry.reference, roomName: entry.roomName, roomPlace: entry.roomPlace, date: entry.date, startsAt: entry.startsAt.toISOString(), endsAt: entry.endsAt.toISOString(), status: entry.status, title: entry.title, bookerName: entry.bookerName, bookerOrganizationName: entry.bookerOrganizationName, canOpen: entry.canOpen }))} />
     <p className="room-month-legend"><span>{t('roomLegendApproved')}</span><span className="legend-pending">{t('roomLegendPending')}</span><em>{t('roomDashboardHelp')}</em></p>
   </section>;
 }

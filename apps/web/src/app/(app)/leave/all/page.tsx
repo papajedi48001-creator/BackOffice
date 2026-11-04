@@ -6,6 +6,7 @@ import { leaveStatusLabel } from '../../../../lib/leave-labels';
 import { HrPageMessage } from '../hr-page-message';
 import { LeaveTable } from '../leave-list';
 import { hrLeaveContext } from '../leave-page';
+import { ThaiDateInput } from '../../../../components/thai-date-input';
 
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 const one = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value) ?? '';
@@ -24,8 +25,8 @@ export default async function AllLeavePage({ searchParams }: { searchParams: Pro
   if (one(params.leaveTypeId)) filter.leaveTypeId = one(params.leaveTypeId);
   const [items, types] = await Promise.all([new LeaveQueries(context.database).allLeave(filter), new LeaveSettingsService(context.database).listTypes()]);
   const fields = <>
-    <div className="form-field"><label htmlFor="all-from">{t('leaveStartDate')}</label><input id="all-from" name="from" type="date" defaultValue={from} /></div>
-    <div className="form-field"><label htmlFor="all-to">{t('leaveEndDate')}</label><input id="all-to" name="to" type="date" defaultValue={to} /></div>
+    <div className="form-field"><label htmlFor="all-from">{t('leaveStartDate')}</label><ThaiDateInput id="all-from" name="from" defaultValue={from} /></div>
+    <div className="form-field"><label htmlFor="all-to">{t('leaveEndDate')}</label><ThaiDateInput id="all-to" name="to" defaultValue={to} /></div>
     <div className="form-field"><label htmlFor="all-status">{t('status')}</label><select id="all-status" name="status" defaultValue={filter.status ?? ''}><option value="">{t('leaveAllStatuses')}</option>{statuses.map((value) => <option key={value} value={value}>{leaveStatusLabel(value)}</option>)}</select></div>
     <div className="form-field"><label htmlFor="all-type">{t('leaveType')}</label><select id="all-type" name="leaveTypeId" defaultValue={filter.leaveTypeId ?? ''}><option value="">{t('leaveAllTypes')}</option>{types.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}</select></div>
   </>;

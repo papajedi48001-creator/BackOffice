@@ -7,6 +7,7 @@ import { t } from '@backoffice/i18n';
 import { ActionDialog } from '../../../../components/action-dialog';
 import { formatBangkokTime } from '../../../../lib/bangkok-time';
 import { fleetErrorMessage, formatFleetRange, fromBangkokLocal, sendFleet, toBangkokLocal, vehicleKindLabel } from '../../../../lib/fleet-labels';
+import { ThaiDateTimeInput } from '../../../../components/thai-date-input';
 
 export interface AssignTarget { id: string; reference: string; departAt: string; returnAt: string }
 interface Options { vehicles: VehicleOption[]; drivers: DriverOption[]; trips: TripOption[] }
@@ -77,8 +78,8 @@ export function AssignDialog({ request, onClose, onDone }: { request: AssignTarg
           </select>
           {options.drivers.length === 0 && <small>{t('fleetNoFreeDrivers')}</small>}</div>
         <div className="form-row">
-          <div className="form-field"><label htmlFor={`${id}-starts`}>{t('fleetStartsAt')}</label><input id={`${id}-starts`} type="datetime-local" step={900} value={draft.startsAt} onChange={(event) => setDraft({ ...draft, startsAt: event.target.value })} /></div>
-          <div className="form-field"><label htmlFor={`${id}-ends`}>{t('fleetEndsAt')}</label><input id={`${id}-ends`} type="datetime-local" step={900} value={draft.endsAt} onChange={(event) => setDraft({ ...draft, endsAt: event.target.value })} /></div>
+          <div className="form-field"><label htmlFor={`${id}-starts`}>{t('fleetStartsAt')}</label><ThaiDateTimeInput id={`${id}-starts`} label={t('fleetStartsAt')} value={draft.startsAt} onChange={(value) => setDraft({ ...draft, startsAt: value })} /></div>
+          <div className="form-field"><label htmlFor={`${id}-ends`}>{t('fleetEndsAt')}</label><ThaiDateTimeInput id={`${id}-ends`} label={t('fleetEndsAt')} value={draft.endsAt} onChange={(value) => setDraft({ ...draft, endsAt: value })} /></div>
         </div>
       </div>}
     </div>}

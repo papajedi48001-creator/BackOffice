@@ -186,12 +186,12 @@ describe('HR leave pages', () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
     render(await LeaveHolidaysPage(query({ year: '2026' })));
-    fireEvent.click(screen.getByRole('button', { name: 'ลบ 5 ธ.ค. 2569' }));
+    fireEvent.click(screen.getByRole('button', { name: 'ลบ เสาร์ 5 ธ.ค. 2569' }));
     expect(fetchMock).not.toHaveBeenCalled();
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'ลบ' }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/leave/holidays/2026-12-05', expect.objectContaining({ method: 'DELETE' })));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    fireEvent.click(screen.getByRole('button', { name: 'แก้ไขชื่อ 5 ธ.ค. 2569' }));
+    fireEvent.click(screen.getByRole('button', { name: 'แก้ไขชื่อ เสาร์ 5 ธ.ค. 2569' }));
     fireEvent.change(screen.getByLabelText('ชื่อวันหยุด'), { target: { value: 'วันชาติ' } });
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'บันทึกชื่อ' }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));

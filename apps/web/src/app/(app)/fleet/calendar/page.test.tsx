@@ -31,4 +31,15 @@ describe('FleetCalendarPage', () => {
     expect(screen.getByRole('link', { name: 'สัปดาห์ถัดไป' })).toHaveAttribute('href', '/fleet/calendar?week=2026-11-02');
     expect(screen.getByRole('link', { name: 'สัปดาห์ก่อน' })).toHaveAttribute('href', '/fleet/calendar?week=2026-10-19');
   });
+  it('greys a วันหยุด column and names it', async () => {
+    mocks.headers.mockResolvedValue(new Headers());
+    mocks.readSession.mockResolvedValue({ authenticated: true, personId: 'person-a', roles: [], dataOwnerModules: [] });
+    mocks.getSharedDatabase.mockReturnValue({ query: vi.fn().mockResolvedValue([{ date: '2026-10-30', name: 'วันหยุดพิเศษ' }]) });
+    mocks.calendar.mockResolvedValue([{ vehicle: { id: 'v1', registration: 'กข 1234', makeModel: 'Toyota Commuter', status: 'ACTIVE' }, blocks: [] }]);
+    render(await FleetCalendarPage({ searchParams: Promise.resolve({ week: '2026-10-26' }) }));
+    const head = screen.getByRole('columnheader', { name: /ศุกร์/ });
+    expect(head).toHaveClass('is-holiday');
+    expect(head).toHaveTextContent('วันหยุด วันหยุดพิเศษ');
+    expect(screen.getByRole('columnheader', { name: /จันทร์/ })).not.toHaveClass('is-holiday');
+  });
 });

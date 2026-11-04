@@ -15,8 +15,8 @@ export function RequestForm({ data }: { data: RequestFormData }) {
   switch (data.module) {
     case 'leave': return <LeaveForm types={data.types} attachments={data.attachments} />;
     case 'official-travel': return <TravelForm leader={data.leader} attachments={data.attachments} />;
-    case 'fleet': return <>{data.fromTravel && <p className="permission-notice">{t('fleetFromTravelHelp')}</p>}<FleetForm initial={data.initial} officialTravelId={data.officialTravelId} /></>;
-    case 'room-booking': return <BookingForm rooms={data.rooms} addons={data.addons} today={data.today} />;
+    case 'fleet': return <>{data.fromTravel && <p className="permission-notice">{t('fleetFromTravelHelp')}</p>}<FleetForm initial={data.initial} officialTravelId={data.officialTravelId} holidays={data.holidays} /></>;
+    case 'room-booking': return <BookingForm rooms={data.rooms} addons={data.addons} today={data.today} holidays={data.holidays} />;
     case 'unavailable': return <p role="alert">{t('requestFormUnavailable')}</p>;
     default: return <p role="alert">{t('hrNoAccess')}</p>;
   }

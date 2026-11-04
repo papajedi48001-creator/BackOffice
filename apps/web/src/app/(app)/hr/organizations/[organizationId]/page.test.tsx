@@ -49,8 +49,8 @@ describe('OrganizationPage', () => {
     expect(screen.getByRole('heading', { name: 'กลุ่มการพยาบาล' })).toBeInTheDocument();
     expect(screen.getByText('กลุ่มงาน')).toBeInTheDocument();
     expect(screen.getAllByText('นางสาวมาลี ดีงาม (E002)')[0]).toBeInTheDocument();
-    expect(screen.getAllByRole('cell', { name: '1 มิ.ย. 2569' })).toHaveLength(2);
-    expect(screen.getByRole('cell', { name: '1 ม.ค. 2569' })).toBeInTheDocument();
+    expect(screen.getAllByRole('cell', { name: 'จันทร์ 1 มิ.ย. 2569' })).toHaveLength(2);
+    expect(screen.getByRole('cell', { name: 'พฤหัสบดี 1 ม.ค. 2569' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'บันทึกชนิดหน่วยงาน' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'ตั้งเป็นหัวหน้า' })).not.toBeInTheDocument();
     expect(mocks.listPeople).not.toHaveBeenCalled();

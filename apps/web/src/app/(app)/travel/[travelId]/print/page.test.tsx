@@ -42,7 +42,7 @@ describe('TravelPrintPage', () => {
     expect(screen.getByText('2,480.00 บาท')).toBeInTheDocument();
     expect(screen.getByText(/^ลงชื่อ/)).toHaveTextContent('นางพรทิพย์ ใจดี');
     expect(screen.queryByText(/ลายมือชื่อไม่ครบ/)).toBeNull();
-    expect(screen.getByText('วันที่ 1 พ.ย. 2569')).toBeInTheDocument();
+    expect(screen.getByText('วันที่ อาทิตย์ 1 พ.ย. 2569')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'พิมพ์' })).toBeInTheDocument();
   });
 

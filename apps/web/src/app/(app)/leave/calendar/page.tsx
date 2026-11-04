@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { LeaveQueries, LeaveSettingsService } from '@backoffice/core';
 import { t } from '@backoffice/i18n';
-import { bangkokToday, datesBetween } from '../../../../lib/bangkok-time';
+import { bangkokToday, datesBetween, formatBangkokDate, formatWeekday } from '../../../../lib/bangkok-time';
 import { getSharedDatabase } from '../../../../lib/database';
 import { formatLeaveMonth } from '../../../../lib/leave-labels';
 import { leaveSession } from '../leave-page';
@@ -24,6 +24,7 @@ export default async function LeaveCalendarPage({ searchParams }: { searchParams
   const [rows, holidays] = await Promise.all([queries.teamCalendar(session.personId, month), new LeaveSettingsService(database).listHolidays(Number(month.slice(0, 4)))]);
   const days = datesBetween(`${month}-01`, lastDay(month));
   const closed = new Set(holidays.map((holiday) => holiday.date));
+  const names = new Map(holidays.map((holiday) => [holiday.date, holiday.name]));
   const weekend = (date: string) => { const day = new Date(`${date}T00:00:00Z`).getUTCDay(); return day === 0 || day === 6; };
   return <section>
     <h2>{t('leaveCalendar')} {formatLeaveMonth(month)}</h2>
@@ -34,7 +35,7 @@ export default async function LeaveCalendarPage({ searchParams }: { searchParams
       <Link href={`/leave/calendar?month=${shiftMonth(month, 1)}`}>{t('leaveNextMonth')}</Link>
     </nav>
     {rows.length === 0 ? <p>{t('leaveCalendarEmpty')}</p> : <div className="leave-calendar"><table>
-      <thead><tr><th scope="col">{t('leavePerson')}</th>{days.map((date) => <th key={date} scope="col" className={weekend(date) || closed.has(date) ? 'leave-day-off' : undefined}>{Number(date.slice(8))}</th>)}</tr></thead>
+      <thead><tr><th scope="col">{t('leavePerson')}</th>{days.map((date) => <th key={date} scope="col" className={[weekend(date) || closed.has(date) ? 'leave-day-off' : '', names.get(date) ? 'is-holiday' : ''].filter(Boolean).join(' ') || undefined} title={names.get(date)} aria-label={`${formatBangkokDate(date)}${names.get(date) ? ` วันหยุด ${names.get(date)}` : ''}`}><span className="calendar-day-number">{Number(date.slice(8))}</span><small className="leave-weekday">{formatWeekday(date)}</small>{names.get(date) && <small className="calendar-holiday-name">{names.get(date)}</small>}</th>)}</tr></thead>
       <tbody>{rows.map((row) => {
         const byDate = new Map<string, typeof row.days>();
         for (const day of row.days) byDate.set(day.date, [...(byDate.get(day.date) ?? []), day]);
@@ -43,7 +44,7 @@ export default async function LeaveCalendarPage({ searchParams }: { searchParams
           {days.map((date) => {
             const entries = byDate.get(date) ?? [];
             const day = entries[0];
-            if (!day) return <td key={date} className={weekend(date) || closed.has(date) ? 'leave-day-off' : undefined}></td>;
+            if (!day) return <td key={date} className={[weekend(date) || closed.has(date) ? 'leave-day-off' : '', names.get(date) ? 'is-holiday' : ''].filter(Boolean).join(' ') || undefined} title={names.get(date)}></td>;
             const trip = entries.find((entry) => entry.kind === 'TRAVEL');
             const leave = entries.find((entry) => entry.kind === 'LEAVE');
             // Half a day on leave and half on a trip: both, in one cell.

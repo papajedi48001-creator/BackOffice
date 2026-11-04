@@ -29,3 +29,16 @@ export type ModuleMode = z.infer<typeof moduleModeSchema>;
 export const adminModuleModeInputSchema = z.object({ mode: moduleModeSchema }).strict();
 
 export const moduleCodeSchema = z.string().regex(/^[a-z][a-z-]{1,63}$/);
+
+const sqlIdentifier = z.string().trim().regex(/^[A-Za-z_][A-Za-z0-9_]{0,63}$/);
+/** ตั้งค่าการเชื่อมต่อ HOSxP. A blank password keeps the stored one; the password is never sent back. */
+export const hosxpSettingsInputSchema = z.object({
+  host: z.string().trim().min(1).max(255).regex(/^[A-Za-z0-9.-]+$/),
+  port: z.number().int().min(1).max(65535),
+  database: sqlIdentifier,
+  user: z.string().trim().min(1).max(64),
+  password: z.string().max(256),
+  dateColumn: sqlIdentifier,
+  nameColumn: sqlIdentifier
+}).strict();
+export type HosxpSettingsInputBody = z.infer<typeof hosxpSettingsInputSchema>;

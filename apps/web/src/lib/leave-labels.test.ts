@@ -12,7 +12,7 @@ describe('leave labels', () => {
   });
 
   it('shows half days only where they apply', () => {
-    expect(formatLeaveRange({ startDate: '2026-11-02', endDate: '2026-11-02', startHalf: 'FULL', endHalf: 'MORNING' })).toBe('2 พ.ย. 2569 (ครึ่งวันเช้า)');
-    expect(formatLeaveRange({ startDate: '2026-11-02', endDate: '2026-11-04', startHalf: 'AFTERNOON', endHalf: 'FULL' })).toBe('2 พ.ย. 2569 (ครึ่งวันบ่าย) – 4 พ.ย. 2569');
+    expect(formatLeaveRange({ startDate: '2026-11-02', endDate: '2026-11-02', startHalf: 'FULL', endHalf: 'MORNING' })).toBe('จันทร์ 2 พ.ย. 2569 (ครึ่งวันเช้า)');
+    expect(formatLeaveRange({ startDate: '2026-11-02', endDate: '2026-11-04', startHalf: 'AFTERNOON', endHalf: 'FULL' })).toBe('จันทร์ 2 พ.ย. 2569 (ครึ่งวันบ่าย) – พุธ 4 พ.ย. 2569');
   });
 });

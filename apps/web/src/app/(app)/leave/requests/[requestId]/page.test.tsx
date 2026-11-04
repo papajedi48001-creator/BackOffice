@@ -79,7 +79,7 @@ describe('LeaveRequestPage', () => {
     render(await LeaveRequestPage(params('c1')));
     fireEvent.click(screen.getByRole('button', { name: 'แก้ไขคำขอยกเลิกวันลาที่ถูกส่งกลับ' }));
     const form = screen.getByRole('form', { name: 'แก้ไขคำขอยกเลิกวันลาที่ถูกส่งกลับ' });
-    expect(screen.getByLabelText('ตั้งแต่วันที่')).toHaveValue('2026-11-05');
+    expect(screen.getByLabelText('ตั้งแต่วันที่')).toHaveValue('05/11/2569');
     expect(screen.getByLabelText('เหตุผลที่ขอยกเลิก')).toHaveValue('กลับมาทำงาน');
     fireEvent.change(screen.getByLabelText('ตั้งแต่วันที่'), { target: { value: '2026-11-06' } });
     fireEvent.submit(form);
