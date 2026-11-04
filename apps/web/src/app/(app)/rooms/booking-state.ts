@@ -29,7 +29,7 @@ export function bookingViewState(booking: BookingViewInput, now: Date): BookingV
     : mayRelease && hasFutureDays ? 'release' : null;
   return {
     expired: waiting && ended,
-    canDecide: booking.viewerCanDecide && !booking.viewerIsBooker && booking.status === 'PENDING' && !ended,
+    canDecide: booking.viewerCanDecide && !booking.viewerIsBooker && waiting && !ended,
     cancelAction
   };
 }

@@ -16,8 +16,6 @@ export interface RoomBookingRepository {
   nextSequence(year: number): Promise<number>;
   currentOrganizationId(personId: string): Promise<string | null>;
   findApproverPersonIds(organizationId: string): Promise<string[]>;
-  /** Opens the คำขอ for the booker's head (central workflow, NEAREST_HEAD) and returns its id; throws NO_APPROVER when nobody can be found. */
-  openHeadRequest(input: { requestorPersonId: string; organizationId: string }): Promise<string>;
   /** Cancels that คำขอ while the head has not decided, telling the head. */
   cancelHeadRequest(input: { requestId: string; actorPersonId: string; reason: string }): Promise<void>;
   insertBooking(booking: RoomBookingRecord, days: RoomBookingDayRecord[], addons: RoomBookingAddonRecord[]): Promise<void>;

@@ -8,6 +8,7 @@ import { RoomBookingService } from './room-booking-service';
 import { RoomCatalogService } from './room-catalog-service';
 import { ApprovalService } from '../workflow/approval-service';
 import { DatabaseWorkflowRepository } from '../workflow/database-workflow-repository';
+import { RequestService } from '../workflow/request-service';
 
 const databaseUrl = process.env.DATABASE_URL;
 const describeWithDatabase = databaseUrl ? describe : describe.skip;
@@ -24,12 +25,18 @@ describeWithDatabase('room booking on MariaDB', () => {
   const manager: RoomActor = { personId: approverId, roles: [{ name: 'room-manager', organizationId: ownerUnit }] };
   const approver: RoomActor = { personId: approverId, roles: [{ name: 'room-booking-approver', organizationId: ownerUnit }] };
   const booker: RoomActor = { personId: bookerId, roles: [] };
-  // The booker's head, as the command chain would find it.
+  // The booker's head, as the command chain found it when bookings still went to the head first.
   const heads = { resolve: async () => [{ personId: headId, organizationId: bookerUnit }] };
-  const service = () => new RoomBookingService(new DatabaseRoomBookingRepository(database, heads), undefined, undefined, () => now);
+  const service = () => new RoomBookingService(new DatabaseRoomBookingRepository(database), undefined, undefined, () => now);
   const headDecides = (requestId: string, decision: 'APPROVE' | 'REJECT' | 'RETURN', reason?: string) => new ApprovalService(new DatabaseWorkflowRepository(database), { findActiveFor: async () => null }).decideRequest({ requestId, actorPersonId: headId, decision, ...(reason ? { reason } : {}) });
-  /** Submits and has the head เห็นชอบ, so the booking waits for the room manager. */
-  const submitted = async (actor: RoomActor, bookingInput: ReturnType<typeof input>) => { const booking = await service().submit(actor, bookingInput); await headDecides(booking.requestId!, 'APPROVE'); return { ...booking, status: 'PENDING' as const }; };
+  const submitted = (actor: RoomActor, bookingInput: ReturnType<typeof input>) => service().submit(actor, bookingInput);
+  /** A booking as filed while the head step existed: HEAD_REVIEW, with an open คำขอ for the head. */
+  const filedWithHead = async (actor: RoomActor, bookingInput: ReturnType<typeof input>) => {
+    const booking = await service().submit(actor, bookingInput);
+    const request = await new RequestService(new DatabaseWorkflowRepository(database), heads).submitRequest({ moduleCode: 'room-booking', requestorPersonId: actor.personId, organizationSnapshot: { organizationId: bookerUnit }, target: 'NEAREST_HEAD' });
+    await database.execute("UPDATE room_booking SET status = 'HEAD_REVIEW', request_id = ? WHERE id = ?", [request.id, booking.id]);
+    return { ...booking, status: 'HEAD_REVIEW' as const, requestId: request.id };
+  };
   const createRoom = () => new RoomCatalogService(new DatabaseRoomCatalogRepository(database)).createRoom(manager, { name: `ห้อง ${randomUUID().slice(0, 8)}`, place: 'อาคารอำนวยการ', capacity: 30, ownerOrganizationId: ownerUnit, isBookable: true });
   const input = (roomId: string, dates = ['2026-11-05', '2026-11-06']) => ({ roomId, dates, startMinute: 540, endMinute: 720, title: 'ประชุมทดสอบ', attendeeCount: 10 });
 
@@ -97,7 +104,7 @@ describeWithDatabase('room booking on MariaDB', () => {
     const forBooker = await queries.detail(booking.id, booker);
 
     expect(forBooker).toMatchObject({ reference: booking.reference, status: 'REJECTED', viewerIsBooker: true, viewerCanDecide: false, days: [expect.objectContaining({ date: '2026-11-20', status: 'ACTIVE' })] });
-    expect(forBooker?.history.map((entry) => [entry.action, entry.reason, entry.actorName])).toEqual([['SUBMITTED', null, 'ผู้จอง ทดสอบ'], ['HEAD_APPROVED', null, 'หัวหน้า ทดสอบ'], ['REJECTED', 'งดใช้ห้อง', 'ธุรการ ทดสอบ']]);
+    expect(forBooker?.history.map((entry) => [entry.action, entry.reason, entry.actorName])).toEqual([['SUBMITTED', null, 'ผู้จอง ทดสอบ'], ['REJECTED', 'งดใช้ห้อง', 'ธุรการ ทดสอบ']]);
     await expect(queries.detail(booking.id, approver)).resolves.toMatchObject({ viewerCanDecide: true });
     await expect(queries.detail(booking.id, { personId: otherBookerId, roles: [] })).resolves.toBeNull();
     const audit = await database.query<{ metadata: string }>('SELECT metadata FROM audit_event WHERE target_id = ?', [booking.id]);
@@ -148,25 +155,34 @@ describeWithDatabase('room booking on MariaDB', () => {
     expect(pending).not.toContain(own.id);
   });
 
-  describe('the head\'s เห็นชอบ in คำขอ', () => {
+  describe('bookings filed while the head step existed', () => {
     const requestStatus = async (requestId: string) => (await database.query<{ status: string }>('SELECT status FROM request WHERE id = ?', [requestId]))[0]?.status;
     const bookingStatus = async (bookingId: string) => (await database.query<{ status: string }>('SELECT status FROM room_booking WHERE id = ?', [bookingId]))[0]?.status;
 
-    it('opens a คำขอ for the head on submit and holds the slots meanwhile', async () => {
+    it('submits new bookings straight to the room managers, with no คำขอ', async () => {
       const room = await createRoom();
       const booking = await service().submit(booker, input(room.id, ['2026-12-01']));
+      expect(booking).toMatchObject({ status: 'PENDING', requestId: null });
+      expect((await database.query<{ requestId: string | null }>('SELECT request_id AS requestId FROM room_booking WHERE id = ?', [booking.id]))[0]?.requestId).toBeNull();
+      const notices = await database.query<{ payload: string }>("SELECT payload FROM outbox_event WHERE type = 'notification.in_app' AND payload LIKE ?", [`%/rooms/bookings/${booking.id}%`]);
+      expect(notices.map((row) => JSON.parse(row.payload)).filter((payload) => payload.subject.startsWith('มีการจองห้องรออนุมัติ')).map((payload) => payload.recipientPersonId)).toContain(approverId);
+      await expect(service().decide(manager, { bookingId: booking.id, decision: 'APPROVE' })).resolves.toMatchObject({ status: 'APPROVED' });
+    });
 
-      expect(booking).toMatchObject({ status: 'HEAD_REVIEW', requestId: expect.any(String) });
-      expect(await requestStatus(booking.requestId!)).toBe('IN_REVIEW');
-      const steps = await database.query<{ assignee: string }>("SELECT JSON_VALUE(assignee_snapshot, '$.personId') AS assignee FROM approval_step WHERE request_id = ? AND status = 'PENDING'", [booking.requestId]);
-      expect(steps.map((step) => step.assignee)).toEqual([headId]);
-      await expect(service().submit({ personId: otherBookerId, roles: [] }, input(room.id, ['2026-12-01']))).rejects.toThrow('BOOKING_CONFLICT');
-      await expect(service().decide(manager, { bookingId: booking.id, decision: 'APPROVE' })).rejects.toThrow('BOOKING_NOT_PENDING');
+    it('lets a room manager decide a booking still waiting on the head, and takes its คำขอ out of the head\'s inbox', async () => {
+      const room = await createRoom();
+      const booking = await filedWithHead(booker, input(room.id, ['2026-12-09']));
+
+      expect((await new RoomBookingQueries(database).pendingForApprover(approver)).map((entry) => entry.id)).toContain(booking.id);
+      await expect(service().decide(manager, { bookingId: booking.id, decision: 'APPROVE' })).resolves.toMatchObject({ status: 'APPROVED' });
+
+      expect(await bookingStatus(booking.id)).toBe('APPROVED');
+      expect(await requestStatus(booking.requestId)).toBe('CANCELLED');
     });
 
     it('hands the booking to the room managers when the head agrees, and lets a room manager approve it', async () => {
       const room = await createRoom();
-      const booking = await service().submit(booker, input(room.id, ['2026-12-02']));
+      const booking = await filedWithHead(booker, input(room.id, ['2026-12-02']));
 
       await headDecides(booking.requestId!, 'APPROVE');
 
@@ -178,19 +194,19 @@ describeWithDatabase('room booking on MariaDB', () => {
 
     it('rejects the booking and frees its slots when the head does not agree', async () => {
       const room = await createRoom();
-      const booking = await service().submit(booker, input(room.id, ['2026-12-03']));
+      const booking = await filedWithHead(booker, input(room.id, ['2026-12-03']));
 
       await headDecides(booking.requestId!, 'REJECT', 'ไม่ใช่งานของหน่วย');
 
       expect(await bookingStatus(booking.id)).toBe('REJECTED');
       const detail = await new RoomBookingQueries(database).detail(booking.id, booker);
       expect(detail?.history.at(-1)).toMatchObject({ action: 'HEAD_REJECTED', reason: 'ไม่ใช่งานของหน่วย', actorName: 'หัวหน้า ทดสอบ' });
-      await expect(service().submit({ personId: otherBookerId, roles: [] }, input(room.id, ['2026-12-03']))).resolves.toMatchObject({ status: 'HEAD_REVIEW' });
+      await expect(service().submit({ personId: otherBookerId, roles: [] }, input(room.id, ['2026-12-03']))).resolves.toMatchObject({ status: 'PENDING' });
     });
 
     it('opens the booking to the head on its คำขอ, who may decide only while it waits on them', async () => {
       const room = await createRoom();
-      const booking = await service().submit(booker, input(room.id, ['2026-12-07']));
+      const booking = await filedWithHead(booker, input(room.id, ['2026-12-07']));
       const queries = new RoomBookingQueries(database);
       const head: RoomActor = { personId: headId, roles: [] };
 
@@ -204,7 +220,7 @@ describeWithDatabase('room booking on MariaDB', () => {
 
     it('opens the booking to an active ผู้แทน of the head, who may decide it for them', async () => {
       const room = await createRoom();
-      const booking = await service().submit(booker, input(room.id, ['2026-12-08']));
+      const booking = await filedWithHead(booker, input(room.id, ['2026-12-08']));
       const deputyId = randomUUID();
       const lapsedId = randomUUID();
       for (const id of [deputyId, lapsedId]) await database.execute('INSERT INTO person (id, national_id_ciphertext, national_id_lookup, display_name, created_at) VALUES (?, ?, ?, ?, UTC_TIMESTAMP())', [id, 'ciphertext', randomUUID(), 'ผู้แทน ทดสอบ']);
@@ -218,13 +234,13 @@ describeWithDatabase('room booking on MariaDB', () => {
 
     it('shows a booking waiting for its head on the calendar', async () => {
       const room = await createRoom();
-      await service().submit(booker, input(room.id, ['2026-12-08']));
+      await filedWithHead(booker, input(room.id, ['2026-12-08']));
       expect((await new RoomBookingQueries(database).calendar(new Date('2026-12-07T17:00:00Z'), new Date('2026-12-08T17:00:00Z'), room.id)).map((entry) => entry.status)).toEqual(['HEAD_REVIEW']);
     });
 
     it('refuses ส่งกลับแก้ไข, because a booking is not edited after it is submitted', async () => {
       const room = await createRoom();
-      const booking = await service().submit(booker, input(room.id, ['2026-12-04']));
+      const booking = await filedWithHead(booker, input(room.id, ['2026-12-04']));
 
       await expect(headDecides(booking.requestId!, 'RETURN', 'แก้เวลา')).rejects.toThrow('RETURN_NOT_ALLOWED');
 
@@ -234,7 +250,7 @@ describeWithDatabase('room booking on MariaDB', () => {
 
     it('cancels the head\'s คำขอ with the booking', async () => {
       const room = await createRoom();
-      const booking = await service().submit(booker, input(room.id, ['2026-12-05']));
+      const booking = await filedWithHead(booker, input(room.id, ['2026-12-05']));
 
       await service().cancel(booker, { bookingId: booking.id, reason: 'เลื่อนประชุม' });
 

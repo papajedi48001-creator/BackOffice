@@ -1,8 +1,8 @@
-import { ROOM_BOOKING_MODULE, type AuditEvent, type OutboxEvent, type RoomBookingStatus } from '@backoffice/contracts';
+import { type AuditEvent, type OutboxEvent, type RoomBookingStatus } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { roleGrantsPermission } from '../access/policy';
 import { DatabaseWorkflowRepository } from '../workflow/database-workflow-repository';
-import { RequestService, type ApproverResolver } from '../workflow/request-service';
+import { RequestService } from '../workflow/request-service';
 import type { TimeRange } from './booking-days';
 import type { LockedRoomBooking, RoomBookingAddonRecord, RoomBookingDayRecord, RoomBookingHistoryEntry, RoomBookingRecord, RoomBookingRepository, RoomRecord } from './room-booking-repository';
 import type { RoomAddonDetails, RoomCatalogRepository, RoomDetails } from './room-catalog-service';
@@ -29,12 +29,11 @@ const roomColumns = 'id, name, capacity, owner_organization_id AS ownerOrganizat
 const bookingColumns = 'id, reference, room_id AS roomId, booker_person_id AS bookerPersonId, booker_organization_id AS bookerOrganizationId, title, attendee_count AS attendeeCount, start_minute AS startMinute, end_minute AS endMinute, status, decided_by_person_id AS decidedByPersonId, request_id AS requestId';
 
 export class DatabaseRoomBookingRepository implements RoomBookingRepository {
-  /** `approvers` finds the booker's head for the คำขอ opened on submit; only submitting needs it. */
-  constructor(private readonly database: Database, private readonly approvers?: ApproverResolver) {}
+  constructor(private readonly database: Database) {}
 
   transaction<T>(work: (repository: RoomBookingRepository) => Promise<T>): Promise<T> {
     // Concurrent submits lock the room and the shared sequence row after other bookings commit; see TransactionOptions.
-    return this.database.transaction((database) => work(new DatabaseRoomBookingRepository(database, this.approvers)), { isolationLevel: 'READ COMMITTED' });
+    return this.database.transaction((database) => work(new DatabaseRoomBookingRepository(database)), { isolationLevel: 'READ COMMITTED' });
   }
 
   async lockRoom(roomId: string): Promise<RoomRecord | null> {
@@ -77,12 +76,6 @@ export class DatabaseRoomBookingRepository implements RoomBookingRepository {
       [organizationId]
     );
     return [...new Set(rows.filter((row) => roleGrantsPermission(row.roleName, 'room.booking.decide')).map((row) => row.personId))].sort();
-  }
-
-  async openHeadRequest(input: { requestorPersonId: string; organizationId: string }): Promise<string> {
-    if (!this.approvers) throw new Error('NO_APPROVER');
-    const request = await new RequestService(new DatabaseWorkflowRepository(this.database), this.approvers).submitRequest({ moduleCode: ROOM_BOOKING_MODULE, requestorPersonId: input.requestorPersonId, organizationSnapshot: { organizationId: input.organizationId }, target: 'NEAREST_HEAD' });
-    return request.id;
   }
 
   async cancelHeadRequest(input: { requestId: string; actorPersonId: string; reason: string }): Promise<void> {
