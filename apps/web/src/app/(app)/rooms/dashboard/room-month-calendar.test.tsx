@@ -54,3 +54,13 @@ it('gives each day a heading with its full date', () => {
   expect(screen.getByRole('heading', { name: /พฤหัสบดี 5 พ.ย. 2569/ })).toBeInTheDocument();
   expect(screen.queryAllByRole('region')).toHaveLength(0);
 });
+
+it('heads the weeks with full Thai weekday names and greys a วันหยุด with its name', () => {
+  render(<RoomMonthCalendar grid={grid} entries={[]} dayHref={dayHref} holidays={{ '2026-11-06': 'วันหยุดชดเชย' }} />);
+  expect(screen.getByText('จันทร์')).toBeInTheDocument();
+  expect(screen.getByText('อาทิตย์')).toBeInTheDocument();
+  expect(screen.queryByText('จ.')).toBeNull();
+  const holiday = screen.getByRole('group', { name: 'ศุกร์ 6 พ.ย. 2569 วันหยุด วันหยุดชดเชย' });
+  expect(holiday).toHaveClass('is-holiday');
+  expect(within(holiday).getByText('วันหยุดชดเชย')).toBeInTheDocument();
+});

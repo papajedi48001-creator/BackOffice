@@ -7,12 +7,14 @@ import { RoomStatusBadge } from './room-display';
 export interface CalendarEntryView { bookingId: string; reference: string; roomId: string; roomName: string; date: string; startsAt: string; endsAt: string; status: RoomBookingStatus; title: string; bookerName: string | null; bookerOrganizationName: string | null; }
 
 /** `dayHref` turns each day heading into a link to that day's view. */
-export function RoomCalendar({ dates, entries, dayHref }: { dates: string[]; entries: CalendarEntryView[]; dayHref?: (date: string) => string }) {
+export function RoomCalendar({ dates, entries, dayHref, holidays = {} }: { dates: string[]; entries: CalendarEntryView[]; dayHref?: (date: string) => string; holidays?: Record<string, string> }) {
   return <div className="room-calendar">{dates.map((date) => {
     const headingId = `room-day-${date}`;
     const dayEntries = entries.filter((entry) => entry.date === date);
-    return <section key={date} className="room-day" aria-labelledby={headingId}>
+    const holiday = holidays[date];
+    return <section key={date} className={holiday ? 'room-day is-holiday' : 'room-day'} aria-labelledby={headingId}>
       <h3 id={headingId}>{dayHref ? <Link href={dayHref(date)}>{formatBangkokDate(date)}</Link> : <>{formatBangkokDate(date)}</>}</h3>
+      {holiday && <p className="calendar-holiday-name">{`วันหยุด ${holiday}`}</p>}
       {dayEntries.length === 0 ? <p className="room-day-empty">{t('noRoomsOnDay')}</p> : <ul>{dayEntries.map((entry) => <li key={`${entry.bookingId}-${entry.date}`} className={`room-slot room-slot-${entry.status.toLowerCase()}`}>
         <span className="room-slot-time">{formatBangkokTime(entry.startsAt)}–{formatBangkokTime(entry.endsAt)}</span>
         <span className="room-slot-room">{entry.roomName}</span>
