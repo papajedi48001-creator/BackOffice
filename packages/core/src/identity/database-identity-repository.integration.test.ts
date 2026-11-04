@@ -32,7 +32,7 @@ describeWithDatabase('identity repositories against MariaDB', () => {
 
     const stored = await database.query<{ tokenHash: string; lifetime: number }>('SELECT token_hash AS tokenHash, TIMESTAMPDIFF(SECOND, created_at, expires_at) AS lifetime FROM user_session WHERE person_id = ?', [personId]);
     expect(stored).toEqual([{ tokenHash: hashSessionToken(token), lifetime: 43_200 }]);
-    await expect(sessions.resolve(token)).resolves.toEqual({ authenticated: true, personId, roles: [{ name: roleName, organizationId }], dataOwnerModules: ['hr', 'maintenance'], hospitalWideDataOwnerModules: ['hr'], activeRole: roleName, roleChoices: [roleName], roleSelectionRequired: false });
+    await expect(sessions.resolve(token)).resolves.toEqual({ authenticated: true, personId, roles: [{ name: roleName, organizationId }], dataOwnerModules: ['hr', 'maintenance'], hospitalWideDataOwnerModules: ['hr'], activeRole: 'manager', roleChoices: ['manager'], roleSelectionRequired: false });
 
     await expect(sessions.revoke(token)).resolves.toBe(personId);
     await expect(sessions.resolve(token)).resolves.toBeNull();

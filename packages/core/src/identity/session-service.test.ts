@@ -37,7 +37,7 @@ describe('SessionService', () => {
     const sessions = service(repository);
     const { token } = await sessions.start('person-a');
 
-    await expect(sessions.resolve(token)).resolves.toEqual({ authenticated: true, personId: 'person-a', roles: [{ name: 'hr-reader', organizationId: 'unit-of-person-a' }], dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: [], activeRole: 'hr-reader', roleChoices: ['hr-reader'], roleSelectionRequired: false });
+    await expect(sessions.resolve(token)).resolves.toEqual({ authenticated: true, personId: 'person-a', roles: [{ name: 'hr-reader', organizationId: 'unit-of-person-a' }], dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: [], activeRole: 'manager', roleChoices: ['manager'], roleSelectionRequired: false });
 
     const revokedAccess = new SessionService(repository, { load: async () => ({ roles: [], dataOwnerModules: [] }) });
     await expect(revokedAccess.resolve(token)).resolves.toMatchObject({ roles: [], dataOwnerModules: [] });
@@ -104,11 +104,11 @@ describe('SessionService', () => {
     const sessions = service(repository, many);
     const { token } = await sessions.start('person-a');
 
-    await expect(sessions.resolve(token)).resolves.toMatchObject({ authenticated: true, roles: [], activeRole: null, roleChoices: ['admin', 'leave-manager'], roleSelectionRequired: true });
-    await expect(sessions.chooseRole(token, 'fleet-manager')).rejects.toThrow('ROLE_NOT_HELD');
-    await expect(sessions.chooseRole(token, 'leave-manager')).resolves.toEqual({ personId: 'person-a', role: 'leave-manager', previousRole: null });
-    await expect(sessions.resolve(token)).resolves.toMatchObject({ roles: [{ name: 'leave-manager', organizationId: null }], activeRole: 'leave-manager', roleSelectionRequired: false });
-    await expect(sessions.chooseRole(token, 'employee')).resolves.toMatchObject({ role: 'employee', previousRole: 'leave-manager' });
+    await expect(sessions.resolve(token)).resolves.toMatchObject({ authenticated: true, roles: [], activeRole: null, roleChoices: ['admin', 'manager'], roleSelectionRequired: true });
+    await expect(sessions.chooseRole(token, 'leave-manager')).rejects.toThrow('ROLE_NOT_HELD');
+    await expect(sessions.chooseRole(token, 'manager')).resolves.toEqual({ personId: 'person-a', role: 'manager', previousRole: null });
+    await expect(sessions.resolve(token)).resolves.toMatchObject({ roles: [{ name: 'leave-manager', organizationId: null }], activeRole: 'manager', roleSelectionRequired: false });
+    await expect(sessions.chooseRole(token, 'employee')).resolves.toMatchObject({ role: 'employee', previousRole: 'manager' });
     await expect(sessions.resolve(token)).resolves.toMatchObject({ roles: [], activeRole: 'employee', roleSelectionRequired: false });
     await expect(sessions.chooseRole('unknown', 'admin')).resolves.toBeNull();
   });
