@@ -9,7 +9,13 @@ export const accessSubjectSchema = z.object({
   roles: z.array(z.object({ name: z.string().min(1), organizationId: z.string().min(1).nullable().optional() })),
   dataOwnerModules: z.array(z.string().min(1)),
   /** Modules this person owns for the whole hospital, not just one unit. */
-  hospitalWideDataOwnerModules: z.array(z.string().min(1)).optional()
+  hospitalWideDataOwnerModules: z.array(z.string().min(1)).optional(),
+  /** The role a signed-in session works in (`employee` = บุคลากรทั่วไป); `roles` then holds only its assignments. */
+  activeRole: z.string().min(1).nullable().optional(),
+  /** Distinct role names the person holds and may switch between. */
+  roleChoices: z.array(z.string().min(1)).optional(),
+  /** True while a person with several roles has not chosen one yet; `roles` is empty until then. */
+  roleSelectionRequired: z.boolean().optional()
 });
 
 export type AccessSubject = z.infer<typeof accessSubjectSchema>;
