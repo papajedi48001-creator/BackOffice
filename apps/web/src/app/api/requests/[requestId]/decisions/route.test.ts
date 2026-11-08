@@ -25,6 +25,13 @@ function ready(moduleCode: string) {
 afterEach(() => { vi.clearAllMocks(); vi.restoreAllMocks(); });
 
 describe('POST /api/requests/[requestId]/decisions', () => {
+  it('passes the session tier so the service can allow an admin or manager to decide their own request', async () => {
+    ready('leave');
+    mocks.requireAuthorized.mockResolvedValue({ authenticated: true, personId: 'approver-1', activeRole: 'manager' });
+    await decide('REJECT');
+    expect(mocks.decideRequest).toHaveBeenCalledWith(expect.objectContaining({ actorPersonId: 'approver-1', actorRole: 'manager', reason: 'เหตุผล' }));
+  });
+
   it('files the ใบขอใช้รถ for a ไปราชการ คำขอ after an approval or a rejection, as the approver', async () => {
     for (const decision of ['APPROVE', 'REJECT']) {
       ready('official-travel');

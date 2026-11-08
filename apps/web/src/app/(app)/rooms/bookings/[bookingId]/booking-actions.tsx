@@ -13,7 +13,7 @@ type BookingDialog = { title: string; url: string; body: Record<string, string>;
  * `cancelAction`: `cancel` before the booking starts, `release` once it is under way, `null` when the viewer may not cancel.
  * `headRequestId`: set when the booking waits on this viewer as the booker's head; they agree or not in คำขอ.
  */
-export function BookingActions({ bookingId, canDecide, cancelAction, cancelByAdmin = false, headRequestId = null }: { bookingId: string; canDecide: boolean; cancelAction: 'cancel' | 'release' | null; cancelByAdmin?: boolean; headRequestId?: string | null }) {
+export function BookingActions({ bookingId, canDecide, cancelAction, cancelByAdmin = false, headRequestId = null, ownRequest = false }: { bookingId: string; canDecide: boolean; ownRequest?: boolean; cancelAction: 'cancel' | 'release' | null; cancelByAdmin?: boolean; headRequestId?: string | null }) {
   const router = useRouter();
   const [dialog, setDialog] = useState<BookingDialog | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -33,9 +33,10 @@ export function BookingActions({ bookingId, canDecide, cancelAction, cancelByAdm
   const cancelLabel = cancelAction === 'release' ? t('releaseRemainingDays') : cancelByAdmin ? t('cancelBookingByAdmin') : t('cancelBooking');
   const open = (next: BookingDialog) => { setError(null); setDialog(next); };
   return <section className="request-actions">
+    {canDecide && ownRequest && <p className="permission-notice">{t('ownRequestReasonNotice')}</p>}
     {headRequestId && <button type="button" disabled={busy} onClick={() => open({ title: t('roomHeadApprove'), url: `/api/requests/${encodeURIComponent(headRequestId)}/decisions`, body: { decision: 'APPROVE' }, reason: false, danger: false })}>{t('roomHeadApprove')}</button>}
     {headRequestId && <button type="button" className="button-danger" disabled={busy} onClick={() => open({ title: t('roomHeadReject'), url: `/api/requests/${encodeURIComponent(headRequestId)}/decisions`, body: { decision: 'REJECT' }, reason: true, danger: true })}>{t('roomHeadReject')}</button>}
-    {canDecide && <button type="button" disabled={busy} onClick={() => open({ title: t('approveBooking'), url: bookingUrl('decision'), body: { decision: 'APPROVE' }, reason: false, danger: false })}>{t('approveBooking')}</button>}
+    {canDecide && <button type="button" disabled={busy} onClick={() => open({ title: t('approveBooking'), url: bookingUrl('decision'), body: { decision: 'APPROVE' }, reason: ownRequest, danger: false })}>{t('approveBooking')}</button>}
     {canDecide && <button type="button" className="button-danger" disabled={busy} onClick={() => open({ title: t('rejectBooking'), url: bookingUrl('decision'), body: { decision: 'REJECT' }, reason: true, danger: true })}>{t('rejectBooking')}</button>}
     {cancelAction && <button type="button" className="button-danger" disabled={busy} onClick={() => open({ title: cancelLabel, url: bookingUrl('cancellation'), body: {}, reason: true, danger: true })}>{cancelLabel}</button>}
     {dialog && <ActionDialog title={dialog.title} message={dialog.reason ? undefined : t('dialogConfirmQuestion')} confirmLabel={t('confirmAction')} tone={dialog.danger ? 'danger' : 'primary'} reason={dialog.reason} isSubmitting={busy} error={error} onConfirm={(reason) => void send(dialog, reason)} onClose={() => { setDialog(null); setError(null); }} />}
