@@ -1,3 +1,4 @@
+import { canDecideOwnRequest } from '../access/active-role';
 import { randomUUID } from 'node:crypto';
 import { cancelRoomBookingInputSchema, decideRoomBookingInputSchema, notificationEventPayloadSchema, ROOM_BOOKING_MODULE, submitRoomBookingInputSchema, type CancelRoomBookingInput, type DecideRoomBookingInput, type Permission, type RoomActor, type RoomBookingHistoryAction, type SubmitRoomBookingInput } from '@backoffice/contracts';
 import { AuthorizationService } from '../access/authorization-service';
@@ -74,7 +75,9 @@ export class RoomBookingService {
       const isBooker = locked.booking.bookerPersonId === actor.personId;
       // Someone who may not see the booking is told it does not exist, as the detail page does.
       if (!(await this.isAllowed(actor, 'room.booking.decide', locked.room))) throw new Error(isBooker ? 'FORBIDDEN' : 'BOOKING_NOT_FOUND');
-      if (isBooker) throw new Error('CONFLICT_OF_INTEREST');
+      // An admin or manager may decide their own booking, with a reason; บุคลากรทั่วไป never.
+      if (isBooker && !canDecideOwnRequest(actor.activeRole)) throw new Error('CONFLICT_OF_INTEREST');
+      if (isBooker && !valid.reason) throw new Error('REASON_REQUIRED');
       const now = this.now();
       // HEAD_REVIEW: filed while bookings went to the head first; the room manager may now decide it directly.
       const waitingOnHead = locked.booking.status === 'HEAD_REVIEW';
@@ -85,7 +88,7 @@ export class RoomBookingService {
       // Its คำขอ leaves the head's inbox, since the decision has been made.
       if (waitingOnHead && booking.requestId) await repository.cancelHeadRequest({ requestId: booking.requestId, actorPersonId: actor.personId, reason: 'ผู้รับผิดชอบพิจารณาการจองห้องแล้ว' });
       const activeDays = locked.days.filter((day) => day.status === 'ACTIVE').length;
-      const historyId = await this.record(repository, booking, actor.personId, approved ? 'APPROVED' : 'REJECTED', approved ? null : valid.reason!, approved ? 'room_booking.approved' : 'room_booking.rejected', activeDays);
+      const historyId = await this.record(repository, booking, actor.personId, approved ? 'APPROVED' : 'REJECTED', approved && !isBooker ? null : valid.reason!, approved ? 'room_booking.approved' : 'room_booking.rejected', activeDays, isBooker);
       await this.notify(repository, booking, historyId, booking.bookerPersonId, `${approved ? 'อนุมัติ' : 'ไม่อนุมัติ'} > ผู้รับผิดชอบ (${booking.reference})`);
       return booking;
     });
@@ -132,12 +135,12 @@ export class RoomBookingService {
   }
 
   // Returns the history entry id, which also keys the notifications of this step.
-  private async record(repository: RoomBookingRepository, booking: RoomBookingRecord, actorPersonId: string, action: RoomBookingHistoryAction, reason: string | null, auditAction: AuditAction, dayCount: number): Promise<string> {
+  private async record(repository: RoomBookingRepository, booking: RoomBookingRecord, actorPersonId: string, action: RoomBookingHistoryAction, reason: string | null, auditAction: AuditAction, dayCount: number, selfApproval = false): Promise<string> {
     const historyId = this.createId();
     await repository.appendHistory({ id: historyId, bookingId: booking.id, actorPersonId, action, reason });
     await new AuditService({ append: (event) => repository.appendAudit(event) }, this.createId).recordAudit({
       actorPersonId, action: auditAction, targetType: 'room_booking', targetId: booking.id, result: 'SUCCESS',
-      metadata: { bookingReference: booking.reference, roomId: booking.roomId, status: booking.status, dayCount }
+      metadata: { bookingReference: booking.reference, roomId: booking.roomId, status: booking.status, dayCount, ...(selfApproval ? { selfApproval: true } : {}) }
     });
     return historyId;
   }
