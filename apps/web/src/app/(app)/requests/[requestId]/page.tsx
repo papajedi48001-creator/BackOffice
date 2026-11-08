@@ -31,10 +31,10 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
     if (!canViewRequest(session.personId, { requestorPersonId: request.requestorPersonId, approverPersonIds: history.steps.map((step) => step.assigneePersonId).filter(Boolean) })) notFound();
     const pendingSteps = history.steps.filter((step) => step.status === 'PENDING');
     const actions = {
-      approve: canApproveRequest(session.personId, { status: request.status, assigneePersonId: pendingSteps[0]?.assigneePersonId }),
+      approve: canApproveRequest(session.personId, { status: request.status, assigneePersonId: pendingSteps[0]?.assigneePersonId, requestorPersonId: request.requestorPersonId, activeRole: session.activeRole }),
       cancel: canCancelRequest(session.personId, request),
       resubmit: canResubmitRequest(session.personId, request)
     };
-    return <RequestDetailPanel requestId={request.id} reference={request.reference} requestorName={history.requestorName} organizationName={history.organizationName} status={request.status} history={history.entries} actions={actions} statusAfterApprove={pendingSteps.length > 1 ? 'IN_REVIEW' : 'APPROVED'} />;
+    return <RequestDetailPanel requestId={request.id} reference={request.reference} requestorName={history.requestorName} organizationName={history.organizationName} status={request.status} history={history.entries} actions={actions} ownRequest={actions.approve && request.requestorPersonId === session.personId} statusAfterApprove={pendingSteps.length > 1 ? 'IN_REVIEW' : 'APPROVED'} />;
   } finally { await database.close(); }
 }

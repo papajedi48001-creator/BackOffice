@@ -35,3 +35,11 @@ test('lets only the requestor resubmit a returned request', () => {
   expect(canResubmitRequest('person-requestor', { requestorPersonId: 'person-requestor', status: 'IN_REVIEW' })).toBe(false);
   expect(canResubmitRequest('person-approver', { requestorPersonId: 'person-requestor', status: 'RETURNED' })).toBe(false);
 });
+
+test('lets the assignee decide their own request only in the admin or manager tier', () => {
+  const own = { status: 'IN_REVIEW', assigneePersonId: 'p1', requestorPersonId: 'p1' };
+  expect(canApproveRequest('p1', { ...own, activeRole: 'employee' })).toBe(false);
+  expect(canApproveRequest('p1', own)).toBe(false);
+  expect(canApproveRequest('p1', { ...own, activeRole: 'manager' })).toBe(true);
+  expect(canApproveRequest('p1', { ...own, activeRole: 'admin' })).toBe(true);
+});

@@ -38,7 +38,7 @@ describeWithDatabase('request inbox against MariaDB', () => {
   afterAll(async () => { await database.close(); });
 
   it('lists only the requests whose current step is this person\'s, with where each one opens', async () => {
-    await expect(listPendingApprovals(database, approver)).resolves.toEqual([{ requestId: leaveRequest, reference: `REQ-${leaveRequest}`, moduleCode: 'leave', requestorName: 'คุณผู้ยื่น', submittedAt: '2026-10-20T03:00:00.000Z', href: `/leave/requests/${leaveRequest}` }]);
+    await expect(listPendingApprovals(database, approver)).resolves.toEqual([{ requestId: leaveRequest, reference: `REQ-${leaveRequest}`, moduleCode: 'leave', requestorName: 'คุณผู้ยื่น', submittedAt: '2026-10-20T03:00:00.000Z', href: `/leave/requests/${leaveRequest}`, ownRequest: false }]);
   });
 
   it('says whether a person still has a request open or a step waiting on them', async () => {

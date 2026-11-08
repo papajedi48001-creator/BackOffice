@@ -1,5 +1,6 @@
 'use client';
 
+import { OwnRequestMarker } from '../../../../components/own-request-marker';
 import { useState } from 'react';
 import type { RequestHistoryView } from '@backoffice/core';
 import { t, type MessageKey } from '@backoffice/i18n';
@@ -20,7 +21,7 @@ type HistoryEntry = RequestHistoryView['entries'][number];
 
 const historyLabel: Record<HistoryEntry['kind'], MessageKey> = { APPROVE: 'auditResultApproved', REJECT: 'auditResultRejected', RETURN: 'auditResultReturned', CANCEL: 'requestHistoryCancelled' };
 
-export function RequestDetailPanel({ requestId, reference, requestorName, organizationName, status: initialStatus, history, actions, statusAfterApprove }: {
+export function RequestDetailPanel({ requestId, reference, requestorName, organizationName, status: initialStatus, history, actions, statusAfterApprove, ownRequest = false }: {
   requestId: string;
   reference: string;
   requestorName: string;
@@ -29,6 +30,8 @@ export function RequestDetailPanel({ requestId, reference, requestorName, organi
   history: RequestHistoryView['entries'];
   actions: { approve: boolean; cancel: boolean; resubmit: boolean };
   statusAfterApprove: 'IN_REVIEW' | 'APPROVED';
+  /** The viewer decides their own request (admin/manager tier): every decision needs a reason. */
+  ownRequest?: boolean;
 }) {
   const [status, setStatus] = useState<RequestDisplayStatus>(initialStatus);
   const [hasActed, setHasActed] = useState(false);
@@ -65,7 +68,7 @@ export function RequestDetailPanel({ requestId, reference, requestorName, organi
   }
 
   function confirm(reason: string) {
-    if (openForm === 'APPROVE') return send(`${path}/decisions`, { decision: 'APPROVE' }, statusAfterApprove);
+    if (openForm === 'APPROVE') return send(`${path}/decisions`, ownRequest ? { decision: 'APPROVE', reason } : { decision: 'APPROVE' }, statusAfterApprove);
     if (openForm === 'RESUBMIT') return send(`${path}/resubmission`, {}, 'IN_REVIEW');
     if (openForm === 'CANCEL') return send(`${path}/cancellation`, { reason }, 'CANCELLED');
     if (openForm) return send(`${path}/decisions`, { decision: openForm, reason }, openForm === 'REJECT' ? 'REJECTED' : 'RETURNED');
@@ -80,7 +83,7 @@ export function RequestDetailPanel({ requestId, reference, requestorName, organi
     <h2>{t('requestDetail')}</h2>
     <dl className="detail-list">
       <div><dt>{t('requestReference')}</dt><dd>{reference}</dd></div>
-      <div><dt>{t('requestor')}</dt><dd>{requestorName}</dd></div>
+      <div><dt>{t('requestor')}</dt><dd>{requestorName}{ownRequest && <> <OwnRequestMarker /></>}</dd></div>
       <div><dt>{t('organization')}</dt><dd>{organizationName}</dd></div>
       <div><dt>{t('status')}</dt><dd><StatusBadge status={status} /></dd></div>
     </dl>
@@ -91,7 +94,7 @@ export function RequestDetailPanel({ requestId, reference, requestorName, organi
       {canResubmit && <button type="button" disabled={isSubmitting} onClick={() => setOpenForm('RESUBMIT')}>{t('actionResubmit')}</button>}
       {canCancel && <button type="button" className="button-danger" disabled={isSubmitting} onClick={() => setOpenForm('CANCEL')}>{t('actionCancelRequest')}</button>}
     </div>}
-    {openForm && !hasActed && <ActionDialog title={t(dialogs[openForm].title)} message={dialogs[openForm].reason ? undefined : `${t('dialogConfirmQuestion')} ${reference}`} confirmLabel={t('confirmAction')} tone={dialogs[openForm].danger ? 'danger' : 'primary'} reason={dialogs[openForm].reason} maxLength={2000} isSubmitting={isSubmitting} error={error ? t(error) : null} onConfirm={(reason) => void confirm(reason)} onClose={() => { setOpenForm(null); setError(null); }} />}
+    {openForm && !hasActed && <ActionDialog title={t(dialogs[openForm].title)} message={ownRequest && openForm !== 'CANCEL' && openForm !== 'RESUBMIT' ? t('ownRequestReasonNotice') : dialogs[openForm].reason ? undefined : `${t('dialogConfirmQuestion')} ${reference}`} confirmLabel={t('confirmAction')} tone={dialogs[openForm].danger ? 'danger' : 'primary'} reason={dialogs[openForm].reason || (ownRequest && openForm === 'APPROVE')} maxLength={2000} isSubmitting={isSubmitting} error={error ? t(error) : null} onConfirm={(reason) => void confirm(reason)} onClose={() => { setOpenForm(null); setError(null); }} />}
     {hasActed && <p className="action-saved" role="status">{t('actionSaved')}</p>}
     {error && !openForm && <p role="alert" className="form-error">{t(error)}</p>}
     <h3 id="request-history-heading">{t('requestHistory')}</h3>

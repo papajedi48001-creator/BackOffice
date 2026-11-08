@@ -1,5 +1,6 @@
 'use client';
 
+import { OwnRequestMarker } from '../../../../components/own-request-marker';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { t } from '@backoffice/i18n';
@@ -19,7 +20,8 @@ async function post(url: string, body: Record<string, string>): Promise<string |
 }
 
 /** Decide one person's คำขอ through the central workflow; the server re-checks that the viewer is its current approver. */
-export function MemberDecision({ requestId, name }: { requestId: string; name: string }) {
+/** `ownRequest`: the viewer's own คำขอ (admin/manager tier); every decision then needs a reason. */
+export function MemberDecision({ requestId, name, ownRequest = false }: { requestId: string; name: string; ownRequest?: boolean }) {
   const router = useRouter();
   const [dialog, setDialog] = useState<Decision | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +29,7 @@ export function MemberDecision({ requestId, name }: { requestId: string; name: s
 
   async function confirm(decision: Decision, reason: string) {
     setBusy(true); setError(null);
-    const failure = await post(`/api/requests/${encodeURIComponent(requestId)}/decisions`, decision === 'APPROVE' ? { decision } : { decision, reason });
+    const failure = await post(`/api/requests/${encodeURIComponent(requestId)}/decisions`, decision === 'APPROVE' && !ownRequest ? { decision } : { decision, reason });
     setBusy(false);
     if (failure) { setError(failure); return; }
     setDialog(null);
@@ -35,10 +37,11 @@ export function MemberDecision({ requestId, name }: { requestId: string; name: s
   }
 
   return <div className="request-actions travel-member-actions">
+    {ownRequest && <OwnRequestMarker />}
     <button type="button" aria-label={`${t('leaveApprove')} ${name}`} disabled={busy} onClick={() => setDialog('APPROVE')}>{t('leaveApprove')}</button>
     <button type="button" aria-label={`${t('leaveReturn')} ${name}`} className="button-secondary" disabled={busy} onClick={() => setDialog('RETURN')}>{t('leaveReturn')}</button>
     <button type="button" aria-label={`${t('leaveReject')} ${name}`} className="button-danger" disabled={busy} onClick={() => setDialog('REJECT')}>{t('leaveReject')}</button>
-    {dialog && <ActionDialog title={`${t(titles[dialog])} · ${name}`} message={dialog === 'APPROVE' ? t('dialogConfirmQuestion') : undefined} confirmLabel={t('confirmAction')} tone={dialog === 'REJECT' ? 'danger' : 'primary'} reason={dialog !== 'APPROVE'} isSubmitting={busy} error={error} onConfirm={(reason) => void confirm(dialog, reason)} onClose={() => { setDialog(null); setError(null); }} />}
+    {dialog && <ActionDialog title={`${t(titles[dialog])} · ${name}`} message={ownRequest ? t('ownRequestReasonNotice') : dialog === 'APPROVE' ? t('dialogConfirmQuestion') : undefined} confirmLabel={t('confirmAction')} tone={dialog === 'REJECT' ? 'danger' : 'primary'} reason={dialog !== 'APPROVE' || ownRequest} isSubmitting={busy} error={error} onConfirm={(reason) => void confirm(dialog, reason)} onClose={() => { setDialog(null); setError(null); }} />}
   </div>;
 }
 

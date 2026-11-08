@@ -19,6 +19,36 @@ describe('ApprovalService', () => {
     await expect(service.decideRequest({ requestId: 'request-1', actorPersonId: 'person-a', decision: 'APPROVE' })).rejects.toThrow('CONFLICT_OF_INTEREST');
   });
 
+  describe('own request (self-approval)', () => {
+    const ownSetup = () => {
+      const audit: AuditEvent[] = []; const outbox: unknown[] = []; const decisions: unknown[] = [];
+      const request = { id: 'request-1', reference: 'REQ-1', moduleCode: 'maintenance', requestorPersonId: 'person-a', organizationSnapshot: { organizationId: 'unit-a' }, status: 'IN_REVIEW' as const };
+      const repository: WorkflowRepository = {
+        transaction: async (work) => work(repository), getRequest: async () => request, getRequestForUpdate: async () => request,
+        getSteps: async () => [{ id: 'step-1', requestId: 'request-1', sequence: 1, assigneeSnapshot: { personId: 'person-a', organizationId: 'unit-a' }, status: 'PENDING' }],
+        saveRequest: async () => undefined, saveDecision: async (decision) => { decisions.push(decision); }, saveCancellation: async () => undefined, saveOutbox: async (event) => { outbox.push(event); }, saveStep: async () => undefined,
+        appendAudit: async (event) => { audit.push(event); }
+      };
+      return { service: new ApprovalService(repository, { findActiveFor: async () => null }, (() => { let n = 0; return () => `id-${++n}`; })()), audit, outbox, decisions };
+    };
+
+    it('keeps refusing in the employee tier or with no tier', async () => {
+      for (const actorRole of ['employee', null, undefined]) await expect(ownSetup().service.decideRequest({ requestId: 'request-1', actorPersonId: 'person-a', actorRole, decision: 'APPROVE', reason: 'จำเป็น' })).rejects.toThrow('CONFLICT_OF_INTEREST');
+    });
+
+    it.each(['admin', 'manager'])('lets the %s tier decide its own request with a reason and tags the audit event', async (actorRole) => {
+      const { service, audit, outbox, decisions } = ownSetup();
+      await service.decideRequest({ requestId: 'request-1', actorPersonId: 'person-a', actorRole, decision: 'APPROVE', reason: 'ไม่มีผู้อนุมัติอื่น' });
+      expect(decisions).toEqual([expect.objectContaining({ reason: 'ไม่มีผู้อนุมัติอื่น' })]);
+      expect(JSON.parse(String(audit.at(-1)?.metadata))).toMatchObject({ selfApproval: true });
+      expect(JSON.stringify([audit, outbox])).not.toContain('ไม่มีผู้อนุมัติอื่น');
+    });
+
+    it('requires a reason even to approve its own request', async () => {
+      await expect(ownSetup().service.decideRequest({ requestId: 'request-1', actorPersonId: 'person-a', actorRole: 'manager', decision: 'APPROVE' })).rejects.toThrow('REASON_REQUIRED');
+    });
+  });
+
   it('marks the pending approval step decided before emitting the outbox event', async () => {
     const savedSteps: ApprovalStep[] = [];
     const repository: WorkflowRepository = {

@@ -1,5 +1,6 @@
 'use client';
 
+import { OwnRequestMarker } from '../../../../components/own-request-marker';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -8,7 +9,7 @@ import { t } from '@backoffice/i18n';
 import { ActionDialog } from '../../../../components/action-dialog';
 import { formatLeaveRange, leaveErrorMessage, leaveKindLabel, leaveWarningText } from '../../../../lib/leave-labels';
 
-export interface PendingLeaveRow { requestId: string; reference: string; kind: 'LEAVE' | 'CANCEL_DAYS'; leaveTypeName: string; startDate: string; endDate: string; startHalf: string; endHalf: string; days: number; personDisplayName: string | null; organizationName: string | null; warnings: LeaveWarning[]; medicalCertificateRequired: boolean }
+export interface PendingLeaveRow { requestId: string; reference: string; kind: 'LEAVE' | 'CANCEL_DAYS'; leaveTypeName: string; startDate: string; endDate: string; startHalf: string; endHalf: string; days: number; personDisplayName: string | null; organizationName: string | null; warnings: LeaveWarning[]; medicalCertificateRequired: boolean; ownRequest?: boolean }
 type Outcome = { ok: true } | { ok: false; error: string };
 
 /** Ticks many ใบลา and approves them in one call; each row then shows its own outcome. Returning or rejecting needs a reason, so it is done on the ใบลา page. */
@@ -46,7 +47,7 @@ export function BulkApprove({ items }: { items: PendingLeaveRow[] }) {
         const outcome = outcomes[item.requestId];
         return <tr key={item.requestId}>
           <td><input type="checkbox" aria-label={`${t('leaveSelect')} ${item.reference}`} checked={selected.has(item.requestId)} disabled={outcome?.ok === true} onChange={() => toggle(item.requestId)} /></td>
-          <td><Link href={`/leave/requests/${item.requestId}`}>{item.reference}</Link>{item.kind === 'CANCEL_DAYS' && <><br /><span className="leave-kind">{leaveKindLabel(item.kind)}</span></>}</td>
+          <td><Link href={`/leave/requests/${item.requestId}`}>{item.reference}</Link>{item.kind === 'CANCEL_DAYS' && <><br /><span className="leave-kind">{leaveKindLabel(item.kind)}</span></>}{item.ownRequest && <><br /><OwnRequestMarker /></>}</td>
           <td>{[item.personDisplayName, item.organizationName].filter(Boolean).join(' · ')}</td>
           <td>{item.leaveTypeName}</td>
           <td>{formatLeaveRange(item)}{item.warnings.map((warning) => <p key={warning.month} className="leave-warning-inline">{leaveWarningText(warning)}</p>)}{item.medicalCertificateRequired && <p className="leave-notice-inline">{t('leaveMedicalCertificateFlag')}</p>}</td>

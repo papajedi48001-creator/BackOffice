@@ -1,3 +1,4 @@
+import { OwnRequestMarker } from '../../../../../components/own-request-marker';
 import { notFound } from 'next/navigation';
 import { LeaveQueries, LeaveSettingsService } from '@backoffice/core';
 import { t } from '@backoffice/i18n';
@@ -44,7 +45,8 @@ export default async function LeaveRequestPage({ params }: { params: Promise<{ r
       <tbody>{view.steps.map((step) => <tr key={step.sequence}><td>{step.sequence}</td><td>{step.assigneeDisplayName ?? '—'}</td><td>{leaveStepLabel(step.status)}</td><td>{instant(step.decidedAt)}</td><td>{step.decisionReason ?? ''}</td></tr>)}</tbody>
     </table></div>
     {view.cancellations.length > 0 && <><h3>{t('leaveCancellations')}</h3><LeaveTable items={view.cancellations} /></>}
-    <LeaveActions requestId={view.requestId} canDecide={view.canDecide} canCancel={view.canCancel} canRequestCancelDays={view.canRequestCancelDays} returnedCancelDays={view.kind === 'CANCEL_DAYS' && view.status === 'RETURNED' && view.canCancel ? { startDate: view.startDate, endDate: view.endDate, startHalf: view.startHalf, endHalf: view.endHalf, reason: view.reason } : undefined} />
+    {view.ownRequest && <p><OwnRequestMarker /></p>}
+    <LeaveActions requestId={view.requestId} canDecide={view.canDecide} ownRequest={view.ownRequest} canCancel={view.canCancel} canRequestCancelDays={view.canRequestCancelDays} returnedCancelDays={view.kind === 'CANCEL_DAYS' && view.status === 'RETURNED' && view.canCancel ? { startDate: view.startDate, endDate: view.endDate, startHalf: view.startHalf, endHalf: view.endHalf, reason: view.reason } : undefined} />
     {editable && <><h3>{t('leaveEditReturned')}</h3><LeaveForm types={types} requestId={view.requestId} attachments={attachmentsEnabled()} initialAttachment={view.attachment} initial={{ leaveTypeId: view.leaveTypeId, startDate: view.startDate, endDate: view.endDate, startHalf: view.startHalf, endHalf: view.endHalf, reason: view.reason, contactDuringLeave: view.contactDuringLeave }} /></>}
     {owner && <p><a href="/leave/mine">{t('leaveBack')}</a></p>}
   </section>;

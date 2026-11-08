@@ -27,6 +27,7 @@ describe('RequestsPage', () => {
     expect(within(waiting).getByText('[การลา]')).toBeInTheDocument();
     expect(within(waiting).getByRole('link', { name: 'REQ-r-1' })).toHaveAttribute('href', '/leave/requests/r-1');
     expect(within(waiting).getByText('นางสาวสุดารัตน์ ใจสมมติ')).toBeInTheDocument();
+    expect(within(waiting).queryByText('คำขอของคุณเอง')).not.toBeInTheDocument();
     expect(within(screen.getByRole('table', { name: 'คำขอของฉัน' })).getByRole('link', { name: 'REQ-r-9' })).toHaveAttribute('href', '/requests/r-9');
   });
 

@@ -46,6 +46,14 @@ export function resolveActiveRole(roles: readonly Role[], stored: string | null 
   return { activeRole, roleChoices: choices, roleSelectionRequired: false, roles: rolesOfTier(roles, activeRole) };
 }
 
+/**
+ * Whether a person working in this tier may decide (approve, reject, return) a request they submitted themselves, when
+ * they would otherwise be its approver. Only the admin and manager tiers may; บุคลากรทั่วไป never can.
+ */
+export function canDecideOwnRequest(activeRole: string | null | undefined): boolean {
+  return activeRole === ADMIN_TIER || activeRole === MANAGER_TIER;
+}
+
 /** Whether `role` may be saved as this person's active tier. */
 export function canChooseRole(roles: readonly Role[], role: string): boolean {
   return role === EMPLOYEE_ROLE || roleChoices(roles).includes(role);

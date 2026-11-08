@@ -38,7 +38,7 @@ describe('RoomDashboardPage', () => {
     ready();
     render(await RoomDashboardPage({ searchParams: Promise.resolve({}) }));
     expect(screen.getByRole('heading', { name: 'พฤศจิกายน 2569' })).toBeInTheDocument();
-    expect(mocks.calendarForViewer).toHaveBeenCalledWith(new Date('2026-10-25T17:00:00Z'), new Date('2026-12-06T17:00:00Z'), { personId: 'person-1', roles: [] }, undefined);
+    expect(mocks.calendarForViewer).toHaveBeenCalledWith(new Date('2026-10-25T17:00:00Z'), new Date('2026-12-06T17:00:00Z'), { personId: 'person-1', roles: [], activeRole: null }, undefined);
     const counts = screen.getByRole('list', { name: 'ภาพรวม' });
     for (const [label, value] of [['การจองวันนี้', '1'], ['การจองในเดือนนี้', '2'], ['ห้องที่เปิดให้จอง', '1']]) expect(within(counts).getByText(label).closest('li')).toHaveTextContent(value!);
     expect(within(counts).queryByText('รออนุมัติ')).toBeNull();

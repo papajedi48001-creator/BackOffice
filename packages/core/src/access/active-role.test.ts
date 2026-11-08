@@ -44,3 +44,10 @@ describe('active role', () => {
     await expect(authorization.canAccess(asEmployee, 'leave.manage', { moduleCode: 'hr', organizationId: 'unit-a' })).resolves.toMatchObject({ allowed: false });
   });
 });
+
+describe('canDecideOwnRequest', () => {
+  it('is open to the admin and manager tiers only', async () => {
+    const { canDecideOwnRequest } = await import('./active-role');
+    expect(['admin', 'manager', 'employee', null, undefined].map(canDecideOwnRequest)).toEqual([true, true, false, false, false]);
+  });
+});
