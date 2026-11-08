@@ -153,6 +153,24 @@ describe('RoomBookingService.decide', () => {
     await expect(service.decide(approver, { bookingId: booking.id, decision: 'APPROVE' })).rejects.toThrow('CONFLICT_OF_INTEREST');
   });
 
+  it('lets an approver in the manager or admin tier decide their own booking with a reason, tagged in the audit trail', async () => {
+    const { service, repository } = setup();
+    // Filed as บุคลากรทั่วไป (no roles in effect), so it waits for an approver.
+    const booking = await service.submit({ personId: approver.personId, roles: [] }, submission);
+    const self = { ...approver, activeRole: 'manager' };
+    await expect(service.decide(self, { bookingId: booking.id, decision: 'APPROVE' })).rejects.toThrow('REASON_REQUIRED');
+    await expect(service.decide(self, { bookingId: booking.id, decision: 'APPROVE', reason: 'ประชุมด่วน' })).resolves.toMatchObject({ status: 'APPROVED' });
+    expect(repository.history.at(-1)).toMatchObject({ action: 'APPROVED', reason: 'ประชุมด่วน' });
+    expect(JSON.parse(String(repository.audit.at(-1)?.metadata))).toMatchObject({ selfApproval: true });
+    expect(JSON.stringify([repository.audit, repository.outbox])).not.toContain('ประชุมด่วน');
+  });
+
+  it('still refuses an own booking in the employee tier', async () => {
+    const { service } = setup();
+    const booking = await service.submit({ personId: approver.personId, roles: [] }, submission);
+    await expect(service.decide({ ...approver, activeRole: 'employee' }, { bookingId: booking.id, decision: 'APPROVE', reason: 'x' })).rejects.toThrow('CONFLICT_OF_INTEREST');
+  });
+
   it.each([
     ['without the approver role', booker],
     ['scoped to another organization', { personId: 'other-unit-approver', roles: [{ name: 'room-booking-approver', organizationId: 'other-unit' }] }]

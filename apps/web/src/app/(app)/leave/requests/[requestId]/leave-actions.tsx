@@ -14,7 +14,7 @@ type LeaveDialog = Decision | 'CANCEL';
 type CancelRange = { startDate: string; endDate: string; startHalf: string; endHalf: string; reason: string };
 
 /** Decide (current approver), cancel (owner of a pending ใบลา), ขอยกเลิกวันลา (owner of an approved one) and editing a returned ขอยกเลิกวันลา (`returnedCancelDays`). The server re-checks each. */
-export function LeaveActions({ requestId, canDecide, canCancel, canRequestCancelDays, returnedCancelDays }: { requestId: string; canDecide: boolean; canCancel: boolean; canRequestCancelDays: boolean; returnedCancelDays?: CancelRange }) {
+export function LeaveActions({ requestId, canDecide, canCancel, canRequestCancelDays, returnedCancelDays, ownRequest = false }: { requestId: string; canDecide: boolean; /** Deciding one's own ใบลา (admin/manager tier): every decision needs a reason. */ ownRequest?: boolean; canCancel: boolean; canRequestCancelDays: boolean; returnedCancelDays?: CancelRange }) {
   const router = useRouter();
   const [dialog, setDialog] = useState<LeaveDialog | null>(null);
   const [range, setRange] = useState<CancelRange>(returnedCancelDays ?? { startDate: '', endDate: '', startHalf: 'FULL', endHalf: 'FULL', reason: '' });
@@ -37,7 +37,7 @@ export function LeaveActions({ requestId, canDecide, canCancel, canRequestCancel
   function confirm(current: LeaveDialog, reason: string) {
     const done = () => { setDialog(null); router.refresh(); };
     if (current === 'CANCEL') void send(`/api/leave/${id}/cancellation`, { reason }, done);
-    else void send(`/api/requests/${id}/decisions`, current === 'APPROVE' ? { decision: current } : { decision: current, reason }, done);
+    else void send(`/api/requests/${id}/decisions`, current === 'APPROVE' && !ownRequest ? { decision: current } : { decision: current, reason }, done);
   }
 
   const dialogTitle: Record<LeaveDialog, string> = { APPROVE: t('leaveApprove'), RETURN: t('leaveReturn'), REJECT: t('leaveReject'), CANCEL: t('leaveCancel') };
@@ -60,7 +60,7 @@ export function LeaveActions({ requestId, canDecide, canCancel, canRequestCancel
       {canDecide && <button type="button" className="button-danger" disabled={busy} onClick={() => open('REJECT')}>{t('leaveReject')}</button>}
       {canCancel && <button type="button" className="button-danger" disabled={busy} onClick={() => open('CANCEL')}>{t('leaveCancel')}</button>}
     </div>}
-    {dialog && <ActionDialog title={dialogTitle[dialog]} message={dialog === 'APPROVE' ? t('dialogConfirmQuestion') : undefined} confirmLabel={t('confirmAction')} tone={dialog === 'REJECT' || dialog === 'CANCEL' ? 'danger' : 'primary'} reason={dialog !== 'APPROVE'} isSubmitting={busy} error={error} onConfirm={(reason) => confirm(dialog, reason)} onClose={() => { setDialog(null); setError(null); }} />}
+    {dialog && <ActionDialog title={dialogTitle[dialog]} message={ownRequest && dialog !== 'CANCEL' ? t('ownRequestReasonNotice') : dialog === 'APPROVE' ? t('dialogConfirmQuestion') : undefined} confirmLabel={t('confirmAction')} tone={dialog === 'REJECT' || dialog === 'CANCEL' ? 'danger' : 'primary'} reason={dialog !== 'APPROVE' || ownRequest} isSubmitting={busy} error={error} onConfirm={(reason) => confirm(dialog, reason)} onClose={() => { setDialog(null); setError(null); }} />}
     {editsCancelDays && <div className="request-actions"><FormDialog title={cancelDaysTitle} triggerLabel={cancelDaysTitle} triggerClassName="button-secondary" submitLabel={returnedCancelDays ? t('leaveResubmit') : t('leaveCancelDaysSubmit')} wide
       open={cancelDaysOpen} onOpenChange={(next) => { setError(null); setCancelDaysOpen(next); }} isSubmitting={busy} error={error} onSubmit={cancelDays}>
       <p className="permission-notice">{t('leaveCancelDaysHelp')}</p>

@@ -13,8 +13,8 @@ describe('requireActor', () => {
     await expect(requireActor(new Request('http://localhost/api/rooms/bookings'))).rejects.toMatchObject({ status: 401 });
   });
 
-  it('exposes only the person and roles of the current session', async () => {
+  it('exposes only the person, roles and active tier of the current session', async () => {
     mocks.readSession.mockResolvedValue({ authenticated: true, personId: 'person-a', roles: [{ name: 'room-booking-approver', organizationId: null }], dataOwnerModules: ['hr'] });
-    await expect(requireActor(new Request('http://localhost'))).resolves.toEqual({ personId: 'person-a', roles: [{ name: 'room-booking-approver', organizationId: null }] });
+    await expect(requireActor(new Request('http://localhost'))).resolves.toEqual({ personId: 'person-a', roles: [{ name: 'room-booking-approver', organizationId: null }], activeRole: null });
   });
 });

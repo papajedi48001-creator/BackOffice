@@ -53,7 +53,7 @@ export default async function TravelPage({ params }: { params: Promise<{ travelI
         <td>{member.displayName ?? '—'}{member.personId === view.leaderPersonId && <span className="travel-leader-tag">{t('travelLeader')}</span>}<br /><small>{member.organizationName ?? ''}</small></td>
         <td><LeaveStatus status={member.status} /></td>
         <td><ol className="travel-steps">{member.steps.map((step) => <li key={step.sequence}>{step.assigneeDisplayName ?? '—'} · {leaveStepLabel(step.status)}{step.decidedAt ? ` · ${instant(step.decidedAt)}` : ''}{step.decisionReason ? ` · ${step.decisionReason}` : ''}</li>)}</ol></td>
-        <td>{member.canDecide && <MemberDecision requestId={member.requestId} name={member.displayName ?? '—'} />}</td>
+        <td>{member.canDecide && <MemberDecision requestId={member.requestId} name={member.displayName ?? '—'} ownRequest={member.ownRequest === true} />}</td>
       </tr>)}</tbody>
     </table></div>
     {view.report && <><h3>{t('travelReport')}</h3><div className="detail-list">

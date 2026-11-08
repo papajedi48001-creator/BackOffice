@@ -15,7 +15,7 @@ export async function POST(request: Request, context: { params: Promise<{ reques
     const { requestId } = await context.params;
     const database = createDatabase(databaseUrl);
     try {
-      const decision = await new ApprovalService(new DatabaseWorkflowRepository(database), new DatabaseActiveDelegationFinder(database)).decideRequest({ requestId, actorPersonId: session.personId!, decision: body.decision, reason: body.reason });
+      const decision = await new ApprovalService(new DatabaseWorkflowRepository(database), new DatabaseActiveDelegationFinder(database)).decideRequest({ requestId, actorPersonId: session.personId!, actorRole: session.activeRole ?? null, decision: body.decision, reason: body.reason });
       if (decision.decision !== 'RETURN') await fileCarForTravel(database, requestId, session.personId!);
       return NextResponse.json(decision);
     } finally { await database.close(); }

@@ -1,3 +1,4 @@
+import { canDecideOwnRequest } from '../access/active-role';
 import type { RoomActor, RoomBookingDayStatus, RoomBookingHistoryAction, RoomBookingStatus } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { AuthorizationService } from '../access/authorization-service';
@@ -7,7 +8,7 @@ import type { RoomAddonDetails, RoomDetails } from './room-catalog-service';
 /** `upcomingBookingCount`: pending or approved bookings with an active day yet to end, shown before a manager closes the room. */
 export interface RoomListItem extends RoomDetails { ownerOrganizationName: string | null; upcomingBookingCount: number; }
 /** Public calendar entry: what every signed-in person may see. */
-export interface RoomCalendarEntry { bookingId: string; reference: string; roomId: string; roomName: string; date: string; startsAt: Date; endsAt: Date; status: RoomBookingStatus; title: string; bookerName: string | null; bookerOrganizationName: string | null; }
+export interface RoomCalendarEntry { bookingId: string; reference: string; roomId: string; roomName: string; date: string; startsAt: Date; endsAt: Date; status: RoomBookingStatus; title: string; bookerName: string | null; bookerOrganizationName: string | null; /** The viewer booked it (admin/manager may decide their own booking). */ ownRequest?: boolean; }
 /** A calendar entry as one viewer sees it; `canOpen` is decided on the server so no person id leaves it. */
 export interface RoomCalendarViewerEntry extends RoomCalendarEntry { roomPlace: string; canOpen: boolean; }
 export interface RoomBookingSummary { id: string; reference: string; roomName: string; title: string; status: RoomBookingStatus; firstDate: string; lastDate: string; startMinute: number; endMinute: number; activeDayCount: number; lastEndsAt: Date | null; bookerName: string | null; bookerOrganizationName: string | null; }
@@ -85,13 +86,16 @@ export class RoomBookingQueries {
 
   /** Bookings this approver can still decide (including any still marked as waiting on the head): in scope, not their own, and with an active day yet to end. */
   async pendingForApprover(actor: RoomActor, now: Date = new Date()): Promise<RoomBookingSummary[]> {
+    // Their own bookings too in the admin/manager tier, which may decide them (canDecideOwnRequest).
+    const includeOwn = canDecideOwnRequest(actor.activeRole);
+    const ownIds = new Set(includeOwn ? (await this.database.query<{ id: string }>("SELECT id FROM room_booking WHERE booker_person_id = ? AND status IN ('HEAD_REVIEW', 'PENDING')", [actor.personId])).map((row) => row.id) : []);
     const scope = this.authorizer.organizationScope(this.subject(actor), 'room.booking.decide');
     if (scope !== 'all' && scope.length === 0) return [];
     const scoped = scope === 'all' ? '' : `AND r.owner_organization_id IN (${scope.map(() => '?').join(', ')})`;
     return (await this.database.query<SummaryRow>(
-      `${summarySelect} WHERE b.status IN ('HEAD_REVIEW', 'PENDING') AND b.booker_person_id <> ? ${scoped} ${summaryGroup} HAVING lastEndsAt > ? ORDER BY firstDate, b.reference`,
-      [actor.personId, ...(scope === 'all' ? [] : scope), toMariaDbDatetime(now)]
-    )).map(toSummary);
+      `${summarySelect} WHERE b.status IN ('HEAD_REVIEW', 'PENDING') AND (? OR b.booker_person_id <> ?) ${scoped} ${summaryGroup} HAVING lastEndsAt > ? ORDER BY firstDate, b.reference`,
+      [includeOwn ? 1 : 0, actor.personId, ...(scope === 'all' ? [] : scope), toMariaDbDatetime(now)]
+    )).map(toSummary).map((summary) => ({ ...summary, ownRequest: ownIds.has(summary.id) }));
   }
 
   /** Full booking for its booker, a head on its คำขอ, or an approver in scope; `null` for anyone else so the page answers not-found. */

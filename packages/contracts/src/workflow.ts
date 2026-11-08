@@ -22,7 +22,7 @@ export const approvalActionSchema = z.enum(['APPROVE', 'REJECT', 'RETURN']);
 export type ApprovalAction = z.infer<typeof approvalActionSchema>;
 /** Reasons are shown only on the request page; never put them in audit metadata, outbox payloads, notifications or logs. */
 export const lifecycleReasonSchema = z.string().trim().min(1).max(2000);
-export const decideRequestInputSchema = z.object({ requestId: z.string().min(1), actorPersonId: z.string().min(1), decision: approvalActionSchema, reason: lifecycleReasonSchema.optional() });
+export const decideRequestInputSchema = z.object({ requestId: z.string().min(1), actorPersonId: z.string().min(1), decision: approvalActionSchema, reason: lifecycleReasonSchema.optional(), /** The actor's active tier; admin or manager may decide their own request. */ actorRole: z.string().min(1).nullable().optional() });
 export type DecideRequestInput = z.infer<typeof decideRequestInputSchema>;
 export const cancelRequestInputSchema = z.object({ requestId: z.string().min(1), actorPersonId: z.string().min(1), reason: lifecycleReasonSchema });
 export type CancelRequestInput = z.infer<typeof cancelRequestInputSchema>;

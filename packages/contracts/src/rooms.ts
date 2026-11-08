@@ -45,4 +45,4 @@ export type RoomInput = z.input<typeof roomInputSchema>;
 export const roomAddonInputSchema = z.object({ name: z.string().trim().min(1).max(120), unit: z.string().trim().min(1).max(30), isActive: z.boolean() });
 export type RoomAddonInput = z.input<typeof roomAddonInputSchema>;
 
-export interface RoomActor { personId: string; roles: AccessSubject['roles']; }
+export interface RoomActor { personId: string; roles: AccessSubject['roles']; /** The session's active tier; admin or manager may decide their own booking. */ activeRole?: string | null; }

@@ -9,6 +9,11 @@ const future = day('2026-11-07T02:00:00Z', '2026-11-07T09:00:00Z');
 const booking = (overrides: Partial<Parameters<typeof bookingViewState>[0]>) => ({ status: 'APPROVED' as const, viewerIsBooker: false, viewerCanDecide: true, days: [future], ...overrides });
 
 describe('bookingViewState', () => {
+  it('offers the decision on an own waiting booking only when the tier may decide its own (admin/manager)', () => {
+    expect(bookingViewState(booking({ status: 'PENDING', viewerIsBooker: true }), now).canDecide).toBe(false);
+    expect(bookingViewState(booking({ status: 'PENDING', viewerIsBooker: true, viewerMayDecideOwn: true }), now).canDecide).toBe(true);
+  });
+
   it('lets an approver cancel a booking that has not started', () => {
     expect(bookingViewState(booking({}), now).cancelAction).toBe('cancel');
   });

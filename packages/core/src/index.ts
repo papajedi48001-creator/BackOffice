@@ -55,6 +55,7 @@ export * from './fleet/fleet-request-service';
 export * from './fleet/fleet-dispatch-service';
 export * from './fleet/fleet-queries';
 export * from './audit/audit-service';
+export * from './audit/self-approval-queries';
 export * from './audit/database-audit-repository';
 export * from './files/attachment-service';
 export * from './files/scan-service';

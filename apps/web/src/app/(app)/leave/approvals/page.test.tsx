@@ -26,7 +26,7 @@ describe('LeaveApprovalsPage', () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ results: [{ requestId: 'r1', ok: true }, { requestId: 'r2', ok: false, error: 'APPROVER_REQUIRED' }] }), { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
     render(await LeaveApprovalsPage());
-    expect(mocks.pendingForApprover).toHaveBeenCalledWith('head-1');
+    expect(mocks.pendingForApprover).toHaveBeenCalledWith('head-1', { includeOwn: false });
     const second = screen.getByRole('row', { name: /REQ-r2/ });
     expect(within(second).getByText(/จะเหลือวันทำการ 14 วัน/)).toBeInTheDocument();
     expect(within(second).getByText('ต้องมีใบรับรองแพทย์ (ส่งที่งาน HR)')).toBeInTheDocument();
@@ -42,6 +42,14 @@ describe('LeaveApprovalsPage', () => {
     expect(url).toBe('/api/leave/decisions');
     expect(JSON.parse(init.body as string)).toEqual({ requestIds: ['r1', 'r2'] });
     await waitFor(() => expect(mocks.refresh).toHaveBeenCalled());
+  });
+
+  it('includes and marks the approver\'s own ใบลา in the manager tier', async () => {
+    ready([{ ...row, ownRequest: true }]);
+    mocks.readSession.mockResolvedValue({ authenticated: true, personId: 'head-1', roles: [], dataOwnerModules: [], activeRole: 'manager' });
+    render(await LeaveApprovalsPage());
+    expect(mocks.pendingForApprover).toHaveBeenCalledWith('head-1', { includeOwn: true });
+    expect(within(screen.getByRole('row', { name: /REQ-r1/ })).getByText('คำขอของคุณเอง')).toBeInTheDocument();
   });
 
   it('shows the empty state', async () => {

@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { decideRequestInputSchema, notificationEventPayloadSchema, type ApprovalDecision, type Delegation, type OutboxEvent } from '@backoffice/contracts';
+import { canDecideOwnRequest } from '../access/active-role';
 import { AuditService } from '../audit/audit-service';
 import { notificationTarget } from './module-notification';
 import type { WorkflowRepository } from './request-service';
@@ -15,7 +16,10 @@ export class ApprovalService {
     return this.repository.transaction(async (repository) => {
       const request = await repository.getRequestForUpdate(decisionInput.requestId);
       if (!request || request.status !== 'IN_REVIEW') throw new Error('REQUEST_NOT_PENDING');
-      if (request.requestorPersonId === decisionInput.actorPersonId) throw new Error('CONFLICT_OF_INTEREST');
+      // An admin or manager may decide their own request (when they are its approver) but must give a reason; บุคลากรทั่วไป never.
+      const selfApproval = request.requestorPersonId === decisionInput.actorPersonId;
+      if (selfApproval && !canDecideOwnRequest(decisionInput.actorRole)) throw new Error('CONFLICT_OF_INTEREST');
+      if (selfApproval && !decisionInput.reason) throw new Error('REASON_REQUIRED');
       const steps = (await repository.getSteps(request.id)).sort((left, right) => left.sequence - right.sequence);
       const stepIndex = steps.findIndex((candidate) => candidate.status === 'PENDING');
       const step = stepIndex === -1 ? undefined : steps[stepIndex];
@@ -53,7 +57,7 @@ export class ApprovalService {
       for (const { personId, subject, targetPath, actionRequired } of watchers) {
         await repository.saveOutbox({ id: this.createId(), type: 'notification.in_app', idempotencyKey: `notification.in_app:request-approved:${decision.id}:recipient:${personId}`, payload: notificationEventPayloadSchema.parse({ ...notificationTarget(request.moduleCode, request.id), targetPath, recipientPersonId: personId, requestId: request.id, subject, ...(actionRequired ? { actionRequired } : {}) }), occurredAt: new Date().toISOString(), processedAt: null });
       }
-      await new AuditService({ append: (event) => repository.appendAudit(event) }, this.createId).recordAudit({ actorPersonId: decision.actorPersonId, action: 'workflow.request.decided', targetType: 'request', targetId: request.id, result: decision.decision, metadata: { moduleCode: request.moduleCode, requestReference: request.reference, status, organizationId: request.organizationSnapshot.organizationId } });
+      await new AuditService({ append: (event) => repository.appendAudit(event) }, this.createId).recordAudit({ actorPersonId: decision.actorPersonId, action: 'workflow.request.decided', targetType: 'request', targetId: request.id, result: decision.decision, metadata: { moduleCode: request.moduleCode, requestReference: request.reference, status, organizationId: request.organizationSnapshot.organizationId, ...(selfApproval ? { selfApproval: true } : {}) } });
       return decision;
     });
   }

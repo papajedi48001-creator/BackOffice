@@ -24,7 +24,7 @@ describe('TravelApprovalsPage', () => {
   it('lists each person waiting on me with a link to their trip', async () => {
     ready([row]);
     render(await TravelApprovalsPage());
-    expect(mocks.pendingForApprover).toHaveBeenCalledWith('head-1');
+    expect(mocks.pendingForApprover).toHaveBeenCalledWith('head-1', { includeOwn: false });
     const person = screen.getByRole('row', { name: /นายสมชาย ดีมาก/ });
     expect(within(person).getByRole('link', { name: 'ประชุมวิชาการ' })).toHaveAttribute('href', '/travel/travel-1');
     expect(within(person).getByText('ในจังหวัด')).toBeInTheDocument();

@@ -1,5 +1,5 @@
 import type { AccessSubject, ModuleMode } from '@backoffice/contracts';
-import { AuthorizationService, FleetQueries, canUseModule, isAdmin, LeaveQueries, OfficialTravelQueries, RoomBookingQueries, canManageFleet, canManageLeave, canManageTravel, hasOpenRequestWork, listPendingApprovals } from '@backoffice/core';
+import { canDecideOwnRequest, AuthorizationService, FleetQueries, canUseModule, isAdmin, LeaveQueries, OfficialTravelQueries, RoomBookingQueries, canManageFleet, canManageLeave, canManageTravel, hasOpenRequestWork, listPendingApprovals } from '@backoffice/core';
 import type { Database } from '@backoffice/db';
 import { t, type MessageKey } from '@backoffice/i18n';
 import type { NavigationItem } from '../components/app-shell';
@@ -56,7 +56,7 @@ const planned = (code: string, href: string, labelKey: MessageKey, descriptionKe
 /** Whether the person holds the permission for at least one หน่วยงาน (or all of them). */
 const covers = (subject: AccessSubject, permission: 'room.booking.decide' | 'room.manage') => { const scope = authorization.organizationScope(subject, permission); return scope === 'all' || scope.length > 0; };
 /** Room bookings waiting for this approver; anyone without the approver role gets 0 without a query. */
-const roomsPending = async (db: Database, subject: AccessSubject) => (subject.personId ? (await new RoomBookingQueries(db).pendingForApprover({ personId: subject.personId, roles: subject.roles })).length : 0);
+const roomsPending = async (db: Database, subject: AccessSubject) => (subject.personId ? (await new RoomBookingQueries(db).pendingForApprover({ personId: subject.personId, roles: subject.roles, activeRole: subject.activeRole ?? null })).length : 0);
 /** ใบ รอจัดรถ, for the หัวหน้าหมวดยานพาหนะ only. */
 const fleetWaiting = async (db: Database, subject: AccessSubject) => (subject.personId && canManageFleet(subject) ? new FleetQueries(db).waitingCount() : 0);
 /** The person's เที่ยวรถ today that have not left yet; 0 for anyone who does not drive. */
@@ -87,7 +87,8 @@ export const moduleRegistry: readonly ModuleEntry[] = [
   withSections({ code: 'access', href: '/access', labelKey: 'moduleAccess', descriptionKey: 'moduleAccessDescription', icon: 'shield', group: 'governance', status: 'live' }, [
     { href: '/access/roles', labelKey: 'roles', visible: hasRole('hr-manager') },
     { href: '/access/delegations', labelKey: 'delegations', visible: hasRole('hr-manager') },
-    { href: '/access/audit', labelKey: 'audit', visible: everyone }
+    { href: '/access/audit', labelKey: 'audit', visible: everyone },
+    { href: '/access/self-approvals', labelKey: 'selfApprovals', visible: isAdmin }
   ]),
   {
     ...withSections({ code: 'room-booking', href: '/rooms', labelKey: 'moduleRoomBooking', descriptionKey: 'moduleRoomBookingDescription', icon: 'room', group: 'services', status: 'live' }, [
@@ -104,7 +105,7 @@ export const moduleRegistry: readonly ModuleEntry[] = [
     ...withSections({ code: 'leave', href: '/leave', labelKey: 'moduleLeave', descriptionKey: 'moduleLeaveDescription', icon: 'leave', group: 'mine', status: 'live' }, [
       { href: '/leave/mine', labelKey: 'leaveMine', visible: everyone },
       // Approvers are unit heads and ผู้แทน, not a role, so the link stays cheap and the page shows its own empty state.
-      { href: '/leave/approvals', labelKey: 'leaveApprovals', visible: everyone, badge: async (db, subject) => subject.personId ? new LeaveQueries(db).pendingCount(subject.personId) : 0 },
+      { href: '/leave/approvals', labelKey: 'leaveApprovals', visible: everyone, badge: async (db, subject) => subject.personId ? new LeaveQueries(db).pendingCount(subject.personId, { includeOwn: canDecideOwnRequest(subject.activeRole) }) : 0 },
       { href: '/leave/calendar', labelKey: 'leaveCalendar', visible: everyone },
       { href: '/leave/all', labelKey: 'leaveAll', visible: canManageLeave },
       { href: '/leave/settings', labelKey: 'leaveSettings', visible: canManageLeave },
@@ -112,18 +113,18 @@ export const moduleRegistry: readonly ModuleEntry[] = [
       { href: '/leave/balances', labelKey: 'leaveBalances', visible: canManageLeave }
     ]),
     submitAction: { href: '/leave/new', label: 'leaveNew', icon: 'leave' },
-    badge: async (db, subject) => subject.personId ? new LeaveQueries(db).pendingCount(subject.personId) : 0
+    badge: async (db, subject) => subject.personId ? new LeaveQueries(db).pendingCount(subject.personId, { includeOwn: canDecideOwnRequest(subject.activeRole) }) : 0
   },
   {
     ...withSections({ code: 'official-travel', href: '/travel', labelKey: 'moduleTravel', descriptionKey: 'moduleTravelDescription', icon: 'travel', group: 'mine', status: 'live' }, [
       { href: '/travel/mine', labelKey: 'travelMine', visible: everyone },
       // Approvers are unit heads and ผู้แทน, not a role, as in leave.
-      { href: '/travel/approvals', labelKey: 'travelApprovals', visible: everyone, badge: async (db, subject) => subject.personId ? new OfficialTravelQueries(db).pendingCount(subject.personId) : 0, available: async (db, subject) => subject.personId ? new OfficialTravelQueries(db).canApprove(subject.personId) : false },
+      { href: '/travel/approvals', labelKey: 'travelApprovals', visible: everyone, badge: async (db, subject) => subject.personId ? new OfficialTravelQueries(db).pendingCount(subject.personId, { includeOwn: canDecideOwnRequest(subject.activeRole) }) : 0, available: async (db, subject) => subject.personId ? new OfficialTravelQueries(db).canApprove(subject.personId) : false },
       { href: '/travel/all', labelKey: 'travelAll', visible: canManageTravel },
       { href: '/travel/settings', labelKey: 'travelSettings', visible: canManageTravel }
     ]),
     submitAction: { href: '/travel/new', label: 'travelSubmitAction', icon: 'travel' },
-    badge: async (db, subject) => subject.personId ? new OfficialTravelQueries(db).pendingCount(subject.personId) : 0
+    badge: async (db, subject) => subject.personId ? new OfficialTravelQueries(db).pendingCount(subject.personId, { includeOwn: canDecideOwnRequest(subject.activeRole) }) : 0
   },
   planned('maintenance', '/maintenance', 'moduleMaintenance', 'moduleMaintenanceDescription', 'wrench'),
   withSections({ code: 'inventory', href: '/inventory', labelKey: 'moduleInventory', descriptionKey: 'moduleInventoryDescription', icon: 'package', group: 'services', status: 'live' }, [

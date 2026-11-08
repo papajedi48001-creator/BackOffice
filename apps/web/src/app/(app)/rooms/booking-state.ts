@@ -4,6 +4,8 @@ export interface BookingViewInput {
   status: RoomBookingStatus;
   viewerIsBooker: boolean;
   viewerCanDecide: boolean;
+  /** The viewer works in the admin or manager tier, which may decide their own booking (with a reason). */
+  viewerMayDecideOwn?: boolean;
   days: { startsAt: Date; endsAt: Date; status: RoomBookingDayStatus }[];
 }
 
@@ -29,7 +31,7 @@ export function bookingViewState(booking: BookingViewInput, now: Date): BookingV
     : mayRelease && hasFutureDays ? 'release' : null;
   return {
     expired: waiting && ended,
-    canDecide: booking.viewerCanDecide && !booking.viewerIsBooker && waiting && !ended,
+    canDecide: booking.viewerCanDecide && (!booking.viewerIsBooker || booking.viewerMayDecideOwn === true) && waiting && !ended,
     cancelAction
   };
 }
