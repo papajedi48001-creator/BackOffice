@@ -1,4 +1,5 @@
 import { t, type MessageKey } from '@backoffice/i18n';
+import { AppName } from './app-name';
 import type { SubmitAction } from '../lib/modules';
 import { ProfileMenu, type BellItem, type ShellProfile, type ShellRole } from './profile-menu';
 import { BrandLogo } from './brand-logo';
@@ -15,7 +16,7 @@ const noProfile: ShellProfile = { displayName: null, positionTitle: null, photoU
 export function AppShell({ navigation, profile = noProfile, bell = { unread: 0, items: [] }, chat, role = null, children }: { navigation: NavigationItem[]; role?: ShellRole | null; profile?: ShellProfile; bell?: { unread: number; items: BellItem[] }; chat?: { admin: boolean; images: boolean; unread: number }; children: React.ReactNode }) {
   return <ShellFrame navigation={navigation}>
     <aside className="sidebar">
-      <div className="brand-block"><BrandLogo size={44} decorative className="brand-mark" /><div><p className="brand">{t('hospitalName')}</p><h1>{t('appName')}</h1></div></div>
+      <div className="brand-block"><BrandLogo size={44} decorative className="brand-mark" /><div><p className="brand">{t('hospitalName')}</p><h1><AppName /></h1></div></div>
       <SidebarNav items={navigation} />
       <SignOutButton />
     </aside>

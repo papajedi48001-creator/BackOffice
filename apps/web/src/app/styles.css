@@ -811,3 +811,6 @@ h2.chat-window-title { cursor: default; }
 .thai-date-holiday { display: block; max-width: 100%; overflow: hidden; font-size: .55rem; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
 .thai-date-day:disabled { cursor: not-allowed; opacity: .6; }
 .thai-date-time { display: inline-flex; flex-wrap: wrap; align-items: flex-start; gap: 6px; }
+
+/* Keep "(Back Office)" together on its own line under the Thai system name. */
+.app-name-tail { display: block; white-space: nowrap; }
