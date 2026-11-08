@@ -1,4 +1,5 @@
 export * from './access/authorization-service';
+export { managedModules, managesModule, managesPermission } from './access/module-manager-scope';
 export * from './access/active-role';
 export * from './crypto/national-id';
 export * from './hr/organization-service';

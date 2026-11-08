@@ -1,18 +1,8 @@
 import { testerModuleCodes, type AccessSubject, type GrantableRole, type ModuleMode, type TesterRole } from '@backoffice/contracts';
 import { isAdmin } from '../access/authorization-service';
+import { managesModule, moduleManagerRoles } from '../access/module-manager-scope';
 
-/**
- * ผู้จัดการโมดูล: the existing hospital-wide role that runs each module. A ผู้ดูแลระบบ passes every one of these checks anyway
- * (see `isAdmin`). Modules missing here (คำขอ, การแจ้งเตือน, สิทธิ์และการตรวจสอบ) have no manager of their own.
- */
-export const moduleManagerRoles: Readonly<Record<string, Exclude<GrantableRole, 'admin'>>> = {
-  hr: 'hr-manager',
-  leave: 'leave-manager',
-  'official-travel': 'travel-manager',
-  'room-booking': 'room-manager',
-  inventory: 'inventory-officer',
-  fleet: 'fleet-manager'
-};
+export { moduleManagerRoles };
 
 /**
  * ผู้ทดสอบ: one `<module-code>-tester` role per live module (not `admin`). It grants no permission, so a tester has the module's
@@ -48,4 +38,13 @@ export function canUseModule(subject: AccessSubject, moduleCode: string, mode: M
   if (isAdmin(subject)) return true;
   const roles = [moduleManagerRoles[moduleCode], moduleTesterRoles[moduleCode]].filter(Boolean);
   return Boolean(subject.authenticated && subject.personId) && subject.roles.some((role) => roles.includes(role.name as never) && (role.organizationId === null || role.organizationId === undefined));
+}
+
+/**
+ * Who may grant or revoke one role from the admin module's single-role APIs: ผู้ดูแลระบบ any grantable role; a ผู้จัดการโมดูล only
+ * the ผู้ทดสอบ role of a module they manage. Everything else in กำหนดสิทธิ stays admin-only.
+ */
+export function canGrantRole(subject: AccessSubject, roleName: GrantableRole): boolean {
+  if (isAdmin(subject)) return true;
+  return modulesTestedBy(roleName).some((code) => managesModule(subject, code));
 }

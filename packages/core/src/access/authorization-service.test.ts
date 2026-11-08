@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import type { Permission } from '@backoffice/contracts';
+import { permissionModules } from '@backoffice/contracts';
+import { managedModules } from './module-manager-scope';
 import { AuthorizationService, isAdmin } from './authorization-service';
 import { canManageFleet } from '../fleet/fleet-access';
 import { canManageLeave } from '../leave/leave-access';
@@ -62,9 +65,11 @@ describe('organization scope for listings', () => {
   it('allows hospital-wide actions only for an unscoped role that also owns the module data', () => {
     expect(service.canActHospitalWide(subject([{ name: 'hr-manager', organizationId: null }], ['hr']), 'hr.person.manage', 'hr')).toBe(true);
     expect(service.canActHospitalWide(subject([{ name: 'hr-manager', organizationId: 'unit-a' }], ['hr']), 'hr.person.manage', 'hr')).toBe(false);
-    expect(service.canActHospitalWide(subject([{ name: 'hr-manager', organizationId: null }]), 'hr.person.manage', 'hr')).toBe(false);
+    // A hospital-wide hr-manager is ผู้จัดการโมดูล of hr and acts as admin there; the data-owner gate still holds for other unscoped holders.
+    expect(service.canActHospitalWide(subject([{ name: 'hr-manager', organizationId: null }]), 'hr.person.manage', 'hr')).toBe(true);
+    expect(service.canActHospitalWide(subject([{ name: 'hr-manager', organizationId: null }]), 'leave.manage', 'hr')).toBe(false);
     // Data owner for one unit only.
-    expect(service.canActHospitalWide({ ...subject([{ name: 'hr-manager', organizationId: null }], ['hr']), hospitalWideDataOwnerModules: [] }, 'hr.person.manage', 'hr')).toBe(false);
+    expect(service.canActHospitalWide({ ...subject([{ name: 'hr-manager', organizationId: null }], ['hr']), hospitalWideDataOwnerModules: [] }, 'leave.manage', 'hr')).toBe(false);
     expect(service.canActHospitalWide({ ...subject([{ name: 'hr-manager', organizationId: null }], ['hr']), authenticated: false }, 'hr.person.manage', 'hr')).toBe(false);
   });
 
@@ -106,5 +111,46 @@ describe('AuthorizationService ผู้ดูแลระบบ', () => {
     expect(roleGrantsPermission('leave-manager', 'leave.manage')).toBe(true);
     expect(roleGrantsPermission('travel-manager', 'travel.manage')).toBe(true);
     expect(roleGrantsPermission('admin', 'fleet.manage')).toBe(false);
+  });
+});
+
+describe('AuthorizationService ผู้จัดการโมดูล acts as admin inside the modules they manage', () => {
+  const authorization = new AuthorizationService();
+  const manager = (name: string, organizationId: string | null = null) => ({ authenticated: true, personId: 'person-m', roles: [{ name, organizationId }], dataOwnerModules: [], hospitalWideDataOwnerModules: [] });
+  const table: { role: string; module: string; own: Permission[]; other: Permission }[] = [
+    { role: 'hr-manager', module: 'hr', own: ['hr.person.read', 'hr.person.manage', 'hr.organization.manage', 'hr.person.private.read'], other: 'fleet.manage' },
+    { role: 'leave-manager', module: 'leave', own: ['leave.manage'], other: 'travel.manage' },
+    { role: 'travel-manager', module: 'official-travel', own: ['travel.manage'], other: 'leave.manage' },
+    { role: 'room-manager', module: 'room-booking', own: ['room.manage', 'room.booking.decide'], other: 'inventory.stock.read' },
+    { role: 'inventory-officer', module: 'inventory', own: ['inventory.item.manage', 'inventory.stock.receive', 'inventory.stock.read', 'inventory.opening.certify'], other: 'room.manage' },
+    { role: 'fleet-manager', module: 'fleet', own: ['fleet.manage'], other: 'hr.person.read' }
+  ];
+
+  it.each(table)('$role: every $module permission like an admin, nothing outside it', async ({ role, module, own, other }) => {
+    const subject = manager(role);
+    expect(managedModules(subject)).toEqual([module]);
+    for (const permission of own) {
+      expect(permissionModules[permission]).toBe(module);
+      await expect(authorization.canAccess(subject, permission, { moduleCode: module, organizationId: 'unit-x' })).resolves.toEqual({ allowed: true, reason: 'allowed' });
+      expect(authorization.organizationScope(subject, permission)).toBe('all');
+      expect(authorization.canActHospitalWide(subject, permission, module)).toBe(true);
+    }
+    await expect(authorization.canAccess(subject, other, { moduleCode: permissionModules[other] as string, organizationId: 'unit-x' })).resolves.toMatchObject({ allowed: false });
+    expect(authorization.organizationScope(subject, other)).toEqual([]);
+    await expect(authorization.canAccess(subject, 'data.export', { moduleCode: module, organizationId: 'unit-x' })).resolves.toEqual({ allowed: true, reason: 'allowed' });
+    await expect(authorization.canAccess(subject, 'data.export', { moduleCode: module === 'hr' ? 'fleet' : 'hr', organizationId: 'unit-x' })).resolves.toMatchObject({ allowed: false });
+  });
+
+  it('does not treat a unit-scoped manager assignment or a signed-out subject as a module manager', async () => {
+    expect(managedModules(manager('fleet-manager', 'unit-a'))).toEqual([]);
+    expect(managedModules({ ...manager('fleet-manager'), authenticated: false })).toEqual([]);
+    await expect(authorization.canAccess(manager('hr-manager', 'unit-a'), 'hr.person.manage', { moduleCode: 'hr', organizationId: 'unit-a' })).resolves.toEqual({ allowed: false, reason: 'data_owner_required' });
+  });
+
+  it('keeps the data-owner gate on leave and travel for an hr-manager, whose module is hr', async () => {
+    await expect(authorization.canAccess(manager('hr-manager'), 'leave.manage', { moduleCode: 'hr', organizationId: 'unit-a' })).resolves.toEqual({ allowed: false, reason: 'data_owner_required' });
+    expect(canManageLeave(manager('leave-manager'))).toBe(true);
+    expect(canManageTravel(manager('travel-manager'))).toBe(true);
+    expect(canManageLeave(manager('hr-manager'))).toBe(false);
   });
 });

@@ -1,5 +1,6 @@
 import type { AccessSubject, Permission } from '@backoffice/contracts';
 import { AuthorizationService, isAdmin } from '../access/authorization-service';
+import { managesModule } from '../access/module-manager-scope';
 
 export interface ProfileAccess { viewWork: boolean; viewPrivate: boolean; editProfile: boolean; editContact: boolean; }
 
@@ -13,7 +14,7 @@ export function profileAccess(subject: AccessSubject, target: { personId: string
     const scope = authorization.organizationScope(subject, permission);
     return scope === 'all' || (target.organizationId !== null && scope.includes(target.organizationId));
   };
-  const ownsHrData = isAdmin(subject) || subject.dataOwnerModules.includes('hr');
+  const ownsHrData = isAdmin(subject) || managesModule(subject, 'hr') || subject.dataOwnerModules.includes('hr');
   const editProfile = covers('hr.person.manage') && ownsHrData;
   return {
     viewWork: self || covers('hr.person.read'),

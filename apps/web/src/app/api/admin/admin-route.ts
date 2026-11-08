@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { AdminQueries, AdminService, isAdmin } from '@backoffice/core';
+import { AdminQueries, AdminService, canGrantRole, isAdmin, managedModules } from '@backoffice/core';
+import type { GrantableRole } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { forbidden, readInput, withSessionAndDatabase } from '../hr/profile-route';
 
@@ -11,6 +12,16 @@ type AdminSession = Parameters<Parameters<typeof withSessionAndDatabase>[1]>[0];
 export function withAdmin(request: Request, action: (session: AdminSession, database: Database) => Promise<Response>): Promise<Response> {
   return withSessionAndDatabase(request, async (session, database) => isAdmin(session) ? action(session, database) : forbidden());
 }
+
+/**
+ * The single-role grant and revoke APIs: ผู้ดูแลระบบ, or a ผู้จัดการโมดูล for the ผู้ทดสอบ role of a module they manage.
+ * Anyone else is refused before the input is read; `roleName` is checked once it is known.
+ */
+export function withRoleGrant(request: Request, action: (session: AdminSession, database: Database, may: (roleName: GrantableRole) => boolean) => Promise<Response>): Promise<Response> {
+  return withSessionAndDatabase(request, async (session, database) => isAdmin(session) || managedModules(session).length > 0 ? action(session, database, (roleName) => canGrantRole(session, roleName)) : forbidden());
+}
+
+export { forbidden };
 
 export const adminService = (database: Database) => new AdminService(database);
 export const adminQueries = (database: Database) => new AdminQueries(database);

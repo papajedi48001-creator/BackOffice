@@ -15,9 +15,10 @@ describe('profileAccess', () => {
     expect(profileAccess(subject([{ name: 'hr-reader', organizationId: 'unit-b' }]), target)).toEqual({ viewWork: false, viewPrivate: false, editProfile: false, editContact: false });
   });
 
-  it('gives an hr manager who owns hr data everything, and without ownership work details only', () => {
+  it('gives the hospital-wide hr ผู้จัดการโมดูล everything like an admin; a unit-scoped hr manager needs hr data ownership', () => {
     expect(profileAccess(subject([{ name: 'hr-manager', organizationId: null }], ['hr']), target)).toEqual({ viewWork: true, viewPrivate: true, editProfile: true, editContact: true });
-    expect(profileAccess(subject([{ name: 'hr-manager', organizationId: null }]), target)).toEqual({ viewWork: true, viewPrivate: false, editProfile: false, editContact: false });
+    expect(profileAccess(subject([{ name: 'hr-manager', organizationId: null }]), target)).toEqual({ viewWork: true, viewPrivate: true, editProfile: true, editContact: true });
+    expect(profileAccess(subject([{ name: 'hr-manager', organizationId: 'unit-a' }]), target)).toEqual({ viewWork: true, viewPrivate: false, editProfile: false, editContact: false });
   });
 
   it('lets only a hospital-wide reader see a person with no unit', () => {
