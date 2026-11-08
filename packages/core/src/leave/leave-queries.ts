@@ -1,3 +1,4 @@
+import { canDecideOwnRequest } from '../access/active-role';
 import type { AccessSubject, LeaveBalance, LeaveEndHalf, LeaveStartHalf, LeaveWarning, RequestStatus } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { linkedAttachment, type LinkedAttachment } from '../files/attachment-link';
@@ -12,7 +13,7 @@ const LIST_LIMIT = 1000;
 
 export interface LeaveListItem { requestId: string; reference: string; kind: 'LEAVE' | 'CANCEL_DAYS'; leaveTypeName: string; startDate: string; endDate: string; startHalf: LeaveStartHalf; endHalf: LeaveEndHalf; days: number; status: RequestStatus; submittedAt: string | null; personDisplayName: string | null; organizationName: string | null }
 export interface LeaveStepView { sequence: number; assigneeDisplayName: string | null; status: string; decidedAt: string | null; decisionReason: string | null }
-export interface LeaveDetail extends LeaveListItem { leaveTypeId: string; reason: string; contactDuringLeave: string | null; medicalCertificateRequired: boolean; warnings: LeaveWarning[]; steps: LeaveStepView[]; cancellations: LeaveListItem[]; canDecide: boolean; canCancel: boolean; canRequestCancelDays: boolean; attachment: LinkedAttachment | null }
+export interface LeaveDetail extends LeaveListItem { leaveTypeId: string; reason: string; contactDuringLeave: string | null; medicalCertificateRequired: boolean; warnings: LeaveWarning[]; steps: LeaveStepView[]; cancellations: LeaveListItem[]; canDecide: boolean; /** The viewer is deciding their own ใบลา (admin/manager tier); a reason is then required. */ ownRequest: boolean; canCancel: boolean; canRequestCancelDays: boolean; attachment: LinkedAttachment | null }
 /** A day away: on leave (never which type) or on official travel (only the place). */
 export interface TeamCalendarDay { date: string; part: 'FULL' | 'MORNING' | 'AFTERNOON'; kind: 'LEAVE' | 'TRAVEL'; place?: string }
 export interface TeamCalendarRow { personId: string; displayName: string | null; organizationName: string | null; days: TeamCalendarDay[] }
@@ -69,6 +70,8 @@ export class LeaveQueries {
     const approver = steps.some((step) => step.assigneeId === viewer.personId);
     const delegate = steps.some((step) => step.status === 'PENDING' && delegators.has(step.assigneeId));
     if (!self && !approver && !delegate && !canManageLeave(viewer)) return null;
+    // Their own ใบลา only in the admin or manager tier (canDecideOwnRequest), as ApprovalService accepts it.
+    const canDecide = (!self || canDecideOwnRequest(viewer.activeRole)) && current !== undefined && (current.assigneeId === viewer.personId || delegators.has(current.assigneeId));
     const leave = row.kind === 'LEAVE';
     const days = Number(row.days);
     return {
@@ -80,7 +83,8 @@ export class LeaveQueries {
       warnings: leave && ACTIVE.has(row.status) ? await this.warningsOf(row) : [],
       steps: steps.map((step) => ({ sequence: Number(step.sequence), assigneeDisplayName: step.assigneeDisplayName, status: step.status, decidedAt: step.decidedAt, decisionReason: step.decisionReason })),
       cancellations: leave ? (await this.items("kind = 'CANCEL_DAYS' AND leaveRequestId = ?", [requestId])).map(toItem) : [],
-      canDecide: !self && current !== undefined && (current.assigneeId === viewer.personId || delegators.has(current.assigneeId)),
+      canDecide,
+      ownRequest: self && canDecide,
       canCancel: self && (row.status === 'IN_REVIEW' || row.status === 'RETURNED'),
       canRequestCancelDays: self && leave && row.status === 'APPROVED',
       attachment: leave ? await linkedAttachment(this.database, 'leave_request', 'request_id', requestId) : null
@@ -88,15 +92,17 @@ export class LeaveQueries {
   }
 
   /** ใบลา and ขอยกเลิกวันลา whose current step waits on the person, directly or as a ผู้แทน. */
-  async pendingForApprover(personId: string): Promise<Array<LeaveListItem & { warnings: LeaveWarning[]; medicalCertificateRequired: boolean }>> {
-    const ids = await this.pendingIds(personId);
+  async pendingForApprover(personId: string, options: { includeOwn?: boolean } = {}): Promise<Array<LeaveListItem & { warnings: LeaveWarning[]; medicalCertificateRequired: boolean; ownRequest: boolean }>> {
+    const pending = await this.pendingRows(personId, options.includeOwn ?? false);
+    const ids = pending.map((row) => row.requestId);
+    const own = new Set(pending.filter((row) => row.own).map((row) => row.requestId));
     if (ids.length === 0) return [];
     const rows = await this.items('requestId IN (?)', [ids]);
-    return Promise.all(rows.map(async (row) => ({ ...toItem(row), warnings: row.kind === 'LEAVE' ? await this.warningsOf(row) : [], medicalCertificateRequired: row.kind === 'LEAVE' && row.attachmentFrom !== null && Number(row.days) >= Number(row.attachmentFrom) })));
+    return Promise.all(rows.map(async (row) => ({ ...toItem(row), warnings: row.kind === 'LEAVE' ? await this.warningsOf(row) : [], medicalCertificateRequired: row.kind === 'LEAVE' && row.attachmentFrom !== null && Number(row.days) >= Number(row.attachmentFrom), ownRequest: own.has(row.requestId) })));
   }
 
-  async pendingCount(personId: string): Promise<number> {
-    return (await this.pendingIds(personId)).length;
+  async pendingCount(personId: string, options: { includeOwn?: boolean } = {}): Promise<number> {
+    return (await this.pendingIds(personId, options.includeOwn)).length;
   }
 
   /** Units the person heads now, with every unit below them. */
@@ -166,15 +172,20 @@ export class LeaveQueries {
     return this.database.query<ItemRow>(`SELECT * FROM ${ITEMS} WHERE ${where} ORDER BY startDate DESC, submittedAt DESC${capped}`, parameters as never);
   }
 
-  private async pendingIds(personId: string): Promise<string[]> {
-    const rows = await this.database.query<{ requestId: string }>(
-      `SELECT s.request_id AS requestId FROM approval_step s JOIN request r ON r.id = s.request_id
-       WHERE r.module_code = '${LEAVE_MODULE}' AND r.status = 'IN_REVIEW' AND s.status = 'PENDING' AND r.requestor_person_id <> ?
+  /** Requests waiting on the person; their own only when `includeOwn` (admin/manager tier, see canDecideOwnRequest). */
+  private async pendingIds(personId: string, includeOwn = false): Promise<string[]> {
+    return (await this.pendingRows(personId, includeOwn)).map((row) => row.requestId);
+  }
+
+  private async pendingRows(personId: string, includeOwn: boolean): Promise<Array<{ requestId: string; own: boolean }>> {
+    const rows = await this.database.query<{ requestId: string; own: number | string }>(
+      `SELECT s.request_id AS requestId, r.requestor_person_id = ? AS own FROM approval_step s JOIN request r ON r.id = s.request_id
+       WHERE r.module_code = '${LEAVE_MODULE}' AND r.status = 'IN_REVIEW' AND s.status = 'PENDING' AND (? OR r.requestor_person_id <> ?)
          AND CAST(s.sequence AS UNSIGNED) = (SELECT MIN(CAST(s2.sequence AS UNSIGNED)) FROM approval_step s2 WHERE s2.request_id = s.request_id AND s2.status = 'PENDING')
          AND (JSON_VALUE(s.assignee_snapshot, '$.personId') = ? OR JSON_VALUE(s.assignee_snapshot, '$.personId') IN (${ACTIVE_DELEGATORS}))`,
-      [personId, personId, personId]
+      [personId, includeOwn ? 1 : 0, personId, personId, personId]
     );
-    return rows.map((row) => row.requestId);
+    return rows.map((row) => ({ requestId: row.requestId, own: Number(row.own) === 1 }));
   }
 
   private tripsOf(personId: string, from: string, to: string): Promise<Array<{ place: string; startDate: string; endDate: string; startHalf: LeaveStartHalf; endHalf: LeaveEndHalf }>> {

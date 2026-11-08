@@ -1,3 +1,4 @@
+import { canDecideOwnRequest } from '../access/active-role';
 import type { AccessSubject, LeaveEndHalf, LeaveStartHalf, RequestStatus, TravelFunding, TravelTypeCode, TravelVehicle } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { linkedAttachment, type LinkedAttachment } from '../files/attachment-link';
@@ -13,9 +14,9 @@ export interface TravelListItem { travelId: string; subject: string; place: stri
 /** SUBMITTED once filed; MISSING when an approved trip has ended without one; NOT_DUE while an approved trip has not ended; NONE when no report is expected. */
 export type TravelReportStatus = 'SUBMITTED' | 'MISSING' | 'NOT_DUE' | 'NONE';
 export interface TravelReportView { summary: string; application: string; submittedAt: string; updatedAt: string }
-export interface TravelMemberView { requestId: string; personId: string; displayName: string | null; organizationName: string | null; status: RequestStatus; steps: LeaveStepView[]; canDecide: boolean }
+export interface TravelMemberView { requestId: string; personId: string; displayName: string | null; organizationName: string | null; status: RequestStatus; steps: LeaveStepView[]; canDecide: boolean; /** The viewer is this member, deciding their own คำขอ (admin/manager tier). */ ownRequest?: boolean }
 export interface TravelDetail extends TravelListItem { organiser: string; vehicle: TravelVehicle; fundingSource: TravelFunding; costs: { allowance: number; lodging: number; transport: number; registration: number; total: number }; leaderPersonId: string; members: TravelMemberView[]; canEdit: boolean; canCancel: boolean; report: TravelReportView | null; canReport: boolean; filedAt: string; attachment: LinkedAttachment | null }
-export interface TravelPendingItem { requestId: string; travelId: string; personId: string; personDisplayName: string | null; organizationName: string | null; subject: string; place: string; travelType: TravelTypeCode; startDate: string; endDate: string; startHalf: LeaveStartHalf; endHalf: LeaveEndHalf; days: number; submittedAt: string | null }
+export interface TravelPendingItem { requestId: string; travelId: string; personId: string; personDisplayName: string | null; organizationName: string | null; subject: string; place: string; travelType: TravelTypeCode; startDate: string; endDate: string; startHalf: LeaveStartHalf; endHalf: LeaveEndHalf; days: number; submittedAt: string | null; /** The viewer is this member (admin/manager deciding their own คำขอ). */ ownRequest?: boolean }
 export interface TravelFilter { from?: string; to?: string; travelType?: TravelTypeCode; status?: TripStatus; reportMissing?: boolean }
 
 type Reader = Pick<Database, 'query'>;
@@ -69,10 +70,13 @@ export class OfficialTravelQueries {
       costs: { ...costs, total: Math.round((costs.allowance + costs.lodging + costs.transport + costs.registration) * 100) / 100 },
       members: members.map((member) => {
         const current = currentOf(member);
+        const own = member.personId === viewer.personId;
+        // Their own คำขอ only in the admin or manager tier (canDecideOwnRequest), as ApprovalService accepts it.
+        const canDecide = (!own || canDecideOwnRequest(viewer.activeRole)) && current !== undefined && (current.assigneeId === viewer.personId || delegators.has(current.assigneeId));
         return {
           requestId: member.requestId, personId: member.personId, displayName: member.displayName, organizationName: member.organizationName, status: member.status,
           steps: steps.filter((step) => step.requestId === member.requestId).map((step) => ({ sequence: Number(step.sequence), assigneeDisplayName: step.assigneeDisplayName, status: step.status, decidedAt: step.decidedAt, decisionReason: step.decisionReason })),
-          canDecide: member.personId !== viewer.personId && current !== undefined && (current.assigneeId === viewer.personId || delegators.has(current.assigneeId))
+          canDecide, ownRequest: own && canDecide
         };
       }),
       canEdit: leader && statuses.includes('RETURNED'),
@@ -89,8 +93,8 @@ export class OfficialTravelQueries {
   }
 
   /** Each person on a trip whose คำขอ's current step waits on the viewer, directly or as a ผู้แทน. */
-  async pendingForApprover(personId: string): Promise<TravelPendingItem[]> {
-    const ids = await this.pendingIds(personId);
+  async pendingForApprover(personId: string, options: { includeOwn?: boolean } = {}): Promise<TravelPendingItem[]> {
+    const ids = await this.pendingIds(personId, options.includeOwn);
     if (ids.length === 0) return [];
     const rows = await this.database.query<Omit<TravelPendingItem, 'days'> & { days: string }>(
       `SELECT m.request_id AS requestId, t.id AS travelId, m.person_id AS personId, p.display_name AS personDisplayName, o.name AS organizationName, t.subject, t.place, t.travel_type AS travelType,
@@ -99,11 +103,11 @@ export class OfficialTravelQueries {
        LEFT JOIN organization o ON o.id = JSON_VALUE(r.organization_snapshot, '$.organizationId')
        WHERE m.request_id IN (?) ORDER BY t.start_date, t.id, p.display_name`, [ids]
     );
-    return rows.map((row) => ({ ...row, days: Number(row.days) }));
+    return rows.map((row) => ({ ...row, days: Number(row.days), ownRequest: row.personId === personId }));
   }
 
-  async pendingCount(personId: string): Promise<number> {
-    return (await this.pendingIds(personId)).length;
+  async pendingCount(personId: string, options: { includeOwn?: boolean } = {}): Promise<number> {
+    return (await this.pendingIds(personId, options.includeOwn)).length;
   }
 
   /** People in a current unit whose name contains the text, for adding ผู้ร่วมเดินทาง; only id, name and unit. */
@@ -158,15 +162,20 @@ export class OfficialTravelQueries {
     return Number(row?.allowed) === 1 || (await this.pendingIds(personId)).length > 0;
   }
 
-  private async pendingIds(personId: string): Promise<string[]> {
-    const rows = await this.database.query<{ requestId: string }>(
-      `SELECT s.request_id AS requestId FROM approval_step s JOIN request r ON r.id = s.request_id
-       WHERE r.module_code = '${OFFICIAL_TRAVEL_MODULE}' AND r.status = 'IN_REVIEW' AND s.status = 'PENDING' AND r.requestor_person_id <> ?
+  /** Requests waiting on the person; their own only when `includeOwn` (admin/manager tier, see canDecideOwnRequest). */
+  private async pendingIds(personId: string, includeOwn = false): Promise<string[]> {
+    return (await this.pendingRows(personId, includeOwn)).map((row) => row.requestId);
+  }
+
+  private async pendingRows(personId: string, includeOwn: boolean): Promise<Array<{ requestId: string; own: boolean }>> {
+    const rows = await this.database.query<{ requestId: string; own: number | string }>(
+      `SELECT s.request_id AS requestId, r.requestor_person_id = ? AS own FROM approval_step s JOIN request r ON r.id = s.request_id
+       WHERE r.module_code = '${OFFICIAL_TRAVEL_MODULE}' AND r.status = 'IN_REVIEW' AND s.status = 'PENDING' AND (? OR r.requestor_person_id <> ?)
          AND CAST(s.sequence AS UNSIGNED) = (SELECT MIN(CAST(s2.sequence AS UNSIGNED)) FROM approval_step s2 WHERE s2.request_id = s.request_id AND s2.status = 'PENDING')
          AND (JSON_VALUE(s.assignee_snapshot, '$.personId') = ? OR JSON_VALUE(s.assignee_snapshot, '$.personId') IN (${ACTIVE_DELEGATORS}))`,
-      [personId, personId, personId]
+      [personId, includeOwn ? 1 : 0, personId, personId, personId]
     );
-    return rows.map((row) => row.requestId);
+    return rows.map((row) => ({ requestId: row.requestId, own: Number(row.own) === 1 }));
   }
 }
 
