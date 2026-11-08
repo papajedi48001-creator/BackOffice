@@ -33,9 +33,15 @@ describe('POST /api/hr/imports', () => {
     expect((await upload('validate')).status).toBe(401);
     ready({ ...hrManager, roles: [{ name: 'hr-manager', organizationId: 'unit-a' }] });
     expect((await upload('validate')).status).toBe(403);
-    ready({ ...hrManager, hospitalWideDataOwnerModules: [] });
+    ready({ ...hrManager, roles: [{ name: 'leave-manager', organizationId: null }] });
     expect((await upload('validate')).status).toBe(403);
     expect(mocks.validate).not.toHaveBeenCalled();
+  });
+
+  it('lets the hospital-wide hr ผู้จัดการโมดูล import like an admin, without a data-owner assignment', async () => {
+    ready({ ...hrManager, dataOwnerModules: [], hospitalWideDataOwnerModules: [] });
+    mocks.validate.mockResolvedValue({ ok: true, report: {} });
+    expect((await upload('validate')).status).not.toBe(403);
   });
 
   it('validates without applying and returns the row report', async () => {

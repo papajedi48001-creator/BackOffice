@@ -42,6 +42,32 @@ describe('admin API access', () => {
   });
 });
 
+describe('ผู้จัดการโมดูล in กำหนดสิทธิ', () => {
+  const fleetManager = { authenticated: true, personId: 'person-fleet', roles: [{ name: 'fleet-manager', organizationId: null }], dataOwnerModules: [] };
+
+  it('lets a module manager grant and revoke only their own module tester role', async () => {
+    ready(fleetManager);
+    mocks.grantRole.mockResolvedValue({ ok: true, changed: true });
+    mocks.revokeRole.mockResolvedValue({ ok: true });
+    expect((await GRANT(json('POST', { roleName: 'fleet-tester' }), params({ personId }))).status).toBe(201);
+    expect(mocks.grantRole).toHaveBeenCalledWith('person-fleet', personId, 'fleet-tester');
+    expect((await REVOKE(json('DELETE'), params({ personId, roleName: 'fleet-tester' }))).status).toBe(200);
+    expect(mocks.revokeRole).toHaveBeenCalledWith('person-fleet', personId, 'fleet-tester');
+  });
+
+  it('keeps every other admin action admin-only for a module manager', async () => {
+    ready(fleetManager);
+    expect((await GRANT(json('POST', { roleName: 'leave-tester' }), params({ personId }))).status).toBe(403);
+    expect((await GRANT(json('POST', { roleName: 'fleet-manager' }), params({ personId }))).status).toBe(403);
+    expect((await REVOKE(json('DELETE'), params({ personId, roleName: 'admin' }))).status).toBe(403);
+    expect((await SET_ROLES(json('PUT', { roleNames: ['fleet-tester'] }), params({ personId }))).status).toBe(403);
+    expect((await TOGGLE(json('PUT', { mode: 'OFF' }), params({ code: 'fleet' }))).status).toBe(403);
+    expect((await PEOPLE(new Request('http://localhost/api/admin/people?q=a'))).status).toBe(403);
+    expect(mocks.grantRole).not.toHaveBeenCalled();
+    expect(mocks.revokeRole).not.toHaveBeenCalled();
+  });
+});
+
 describe('ตั้งค่าโปรแกรม', () => {
   it('switches a live module and refuses an unknown or locked one', async () => {
     ready();

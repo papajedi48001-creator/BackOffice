@@ -88,12 +88,14 @@ describe('opening balance', () => {
     await expect(service.decideOpening(supervisor, { decision: 'RETURN' })).rejects.toThrow('REASON_REQUIRED');
   });
 
-  it('lets only a supervisor certify', async () => {
+  it('lets a supervisor or the inventory ผู้จัดการโมดูล certify, nobody else', async () => {
     const { service } = setup();
     await service.openOpening(officer);
     await service.saveOpeningLines(officer, { lines: [paperLine] });
     await service.submitOpening(officer);
-    await expect(service.decideOpening(officer, { decision: 'CERTIFY' })).rejects.toThrow('FORBIDDEN');
+    await expect(service.decideOpening({ ...officer, roles: [{ name: 'inventory-officer', organizationId: 'unit-a' }] }, { decision: 'CERTIFY' })).rejects.toThrow('FORBIDDEN');
+    await expect(service.decideOpening({ ...officer, roles: [] }, { decision: 'CERTIFY' })).rejects.toThrow('FORBIDDEN');
+    await expect(service.decideOpening(officer, { decision: 'CERTIFY' })).resolves.not.toThrow();
   });
 
   it('checks the saved lines again at certification, after the catalogue may have changed', async () => {

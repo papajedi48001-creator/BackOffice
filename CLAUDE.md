@@ -37,4 +37,5 @@ Integration suites skip silently without `DATABASE_URL`; say so when reporting r
 - Migrations are additive and listed in order in `packages/db/src/migrate.ts`; keep the Drizzle schema in `packages/db/src/schema` in step.
 - Only the admin or manager tier may decide (approve/reject/return) its own request, and only where it could decide the same request for someone else: a reason is required, the audit event carries `selfApproval: true` and `actor_role`; the employee tier keeps `CONFLICT_OF_INTEREST` (see `canDecideOwnRequest`).
 - Store UTC in the database and display Asia/Bangkok time.
+- A ผู้จัดการโมดูล (hospital-wide module manager role) has admin-equivalent rights inside the modules they manage and nothing extra outside; this is decided only in `AuthorizationService` via `permissionModules` (`packages/contracts/src/access.ts`). Map every new permission there; never add per-page manager checks.
 - Production deploys follow `docs/runbooks/deploy.md` and need Data Owner approval; CI and image builds are not approval.
