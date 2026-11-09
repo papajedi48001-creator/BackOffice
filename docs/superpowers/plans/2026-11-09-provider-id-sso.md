@@ -49,11 +49,11 @@
 - Produces: `SSO_BASE_DIRECTORY = Path('/etc/hospital-backoffice-sso')`; `@dataclass(frozen=True) class SsoClient: client_id: str; secret_sha256: bytes (repr=False); redirect_uri: str`; `@dataclass(frozen=True) class SsoConfig: issuer: str; client: SsoClient; signing_key: authlib JsonWebKey (repr=False); kid: str`; `load_sso_config(directory: Path) -> SsoConfig | None` (ไม่มีไฟล์ → None; ไฟล์ไม่ปลอดภัย/ไม่ครบ → `SsoConfigError`); `SsoClient.secret_matches(secret: str) -> bool` (constant-time)
 - ไฟล์ใน directory: `client.env` (`CLIENT_ID`, `REDIRECT_URI`), `client-secret.sha256`, `signing-key.pem` (EC P-256); ตรวจ owner/mode แบบเดียวกับ `portal/provider/config.py`; `issuer` = `PORTAL_ORIGIN`; `kid` = SHA-256 ของ public JWK แบบ thumbprint (RFC 7638)
 
-- [ ] Step 1: เขียน test `test_missing_directory_returns_none`, `test_loads_client_and_key`, `test_redirect_uri_must_be_https_without_wildcard` (`https://x/*`, `http://...` → `SsoConfigError`), `test_rejects_rsa_key`, `test_world_readable_secret_rejected`, `test_secret_matches_constant_time` (ถูก True, ผิด False), `test_repr_hides_secret_and_key`
-- [ ] Step 2: `.venv/bin/python -m pytest tests/portal/test_sso_config.py -v` → FAIL (ModuleNotFoundError)
-- [ ] Step 3: Implement `portal/sso/config.py`; CLI `set` ถาม secret ด้วย getpass แล้วเก็บเฉพาะ SHA-256, สร้างกุญแจ EC ถ้ายังไม่มี, `status` ไม่แสดงค่าลับ
-- [ ] Step 4: รัน test เดิม → PASS
-- [ ] Step 5: Commit `feat(sso): load BackOffice SSO client and signing key`
+- [x] Step 1: เขียน test `test_missing_directory_returns_none`, `test_loads_client_and_key`, `test_redirect_uri_must_be_https_without_wildcard` (`https://x/*`, `http://...` → `SsoConfigError`), `test_rejects_rsa_key`, `test_world_readable_secret_rejected`, `test_secret_matches_constant_time` (ถูก True, ผิด False), `test_repr_hides_secret_and_key`
+- [x] Step 2: `.venv/bin/python -m pytest tests/portal/test_sso_config.py -v` → FAIL (ModuleNotFoundError)
+- [x] Step 3: Implement `portal/sso/config.py`; CLI `set` ถาม secret ด้วย getpass แล้วเก็บเฉพาะ SHA-256, สร้างกุญแจ EC ถ้ายังไม่มี, `status` ไม่แสดงค่าลับ
+- [x] Step 4: รัน test เดิม → PASS
+- [x] Step 5: Commit `feat(sso): load BackOffice SSO client and signing key`
 
 ### Task A2: authorize และตาราง
 
@@ -68,11 +68,11 @@
 - `/oidc/authorize` ผิดพลาดก่อนตรวจ redirect URI → หน้า error ของ portal (ไม่ redirect); หลังตรวจแล้ว → redirect `?error=invalid_request&state=`
 - สมาชิกไม่ `approved` → หน้า error "บัญชีของคุณยังไม่ได้รับอนุมัติให้ใช้ระบบ Back office" สถานะ 403
 
-- [ ] Step 1: test `test_unconfigured_returns_503`, `test_unknown_client_or_redirect_shows_error_page`, `test_requires_s256_and_nonce`, `test_existing_session_redirects_with_code_and_state`, `test_no_session_stores_request_and_redirects_to_login`, `test_resume_after_provider_login_issues_code` (mock `HealthProviderClient` แบบ test เดิม), `test_resume_with_other_browser_cookie_rejected`, `test_pending_member_refused_403`, `test_discovery_document_lists_endpoints_and_es256`; เพิ่มใน `test_migrations.py` ว่า head = `0015` และสร้างสองตาราง
-- [ ] Step 2: `TEST_DATABASE_URL=... .venv/bin/python -m pytest tests/portal/test_sso_authorize.py tests/portal/test_migrations.py -v` → FAIL
-- [ ] Step 3: Implement; cookie คำขอค้างชื่อ `hospital_sso_flow` path `/oidc` httpOnly secure samesite=lax
-- [ ] Step 4: รัน test เดิม → PASS
-- [ ] Step 5: Commit `feat(sso): authorize BackOffice through the portal session`
+- [x] Step 1: test `test_unconfigured_returns_503`, `test_unknown_client_or_redirect_shows_error_page`, `test_requires_s256_and_nonce`, `test_existing_session_redirects_with_code_and_state`, `test_no_session_stores_request_and_redirects_to_login`, `test_resume_after_provider_login_issues_code` (mock `HealthProviderClient` แบบ test เดิม), `test_resume_with_other_browser_cookie_rejected`, `test_pending_member_refused_403`, `test_discovery_document_lists_endpoints_and_es256`; เพิ่มใน `test_migrations.py` ว่า head = `0015` และสร้างสองตาราง
+- [x] Step 2: `TEST_DATABASE_URL=... .venv/bin/python -m pytest tests/portal/test_sso_authorize.py tests/portal/test_migrations.py -v` → FAIL
+- [x] Step 3: Implement; cookie คำขอค้างชื่อ `hospital_sso_flow` path `/oidc` httpOnly secure samesite=lax
+- [x] Step 4: รัน test เดิม → PASS
+- [x] Step 5: Commit `feat(sso): authorize BackOffice through the portal session`
 
 ### Task A3: token และ JWKS
 
@@ -84,11 +84,11 @@
 - Produces: `POST /oidc/token` (form, `client_secret_basic`) → `{"id_token", "token_type": "Bearer", "expires_in": 300}`; `GET /oidc/jwks` → `{"keys":[public JWK with kid, alg ES256, use sig]}`; `sign_id_token(config, member, *, nonce, auth_time, now) -> str`
 - error: OAuth JSON `invalid_client` (401), `invalid_grant` (400), `invalid_request` (400)
 
-- [ ] Step 1: test `test_exchange_returns_verifiable_id_token` (ตรวจด้วย JWKS: iss, aud, sub=member.id, nonce, exp-iat=300), `test_claims_exclude_sensitive_fields` (ไม่มี `hash_cid`, `email`, `cid`), `test_wrong_secret_invalid_client`, `test_wrong_verifier_invalid_grant`, `test_code_single_use`, `test_code_expires_after_60_seconds`, `test_redirect_uri_mismatch_invalid_grant`, `test_member_suspended_after_code_issued_invalid_grant`, `test_logs_contain_no_code_or_secret` (caplog)
-- [ ] Step 2: pytest ไฟล์นี้ → FAIL
-- [ ] Step 3: Implement ด้วย `authlib.jose.JsonWebToken(['ES256'])`; ลบแถว code ก่อนตรวจ verifier เพื่อให้ใช้ได้ครั้งเดียวเสมอ
-- [ ] Step 4: pytest → PASS
-- [ ] Step 5: Commit `feat(sso): exchange codes for signed ID tokens`
+- [x] Step 1: test `test_exchange_returns_verifiable_id_token` (ตรวจด้วย JWKS: iss, aud, sub=member.id, nonce, exp-iat=300), `test_claims_exclude_sensitive_fields` (ไม่มี `hash_cid`, `email`, `cid`), `test_wrong_secret_invalid_client`, `test_wrong_verifier_invalid_grant`, `test_code_single_use`, `test_code_expires_after_60_seconds`, `test_redirect_uri_mismatch_invalid_grant`, `test_member_suspended_after_code_issued_invalid_grant`, `test_logs_contain_no_code_or_secret` (caplog)
+- [x] Step 2: pytest ไฟล์นี้ → FAIL
+- [x] Step 3: Implement ด้วย `authlib.jose.JsonWebToken(['ES256'])`; ลบแถว code ก่อนตรวจ verifier เพื่อให้ใช้ได้ครั้งเดียวเสมอ
+- [x] Step 4: pytest → PASS
+- [x] Step 5: Commit `feat(sso): exchange codes for signed ID tokens`
 
 ### Task A4: runbook, nginx และ CI
 
@@ -97,11 +97,11 @@
 - Modify: `deploy/ubuntu-membership/nginx-portal.conf` (อนุญาต `/oidc/` และ `/.well-known/openid-configuration`), `deploy/ubuntu-membership/install-services.sh` (ติดตั้ง CLI)
 - Test: `tests/portal/test_nginx_deployment.py`, `tests/portal/test_deployment.py`
 
-- [ ] Step 1: test ว่า nginx config มี location `/oidc/` ไป upstream เดิม และ install script ติดตั้ง `hospital-backoffice-sso-config` mode 0755 root
-- [ ] Step 2: pytest → FAIL
-- [ ] Step 3: แก้ไฟล์; runbook: สร้าง secret, ลงทะเบียน redirect URI ของ BackOffice, ตรวจ `status`, ปิดด้วยการลบ directory
-- [ ] Step 4: `TEST_DATABASE_URL=... .venv/bin/python -m pytest` ทั้งชุด → PASS ไม่มี skip
-- [ ] Step 5: Commit `docs(sso): runbook and ADR for BackOffice SSO`; เปิด PR radius-server
+- [x] Step 1: test ว่า nginx config มี location `/oidc/` ไป upstream เดิม และ install script ติดตั้ง `hospital-backoffice-sso-config` mode 0755 root
+- [x] Step 2: pytest → FAIL
+- [x] Step 3: แก้ไฟล์; runbook: สร้าง secret, ลงทะเบียน redirect URI ของ BackOffice, ตรวจ `status`, ปิดด้วยการลบ directory
+- [x] Step 4: `TEST_DATABASE_URL=... .venv/bin/python -m pytest` ทั้งชุด → PASS ไม่มี skip
+- [x] Step 5: Commit `docs(sso): runbook and ADR for BackOffice SSO`; เปิด PR radius-server
 
 ## Part B — BackOffice (branch `claude/project-thread-xno1gg`)
 
@@ -134,11 +134,11 @@
   ```
 - ตารางตาม spec; `CREATE TABLE IF NOT EXISTS`; unique (`issuer`,`subject`) และ (`person_id`,`issuer`) บน `person_external_identity`; unique (`issuer`,`subject`) และ index `token_hash` บน `external_login_pending`
 
-- [ ] Step 1: integration test `links once per subject and per person`, `link removes pending and writes audit in the same transaction` (บังคับ audit ล้มด้วย actor ไม่มีอยู่ → ไม่มี link), `unlink revokes the person's sessions`, `pending ticket expires`, `upsertPending refreshes last_seen_at and ticket`
-- [ ] Step 2: `DATABASE_URL=... pnpm --filter @backoffice/core test:integration -- database-external-identity` → FAIL (ถ้าไม่มี MariaDB ให้รายงานว่า skip)
-- [ ] Step 3: Implement migration, schema, repository
-- [ ] Step 4: รันซ้ำ → PASS; `pnpm --filter @backoffice/db test` → PASS
-- [ ] Step 5: Commit `feat(db): store Provider ID links and pending logins`
+- [x] Step 1: integration test `links once per subject and per person`, `link removes pending and writes audit in the same transaction` (บังคับ audit ล้มด้วย actor ไม่มีอยู่ → ไม่มี link), `unlink revokes the person's sessions`, `pending ticket expires`, `upsertPending refreshes last_seen_at and ticket`
+- [x] Step 2: `DATABASE_URL=... pnpm --filter @backoffice/core test:integration -- database-external-identity` → FAIL (ถ้าไม่มี MariaDB ให้รายงานว่า skip)
+- [x] Step 3: Implement migration, schema, repository
+- [x] Step 4: รันซ้ำ → PASS; `pnpm --filter @backoffice/db test` → PASS
+- [x] Step 5: Commit `feat(db): store Provider ID links and pending logins`
 
 ### Task B2: OIDC client
 
@@ -161,11 +161,11 @@
   `ExternalIdentity` จาก `@backoffice/contracts`: แทน `email` ใน `externalIdentitySchema` (`packages/contracts/src/identity.ts`) ด้วย `displayName: z.string().max(255).nullable()` (ไม่มีผู้ใช้ `email` อยู่)
 - ตรวจ ES256 ด้วย `createPublicKey({ key: jwk, format: 'jwk' })` + `verify('sha256', data, { key, dsaEncoding: 'ieee-p1363' }, sig)`; JWKS cache 10 นาที, `kid` ไม่รู้จัก → ดึงใหม่หนึ่งครั้ง
 
-- [ ] Step 1: test (สร้างกุญแจ EC ใน test, fetch ปลอม): `begin builds authorize URL with S256 challenge`, `complete returns identity for a valid token`, `rejects wrong iss / aud / nonce / expired (beyond 60s skew) / alg none / RS256 / bad signature` → `INVALID`, `network error, timeout, non-JSON body, 5xx → UNAVAILABLE`, `invalid_grant → INVALID`, `refetches JWKS once for unknown kid`, `caches JWKS for 10 minutes`
-- [ ] Step 2: `pnpm --filter @backoffice/core test -- oidc-client` → FAIL
-- [ ] Step 3: Implement
-- [ ] Step 4: → PASS
-- [ ] Step 5: Commit `feat(core): verify portal ID tokens with node:crypto`
+- [x] Step 1: test (สร้างกุญแจ EC ใน test, fetch ปลอม): `begin builds authorize URL with S256 challenge`, `complete returns identity for a valid token`, `rejects wrong iss / aud / nonce / expired (beyond 60s skew) / alg none / RS256 / bad signature` → `INVALID`, `network error, timeout, non-JSON body, 5xx → UNAVAILABLE`, `invalid_grant → INVALID`, `refetches JWKS once for unknown kid`, `caches JWKS for 10 minutes`
+- [x] Step 2: `pnpm --filter @backoffice/core test -- oidc-client` → FAIL
+- [x] Step 3: Implement
+- [x] Step 4: → PASS
+- [x] Step 5: Commit `feat(core): verify portal ID tokens with node:crypto`
 
 ### Task B3: ExternalLoginService
 
@@ -187,11 +187,11 @@
   ```
 - ตั๋ว: สุ่ม 32 ไบต์ base64url, เก็บ SHA-256, อายุ 10 นาที; audit actions `identity.provider_login`, `identity.provider_link` (`metadata: { method: 'self' | 'admin' }`), `identity.provider_unlink` (`metadata: {}`)
 
-- [ ] Step 1: test (repository ในหน่วยความจำ): `linked active person resolves`, `inactive person → inactive`, `unlinked → ticket and pending row`, `linkWithPassword links and returns mustChangePassword`, `expired ticket refused`, `person already linked to another subject → ALREADY_LINKED`, `wrong password does not link and keeps ticket`, `adminLink of person linked elsewhere → ALREADY_LINKED` (Review Focus 5), `adminUnlink audit metadata has no reason`
-- [ ] Step 2: `pnpm --filter @backoffice/core test -- external-login-service` → FAIL
-- [ ] Step 3: Implement
-- [ ] Step 4: → PASS
-- [ ] Step 5: Commit `feat(core): resolve and link Provider ID logins`
+- [x] Step 1: test (repository ในหน่วยความจำ): `linked active person resolves`, `inactive person → inactive`, `unlinked → ticket and pending row`, `linkWithPassword links and returns mustChangePassword`, `expired ticket refused`, `person already linked to another subject → ALREADY_LINKED`, `wrong password does not link and keeps ticket`, `adminLink of person linked elsewhere → ALREADY_LINKED` (Review Focus 5), `adminUnlink audit metadata has no reason`
+- [x] Step 2: `pnpm --filter @backoffice/core test -- external-login-service` → FAIL
+- [x] Step 3: Implement
+- [x] Step 4: → PASS
+- [x] Step 5: Commit `feat(core): resolve and link Provider ID logins`
 
 ### Task B4: routes start/callback/link
 
@@ -206,11 +206,11 @@
 - callback redirect: linked → `/` (flow เดิมจัดการเปลี่ยนรหัสผ่าน/เลือกบทบาท); unlinked → `/link-provider`; error → `/?provider=unavailable|failed|inactive`
 - link POST: JSON `{ username, password }` → 200 `{ authenticated: true, mustChangePassword }` / 401 `invalid_credentials` / 429 `login_locked` / 409 `already_linked` / 410 `ticket_expired`
 
-- [ ] Step 1: test `start 404 when not configured`, `start redirects to portal and sets flow cookie`, `callback without flow cookie → /?provider=failed` (Review Focus 1), `callback with portal down → /?provider=unavailable`, `callback non-JSON token response → unavailable` (Review Focus 2), `callback linked sets session cookie`, `callback unlinked sets ticket cookie and goes to /link-provider`, `link maps service errors to status codes`, `no code/state/token in any console call` (spy console)
-- [ ] Step 2: `pnpm --filter @backoffice/web test -- provider` → FAIL
-- [ ] Step 3: Implement
-- [ ] Step 4: → PASS
-- [ ] Step 5: Commit `feat(web): sign in with Provider ID through the portal`
+- [x] Step 1: test `start 404 when not configured`, `start redirects to portal and sets flow cookie`, `callback without flow cookie → /?provider=failed` (Review Focus 1), `callback with portal down → /?provider=unavailable`, `callback non-JSON token response → unavailable` (Review Focus 2), `callback linked sets session cookie`, `callback unlinked sets ticket cookie and goes to /link-provider`, `link maps service errors to status codes`, `no code/state/token in any console call` (spy console)
+- [x] Step 2: `pnpm --filter @backoffice/web test -- provider` → FAIL
+- [x] Step 3: Implement
+- [x] Step 4: → PASS
+- [x] Step 5: Commit `feat(web): sign in with Provider ID through the portal`
 
 ### Task B5: หน้า login และหน้าผูกบัญชี
 
@@ -222,11 +222,11 @@
 - Consumes: `providerSsoEnabled()` (B4), `POST /api/auth/provider/link`
 - ข้อความ: ปุ่ม "เข้าสู่ระบบด้วย Provider ID"; `unavailable` → "ระบบ Provider ID ไม่พร้อมใช้งาน กรุณาใช้ชื่อผู้ใช้และรหัสผ่าน"; `failed` → "เข้าสู่ระบบด้วย Provider ID ไม่สำเร็จ กรุณาลองใหม่"; `inactive` → "บัญชีบุคลากรนี้ไม่ได้อยู่ในสถานะปฏิบัติงาน กรุณาติดต่อผู้ดูแลระบบ"; หน้าผูก: หัวข้อ "ผูกบัญชี Provider ID", "ถ้าไม่มีรหัสผ่าน BackOffice ให้ติดต่อผู้ดูแลระบบเพื่อผูกบัญชี"
 
-- [ ] Step 1: test `hides Provider button when disabled`, `shows button linking to /api/auth/provider/start`, `shows Thai message for each provider query code and ignores unknown codes`, `link form posts credentials and navigates`, `shows already-linked and expired messages`
-- [ ] Step 2: `pnpm --filter @backoffice/web test -- page link-provider` → FAIL
-- [ ] Step 3: Implement ตาม `DESIGN.md`
-- [ ] Step 4: → PASS
-- [ ] Step 5: Commit `feat(web): Provider ID button and account link page`
+- [x] Step 1: test `hides Provider button when disabled`, `shows button linking to /api/auth/provider/start`, `shows Thai message for each provider query code and ignores unknown codes`, `link form posts credentials and navigates`, `shows already-linked and expired messages`
+- [x] Step 2: `pnpm --filter @backoffice/web test -- page link-provider` → FAIL
+- [x] Step 3: Implement ตาม `DESIGN.md`
+- [x] Step 4: → PASS
+- [x] Step 5: Commit `feat(web): Provider ID button and account link page`
 
 ### Task B6: หน้า admin ผูก/ยกเลิก
 
@@ -239,11 +239,11 @@
 - Consumes: `withAdmin`, `adminResult` (เพิ่ม `ALREADY_LINKED: 409` ใน `statusByCode`), `ExternalLoginService.adminLink/adminUnlink`, `person-picker.tsx`
 - เหตุผลยกเลิกจำเป็น 1–500 ตัวอักษร; บันทึกในคอลัมน์เหตุผลของ audit ตามรูปแบบที่ admin module ใช้อยู่ ไม่ใส่ใน metadata
 
-- [ ] Step 1: test `non-admin gets 403 before input is read`, `module manager gets 403`, `link conflict returns 409`, `unlink requires reason`, `manager lists pending and linked with Bangkok time`, `link opens FormDialog that does not close on Escape or outside click`, `unlink opens ActionDialog requiring reason`
-- [ ] Step 2: `pnpm --filter @backoffice/web test -- provider-links` → FAIL
-- [ ] Step 3: Implement
-- [ ] Step 4: → PASS
-- [ ] Step 5: Commit `feat(admin): link and unlink Provider ID accounts`
+- [x] Step 1: test `non-admin gets 403 before input is read`, `module manager gets 403`, `link conflict returns 409`, `unlink requires reason`, `manager lists pending and linked with Bangkok time`, `link opens FormDialog that does not close on Escape or outside click`, `unlink opens ActionDialog requiring reason`
+- [x] Step 2: `pnpm --filter @backoffice/web test -- provider-links` → FAIL
+- [x] Step 3: Implement
+- [x] Step 4: → PASS
+- [x] Step 5: Commit `feat(admin): link and unlink Provider ID accounts`
 
 ### Task B7: e2e, เอกสาร และตรวจครบ
 
@@ -251,8 +251,8 @@
 - Create: `apps/web/e2e/provider-sso.spec.ts` (OIDC stub server ใน test ที่ลงนาม ES256)
 - Create: `docs/runbooks/provider-sso.md`; Modify: `CONTEXT.md` (คำว่า "บัญชี Provider ID", "รอผูกบัญชี"), `docs/runbooks/local-setup.md` (env ใหม่)
 
-- [ ] Step 1: e2e `linked user signs in`, `unlinked user links with password`, `admin links pending login then user signs in`
-- [ ] Step 2: รัน e2e → FAIL ก่อนเชื่อม stub
-- [ ] Step 3: เขียน stub และเอกสาร
-- [ ] Step 4: `pnpm install --frozen-lockfile && pnpm lint && pnpm typecheck && pnpm test`, `DATABASE_URL=... pnpm test:integration`, e2e `--trace off`, `git diff --check` → ผ่านทั้งหมด (รายงาน suite ที่ skip ตามจริง)
+- [x] Step 1: e2e `linked user signs in`, `unlinked user links with password`, `admin links pending login then user signs in`
+- [x] Step 2: รัน e2e → FAIL ก่อนเชื่อม stub
+- [x] Step 3: เขียน stub และเอกสาร
+- [x] Step 4: `pnpm install --frozen-lockfile && pnpm lint && pnpm typecheck && pnpm test`, `DATABASE_URL=... pnpm test:integration`, e2e `--trace off`, `git diff --check` → ผ่านทั้งหมด (รายงาน suite ที่ skip ตามจริง)
 - [ ] Step 5: Commit `docs: Provider ID SSO runbook`; เปิด PR BackOffice
