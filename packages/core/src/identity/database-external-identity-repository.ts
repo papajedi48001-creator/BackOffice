@@ -16,6 +16,11 @@ function isDuplicate(error: unknown): boolean {
 export class DatabaseExternalIdentityRepository implements ExternalIdentityRepository {
   constructor(private readonly database: Database, private readonly createId: () => string = randomUUID) {}
 
+  /** Only a person still ปฏิบัติงาน may sign in, as with a password. */
+  async isActivePerson(personId: string): Promise<boolean> {
+    return (await this.database.query<{ id: string }>("SELECT id FROM person WHERE id = ? AND employment_status = 'ACTIVE' LIMIT 1", [personId])).length === 1;
+  }
+
   async findLink(issuer: string, subject: string): Promise<ExternalIdentityLink | null> {
     return (await this.database.query<LinkRow>(`SELECT ${linkColumns} FROM identity_link l WHERE l.issuer = ? AND l.subject = ? LIMIT 1`, [issuer, subject]))[0] ?? null;
   }

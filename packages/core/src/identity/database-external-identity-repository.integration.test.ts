@@ -8,7 +8,9 @@ import { SessionService } from './session-service';
 const databaseUrl = process.env.DATABASE_URL;
 const describeWithDatabase = databaseUrl ? describe : describe.skip;
 const issuer = 'https://portal.integration.test';
-const hash = (value: string) => createHash('sha256').update(value).digest('hex');
+// Tickets are salted per run: rows from an earlier run of this file are still unexpired.
+const run = randomUUID();
+const hash = (value: string) => createHash('sha256').update(`${run}:${value}`).digest('hex');
 const audit = (actorPersonId: string | null, action: string, targetId: string) => ({ actorPersonId, action, targetType: 'person', targetId, result: 'SUCCESS' as const, metadata: { method: 'self' } });
 
 describeWithDatabase('external identity repository against MariaDB', () => {
@@ -76,5 +78,12 @@ describeWithDatabase('external identity repository against MariaDB', () => {
     await expect(repository.findPendingByTicket(hash('old'), now)).resolves.toBeNull();
     await expect(repository.findPendingByTicket(hash('new'), now)).resolves.toMatchObject({ subject: pendingSubject, displayName: 'ใหม่' });
     expect((await repository.listPending()).filter((row) => row.subject === pendingSubject)).toHaveLength(1);
+  });
+
+  it('isActivePerson is true only for an ACTIVE person', async () => {
+    await expect(repository.isActivePerson(personA)).resolves.toBe(true);
+    await database.execute("UPDATE person SET employment_status = 'RESIGNED' WHERE id = ?", [personB]);
+    await expect(repository.isActivePerson(personB)).resolves.toBe(false);
+    await expect(repository.isActivePerson(randomUUID())).resolves.toBe(false);
   });
 });
