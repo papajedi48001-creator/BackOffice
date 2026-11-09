@@ -59,6 +59,12 @@ export class ExternalLoginService {
     return { kind: 'unlinked', ticket };
   }
 
+  /** The Provider ID name behind a live ticket, shown before the person links it; null when the ticket is missing or expired. */
+  async pendingLogin(ticket: string): Promise<{ displayName: string | null } | null> {
+    const pending = ticket ? await this.deps.repository.findPendingByTicket(ticketHash(ticket), this.now()) : null;
+    return pending ? { displayName: pending.displayName } : null;
+  }
+
   /** Throws TICKET_EXPIRED, ALREADY_LINKED, or the local sign-in errors (INVALID_CREDENTIALS, LOGIN_LOCKED). */
   async linkWithPassword(ticket: string, credentials: LocalCredentials): Promise<{ personId: string; mustChangePassword: boolean }> {
     const pending = ticket ? await this.deps.repository.findPendingByTicket(ticketHash(ticket), this.now()) : null;

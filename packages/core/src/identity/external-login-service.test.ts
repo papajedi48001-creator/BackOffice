@@ -86,6 +86,16 @@ describe('ExternalLoginService', () => {
     expect(repository.audits).toContainEqual(expect.objectContaining({ action: 'identity.provider_link', actorPersonId: 'person-1', targetId: 'person-1', metadata: { method: 'self' } }));
   });
 
+  it('shows the Provider ID name for a live ticket so the person can see whose account they are linking', async () => {
+    const { service, advance } = await setup();
+    const { ticket } = await service.resolve(identity) as { ticket: string };
+    await expect(service.pendingLogin(ticket)).resolves.toEqual({ displayName: 'สมชาย ใจดี' });
+    await expect(service.pendingLogin('')).resolves.toBeNull();
+    await expect(service.pendingLogin('not-a-ticket')).resolves.toBeNull();
+    advance(10 * 60_000 + 1);
+    await expect(service.pendingLogin(ticket)).resolves.toBeNull();
+  });
+
   it('refuses an expired ticket', async () => {
     const { service, advance } = await setup();
     const { ticket } = await service.resolve(identity) as { ticket: string };

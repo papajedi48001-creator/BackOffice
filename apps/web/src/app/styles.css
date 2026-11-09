@@ -860,3 +860,6 @@ h2.chat-window-title { cursor: default; }
 .provider-sign-in-button:hover { background: var(--line-soft); }
 .provider-sign-in-button:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
 .link-provider-card { grid-template-columns: minmax(0, 1fr); max-width: 520px; }
+.link-provider-identity { display: grid; gap: 4px; margin: 0 0 16px; padding: 12px 16px; border-radius: 8px; background: var(--line-soft); border-left: 4px solid var(--brand); color: var(--ink-2); }
+.link-provider-identity p { margin: 0; }
+.link-provider-name { color: var(--ink); font-size: 1.15rem; font-weight: 700; }

@@ -68,6 +68,7 @@ test('an unlinked Provider ID login links once with the password, then signs str
   await page.waitForURL(/\/(link-provider|dashboard)$/);
   if (page.url().endsWith('/link-provider')) {
     await expect(page.getByRole('heading', { name: 'ผูกบัญชี Provider ID' })).toBeVisible();
+    await expect(page.getByText('ผู้ทดสอบ Provider ID', { exact: true })).toBeVisible();
     await page.getByLabel('ชื่อผู้ใช้').fill('r0-e2e-requestor');
     await page.getByLabel('รหัสผ่าน').fill(process.env.R0_E2E_PASSWORD!);
     await page.getByRole('button', { name: 'ผูกบัญชีและเข้าสู่ระบบ' }).click();
@@ -85,6 +86,7 @@ test('a second Provider ID account cannot take a person who is already linked', 
   stub.name = 'บัญชีที่สอง';
   await page.goto('/');
   await page.getByRole('link', { name: 'เข้าสู่ระบบด้วย Provider ID' }).click();
+  await expect(page.getByText('บัญชีที่สอง', { exact: true })).toBeVisible();
   await page.getByLabel('ชื่อผู้ใช้').fill('r0-e2e-requestor');
   await page.getByLabel('รหัสผ่าน').fill(process.env.R0_E2E_PASSWORD!);
   await page.getByRole('button', { name: 'ผูกบัญชีและเข้าสู่ระบบ' }).click();
