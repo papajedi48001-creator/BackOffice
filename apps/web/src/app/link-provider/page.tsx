@@ -4,6 +4,9 @@ import { BrandLogo } from '../../components/brand-logo';
 import { providerSsoEnabled } from '../../lib/provider-sso';
 import { LinkProviderForm } from './link-provider-form';
 
+// The Provider SSO settings are read at run time; a page prerendered at build time would bake in "disabled".
+export const dynamic = 'force-dynamic';
+
 /** ผูกบัญชี Provider ID: reached only from the Provider ID callback, which leaves a ten-minute ticket cookie. */
 export default function LinkProviderPage() {
   if (!providerSsoEnabled()) redirect('/');
