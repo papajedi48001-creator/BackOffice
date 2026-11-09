@@ -113,7 +113,7 @@ describe('PortalOidcClient', () => {
     h.setKeys([rotated.jwk]);
     const tokenHarness = h; // reuse cache
     const second = tokenHarness.begin();
-    const client = new PortalOidcClient(config, (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const client = new PortalOidcClient(config, (async (input: RequestInfo | URL) => {
       const url = String(input);
       h.calls.push(url);
       if (url.endsWith('/oidc/token')) return new Response(JSON.stringify({ id_token: token(rotated.privateKey, baseClaims(second.flow.nonce), { alg: 'ES256', kid: 'k2' }) }), { status: 200 });
