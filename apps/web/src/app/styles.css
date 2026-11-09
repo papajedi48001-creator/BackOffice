@@ -815,3 +815,39 @@ h2.chat-window-title { cursor: default; }
 
 /* Keep "(Back Office)" together on its own line under the Thai system name. */
 .app-name-tail { display: block; white-space: nowrap; }
+
+/* Motion (DESIGN.md "Motion"): short ease-out entrances and hover/press feedback. CSS only; all off under prefers-reduced-motion. */
+:root { --motion-fast: 150ms; --motion-base: 220ms; --motion-slow: 380ms; --motion-stagger: 40ms; --ease-out: cubic-bezier(.2, .8, .2, 1); }
+@keyframes rise-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes slide-in { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+.app-main > :not(.app-topbar) { animation: rise-in var(--motion-slow) var(--ease-out) both; }
+.login-card, .welcome-shell > .welcome-panel { animation: rise-in var(--motion-slow) var(--ease-out) both; }
+.login-hero > * { animation: rise-in var(--motion-slow) var(--ease-out) both; animation-delay: calc(var(--motion-stagger) * 3); }
+.form-error, .room-conflicts, .chat-error { animation: slide-in var(--motion-base) var(--ease-out) both; }
+.profile-panel { animation: rise-in var(--motion-base) var(--ease-out) both; }
+.launcher-grid > li { animation: rise-in var(--motion-slow) var(--ease-out) both; }
+.launcher-grid > li:nth-child(2) { animation-delay: calc(var(--motion-stagger) * 1); }
+.launcher-grid > li:nth-child(3) { animation-delay: calc(var(--motion-stagger) * 2); }
+.launcher-grid > li:nth-child(4) { animation-delay: calc(var(--motion-stagger) * 3); }
+.launcher-grid > li:nth-child(5) { animation-delay: calc(var(--motion-stagger) * 4); }
+.launcher-grid > li:nth-child(6) { animation-delay: calc(var(--motion-stagger) * 5); }
+.launcher-grid > li:nth-child(7) { animation-delay: calc(var(--motion-stagger) * 6); }
+.launcher-grid > li:nth-child(8) { animation-delay: calc(var(--motion-stagger) * 7); }
+.launcher-grid > li:nth-child(9) { animation-delay: calc(var(--motion-stagger) * 8); }
+.launcher-grid > li:nth-child(10) { animation-delay: calc(var(--motion-stagger) * 9); }
+.launcher-grid > li:nth-child(11) { animation-delay: calc(var(--motion-stagger) * 10); }
+.launcher-grid > li:nth-child(n+12) { animation-delay: calc(var(--motion-stagger) * 11); }
+.hero-stat { transition: background var(--motion-fast) var(--ease-out), transform var(--motion-fast) var(--ease-out); }
+.hero-stat:hover { transform: translateY(-2px); }
+.sidebar a { transition: background var(--motion-fast) var(--ease-out), color var(--motion-fast) var(--ease-out), transform var(--motion-fast) var(--ease-out); }
+.sidebar a:hover:not([aria-current="page"]) { transform: translateX(2px); }
+.module-subnav a { transition: color var(--motion-fast) var(--ease-out), border-color var(--motion-fast) var(--ease-out); }
+.app-main button, .action-dialog button, .sign-in-form > button[type="submit"], .setup-form .secondary-button, .sign-out-button, .button-link { transition: background var(--motion-fast) var(--ease-out), box-shadow var(--motion-fast) var(--ease-out), transform var(--motion-fast) var(--ease-out); }
+.app-main button:hover:not(:disabled), .action-dialog button:hover:not(:disabled), .sign-in-form > button[type="submit"]:hover:not(:disabled), .button-link:hover { transform: translateY(-1px); }
+.app-main button:active:not(:disabled), .action-dialog button:active:not(:disabled), .sign-in-form > button[type="submit"]:active:not(:disabled), .sign-out-button:active:not(:disabled), .button-link:active { transform: scale(.98); }
+.app-main .profile-chip:hover:not(:disabled), .action-dialog .action-dialog-close:hover:not(:disabled) { transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after, *::backdrop { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .app-main button:hover, .app-main button:active, .action-dialog button:hover, .action-dialog button:active, .sign-in-form > button[type="submit"]:hover, .sign-in-form > button[type="submit"]:active, .sign-out-button:active, .button-link:hover, .button-link:active, .hero-stat:hover, .sidebar a:hover { transform: none; }
+}
