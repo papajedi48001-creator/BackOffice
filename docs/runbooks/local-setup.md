@@ -101,6 +101,17 @@ $env:BACKOFFICE_DB_PORT = '3310'; $env:BACKOFFICE_REDIS_PORT = '6390'; node scri
 
 ใช้เฉพาะวงเครือข่ายที่ไว้ใจได้ และใช้กับข้อมูลสมมติเท่านั้น
 
+## เข้าสู่ระบบด้วย Provider ID (ไม่บังคับ)
+
+ปุ่ม **เข้าสู่ระบบด้วย Provider ID** ขึ้นเมื่อ `.env` มี `PROVIDER_SSO_ISSUER`, `PROVIDER_SSO_CLIENT_ID`, `PROVIDER_SSO_CLIENT_SECRET` (หรือ `PROVIDER_SSO_CLIENT_SECRET_FILE`) และ `PROVIDER_SSO_REDIRECT_URI` ครบ ไม่ใส่ = ใช้ชื่อผู้ใช้และรหัสผ่านตามเดิม ขั้นตอนเชื่อม portal จริงอยู่ที่ `docs/runbooks/provider-sso.md`
+
+ทดสอบบนเครื่องโดยไม่ต้องมี portal: เปิดเว็บด้วย `PROVIDER_SSO_ISSUER=http://127.0.0.1:4455`, `PROVIDER_SSO_CLIENT_ID=backoffice`, `PROVIDER_SSO_CLIENT_SECRET=<ค่าสุ่ม 32 ตัวขึ้นไป>`, `PROVIDER_SSO_REDIRECT_URI=http://localhost:3000/api/auth/provider/callback` แล้วรัน e2e ซึ่งเปิด portal จำลองที่พอร์ต 4455 เอง
+
+```bash
+cd apps/web && E2E_BASE_URL=http://localhost:3000 R0_E2E_PASSWORD=<รหัสผ่าน seed> E2E_PROVIDER_STUB_PORT=4455 E2E_PROVIDER_SECRET=<ค่าเดียวกับ CLIENT_SECRET> \
+  npx playwright test e2e/provider-sso.spec.ts --trace off
+```
+
 ## ทดสอบสคริปต์
 
 ```bash

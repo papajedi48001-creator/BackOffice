@@ -11,7 +11,7 @@ export type LocalCredentials = z.infer<typeof localCredentialsSchema>;
 export const externalIdentitySchema = z.object({
   issuer: z.string().url(),
   subject: z.string().min(1),
-  email: z.string().email().optional()
+  displayName: z.string().max(255).nullable()
 });
 
 export type ExternalIdentity = z.infer<typeof externalIdentitySchema>;

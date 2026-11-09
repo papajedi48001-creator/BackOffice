@@ -1,0 +1,5 @@
+ALTER TABLE identity_link ADD COLUMN IF NOT EXISTS display_name VARCHAR(255) NULL;
+ALTER TABLE identity_link ADD COLUMN IF NOT EXISTS linked_by_person_id CHAR(36) NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS identity_link_person_issuer_unique ON identity_link (person_id, issuer(255));
+CREATE TABLE IF NOT EXISTS external_login_pending (id CHAR(36) PRIMARY KEY, issuer VARCHAR(255) NOT NULL, subject VARCHAR(255) NOT NULL, display_name VARCHAR(255) NULL, ticket_hash CHAR(64) NULL, ticket_expires_at DATETIME NULL, last_seen_at DATETIME NOT NULL, UNIQUE KEY external_login_pending_identity_unique (issuer, subject), KEY external_login_pending_ticket_index (ticket_hash));
+CREATE TABLE IF NOT EXISTS identity_link_removal (id CHAR(36) PRIMARY KEY, person_id CHAR(36) NOT NULL, issuer VARCHAR(512) NOT NULL, subject VARCHAR(512) NOT NULL, reason VARCHAR(500) NOT NULL, removed_by_person_id CHAR(36) NOT NULL, removed_at DATETIME NOT NULL, KEY identity_link_removal_person_index (person_id), CONSTRAINT identity_link_removal_person_fk FOREIGN KEY (person_id) REFERENCES person(id))

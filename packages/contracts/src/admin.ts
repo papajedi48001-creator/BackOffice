@@ -42,3 +42,8 @@ export const hosxpSettingsInputSchema = z.object({
   nameColumn: sqlIdentifier
 }).strict();
 export type HosxpSettingsInputBody = z.infer<typeof hosxpSettingsInputSchema>;
+
+/** ผูกบัญชี Provider ID ที่รอผูกเข้ากับบุคลากร (ผู้ดูแลระบบ). */
+export const providerLinkInputSchema = z.object({ pendingId: z.string().uuid(), personId: z.string().uuid() }).strict();
+/** ยกเลิกการผูกบัญชี Provider ID: the reason is kept apart from audit metadata. */
+export const providerUnlinkInputSchema = z.object({ reason: z.string().trim().min(1).max(500) }).strict();

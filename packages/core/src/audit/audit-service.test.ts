@@ -2,6 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { AuditService } from './audit-service';
 
 describe('AuditService', () => {
+  it('keeps the Provider ID sign-in stage and link method so failures and link routes can be told apart', async () => {
+    const recorded: string[] = [];
+    const service = new AuditService({ append: async (event) => { recorded.push(event.metadata); } }, () => 'audit-1');
+
+    await service.recordAudit({ actorPersonId: null, action: 'identity.provider_login', targetType: 'person', targetId: 'person-0', result: 'FAILURE', metadata: { stage: 'token' } });
+    await service.recordAudit({ actorPersonId: 'person-a', action: 'identity.provider_link', targetType: 'person', targetId: 'person-a', result: 'SUCCESS', metadata: { method: 'self' } });
+
+    expect(recorded).toEqual(['{"stage":"token"}', '{"method":"self"}']);
+  });
+
   it('keeps organization head identifiers and the unit type but drops a national ID', async () => {
     const recorded: string[] = [];
     const service = new AuditService({ append: async (event) => { recorded.push(event.metadata); } }, () => 'audit-1');

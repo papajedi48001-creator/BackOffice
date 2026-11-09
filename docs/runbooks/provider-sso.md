@@ -1,0 +1,67 @@
+# เข้าสู่ระบบด้วย Provider ID
+
+บุคลากรเข้าสู่ระบบ Back Office ด้วย Provider ID ผ่าน portal ของ radius-server (`https://aut-waritch-hosp.moph.go.th`) ซึ่งทำหน้าที่ OpenID Provider
+(OIDC authorization code + PKCE, ID token ลงนาม ES256) ชื่อผู้ใช้และรหัสผ่าน Back Office ยังใช้ได้ตามเดิม
+ปุ่ม **เข้าสู่ระบบด้วย Provider ID** ขึ้นที่หน้าเข้าสู่ระบบก็ต่อเมื่อตั้งค่าครบทั้ง 4 ค่าด้านล่าง
+
+ออกแบบไว้ที่ `docs/superpowers/specs/2026-11-09-provider-id-sso-design.md`
+
+## 1. เปิดฝั่ง portal (radius-server)
+
+ทำตาม `docs/backoffice-sso-runbook.md` ใน repo radius-server: ติดตั้งคำสั่ง ลงทะเบียน client `backoffice` ด้วย redirect URI
+`https://<โฮสต์ Back Office>/api/auth/provider/callback` (ต้องเป็น https และตรงตัว) และเปิดให้เครื่องผู้ใช้กับเครื่อง Back Office เข้าถึง portal ได้
+
+client secret สุ่มอย่างน้อย 32 ตัวอักษร เช่น `openssl rand -base64 48 > /etc/backoffice/provider-sso.secret` แล้ว `chmod 600`
+ห้ามวาง secret ในเอกสาร แชต Git command line หรือ log
+
+## 2. ตั้งค่าฝั่ง Back Office
+
+เพิ่มใน `.env` ที่ราก repo (หรือ environment ของ container เว็บ):
+
+```
+PROVIDER_SSO_ISSUER=https://aut-waritch-hosp.moph.go.th
+PROVIDER_SSO_CLIENT_ID=backoffice
+PROVIDER_SSO_CLIENT_SECRET_FILE=/etc/backoffice/provider-sso.secret
+PROVIDER_SSO_REDIRECT_URI=https://<โฮสต์ Back Office>/api/auth/provider/callback
+```
+
+`PROVIDER_SSO_REDIRECT_URI` ต้องตรงกับค่าที่ลงทะเบียนใน portal ทุกตัวอักษร ใช้ `PROVIDER_SSO_CLIENT_SECRET` แทนไฟล์ได้เฉพาะเครื่องนักพัฒนา
+
+เปิดเว็บใหม่ แล้วตรวจ:
+
+- จากเครื่อง Back Office: `curl -s https://aut-waritch-hosp.moph.go.th/.well-known/openid-configuration` ได้ JSON ที่มี `ES256`
+- หน้าเข้าสู่ระบบมีปุ่ม **เข้าสู่ระบบด้วย Provider ID**
+
+## 3. ผูกบัญชี
+
+บัญชี Provider ID หนึ่งบัญชีผูกกับบุคลากรได้หนึ่งคน และบุคลากรหนึ่งคนผูกได้หนึ่งบัญชี Provider ID
+
+- **บุคลากรผูกเอง**: ครั้งแรกที่เข้าด้วย Provider ID ระบบพาไปหน้า **ผูกบัญชี Provider ID** ให้กรอกชื่อผู้ใช้และรหัสผ่าน Back Office หนึ่งครั้ง
+  (มีเวลา 10 นาที ใช้การจำกัดการเดารหัสผ่านเดียวกับหน้าเข้าสู่ระบบ) ครั้งต่อไปเข้าได้ทันที
+- **ผู้ดูแลระบบผูกให้**: คนที่ไม่มีรหัสผ่าน Back Office ให้ลองเข้าด้วย Provider ID หนึ่งครั้ง ชื่อจะขึ้นในรายการ **รอผูกบัญชี**
+  ที่ **ผู้ดูแลระบบ > บัญชี Provider ID** แล้วกด **ผูกบัญชี** เลือกบุคลากร
+- **ยกเลิกการผูก**: ที่หน้าเดียวกัน กด **ยกเลิกการผูก** และใส่เหตุผล ระบบออกจากระบบทุก session ของบุคลากรคนนั้นทันที
+
+ทุกการผูก ยกเลิก และเข้าสู่ระบบที่ไม่สำเร็จ ถูกบันทึกใน audit (`identity.provider_link`, `identity.provider_unlink`, `identity.provider_login`)
+เหตุผลการยกเลิกเก็บแยกในตาราง `identity_link_removal` ไม่อยู่ใน audit metadata
+
+## 4. ข้อควรรู้
+
+- ระบบออก code ให้เฉพาะสมาชิก portal ที่สถานะ `approved` และตรวจซ้ำตอนแลก token บุคลากรที่ถูกปิดใช้งานใน Back Office เข้าไม่ได้แม้ Provider ID ยังใช้ได้
+- เครื่องใช้ร่วม: ถ้า portal ยังมี session ค้างอยู่ คนถัดไปที่กดปุ่มจะเข้าเป็นเจ้าของ session นั้นโดยไม่ต้องยืนยันตัวตนใหม่
+  (ตัดสินใจรับความเสี่ยงนี้แล้ว) ให้ออกจากระบบ portal ทุกครั้งบนเครื่องใช้ร่วม
+- portal หมุนกุญแจลงนามได้โดยไม่ต้องแก้ Back Office: เว็บเก็บ JWKS 10 นาที และดึงใหม่ทันทีเมื่อพบ `kid` ที่ไม่รู้จัก
+
+## ปิดทันที
+
+ลบ 4 ค่าใน `.env` แล้วเปิดเว็บใหม่ ปุ่มหาย ทุกคนใช้ชื่อผู้ใช้และรหัสผ่านตามเดิม การผูกบัญชีที่มีอยู่ยังเก็บไว้ หรือปิดฝั่ง portal ตาม runbook ของ radius-server
+(กดปุ่มแล้วหน้าเข้าสู่ระบบจะแจ้งว่า "ระบบ Provider ID ไม่พร้อมใช้งาน")
+
+## ปัญหาที่พบบ่อย
+
+| อาการ | สาเหตุและวิธีแก้ |
+|---|---|
+| ไม่มีปุ่ม Provider ID | ตั้งค่าไม่ครบ 4 ค่า หรืออ่านไฟล์ secret ไม่ได้ (สิทธิ์ไฟล์) |
+| "ระบบ Provider ID ไม่พร้อมใช้งาน" | เครื่อง Back Office เรียก portal ไม่ถึง (DNS, certificate, allowlist ของ nginx) หรือ client secret ไม่ตรง ดู log เว็บบรรทัด `provider sign-in failed` |
+| "เข้าสู่ระบบด้วย Provider ID ไม่สำเร็จ" | ใช้เกิน 10 นาที เปิดสองแท็บพร้อมกัน หรือ code ถูกใช้แล้ว ให้กดปุ่มใหม่ ดู audit `identity.provider_login` ช่อง `stage` |
+| portal ตอบ `redirect_uri` ไม่ถูกต้อง | ค่า `PROVIDER_SSO_REDIRECT_URI` ไม่ตรงกับที่ลงทะเบียน |
