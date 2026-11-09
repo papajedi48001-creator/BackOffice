@@ -20,6 +20,8 @@ export * from './hr/profile-changes';
 export * from './identity/auth-service';
 export * from './identity/session-service';
 export * from './identity/database-identity-repository';
+export * from './identity/database-external-identity-repository';
+export * from './identity/external-login-service';
 export * from './access/delegation-service';
 export * from './workflow/request-service';
 export * from './workflow/approval-service';
