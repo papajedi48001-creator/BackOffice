@@ -1,9 +1,12 @@
 import { t } from '@backoffice/i18n';
 import { AppName } from '../components/app-name';
 import { BrandLogo } from '../components/brand-logo';
+import { providerSsoEnabled } from '../lib/provider-sso';
 import { LocalSignInForm } from './local-sign-in-form';
+import { ProviderSignIn } from './provider-sign-in';
 
-export default function HomePage() {
+export default async function HomePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const provider = (await searchParams).provider;
   return (
     <main className="welcome-shell">
       <div className="login-card">
@@ -21,6 +24,7 @@ export default function HomePage() {
           <h1 id="page-title"><AppName /></h1>
           <p className="welcome-status" role="status">กำลังเตรียมระบบพื้นฐานสำหรับโครงการนำร่อง</p>
           <LocalSignInForm />
+          <ProviderSignIn enabled={providerSsoEnabled()} outcome={typeof provider === 'string' ? provider : undefined} />
           <p className="login-help">ลืมรหัสผ่าน ติดต่อกลุ่มงานเทคโนโลยีสารสนเทศ</p>
         </section>
       </div>
