@@ -89,6 +89,17 @@ signature ของระบบคือ “สถานะงานเป็น
 
 **หัวโมดูลตรึงด้านบน** แถบบน (ปุ่มยื่นคำขอ ป้ายสิทธิ์ ชิปโปรไฟล์) ติดด้านบนเมื่อเลื่อนเนื้อหา พื้นทึบ `--page` เส้นล่างและเงาเบา แถบย่อยของโมดูลติดถัดลงมา (จอกว้างกว่า 960px)
 
+## Motion
+
+การเคลื่อนไหวมีไว้บอกว่าหน้าโหลดเสร็จหรือปุ่มตอบสนอง ไม่ใช่การตกแต่ง ใช้ CSS เท่านั้น (ท้าย `apps/web/src/app/styles.css`) ไม่เพิ่ม library token: `--motion-fast` 150ms (hover, กดปุ่ม), `--motion-base` 220ms (popup, ข้อความแจ้ง, เมนูโปรไฟล์), `--motion-slow` 380ms (เนื้อหาหน้าเข้า), `--motion-stagger` 40ms, `--ease-out` `cubic-bezier(.2, .8, .2, 1)` ห้ามใช้เวลาเกิน 400ms หรือ easing แบบเด้ง
+
+- เนื้อหาหน้า (ลูกของ `.app-main` ยกเว้นแถบบน) การ์ดหน้าเข้าสู่ระบบ และ welcome panel จางเข้าและลอยขึ้น 8px (`rise-in`)
+- ปุ่มโมดูลบนหน้าหลัก (`.launcher-grid`) เข้าทีละปุ่มห่างกัน `--motion-stagger` สูงสุด 11 ขั้น
+- ปุ่มยกขึ้น 1px ตอน hover และย่อ `scale(.98)` ตอนกด เมนูซ้ายเลื่อนขวา 2px ตอน hover
+- ข้อความผิดพลาด (`.form-error`, `.room-conflicts`, `.chat-error`) เลื่อนเข้าจากซ้าย (`slide-in`)
+- popup `ActionDialog`/`FormDialog` ใช้ `dialog-in` และพื้นหลัง `backdrop-in` เดิม การปิดยังทำได้จากปุ่มเท่านั้น
+- `prefers-reduced-motion: reduce` ปิด animation และ transition ทั้งหมดด้วยกฎเดียว (มีเทสต์ `apps/web/src/app/styles-motion.test.ts`)
+
 ## Do's and Don'ts
 
 - ใช้คำที่บุคลากรโรงพยาบาลรู้จัก เช่น “คำขอ”, “รอพิจารณา”, “บันทึกการตรวจสอบ”
