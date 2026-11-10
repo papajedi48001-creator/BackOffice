@@ -103,3 +103,5 @@ export * from './holidays/holiday-sync-service';
 export * from './holidays/hosxp-holiday-reader';
 export * from './mass-casualty/mci-rules';
 export * from './mass-casualty/mci-access';
+export * from './mass-casualty/mci-settings-queries';
+export * from './mass-casualty/mci-settings-service';
