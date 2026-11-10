@@ -14,4 +14,10 @@ export class DeviceQueries {
     );
     return rows.map((row) => ({ ...row, paired: Number(row.paired) === 1, revoked: Number(row.revoked) === 1, online: Number(row.online) === 1 }));
   }
+
+  /** The names a paired box shows on its screen. */
+  async identity(deviceId: string): Promise<{ deviceName: string; locationName: string } | null> {
+    const [row] = await this.database.query<{ deviceName: string; locationName: string }>('SELECT d.name AS deviceName, l.name AS locationName FROM attendance_device d JOIN attendance_location l ON l.id = d.location_id WHERE d.id = ?', [deviceId]);
+    return row ?? null;
+  }
 }

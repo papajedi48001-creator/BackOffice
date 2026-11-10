@@ -51,6 +51,8 @@ describeWithDatabase('DeviceService against MariaDB', () => {
     expect(await service.authenticate({ ...request(created.id, key), body: '{"changed":true}' })).toEqual({ ok: false, code: 'DEVICE_SIGNATURE_INVALID' });
     expect(await service.authenticate(request(randomUUID(), key))).toEqual({ ok: false, code: 'DEVICE_SIGNATURE_INVALID' });
     expect((await new DeviceQueries(database).list()).find((device) => device.id === created.id)).toMatchObject({ paired: true, revoked: false, online: true, locationId });
+    expect(await new DeviceQueries(database).identity(created.id)).toMatchObject({ deviceName: 'กล่องหน้า OPD' });
+    expect(await new DeviceQueries(database).identity(randomUUID())).toBeNull();
     const audits = await database.query<{ metadata: string }>("SELECT metadata FROM audit_event WHERE target_id = ? AND action LIKE 'attendance.device.%'", [created.id]);
     expect(audits.length).toBeGreaterThanOrEqual(2);
     expect(JSON.stringify(audits)).not.toContain(created.pairingCode);
