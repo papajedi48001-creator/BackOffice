@@ -48,6 +48,7 @@
 [data-module="access"] { --accent: #475569; }
 [data-module="fleet"] { --accent: #a63d40; }
 [data-module="mass-casualty"] { --accent: #b91c1c; }
+[data-module="lab-inventory"] { --accent: #0e7490; }
 [data-module="admin"] { --accent: #374151; }
 
 * { box-sizing: border-box; }
@@ -929,6 +930,41 @@ h2.chat-window-title { cursor: default; }
 }
 @media print { .mci-no-print { display: none !important; } }
 
+/* วัสดุคงคลัง Lab: accent from [data-module="lab-inventory"]. */
+.lab-banner { border-left: 4px solid var(--dev-amber); border-radius: 8px; background: #fff4ce; color: #714d00; padding: 10px 14px; font-weight: 700; }
+.lab-primary { margin: 12px 0 20px; }
+.app-main .lab-primary-action { min-height: 64px; min-width: 220px; font-size: 1.25rem; }
+.lab-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0 14px; }
+.lab-block { margin: 18px 0; }
+.lab-count { display: inline-block; min-width: 1.8em; border-radius: 999px; background: var(--accent-tint); color: var(--accent-strong); padding: 0 8px; font-size: .9rem; text-align: center; }
+.lab-doc-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.lab-doc-list li { display: flex; flex-wrap: wrap; gap: 4px 14px; border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 8px; background: var(--surface); padding: 8px 12px; }
+.lab-empty, .lab-hint, .lab-range, .lab-me { color: var(--muted); }
+.lab-number { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.lab-row-void td { color: var(--muted); text-decoration: line-through; }
+.lab-row-carry td { font-weight: 700; background: var(--accent-tint); }
+.lab-warn { color: #9a3412; font-weight: 700; }
+.lab-form-grid { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 10px 14px; align-items: center; }
+.form-dialog-body .lab-form-grid label { display: block; }
+.lab-lot-list { margin: 10px 0; padding-left: 20px; }
+.lab-lot-editor, .lab-receipt-line, .lab-choice { margin: 12px 0; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.lab-lot-editor legend, .lab-receipt-line legend, .lab-choice legend { font-weight: 700; padding: 0 4px; }
+.lab-lot-row { display: grid; grid-template-columns: minmax(0, 1fr) 120px; gap: 8px; align-items: center; margin: 6px 0; }
+.lab-choice label { display: inline-flex; gap: 6px; align-items: center; margin: 4px 14px 4px 0; }
+.lab-request-line { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content 110px auto; gap: 8px; align-items: center; margin: 8px 0; }
+.lab-line-summary { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: flex-end; margin: 8px 0 0; font-weight: 700; }
+.lab-total { text-align: right; font-size: 1.05rem; }
+.lab-filter { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin: 8px 0 14px; }
+.lab-facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 14px; margin: 12px 0; }
+.lab-facts dt { color: var(--muted); }
+.lab-facts dd { margin: 0; }
+.lab-csv-errors { max-height: 220px; overflow-y: auto; color: #9a3412; }
+@media (max-width: 640px) {
+  .lab-form-grid, .lab-facts { grid-template-columns: 1fr; gap: 6px; }
+  .lab-request-line { grid-template-columns: 1fr; }
+  .lab-lot-row { grid-template-columns: 1fr 96px; }
+  .app-main .lab-primary-action { width: 100%; }
+}
 /* ระบบลงเวลา */
 [data-module="attendance"] { --accent: #0f766e; }
 .attendance-page { display: grid; gap: 24px; }

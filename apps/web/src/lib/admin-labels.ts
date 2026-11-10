@@ -5,13 +5,13 @@ type ManagerRole = Exclude<GrantableRole, TesterRole>;
 const roleKeys: Record<ManagerRole, MessageKey> = {
   admin: 'adminRoleAdmin', 'hr-manager': 'adminRoleHrManager', 'leave-manager': 'adminRoleLeaveManager', 'travel-manager': 'adminRoleTravelManager',
   'room-manager': 'adminRoleRoomManager', 'inventory-officer': 'adminRoleInventoryOfficer', 'fleet-manager': 'adminRoleFleetManager',
-  'mci-manager': 'adminRoleMciManager', 'attendance-manager': 'adminRoleAttendanceManager', 'attendance-auditor': 'adminRoleAttendanceAuditor'
+  'mci-manager': 'adminRoleMciManager', 'attendance-manager': 'adminRoleAttendanceManager', 'attendance-auditor': 'adminRoleAttendanceAuditor', 'lab-manager': 'adminRoleLabManager'
 };
 
 /** Module names for the ผู้ทดสอบ labels; the same keys as the module registry. */
 const testedModuleKeys: Record<TesterModuleCode, MessageKey> = {
   requests: 'requests', notifications: 'notifications', hr: 'moduleHr', access: 'moduleAccess', 'room-booking': 'moduleRoomBooking',
-  leave: 'moduleLeave', 'official-travel': 'moduleTravel', inventory: 'moduleInventory', fleet: 'moduleFleet', 'mass-casualty': 'moduleMassCasualty', attendance: 'moduleAttendance'
+  leave: 'moduleLeave', 'official-travel': 'moduleTravel', inventory: 'moduleInventory', fleet: 'moduleFleet', 'mass-casualty': 'moduleMassCasualty', attendance: 'moduleAttendance', 'lab-inventory': 'moduleLabInventory'
 };
 
 /** ผู้ดูแลระบบ and each module's ผู้จัดการ, in the order the forms list them. */

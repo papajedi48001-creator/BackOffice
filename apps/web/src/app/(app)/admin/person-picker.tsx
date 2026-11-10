@@ -5,8 +5,8 @@ import { t } from '@backoffice/i18n';
 
 export interface PickedPerson { personId: string; displayName: string | null; employeeCode: string | null; organizationName: string | null }
 
-/** Finds an active บุคลากร by name or employee code (server checks ผู้ดูแลระบบ again). */
-export function PersonPicker({ person, onPick }: { person: PickedPerson | null; onPick: (person: PickedPerson | null) => void }) {
+/** Finds an active บุคลากร by name or employee code (the search API checks its own permission again). */
+export function PersonPicker({ person, onPick, searchUrl = '/api/admin/people' }: { person: PickedPerson | null; onPick: (person: PickedPerson | null) => void; searchUrl?: string }) {
   const id = useId();
   const [search, setSearch] = useState('');
   const [found, setFound] = useState<PickedPerson[] | null>(null);
@@ -16,12 +16,12 @@ export function PersonPicker({ person, onPick }: { person: PickedPerson | null; 
     if (text.length === 0) { setFound(null); return; }
     let current = true;
     const timer = setTimeout(() => {
-      void fetch(`/api/admin/people?q=${encodeURIComponent(text)}`)
+      void fetch(`${searchUrl}?q=${encodeURIComponent(text)}`)
         .then(async (response) => { if (current && response.ok) setFound(((await response.json()) as { people: PickedPerson[] }).people); })
         .catch(() => undefined);
     }, 250);
     return () => { current = false; clearTimeout(timer); };
-  }, [search]);
+  }, [search, searchUrl]);
 
   if (person) return <p className="admin-picked"><strong>{person.displayName ?? '—'}</strong>{person.employeeCode ? <small> · {person.employeeCode}</small> : null}{person.organizationName ? <small> · {person.organizationName}</small> : null} <button type="button" className="button-secondary" onClick={() => onPick(null)}>{t('adminChangePerson')}</button></p>;
   return <div className="admin-person-picker">

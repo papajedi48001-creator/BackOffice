@@ -14,7 +14,7 @@ describe('module registry', () => {
   });
 
   it('shows one entry per module and only their own profile under HR to a user without roles', () => {
-    expect(hrefs(subject())).toEqual(['/dashboard', '/requests', '/notifications', '/hr', '/access', '/rooms', '/leave', '/travel', '/fleet', '/mci']);
+    expect(hrefs(subject())).toEqual(['/dashboard', '/requests', '/notifications', '/hr', '/access', '/rooms', '/leave', '/travel', '/fleet', '/mci', '/lab']);
     expect(sectionHrefs('access', subject())).toEqual(['/access/audit']);
     expect(sectionHrefs('hr', subject())).toEqual(['/hr/me']);
   });
@@ -336,6 +336,38 @@ describe('request forms open as a popup from the top button', () => {
   it('has a popup form for every module with a submit action', async () => {
     const { requestFormModules } = await import('../components/request-form');
     expect([...requestFormModules].sort()).toEqual(moduleRegistry.filter((item) => item.submitAction).map((item) => item.code).sort());
+  });
+});
+
+describe('Lab stock module', () => {
+  const lab = () => moduleRegistry.find((entry) => entry.code === 'lab-inventory')!;
+  const fakeDb = (rows: { role: string; section_id: string | null }[]) => ({ query: vi.fn(async (sql: string) => (sql.includes('lab_member') ? rows : [{ n: 0 }])) }) as unknown as Database;
+  const shown = async (db: Database, value: AccessSubject) => (await availableSections(moduleSections('lab-inventory', value), db, value)).map((section) => section.href);
+
+  it('registers lab-inventory at /lab as a live services module', () => {
+    expect(lab()).toMatchObject({ href: '/lab', status: 'live', group: 'services', labelKey: 'moduleLabInventory' });
+    expect(moduleCodeForPath('/lab/stock')).toBe('lab-inventory');
+  });
+
+  it('hides the module and its sections from a non-member', async () => {
+    const db = fakeDb([]);
+    expect(await availableModules([lab()], db, subject())).toEqual([]);
+    expect(await shown(db, subject())).toEqual([]);
+  });
+
+  it('shows a STAFF member usage, requisitions and stock but not receipts or settings', async () => {
+    const sections = await shown(fakeDb([{ role: 'STAFF', section_id: 's-1' }]), subject());
+    expect(sections).toEqual(['/lab/usage', '/lab/requisitions', '/lab/stock']);
+    expect(await availableModules([lab()], fakeDb([{ role: 'STAFF', section_id: 's-1' }]), subject())).toHaveLength(1);
+  });
+
+  it('shows the KEEPER receipts, opening and settings', async () => {
+    expect(await shown(fakeDb([{ role: 'KEEPER', section_id: null }]), subject())).toEqual(['/lab/usage', '/lab/requisitions', '/lab/receipts', '/lab/stock', '/lab/opening', '/lab/settings']);
+  });
+
+  it('shows a lab-manager every section without membership', async () => {
+    const manager = subject({ roles: [{ name: 'lab-manager', organizationId: null }] });
+    expect(await shown(fakeDb([]), manager)).toEqual(['/lab/usage', '/lab/requisitions', '/lab/receipts', '/lab/stock', '/lab/opening', '/lab/settings']);
   });
 });
 

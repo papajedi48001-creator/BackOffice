@@ -12,7 +12,8 @@ export const moduleManagerRoles: Readonly<Record<string, Exclude<GrantableRole, 
   inventory: 'inventory-officer',
   fleet: 'fleet-manager',
   'mass-casualty': 'mci-manager',
-  attendance: 'attendance-manager'
+  attendance: 'attendance-manager',
+  'lab-inventory': 'lab-manager'
 };
 
 /** Modules this signed-in person manages: a hospital-wide (unscoped) assignment of the module's manager role. */

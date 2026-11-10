@@ -13,4 +13,4 @@ export const lineRouteInputSchema = z.object({ groupId: lineGroupIdSchema.nullab
 export const lineAlertPayloadSchema = z.object({ recipientPersonId: z.string().min(1), moduleCode: notificationModuleCodeSchema, targetPath: notificationTargetPathSchema });
 export type LineAlertPayload = z.infer<typeof lineAlertPayloadSchema>;
 /** Modules whose notices can need action and so can have a กลุ่มแจ้งเตือน. `requests` covers คำขอ without a module of its own. */
-export const lineAlertModuleCodes = ['requests', 'room-booking', 'leave', 'official-travel', 'inventory', 'fleet', 'mass-casualty'] as const;
+export const lineAlertModuleCodes = ['requests', 'room-booking', 'leave', 'official-travel', 'inventory', 'fleet', 'mass-casualty', 'lab-inventory'] as const;
