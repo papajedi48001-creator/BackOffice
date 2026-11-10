@@ -106,3 +106,6 @@ export * from './mass-casualty/mci-access';
 export * from './mass-casualty/mci-settings-queries';
 export * from './mass-casualty/mci-settings-service';
 export * from './mass-casualty/mci-incident-service';
+export * from './mass-casualty/mci-actor';
+export * from './mass-casualty/mci-responder-service';
+export * from './mass-casualty/mci-patient-service';
