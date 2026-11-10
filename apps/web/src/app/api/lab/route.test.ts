@@ -143,3 +143,12 @@ describe('stock reads', () => {
     expect((await FEFO(new Request('http://localhost/api/lab/requisitions/id-1/fefo'), id)).status).toBe(200);
   });
 });
+
+describe('people search for สมาชิก', () => {
+  it('refuses anyone without lab.manage and never queries people for them', async () => {
+    const { GET: PEOPLE } = await import('./people/route');
+    ready(person, { role: 'KEEPER', sectionIds: [] });
+    expect((await PEOPLE(new Request('http://localhost/api/lab/people?q=สม'))).status).toBe(403);
+    expect(mocks.storeSection).not.toHaveBeenCalled();
+  });
+});

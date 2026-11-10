@@ -48,6 +48,7 @@ describeWithDatabase('LabQueries against MariaDB', () => {
     const expected = pickFefo(await queries.lotOptions(LAB_SEED.stores.main, item.id), 8, today);
     expect(suggestion).toMatchObject({ itemId: item.id, quantityRequested: 8, suggestion: expected });
     expect(expected).toMatchObject({ ok: true, picks: [{ quantity: 8 }] });
+    expect(suggestion!.lots.every((lot) => typeof lot.lotNo === 'string' && lot.lotNo.length > 0)).toBe(true);
     expect(await queries.pendingIssueCount()).toBeGreaterThanOrEqual(1);
   });
 

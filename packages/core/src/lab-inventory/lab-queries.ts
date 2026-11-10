@@ -61,14 +61,14 @@ export class LabQueries {
     }) };
   }
 
-  async lotOptions(storeId: string, itemId: string): Promise<LotOption[]> {
-    const rows = await this.database.query<{ lot_id: string; expiry_date: string | null; created_at: string | Date; quantity: number }>(
-      "SELECT b.lot_id, DATE_FORMAT(l.expiry_date, '%Y-%m-%d') AS expiry_date, l.created_at, b.quantity FROM lab_lot_balance b JOIN lab_lot l ON l.id = b.lot_id WHERE b.store_id = ? AND l.item_id = ? AND b.quantity > 0", [storeId, itemId]);
-    return rows.map((row) => ({ lotId: row.lot_id, expiryDate: dateOnly(row.expiry_date), createdAt: new Date(row.created_at).toISOString(), available: Number(row.quantity) }));
+  async lotOptions(storeId: string, itemId: string): Promise<(LotOption & { lotNo: string })[]> {
+    const rows = await this.database.query<{ lot_id: string; lot_no: string; expiry_date: string | null; created_at: string | Date; quantity: number }>(
+      "SELECT b.lot_id, l.lot_no, DATE_FORMAT(l.expiry_date, '%Y-%m-%d') AS expiry_date, l.created_at, b.quantity FROM lab_lot_balance b JOIN lab_lot l ON l.id = b.lot_id WHERE b.store_id = ? AND l.item_id = ? AND b.quantity > 0", [storeId, itemId]);
+    return rows.map((row) => ({ lotId: row.lot_id, lotNo: row.lot_no, expiryDate: dateOnly(row.expiry_date), createdAt: new Date(row.created_at).toISOString(), available: Number(row.quantity) }));
   }
 
   /** The issue dialog's starting point: FEFO picks over คลังหลัก for each line of a ใบขอเบิก, capped at what is there. */
-  async fefoSuggestion(requisitionId: string, entryDate: string): Promise<{ lineId: string; itemId: string; quantityRequested: number; suggestion: ReturnType<typeof pickFefo>; lots: LotOption[] }[]> {
+  async fefoSuggestion(requisitionId: string, entryDate: string): Promise<{ lineId: string; itemId: string; quantityRequested: number; suggestion: ReturnType<typeof pickFefo>; lots: (LotOption & { lotNo: string })[] }[]> {
     const [main] = await this.database.query<{ id: string }>("SELECT id FROM lab_store WHERE kind = 'MAIN'");
     const lines = await this.database.query<{ id: string; item_id: string; quantity_requested: number }>('SELECT id, item_id, quantity_requested FROM lab_requisition_line WHERE requisition_id = ? ORDER BY line_no', [requisitionId]);
     const result = [];
