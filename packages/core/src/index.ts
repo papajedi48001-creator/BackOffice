@@ -112,3 +112,5 @@ export * from './mass-casualty/mci-patient-service';
 export * from './mass-casualty/mci-public-board';
 export * from './mass-casualty/mci-queries';
 export * from './mass-casualty/mci-export';
+export * from './attendance/attendance-chain';
+export { attendanceOutbox } from './attendance/attendance-db';
