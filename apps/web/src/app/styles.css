@@ -864,3 +864,67 @@ h2.chat-window-title { cursor: default; }
 .link-provider-identity { display: grid; gap: 4px; margin: 0 0 16px; padding: 12px 16px; border-radius: 8px; background: var(--line-soft); border-left: 4px solid var(--brand); color: var(--ink-2); }
 .link-provider-identity p { margin: 0; }
 .link-provider-name { color: var(--ink); font-size: 1.15rem; font-weight: 700; }
+
+/* อุบัติเหตุหมู่: --triage carries each สีคัดกรอง from ตั้งค่า; the accent comes from [data-module="mass-casualty"]. */
+.mci-incident-banner { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin: 0 0 16px; border-radius: 12px; background: var(--accent); color: #fff; font-weight: 700; padding: 12px 16px; }
+.mci-incident-none { background: var(--line-soft); color: var(--muted); font-weight: 400; }
+.mci-incident-drill, .mci-drill-banner { background: repeating-linear-gradient(135deg, #fef3c7 0 14px, #fde68a 14px 28px); color: #78350f; }
+.mci-drill-banner { margin: 0 0 16px; border-radius: 12px; padding: 12px 16px; font-size: 1.15rem; font-weight: 700; text-align: center; }
+.mci-triage-counts { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin: 12px 0 20px; padding: 0; list-style: none; }
+.mci-triage-counts li { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px 10px; border: 1px solid var(--line); border-left: 8px solid var(--triage); border-radius: 12px; background: var(--surface); padding: 12px 14px; }
+.mci-triage-count { grid-column: 1 / -1; font-size: 2rem; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.mci-triage-swatch { display: inline-block; width: 16px; height: 16px; border: 1px solid rgba(0, 0, 0, .2); border-radius: 50%; background: var(--triage); }
+.mci-triage-name { font-weight: 700; }
+.mci-triage-pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; background: color-mix(in srgb, var(--triage) 14%, white); color: var(--ink); font-weight: 700; padding: 3px 10px; }
+.mci-triage-pill::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--triage); }
+.mci-status-counts { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 20px; padding: 0; list-style: none; }
+.mci-status-counts li { border: 1px solid var(--line); border-radius: 999px; background: var(--surface); padding: 6px 12px; }
+.mci-duty-card { display: grid; gap: 12px; margin: 0 0 20px; border: 1px solid var(--line); border-top: 4px solid var(--accent); border-radius: 14px; background: var(--surface); padding: 16px 18px; }
+.mci-duty-title { margin: 0; font-weight: 700; }
+.mci-duty { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 0; }
+.mci-duty dt { color: var(--muted); }
+.mci-duty dd { margin: 2px 0 0; font-weight: 700; }
+.mci-duty-zone { color: var(--accent); font-size: 1.6rem; }
+.mci-check-in, .mci-primary-action { min-height: 48px; font-size: 1.05rem; }
+.mci-new-tag { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px; margin: 12px 0; border: 2px dashed var(--accent); border-radius: 12px; background: var(--accent-soft); padding: 12px 16px; }
+.mci-new-tag strong { color: var(--accent); font-size: 2.4rem; letter-spacing: .04em; }
+.mci-tag { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mci-patient-form { margin: 0 0 16px; }
+.mci-form-grid { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 10px 14px; align-items: center; }
+.mci-form-grid > .mci-form-pair { display: contents; }
+.form-dialog-body .mci-form-grid label { display: block; }
+.mci-triage-picker, .mci-position-picks { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; border: 0; padding: 0; }
+.mci-triage-picker legend, .mci-position-picks legend { margin-bottom: 6px; font-weight: 700; }
+.form-dialog-body .mci-triage-option { border: 2px solid var(--line); border-radius: 999px; padding: 8px 14px; font-weight: 700; cursor: pointer; }
+.form-dialog-body .mci-triage-option:has(input:checked) { border-color: var(--triage); background: color-mix(in srgb, var(--triage) 14%, white); }
+.mci-position-picks { max-height: 240px; overflow-y: auto; }
+.mci-staff-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.mci-staff-zone { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 12px 14px; }
+.mci-staff-zone h3 { margin: 0 0 8px; }
+.mci-staff-zone ul { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.mci-staff-zone li { display: grid; gap: 6px; border-top: 1px solid var(--line-soft); padding-top: 8px; }
+.mci-staff-waiting { border-color: #f59e0b; background: #fffbeb; }
+.mci-settings-block { margin: 0 0 28px; }
+.mci-landing-card { display: grid; gap: 16px; width: min(480px, 100%); border-radius: 18px; background: var(--surface); box-shadow: var(--shadow-md); padding: 24px; }
+.mci-landing-header { display: flex; align-items: center; gap: 14px; }
+.mci-landing-header h1 { margin: 0; font-size: 1.4rem; }
+.mci-landing-header .eyebrow { margin: 0; }
+.mci-board-shell { min-height: 100dvh; background: var(--page); padding: 16px; }
+.mci-board { max-width: 960px; margin: 0 auto; }
+.mci-board-header h1 { margin: 0 0 4px; font-size: clamp(1.4rem, 4vw, 2rem); }
+.mci-board-kicker { margin: 0; color: var(--accent); font-weight: 700; }
+.mci-board-contact { margin: 12px 0; border-radius: 12px; background: var(--accent-soft); color: var(--accent-strong); font-size: 1.1rem; font-weight: 700; padding: 12px 16px; }
+.mci-board-total { display: flex; align-items: baseline; gap: 10px; margin: 16px 0 0; font-size: 1.1rem; }
+.mci-board-total strong { font-size: 2.4rem; font-variant-numeric: tabular-nums; }
+.mci-board-empty { border-radius: 12px; background: var(--surface); font-size: 1.2rem; padding: 24px; text-align: center; }
+.mci-board-people { display: grid; gap: 8px; }
+.mci-board-people h2 { margin: 8px 0 0; }
+.mci-board-people label { font-weight: 700; }
+.mci-board-people input { max-width: 420px; min-height: 48px; border: 1px solid var(--line-strong); border-radius: 10px; padding: 10px 14px; font: inherit; font-size: 1.05rem; }
+.mci-board-people table { width: 100%; border-collapse: collapse; background: var(--surface); font-size: 1.05rem; }
+.mci-board-people th, .mci-board-people td { border-bottom: 1px solid var(--line); padding: 10px 12px; text-align: left; }
+@media (max-width: 560px) {
+  .mci-form-grid { grid-template-columns: 1fr; gap: 6px; }
+  .mci-triage-count { font-size: 1.6rem; }
+}
+@media print { .mci-no-print { display: none !important; } }
