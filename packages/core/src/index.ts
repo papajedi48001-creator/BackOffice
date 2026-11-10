@@ -120,4 +120,5 @@ export * from './lab-inventory/lab-opening-service';
 export { LabRefusal, labToday } from './lab-inventory/lab-stock-writer';
 export * from './lab-inventory/lab-receipt-service';
 export * from './lab-inventory/lab-requisition-service';
+export * from './lab-inventory/lab-usage-service';
 export * from './mass-casualty/mci-export';
