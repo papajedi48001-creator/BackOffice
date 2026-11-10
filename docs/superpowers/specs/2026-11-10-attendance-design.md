@@ -9,7 +9,7 @@
 หลักที่ใช้ทั้งโมดูล
 
 1. เวลาอ้างอิงคือเวลา server เสมอ ผู้ใช้กำหนดเวลาเองไม่ได้ (ยกเว้นรายการออฟไลน์ ซึ่งเก็บเวลากล่องคู่กับเวลาที่ server รับ และเป็น "รอตรวจสอบ" เสมอ)
-2. **รายการลงเวลา** เป็นข้อมูลต้นฉบับแบบเพิ่มอย่างเดียว ไม่มี UPDATE/DELETE (บังคับด้วย trigger ใน MariaDB) ผลตรวจ การยกเลิก และการปรับปรุงเป็นแถวใหม่ที่อ้างถึงต้นฉบับ
+2. **รายการลงเวลา** เป็นข้อมูลต้นฉบับแบบเพิ่มอย่างเดียว ไม่มี UPDATE/DELETE (บังคับด้วย trigger ใน MariaDB ซึ่งติดตั้งด้วยสคริปต์ `infra/attendance/append-only-guards.sql` ที่ผู้ดูแลฐานข้อมูลรัน เพราะบัญชีของแอปไม่มีสิทธิ์ TRIGGER) ผลตรวจ การยกเลิก และการปรับปรุงเป็นแถวใหม่ที่อ้างถึงต้นฉบับ
 3. **ผลประเมินการลงเวลา** คำนวณจากต้นฉบับ + ผลตรวจ + รายการปรับปรุง + ตารางเวร + กฎ + ข้อยกเว้น (ลา ไปราชการ วันหยุด) ลบแล้วคำนวณใหม่ได้ทุกเมื่อโดยไม่กระทบต้นฉบับ
 4. สิทธิ์ตรวจที่ server ทุก action ผ่าน `AuthorizationService` เท่านั้น
 5. เก็บ UTC แสดงเวลาไทยและปี พ.ศ.
@@ -58,7 +58,7 @@ apps/web  /api/attendance/kiosk/*  ──►  packages/core/src/attendance  ─�
   - `evaluation.ts` ฟังก์ชันบริสุทธิ์ คำนวณผลประเมินต่อช่วงเวร
   - `evaluation-service.ts` โหลดข้อมูล เรียก `evaluation.ts` เขียนผลแทนของเดิม
   - `roster-service.ts`, `review-service.ts`, `adjustment-service.ts`, `period-close-service.ts`, `report-service.ts`, `retention-service.ts`, `audit-chain.ts`
-- `packages/db`: migration `0033_attendance.sql` (additive) + Drizzle schema `schema/attendance.ts`
+- `packages/db`: migration แยกตามขั้นส่งมอบ (additive) เริ่มที่ `0033_attendance_foundation.sql` ขั้นถัดไปเพิ่ม migration ของตัวเอง + Drizzle schema `schema/attendance.ts`
 - `apps/web`: หน้า `/kiosk` (ไม่อยู่ใต้ app shell), `/attendance/*`, API route ใต้ `/api/attendance/*`; เปลี่ยน entry `planned('attendance')` ใน `lib/modules.ts` เป็น live พร้อม sections
 - `apps/face`: บริการ Python (FastAPI + InsightFace buffalo_l ONNX + โมเดล liveness แบบ passive) endpoint เดียว `POST /embed` รับภาพ JPEG คืน `{faces, embedding[512], liveness, quality}` ไม่เขียนดิสก์ ไม่ log ภาพ ฟังเฉพาะเครือข่ายภายใน ตรวจ shared secret ใน header; CI ใช้ตัวปลอมที่คืน embedding ตายตัว
 
@@ -136,9 +136,9 @@ idempotency: ทุกคำขอมี `idempotency_key` (UUID ที่ clien
 
 ## Audit แบบสายแฮช
 
-`attendance_audit_chain` เก็บต่อจาก audit เดิมของทุก action ในโมดูล: `seq`, `audit_event_id`, `prev_hash`, `hash` = SHA-256(prev_hash ‖ canonical JSON ของ audit event) เขียนใน transaction เดียวกับ audit (ล็อกแถวล่าสุดด้วย `FOR UPDATE`) ผู้ตรวจสอบกด "ตรวจสอบความต่อเนื่อง" ระบบไล่ทั้งสายและรายงานแถวแรกที่ไม่ตรง trigger ห้าม UPDATE/DELETE ทั้ง `attendance_event`, `attendance_event_review`, `attendance_event_void`, `attendance_adjustment`, `attendance_audit_chain` metadata ของ audit ไม่มีเหตุผลการตัดสิน PIN token ภาพ พิกัด หรือข้อมูลใบหน้า (ตามกติกา CLAUDE.md)
+`attendance_hash_chain` เก็บต่อจาก audit เดิมของทุก action ในโมดูล และในขั้นถัดไปครอบรายการลงเวลา ผลตรวจ การยกเลิก และรายการปรับปรุงด้วย: `seq`, `record_type`, `record_id`, `prev_hash`, `hash` = SHA-256(prev_hash ‖ canonical JSON ของแถวนั้น) เขียนใน transaction เดียวกับ audit (ล็อกแถวล่าสุดด้วย `FOR UPDATE`) ผู้ตรวจสอบกด "ตรวจสอบความต่อเนื่อง" ระบบไล่ทั้งสายและรายงานแถวแรกที่ไม่ตรง trigger ห้าม UPDATE/DELETE ทั้ง `attendance_event`, `attendance_event_review`, `attendance_event_void`, `attendance_adjustment`, `attendance_hash_chain` (ติดตั้งด้วยสคริปต์ผู้ดูแลฐานข้อมูล ขั้นแรกครอบ `attendance_hash_chain` ขั้นถัดไปเพิ่มตารางของตัวเองในสคริปต์เดียวกัน) metadata ของ audit ไม่มีเหตุผลการตัดสิน PIN token ภาพ พิกัด หรือข้อมูลใบหน้า (ตามกติกา CLAUDE.md)
 
-## ข้อมูล (migration `0033_attendance.sql`)
+## ข้อมูล (migration แยกตามขั้นส่งมอบ เริ่มที่ `0033_attendance_foundation.sql`)
 
 ทุกตาราง PK `id` (UUID string ตามรูปแบบเดิม) FK ไปยัง `person`/`organization` เดิม และ index ตามคำค้นหลัก
 
