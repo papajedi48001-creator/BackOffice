@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { AccessSubject } from '@backoffice/contracts';
 import { createDatabase, runMigrations } from '@backoffice/db';
+import { exportIncident } from './mci-export';
 import { MciIncidentService } from './mci-incident-service';
 import { MciPatientService } from './mci-patient-service';
 import { MciQueries } from './mci-queries';
@@ -40,5 +41,21 @@ describeWithDatabase('MciQueries against MariaDB', () => {
     const board = await queries.publicBoard();
     expect(board).toMatchObject({ incident: { title: 'ไฟไหม้โรงงาน' }, total: 1, people: [{ name: 'สมชาย ใ.', place: 'ER' }] });
     expect((await queries.incidents()).find((row) => row.id === opened.incidentId)).toMatchObject({ patients: 1, responders: 1 });
+  });
+
+  it('exports a closed เหตุ as CSV with an audit row, and refuses an open one', async () => {
+    const open = await queries.openIncident();
+    if (!open) throw new Error('setup');
+    expect(await exportIncident(database, manager.personId!, open.id, 'patients')).toEqual({ ok: false, code: 'INCIDENT_OPEN' });
+    await new MciIncidentService(database).close(manager.personId!, open.id);
+    const patients = await exportIncident(database, manager.personId!, open.id, 'patients');
+    if (!patients.ok) throw new Error(patients.code);
+    expect(patients.csv.split('\r\n')[0]).toBe('\uFEFF"เลขป้าย","สี","สถานะ","จุด","รพ.ปลายทาง","ชื่อ","นามสกุล","เพศ","อายุ (ประมาณ)","HN","ไม่เปิดเผยบนกระดาน","แก้ไขล่าสุด"');
+    expect(patients.csv).toContain('"MCI-001","แดง","รับเข้า/คัดกรอง","ER","","สมชาย","ใจดี"');
+    const responders = await exportIncident(database, manager.personId!, open.id, 'responders');
+    if (!responders.ok) throw new Error(responders.code);
+    expect(responders.csv).toContain('"แพทย์","ER","ผู้บัญชาการเหตุ"');
+    const audits = await database.query<{ metadata: string }>("SELECT metadata FROM audit_event WHERE action = 'mci.incident.export' AND target_id = ?", [open.id]);
+    expect(audits.map((row) => JSON.parse(row.metadata)).sort((a, b) => a.exportKind.localeCompare(b.exportKind))).toEqual([{ exportKind: 'patients', rows: 1 }, { exportKind: 'responders', rows: 1 }]);
   });
 });

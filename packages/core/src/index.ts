@@ -111,3 +111,4 @@ export * from './mass-casualty/mci-responder-service';
 export * from './mass-casualty/mci-patient-service';
 export * from './mass-casualty/mci-public-board';
 export * from './mass-casualty/mci-queries';
+export * from './mass-casualty/mci-export';
