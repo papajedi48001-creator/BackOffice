@@ -1,63 +1,55 @@
 # เข้าสู่ระบบด้วย Provider ID
 
-บุคลากรเข้าสู่ระบบ Back Office ด้วย Provider ID ผ่าน portal ของ radius-server (`https://aut-waritch-hosp.moph.go.th`) ซึ่งทำหน้าที่ OpenID Provider
-(OIDC authorization code + PKCE, ID token ลงนาม ES256) ชื่อผู้ใช้และรหัสผ่าน Back Office ยังใช้ได้ตามเดิม
-ปุ่ม **เข้าสู่ระบบด้วย Provider ID** ขึ้นที่หน้าเข้าสู่ระบบก็ต่อเมื่อตั้งค่าครบทั้ง 4 ค่าด้านล่าง
+บุคลากรเข้าสู่ระบบ Back Office ด้วย Provider ID ได้จากทุกที่ Back Office ต่อ MOPH ID (`moph.id.th`) และ Provider ID (`provider.id.th`) ของกระทรวงเอง
+แบบเดียวกับที่ portal ของ radius-server ทำ ไม่ผ่าน portal เพราะ portal เปิดเฉพาะในโรงพยาบาล (ADR 0006 ของ radius-server) ชื่อผู้ใช้และรหัสผ่าน Back Office ยังใช้ได้ตามเดิม
+ปุ่ม **เข้าสู่ระบบด้วย Provider ID** ขึ้นที่หน้าเข้าสู่ระบบก็ต่อเมื่อตั้งค่าครบตามข้อ 2
 
-ออกแบบไว้ที่ `docs/superpowers/specs/2026-11-09-provider-id-sso-design.md`
+ออกแบบไว้ที่ `docs/superpowers/specs/2026-11-10-provider-id-direct-design.md`
 
-## 1. เปิดฝั่ง portal (radius-server)
+## 1. ลงทะเบียน callback กับกระทรวง
 
-ทำตาม `docs/backoffice-sso-runbook.md` ใน repo radius-server: ติดตั้งคำสั่ง ลงทะเบียน client `backoffice` ด้วย redirect URI
-`https://<โฮสต์ Back Office>/api/auth/provider/callback` (ต้องเป็น https และตรงตัว) และเปิดให้เครื่องผู้ใช้กับเครื่อง Back Office เข้าถึง portal ได้
+ลงทะเบียน callback ค่าเดียวกันกับทั้ง Health ID (MOPH ID) และ Provider ID เหมือนที่ทำให้ radius-server:
 
-client secret สุ่มอย่างน้อย 32 ตัวอักษร เช่น `openssl rand -base64 48 > /etc/backoffice/provider-sso.secret` แล้ว `chmod 600`
+`https://office-waritch-hosp.moph.go.th/api/auth/provider/callback`
+
+ใช้ client PRD เดิมของ radius-server ได้ถ้าเพิ่ม callback ต่อจากของ `aut-waritch-hosp` ได้ ห้ามลบ callback เดิมเพราะการเข้า Wi-Fi ผ่าน portal ใช้อยู่
+ถ้าเพิ่มไม่ได้ให้ขอ client ใหม่ทั้งสองบริการ ค่า secret ของ radius-server อยู่ที่ `/etc/hospital-provider-id/health-prd.client-secret` และ `provider-prd.client-secret` บนเครื่อง .10
 ห้ามวาง secret ในเอกสาร แชต Git command line หรือ log
 
 ## 2. ตั้งค่าฝั่ง Back Office
 
-เพิ่มใน `.env` ที่ราก repo (หรือ environment ของ container เว็บ):
+| ค่า | ความหมาย |
+|---|---|
+| `PROVIDER_ID_ENV` | `prd` (ค่าเริ่มต้น) หรือ `uat` |
+| `PROVIDER_ID_HEALTH_CLIENT_ID` | Client ID ของ MOPH ID |
+| `PROVIDER_ID_HEALTH_CLIENT_SECRET_FILE` | ไฟล์ secret ของ MOPH ID |
+| `PROVIDER_ID_CLIENT_ID` | Client ID ของ Provider ID |
+| `PROVIDER_ID_SECRET_KEY_FILE` | ไฟล์ secret key ของ Provider ID |
+| `PROVIDER_ID_REDIRECT_URI` | callback ในข้อ 1 ตรงทุกตัวอักษร |
 
-```
-PROVIDER_SSO_ISSUER=https://aut-waritch-hosp.moph.go.th
-PROVIDER_SSO_CLIENT_ID=backoffice
-PROVIDER_SSO_CLIENT_SECRET_FILE=/etc/backoffice/provider-sso.secret
-PROVIDER_SSO_REDIRECT_URI=https://<โฮสต์ Back Office>/api/auth/provider/callback
-```
-
-`PROVIDER_SSO_REDIRECT_URI` ต้องตรงกับค่าที่ลงทะเบียนใน portal ทุกตัวอักษร ใช้ `PROVIDER_SSO_CLIENT_SECRET` แทนไฟล์ได้เฉพาะเครื่องนักพัฒนา
-
-เปิดเว็บใหม่ แล้วตรวจ:
-
-- จากเครื่อง Back Office: `curl -s https://aut-waritch-hosp.moph.go.th/.well-known/openid-configuration` ได้ JSON ที่มี `ES256`
-- หน้าเข้าสู่ระบบมีปุ่ม **เข้าสู่ระบบด้วย Provider ID**
+ใช้ `PROVIDER_ID_HEALTH_CLIENT_SECRET` / `PROVIDER_ID_SECRET_KEY` แทนไฟล์ได้เฉพาะเครื่องนักพัฒนา `PROVIDER_ID_HEALTH_URL` และ `PROVIDER_ID_API_URL` มีไว้ให้ e2e ชี้ไปที่ตัวจำลองเท่านั้น
 
 ### เว็บที่รันใน Docker (production หรือ staging)
 
-container web ไม่อ่าน `.env` ที่ราก repo ให้ใช้ไฟล์ override `infra/compose/docker-compose.provider-sso.yml` ซึ่งทำ 3 อย่าง ส่งค่าข้างต้นเข้า container,
-อ่าน client secret จาก Docker secret และให้ container ออกไปเรียก portal ได้ (ชื่อ `aut-waritch-hosp.moph.go.th` ชี้ไปที่ `192.168.1.10` ใน container
-เปลี่ยนได้ด้วย `PROVIDER_SSO_PORTAL_HOST` / `PROVIDER_SSO_PORTAL_IP`) ไม่ใส่ไฟล์นี้ = ปุ่มไม่ขึ้นเหมือนเดิม
+ใช้ไฟล์ override `infra/compose/docker-compose.provider-sso.yml` ซึ่งส่งค่าข้างต้นเข้า container web, อ่าน secret ทั้งสองจาก Docker secret
+และให้เฉพาะ web ออก HTTPS ไปที่กระทรวงผ่าน network `egress` ไม่ใส่ไฟล์นี้ = ปุ่มไม่ขึ้น
 
-1. เก็บ client secret ตัวเดียวกับที่ลงทะเบียนใน portal เป็นไฟล์ mode `0600` เหมือน secret อื่น เช่น `/etc/backoffice/secrets/provider_sso_client_secret`
-2. เพิ่มใน environment file ของ Compose (`/etc/backoffice/production.env` หรือ `/etc/backoffice/staging.env`):
+1. คัดลอก secret ทั้งสองเป็นไฟล์ root mode `0600` เช่น `/etc/backoffice/secrets/provider_id_health_client_secret` และ `/etc/backoffice/secrets/provider_id_secret_key`
+   จากเครื่อง .10 ให้ใช้ `scp` ของไฟล์ ไม่พิมพ์ค่าในหน้าจอ
+2. เพิ่มใน environment file ของ Compose (`/etc/backoffice/staging.env` หรือ `/etc/backoffice/production.env`):
    ```
-   PROVIDER_SSO_ISSUER=https://aut-waritch-hosp.moph.go.th
-   PROVIDER_SSO_REDIRECT_URI=https://office-waritch-hosp.moph.go.th/api/auth/provider/callback
-   PROVIDER_SSO_CLIENT_SECRET_FILE=/etc/backoffice/secrets/provider_sso_client_secret
+   PROVIDER_ID_ENV=prd
+   PROVIDER_ID_HEALTH_CLIENT_ID=<Client ID ของ MOPH ID>
+   PROVIDER_ID_CLIENT_ID=<Client ID ของ Provider ID>
+   PROVIDER_ID_REDIRECT_URI=https://office-waritch-hosp.moph.go.th/api/auth/provider/callback
+   PROVIDER_ID_HEALTH_CLIENT_SECRET_FILE=/etc/backoffice/secrets/provider_id_health_client_secret
+   PROVIDER_ID_SECRET_KEY_FILE=/etc/backoffice/secrets/provider_id_secret_key
    # ช่วงที่จัดสรรแล้วและไม่ทับวงเครือข่ายโรงพยาบาล (ห้ามใช้ 172.18.0.0/16)
-   BACKOFFICE_PORTAL_SUBNET=10.250.255.0/24
+   BACKOFFICE_EGRESS_SUBNET=10.250.255.0/24
    ```
-3. ใส่ `-f infra/compose/docker-compose.provider-sso.yml` ต่อท้ายไฟล์ compose เดิมทุกคำสั่ง เช่น staging ที่ใช้ nginx ร่วม (เครื่อง .251):
-   ```sh
-   docker compose --env-file /etc/backoffice/staging.env \
-     -f infra/compose/docker-compose.staging.yml \
-     -f infra/compose/docker-compose.staging-shared-nginx.yml \
-     -f infra/compose/docker-compose.provider-sso.yml up -d web
-   ```
-4. ตรวจจากใน container: `docker compose ... exec web node -e "fetch('https://aut-waritch-hosp.moph.go.th/oidc/jwks').then(r=>console.log(r.status))"` ต้องได้ `200`
-   ถ้าได้ error ให้ตรวจว่า IP ของเครื่องที่รัน Docker อยู่ใน `/etc/nginx/hospital-portal-allow.conf` ของ portal
-
-portal ลงทะเบียน redirect URI ได้ค่าเดียว ถ้าย้ายเครื่อง (เช่นทดสอบที่เครื่องหนึ่งแล้วย้ายไป .251) ให้รัน `hospital-backoffice-sso-config set` ใหม่ด้วย redirect URI ของเครื่องใหม่
+3. ใส่ `-f infra/compose/docker-compose.provider-sso.yml` ต่อท้ายไฟล์ compose เดิมทุกคำสั่ง รวมถึงสคริปต์ deploy อัตโนมัติ ไม่อย่างนั้นปุ่มจะหายเมื่อ deploy รอบถัดไป
+4. ตรวจจากใน container: `docker compose ... exec web node -e "fetch('https://moph.id.th').then(r=>console.log(r.status)).catch(e=>console.log(e.cause?.code||e.message))"`
+   ต้องได้เลข HTTP (เช่น 200 หรือ 302) ถ้าได้ `ENOTFOUND` หรือ `ETIMEDOUT` ให้ตรวจ DNS และ firewall ขาออกของเครื่อง
 
 ## 3. ผูกบัญชี
 
@@ -74,21 +66,20 @@ portal ลงทะเบียน redirect URI ได้ค่าเดีย�
 
 ## 4. ข้อควรรู้
 
-- ระบบออก code ให้เฉพาะสมาชิก portal ที่สถานะ `approved` และตรวจซ้ำตอนแลก token บุคลากรที่ถูกปิดใช้งานใน Back Office เข้าไม่ได้แม้ Provider ID ยังใช้ได้
-- เครื่องใช้ร่วม: ถ้า portal ยังมี session ค้างอยู่ คนถัดไปที่กดปุ่มจะเข้าเป็นเจ้าของ session นั้นโดยไม่ต้องยืนยันตัวตนใหม่
-  (ตัดสินใจรับความเสี่ยงนี้แล้ว) ให้ออกจากระบบ portal ทุกครั้งบนเครื่องใช้ร่วม
-- portal หมุนกุญแจลงนามได้โดยไม่ต้องแก้ Back Office: เว็บเก็บ JWKS 10 นาที และดึงใหม่ทันทีเมื่อพบ `kid` ที่ไม่รู้จัก
+- ระบบเก็บเฉพาะ `account_id` และชื่อ-สกุลจาก Provider ID ไม่เก็บ `hash_cid` หน่วยงาน หรือตำแหน่ง
+- บุคลากรที่ถูกปิดใช้งานใน Back Office เข้าไม่ได้แม้ Provider ID ยังใช้ได้
+- การผูกบัญชีเก็บแยกตามสภาพแวดล้อม เปลี่ยน `PROVIDER_ID_ENV` จาก `uat` เป็น `prd` แล้วต้องผูกใหม่ การผูกที่เคยทำผ่าน portal ของ radius-server ใช้ไม่ได้แล้ว
+- เครื่องใช้ร่วม: ถ้า MOPH ID ยังมี session ค้างอยู่ คนถัดไปที่กดปุ่มอาจเข้าเป็นเจ้าของ session นั้น ให้ออกจากระบบ MOPH ID ทุกครั้งบนเครื่องใช้ร่วม
 
 ## ปิดทันที
 
-ลบ 4 ค่าใน `.env` แล้วเปิดเว็บใหม่ ปุ่มหาย ทุกคนใช้ชื่อผู้ใช้และรหัสผ่านตามเดิม การผูกบัญชีที่มีอยู่ยังเก็บไว้ หรือปิดฝั่ง portal ตาม runbook ของ radius-server
-(กดปุ่มแล้วหน้าเข้าสู่ระบบจะแจ้งว่า "ระบบ Provider ID ไม่พร้อมใช้งาน")
+ลบค่า `PROVIDER_ID_*` หรือเอา `-f infra/compose/docker-compose.provider-sso.yml` ออก แล้วเปิดเว็บใหม่ ปุ่มหาย ทุกคนใช้ชื่อผู้ใช้และรหัสผ่านตามเดิม การผูกบัญชีที่มีอยู่ยังเก็บไว้
 
 ## ปัญหาที่พบบ่อย
 
 | อาการ | สาเหตุและวิธีแก้ |
 |---|---|
-| ไม่มีปุ่ม Provider ID | ตั้งค่าไม่ครบ 4 ค่า หรืออ่านไฟล์ secret ไม่ได้ (สิทธิ์ไฟล์) |
-| "ระบบ Provider ID ไม่พร้อมใช้งาน" | เครื่อง Back Office เรียก portal ไม่ถึง (DNS, certificate, allowlist ของ nginx) หรือ client secret ไม่ตรง ดู log เว็บบรรทัด `provider sign-in failed` |
-| "เข้าสู่ระบบด้วย Provider ID ไม่สำเร็จ" | ใช้เกิน 10 นาที เปิดสองแท็บพร้อมกัน หรือ code ถูกใช้แล้ว ให้กดปุ่มใหม่ ดู audit `identity.provider_login` ช่อง `stage` |
-| portal ตอบ `redirect_uri` ไม่ถูกต้อง | ค่า `PROVIDER_SSO_REDIRECT_URI` ไม่ตรงกับที่ลงทะเบียน |
+| ไม่มีปุ่ม Provider ID | ตั้งค่าไม่ครบ อ่านไฟล์ secret ไม่ได้ หรือ `PROVIDER_ID_ENV` ไม่ใช่ `prd`/`uat` |
+| MOPH ID ตอบว่า redirect_uri ไม่ถูกต้อง | ยังไม่ได้ลงทะเบียน callback ในข้อ 1 หรือ `PROVIDER_ID_REDIRECT_URI` ไม่ตรง |
+| "ระบบ Provider ID ไม่พร้อมใช้งาน" | container เรียก `moph.id.th` หรือ `provider.id.th` ไม่ถึง หรือบริการของกระทรวงขัดข้อง ดู log เว็บบรรทัด `provider sign-in failed` |
+| "เข้าสู่ระบบด้วย Provider ID ไม่สำเร็จ" | ใช้เกิน 10 นาที เปิดสองแท็บพร้อมกัน code ถูกใช้แล้ว secret ไม่ตรง หรือบัญชีไม่มี Provider ID ให้กดปุ่มใหม่ ดู audit `identity.provider_login` ช่อง `stage` |

@@ -31,8 +31,8 @@
 
 **Files:** `infra/compose/docker-compose.provider-sso.yml`, `infra/compose/compose-config.test.sh`, `infra/compose/.env.*.example`, `infra/scripts/staging-network.sh`, `docs/runbooks/provider-sso.md`, `docs/runbooks/local-setup.md`.
 
-- [ ] Failing compose test: the new variables, both secrets file-only, web alone on a non-internal `egress` network with `BACKOFFICE_EGRESS_SUBNET`, no portal host pin.
-- [ ] Implement and update the runbook; `bash infra/compose/compose-config.test.sh` green.
+- [x] Failing compose test: the new variables, both secrets file-only, web alone on a non-internal `egress` network with `BACKOFFICE_EGRESS_SUBNET`, no portal host pin.
+- [x] Implement and update the runbook; `bash infra/compose/compose-config.test.sh` green.
 
 ## Verification
 

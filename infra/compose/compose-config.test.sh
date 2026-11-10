@@ -102,15 +102,17 @@ echo "staging compose renders"
 rendered="$(docker compose --env-file "${env_file}" -f "${compose_file}" config --format json)"
 node -e '
   const { services } = JSON.parse(require("fs").readFileSync(0, "utf8"));
-  if (Object.keys(services.web.environment).some((key) => key.startsWith("PROVIDER_SSO_"))) { console.error("Provider ID sign-in must stay off without the provider-sso override"); process.exit(1); }
+  if (Object.keys(services.web.environment).some((key) => key.startsWith("PROVIDER_ID_"))) { console.error("Provider ID sign-in must stay off without the provider-sso override"); process.exit(1); }
 ' <<< "${rendered}"
 provider_env="$(mktemp)"
 cat "${env_file}" > "${provider_env}"
 cat >> "${provider_env}" <<'ENV'
-PROVIDER_SSO_ISSUER=https://aut-waritch-hosp.moph.go.th
-PROVIDER_SSO_REDIRECT_URI=https://office-waritch-hosp.moph.go.th/api/auth/provider/callback
-PROVIDER_SSO_CLIENT_SECRET_FILE=/etc/backoffice/secrets/provider_sso_client_secret
-BACKOFFICE_PORTAL_SUBNET=10.250.255.0/24
+PROVIDER_ID_HEALTH_CLIENT_ID=health-client-id
+PROVIDER_ID_CLIENT_ID=provider-client-id
+PROVIDER_ID_REDIRECT_URI=https://office-waritch-hosp.moph.go.th/api/auth/provider/callback
+PROVIDER_ID_HEALTH_CLIENT_SECRET_FILE=/etc/backoffice/secrets/provider_id_health_client_secret
+PROVIDER_ID_SECRET_KEY_FILE=/etc/backoffice/secrets/provider_id_secret_key
+BACKOFFICE_EGRESS_SUBNET=10.250.255.0/24
 ENV
 for overrides in "" "${root_dir}/infra/compose/docker-compose.staging-shared-nginx.yml"; do
   files=(-f "${compose_file}")
@@ -122,22 +124,26 @@ for overrides in "" "${root_dir}/infra/compose/docker-compose.staging-shared-ngi
     const { services, networks, secrets } = JSON.parse(require("fs").readFileSync(0, "utf8"));
     const fail = (message) => { console.error(message); process.exit(1); };
     const env = services.web.environment;
-    if (env.PROVIDER_SSO_ISSUER !== "https://aut-waritch-hosp.moph.go.th") fail("web must receive PROVIDER_SSO_ISSUER");
-    if (env.PROVIDER_SSO_CLIENT_ID !== "backoffice") fail("web must default PROVIDER_SSO_CLIENT_ID to backoffice");
-    if (env.PROVIDER_SSO_REDIRECT_URI !== "https://office-waritch-hosp.moph.go.th/api/auth/provider/callback") fail("web must receive PROVIDER_SSO_REDIRECT_URI");
-    if (env.PROVIDER_SSO_CLIENT_SECRET_FILE !== "/run/secrets/provider_sso_client_secret" || env.PROVIDER_SSO_CLIENT_SECRET) fail("web must read the client secret only from the secret file");
-    if (!services.web.secrets.some((secret) => secret.source === "provider_sso_client_secret")) fail("web must mount the provider_sso_client_secret secret");
-    if (secrets.provider_sso_client_secret?.file !== "/etc/backoffice/secrets/provider_sso_client_secret") fail("the secret must come from PROVIDER_SSO_CLIENT_SECRET_FILE");
+    if (env.PROVIDER_ID_ENV !== "prd") fail("web must default PROVIDER_ID_ENV to prd");
+    if (env.PROVIDER_ID_HEALTH_CLIENT_ID !== "health-client-id" || env.PROVIDER_ID_CLIENT_ID !== "provider-client-id") fail("web must receive both client IDs");
+    if (env.PROVIDER_ID_REDIRECT_URI !== "https://office-waritch-hosp.moph.go.th/api/auth/provider/callback") fail("web must receive PROVIDER_ID_REDIRECT_URI");
+    if (env.PROVIDER_ID_HEALTH_CLIENT_SECRET_FILE !== "/run/secrets/provider_id_health_client_secret" || env.PROVIDER_ID_HEALTH_CLIENT_SECRET) fail("web must read the MOPH ID secret only from the secret file");
+    if (env.PROVIDER_ID_SECRET_KEY_FILE !== "/run/secrets/provider_id_secret_key" || env.PROVIDER_ID_SECRET_KEY) fail("web must read the Provider ID secret key only from the secret file");
+    if (env.PROVIDER_ID_HEALTH_URL || env.PROVIDER_ID_API_URL) fail("the stub base-URL overrides must never reach a deployed web");
+    for (const [name, file] of [["provider_id_health_client_secret", "/etc/backoffice/secrets/provider_id_health_client_secret"], ["provider_id_secret_key", "/etc/backoffice/secrets/provider_id_secret_key"]]) {
+      if (!services.web.secrets.some((secret) => secret.source === name)) fail(`web must mount the ${name} secret`);
+      if (secrets[name]?.file !== file) fail(`the ${name} secret must come from its _FILE setting`);
+    }
     if (!services.web.secrets.some((secret) => secret.source === "session_secret")) fail("web must keep its other secrets");
     const joined = Object.keys(services.web.networks ?? {});
-    if (!joined.includes("portal") || networks.portal.internal) fail("web must join a non-internal portal network to reach the portal");
+    if (!joined.includes("egress") || networks.egress.internal) fail("web must join a non-internal egress network to reach MOPH ID and Provider ID");
     // An unpinned network may get 172.18.0.0/16 from Docker, which overlaps the hospital client network.
-    if (networks.portal.ipam?.config?.[0]?.subnet !== "10.250.255.0/24") fail("the portal network must use BACKOFFICE_PORTAL_SUBNET");
+    if (networks.egress.ipam?.config?.[0]?.subnet !== "10.250.255.0/24") fail("the egress network must use BACKOFFICE_EGRESS_SUBNET");
     for (const name of ["backplane", "storage", "scan"]) if (!joined.includes(name)) fail(`web must keep the ${name} network`);
-    for (const [name, service] of Object.entries(services)) if (name !== "web" && Object.keys(service.networks ?? {}).includes("portal")) fail(`${name} must not join the portal network`);
-    if (!(services.web.extra_hosts ?? []).some((entry) => /^aut-waritch-hosp\.moph\.go\.th[:=]192\.168\.1\.10$/.test(entry))) fail("web must resolve the portal host to 192.168.1.10");
+    for (const [name, service] of Object.entries(services)) if (name !== "web" && Object.keys(service.networks ?? {}).includes("egress")) fail(`${name} must not join the egress network`);
+    if ((services.web.extra_hosts ?? []).length) fail("web must resolve the ministry hosts through DNS, not a pinned address");
   ' <<< "${rendered}"
   if [[ "${env_for_run}" != "${provider_env}" ]]; then rm -f "${env_for_run}"; fi
 done
 rm -f "${provider_env}"
-echo "the provider-sso override turns on Provider ID sign-in and reaches the portal"
+echo "the provider-sso override turns on Provider ID sign-in and reaches MOPH ID"
