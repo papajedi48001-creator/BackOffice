@@ -27,9 +27,9 @@ async function sha256Hex(text: string): Promise<string> {
   return [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)))].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
-/** The four headers of a signed box request; the payload matches `signedPayload` on the server. */
-export async function kioskSignedHeaders(key: KioskKey, deviceId: string, method: string, path: string, body: string): Promise<Record<'x-device-id' | 'x-timestamp' | 'x-nonce' | 'x-signature', string>> {
-  const timestamp = new Date().toISOString();
+/** The four headers of a signed box request; the payload matches `signedPayload` on the server. `offsetMs` is server time minus the box's clock. */
+export async function kioskSignedHeaders(key: KioskKey, deviceId: string, method: string, path: string, body: string, offsetMs = 0): Promise<Record<'x-device-id' | 'x-timestamp' | 'x-nonce' | 'x-signature', string>> {
+  const timestamp = new Date(Date.now() + offsetMs).toISOString();
   const nonce = crypto.randomUUID().replace(/-/g, '');
   const signature = await key.sign([method.toUpperCase(), path, timestamp, nonce, await sha256Hex(body)].join('\n'));
   return { 'x-device-id': deviceId, 'x-timestamp': timestamp, 'x-nonce': nonce, 'x-signature': signature };

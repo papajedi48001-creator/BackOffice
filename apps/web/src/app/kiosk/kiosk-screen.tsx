@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { attendanceErrorMessage } from '../../lib/attendance-labels';
 import { kioskDeviceStorageKey, kioskSignedHeaders, loadOrCreateKey, type KioskKey } from '../../lib/kiosk-key';
 import { KioskPairing } from './kiosk-pairing';
@@ -19,6 +19,7 @@ export function KioskScreen() {
   const [key, setKey] = useState<KioskKey | null>(null);
   const [device, setDevice] = useState<Paired | null>(null);
   const [offsetMs, setOffsetMs] = useState<number | null>(null);
+  const clockOffset = useRef(0);
   const [now, setNow] = useState(() => new Date());
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -27,13 +28,15 @@ export function KioskScreen() {
   useEffect(() => { setDevice(savedDevice()); loadOrCreateKey().then(setKey, () => setError('เบราว์เซอร์นี้สร้างกุญแจของกล่องไม่ได้')); }, []);
   useEffect(() => { const timer = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(timer); }, []);
 
-  const heartbeat = useCallback(async () => {
+  const heartbeat = useCallback(async (retry = true) => {
     if (!key || !device) return;
     const path = '/api/kiosk/heartbeat';
     try {
-      const response = await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json', ...await kioskSignedHeaders(key, device.deviceId, 'POST', path, '{}') }, body: '{}' });
+      const response = await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json', ...await kioskSignedHeaders(key, device.deviceId, 'POST', path, '{}', clockOffset.current) }, body: '{}' });
       const result = await response.json().catch(() => ({})) as { serverTime?: string; error?: string };
-      if (response.ok && result.serverTime) { setOffsetMs(Date.parse(result.serverTime) - Date.now()); setOnline(true); setError(null); return; }
+      if (response.ok && result.serverTime) { clockOffset.current = Date.parse(result.serverTime) - Date.now(); setOffsetMs(clockOffset.current); setOnline(true); setError(null); return; }
+      // The box's own clock is off (for example after a power cut without network time): sign with server time from now on.
+      if (result.error === 'CLOCK_SKEW' && result.serverTime && retry) { clockOffset.current = Date.parse(result.serverTime) - Date.now(); return heartbeat(false); }
       if (result.error === 'DEVICE_REVOKED') { localStorage.removeItem(kioskDeviceStorageKey); setDevice(null); }
       setError(attendanceErrorMessage(result.error));
     } catch { setOnline(false); }

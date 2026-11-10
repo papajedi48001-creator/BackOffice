@@ -15,4 +15,12 @@ describe('kiosk key', () => {
     const { signedPayload } = await import('@backoffice/core');
     expect(verifyDeviceSignature(first.publicJwk, signedPayload('POST', '/api/kiosk/heartbeat', headers['x-timestamp'], headers['x-nonce'], '{}'), headers['x-signature'])).toBe(true);
   });
+
+  it('signs with the server clock when the box knows how far its own clock is off', async () => {
+    const key = await loadOrCreateKey(memoryKeyStorage());
+    const before = Date.now();
+    const headers = await kioskSignedHeaders(key, 'device-1', 'POST', '/api/kiosk/heartbeat', '{}', 120_000);
+    expect(Date.parse(headers['x-timestamp']) - before).toBeGreaterThanOrEqual(119_000);
+    expect(Date.parse(headers['x-timestamp']) - before).toBeLessThan(125_000);
+  });
 });

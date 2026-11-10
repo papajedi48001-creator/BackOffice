@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDatabase, runMigrations } from '@backoffice/db';
 import { insertPerson } from '../leave/leave-fixtures';
-import { attendanceAudit, verifyChain } from './attendance-chain';
+import { attendanceAudit, attendanceTransaction, verifyChain } from './attendance-chain';
 
 const databaseUrl = process.env.DATABASE_URL;
 const describeWithDatabase = databaseUrl ? describe : describe.skip;
@@ -38,6 +38,43 @@ describeWithDatabase('attendance hash chain against MariaDB', () => {
     const seqs = (await Promise.all(targets.map(async (target) => seqOf(await auditIdOf(target))))).sort((a, b) => a - b);
     expect(seqs.at(-1)! - seqs[0]!).toBe(9);
     expect(await verifyChain(database)).toMatchObject({ ok: true });
+  });
+
+  it('appends after another action committed while this transaction had already read', async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const first = attendanceTransaction(database, async (tx) => {
+      await tx.query('SELECT last_seq FROM attendance_hash_chain_head WHERE id = 1');
+      await gate;
+      await attendanceAudit(tx, actor, 'attendance.test.chain', 'attendance_test', randomUUID(), {});
+    });
+    await audit(randomUUID());
+    release();
+    await first;
+    expect(await verifyChain(database)).toMatchObject({ ok: true });
+  });
+
+  it('does not report a break when an action commits while the chain is being checked', async () => {
+    await audit(randomUUID());
+    let raced = false;
+    const racing = { query: async <T extends object>(sql: string, parameters?: unknown[]) => {
+      const rows = await database.query<T>(sql, parameters as never);
+      if (!raced && sql.includes('attendance_hash_chain_head')) { raced = true; await audit(randomUUID()); }
+      return rows;
+    } };
+    expect(await verifyChain(racing)).toMatchObject({ ok: true });
+    expect(raced).toBe(true);
+  });
+
+  it('verifies the same whatever time zone the checking process runs in', async () => {
+    await audit(randomUUID());
+    const zone = process.env.TZ;
+    process.env.TZ = 'Asia/Bangkok';
+    try {
+      expect(await verifyChain(database)).toMatchObject({ ok: true });
+    } finally {
+      if (zone === undefined) delete process.env.TZ; else process.env.TZ = zone;
+    }
   });
 
   it('leaves neither the audit row nor a chain row when the transaction fails', async () => {

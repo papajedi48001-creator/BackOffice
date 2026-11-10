@@ -47,7 +47,7 @@ describeWithDatabase('DeviceService against MariaDB', () => {
     const first = request(created.id, key);
     expect(await service.authenticate(first)).toEqual({ ok: true, device: { id: created.id, locationId } });
     expect(await service.authenticate(first)).toEqual({ ok: false, code: 'REQUEST_REPLAYED' });
-    expect(await service.authenticate(request(created.id, key, { timestamp: new Date(clock.getTime() - 61_000).toISOString() }))).toEqual({ ok: false, code: 'DEVICE_SIGNATURE_INVALID' });
+    expect(await service.authenticate(request(created.id, key, { timestamp: new Date(clock.getTime() - 61_000).toISOString() }))).toEqual({ ok: false, code: 'CLOCK_SKEW', serverTime: clock.toISOString() });
     expect(await service.authenticate({ ...request(created.id, key), body: '{"changed":true}' })).toEqual({ ok: false, code: 'DEVICE_SIGNATURE_INVALID' });
     expect(await service.authenticate(request(randomUUID(), key))).toEqual({ ok: false, code: 'DEVICE_SIGNATURE_INVALID' });
     expect((await new DeviceQueries(database).list()).find((device) => device.id === created.id)).toMatchObject({ paired: true, revoked: false, online: true, locationId });

@@ -46,6 +46,16 @@ describe('POST /api/kiosk/pair', () => {
     expect((await PAIR(pairRequest())).status).toBe(429);
     expect((await PAIR(pairRequest(pairBody, '10.0.0.6'))).status).toBe(400);
   });
+  it('counts the address the proxy saw, not one the caller wrote into x-forwarded-for', async () => {
+    mocks.pair.mockResolvedValue({ ok: false, code: 'PAIRING_CODE_INVALID' });
+    for (let attempt = 0; attempt < 10; attempt += 1) expect((await PAIR(pairRequest(pairBody, `203.0.113.${attempt}, 10.0.0.5`))).status).toBe(400);
+    expect((await PAIR(pairRequest(pairBody, '203.0.113.99, 10.0.0.5'))).status).toBe(429);
+  });
+  it('stops all guessing for a minute after 30 wrong codes from any addresses', async () => {
+    mocks.pair.mockResolvedValue({ ok: false, code: 'PAIRING_CODE_INVALID' });
+    for (let attempt = 0; attempt < 30; attempt += 1) expect((await PAIR(pairRequest(pairBody, `10.0.1.${attempt}`))).status).toBe(400);
+    expect((await PAIR(pairRequest(pairBody, '10.0.2.1'))).status).toBe(429);
+  });
 });
 
 describe('POST /api/kiosk/heartbeat', () => {

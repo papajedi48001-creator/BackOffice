@@ -25,20 +25,33 @@ export function withDevice(request: Request, action: (device: { id: string; loca
     const body = await request.text();
     const header = (name: string) => request.headers.get(name) ?? '';
     const result = await new DeviceService(database).authenticate({ deviceId: header('x-device-id'), timestamp: header('x-timestamp'), nonce: header('x-nonce'), signature: header('x-signature'), method: request.method, path: new URL(request.url).pathname, body });
-    if (!result.ok) return kioskError(result.code, 401);
+    if (!result.ok) return result.code === 'CLOCK_SKEW' ? NextResponse.json({ error: result.code, serverTime: result.serverTime }, { status: 401, headers: noStore }) : kioskError(result.code, 401);
     return action(result.device, database, body);
   });
 }
 
-/** Per-instance limit on รหัสจับคู่ guesses: 10 a minute from one address. Enough with one web container; see the runbook. */
+/**
+ * Per-instance limits on รหัสจับคู่ guesses: 10 a minute from one address, and 30 wrong codes a minute from all addresses
+ * together, so a caller who rotates addresses still cannot search the 8-digit space. Enough with one web container.
+ * The address is the last x-forwarded-for hop, the one our own proxy appended, never the caller's own first entry.
+ */
 const PAIR_LIMIT = 10;
+const GLOBAL_FAILED_LIMIT = 30;
 const WINDOW_MS = 60_000;
 const attempts = new Map<string, { count: number; resetAt: number }>();
+let failed = { count: 0, resetAt: 0 };
 export function allowPairAttempt(request: Request, now = Date.now()): boolean {
-  const address = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'unknown';
+  if (failed.resetAt > now && failed.count >= GLOBAL_FAILED_LIMIT) return false;
+  for (const [key, entry] of attempts) if (entry.resetAt <= now) attempts.delete(key);
+  const address = request.headers.get('x-forwarded-for')?.split(',').at(-1)?.trim() || request.headers.get('x-real-ip') || 'unknown';
   const entry = attempts.get(address);
-  if (!entry || entry.resetAt <= now) { attempts.set(address, { count: 1, resetAt: now + WINDOW_MS }); return true; }
+  if (!entry) { attempts.set(address, { count: 1, resetAt: now + WINDOW_MS }); return true; }
   entry.count += 1;
   return entry.count <= PAIR_LIMIT;
 }
-export function resetPairLimiter(): void { attempts.clear(); }
+/** Counts one wrong รหัสจับคู่ toward the limit shared by every address. */
+export function recordPairFailure(now = Date.now()): void {
+  if (failed.resetAt <= now) failed = { count: 0, resetAt: now + WINDOW_MS };
+  failed.count += 1;
+}
+export function resetPairLimiter(): void { attempts.clear(); failed = { count: 0, resetAt: 0 }; }

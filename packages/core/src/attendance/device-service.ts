@@ -1,7 +1,7 @@
 import { createHash, randomInt, randomUUID } from 'node:crypto';
 import { attendanceDeviceInputSchema, attendancePairInputSchema, type AttendanceDeviceInput, type AttendancePairInput } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
-import { attendanceAudit } from './attendance-chain';
+import { attendanceAudit, attendanceTransaction } from './attendance-chain';
 import { isDuplicateEntry } from './attendance-db';
 import { signedPayload, verifyDeviceSignature } from './device-signature';
 
@@ -10,7 +10,7 @@ const SKEW_MS = 60_000;
 const NONCE_KEEP_MINUTES = 10;
 
 export interface SignedDeviceRequest { deviceId: string; timestamp: string; nonce: string; signature: string; method: string; path: string; body: string }
-export type DeviceAuthResult = { ok: true; device: { id: string; locationId: string } } | { ok: false; code: 'DEVICE_REVOKED' | 'DEVICE_SIGNATURE_INVALID' | 'REQUEST_REPLAYED' };
+export type DeviceAuthResult = { ok: true; device: { id: string; locationId: string } } | { ok: false; code: 'DEVICE_REVOKED' | 'DEVICE_SIGNATURE_INVALID' | 'REQUEST_REPLAYED' } | { ok: false; code: 'CLOCK_SKEW'; serverTime: string };
 
 const hashCode = (code: string) => createHash('sha256').update(code).digest('hex');
 /** DATETIME text in UTC; the pool has no time zone set, so Date parameters would be written in the host's zone. */
@@ -25,7 +25,7 @@ export class DeviceService {
 
   async create(actor: string, input: AttendanceDeviceInput): Promise<{ ok: true; id: string; pairingCode: string } | { ok: false; code: 'NOT_FOUND' }> {
     const device = attendanceDeviceInputSchema.parse(input);
-    return this.database.transaction(async (tx) => {
+    return attendanceTransaction(this.database, async (tx) => {
       const [location] = await tx.query<{ id: string }>('SELECT id FROM attendance_location WHERE id = ? AND is_active = 1', [device.locationId]);
       if (!location) return { ok: false as const, code: 'NOT_FOUND' as const };
       const id = this.createId();
@@ -38,7 +38,7 @@ export class DeviceService {
 
   /** A new รหัสจับคู่ for a box that was replaced or never paired; older unused codes stop working. */
   async newPairingCode(actor: string, deviceId: string): Promise<{ ok: true; pairingCode: string } | { ok: false; code: 'NOT_FOUND' | 'DEVICE_REVOKED' }> {
-    return this.database.transaction(async (tx) => {
+    return attendanceTransaction(this.database, async (tx) => {
       const [device] = await tx.query<{ revokedAt: Date | null }>('SELECT revoked_at AS revokedAt FROM attendance_device WHERE id = ? FOR UPDATE', [deviceId]);
       if (!device) return { ok: false as const, code: 'NOT_FOUND' as const };
       if (device.revokedAt) return { ok: false as const, code: 'DEVICE_REVOKED' as const };
@@ -55,7 +55,7 @@ export class DeviceService {
     if (!parsed.success) return { ok: false, code: 'PAIRING_CODE_INVALID' };
     const { pairingCode, publicKey } = parsed.data;
     const now = sqlTime(this.now());
-    return this.database.transaction(async (tx) => {
+    return attendanceTransaction(this.database, async (tx) => {
       const [pairing] = await tx.query<{ id: string; deviceId: string; deviceName: string; locationName: string }>(
         `SELECT p.id, p.device_id AS deviceId, d.name AS deviceName, l.name AS locationName FROM attendance_device_pairing p JOIN attendance_device d ON d.id = p.device_id JOIN attendance_location l ON l.id = d.location_id
          WHERE p.code_hash = ? AND p.used_at IS NULL AND p.expires_at > ? AND d.revoked_at IS NULL FOR UPDATE`, [hashCode(pairingCode), now]);
@@ -68,7 +68,7 @@ export class DeviceService {
   }
 
   async revoke(actor: string, deviceId: string): Promise<{ ok: true } | { ok: false; code: 'NOT_FOUND' }> {
-    return this.database.transaction(async (tx) => {
+    return attendanceTransaction(this.database, async (tx) => {
       const [device] = await tx.query<{ revokedAt: Date | null }>('SELECT revoked_at AS revokedAt FROM attendance_device WHERE id = ? FOR UPDATE', [deviceId]);
       if (!device) return { ok: false as const, code: 'NOT_FOUND' as const };
       if (!device.revokedAt) {
@@ -80,7 +80,7 @@ export class DeviceService {
     });
   }
 
-  /** Checks one signed box request: known paired box, not revoked, timestamp within ±60 s, valid signature, unused nonce. */
+  /** Checks one signed box request: known paired box, not revoked, timestamp within ±60 s (else CLOCK_SKEW with server time), valid signature, unused nonce. */
   async authenticate(request: SignedDeviceRequest): Promise<DeviceAuthResult> {
     const invalid = { ok: false as const, code: 'DEVICE_SIGNATURE_INVALID' as const };
     const [device] = await this.database.query<{ id: string; locationId: string; publicKeyJwk: string | null; revokedAt: Date | null }>('SELECT id, location_id AS locationId, public_key_jwk AS publicKeyJwk, revoked_at AS revokedAt FROM attendance_device WHERE id = ?', [request.deviceId]);
@@ -88,7 +88,9 @@ export class DeviceService {
     if (device.revokedAt) return { ok: false, code: 'DEVICE_REVOKED' };
     const now = this.now();
     const sent = Date.parse(request.timestamp);
-    if (!Number.isFinite(sent) || Math.abs(now.getTime() - sent) > SKEW_MS) return invalid;
+    if (!Number.isFinite(sent)) return invalid;
+    // The box's clock is off: tell it the server time so it can correct itself. Time is not a secret, and nothing is accepted.
+    if (Math.abs(now.getTime() - sent) > SKEW_MS) return { ok: false, code: 'CLOCK_SKEW', serverTime: now.toISOString() };
     if (!/^[A-Za-z0-9_-]{16,64}$/.test(request.nonce)) return invalid;
     if (!verifyDeviceSignature(JSON.parse(device.publicKeyJwk) as { kty: string; crv: string; x: string; y: string }, signedPayload(request.method, request.path, request.timestamp, request.nonce, request.body), request.signature)) return invalid;
     try {

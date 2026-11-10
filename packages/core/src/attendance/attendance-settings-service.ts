@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { attendanceLocationInputSchema, attendanceSettingsInputSchema, attendanceShiftTypeInputSchema, type AttendanceLocationInput, type AttendanceSettings, type AttendanceShiftTypeInput } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
-import { attendanceAudit } from './attendance-chain';
+import { attendanceAudit, attendanceTransaction } from './attendance-chain';
 import { isDuplicateEntry } from './attendance-db';
 import { AttendanceSettingsQueries, timeToMinute } from './attendance-settings-queries';
 
@@ -15,7 +15,7 @@ export class AttendanceSettingsService {
   /** Writes only the keys whose value changed; the audit lists those keys, never the values. */
   async saveSettings(actor: string, input: AttendanceSettings): Promise<{ ok: true }> {
     const settings = attendanceSettingsInputSchema.parse(input);
-    return this.database.transaction(async (tx) => {
+    return attendanceTransaction(this.database, async (tx) => {
       const current = await new AttendanceSettingsQueries(tx).settings();
       const changed = (Object.keys(settings) as (keyof AttendanceSettings)[]).filter((key) => settings[key] !== current[key]);
       for (const key of changed) {
@@ -44,7 +44,7 @@ export class AttendanceSettingsService {
   private async save(actor: string, action: string, table: Table, id: string | null, values: Record<string, string | number>, ids: (rowId: string) => Record<string, string>): Promise<AttendanceSaveResult> {
     const columns = Object.keys(values);
     try {
-      return await this.database.transaction(async (tx) => {
+      return await attendanceTransaction(this.database, async (tx) => {
         let rowId = id;
         if (rowId) {
           const [existing] = await tx.query<{ id: string }>(`SELECT id FROM ${table} WHERE id = ? FOR UPDATE`, [rowId]);

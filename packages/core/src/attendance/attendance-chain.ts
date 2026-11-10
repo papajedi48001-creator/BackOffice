@@ -50,11 +50,11 @@ export function checkChain(rows: readonly ChainRow[], canonicalOf: (row: ChainRo
 
 type Reader = (database: Pick<Database, 'query'>, ids: readonly string[]) => Promise<Map<string, Record<string, unknown>>>;
 
-/** How each chained record type is read back. A later delivery step adds `attendance_event`. */
+/** How each chained record type is read back. Times are formatted in SQL so the hash never depends on the process time zone. A later delivery step adds `attendance_event`. */
 export const chainRecordReaders: Record<ChainRecordType, Reader> = {
   audit_event: async (database, ids) => {
     if (ids.length === 0) return new Map();
-    const rows = await database.query<Record<string, unknown> & { id: string }>(`SELECT id, actor_person_id, action, target_type, target_id, result, metadata, created_at, actor_role FROM audit_event WHERE id IN (${ids.map(() => '?').join(', ')})`, [...ids]);
+    const rows = await database.query<Record<string, unknown> & { id: string }>(`SELECT id, actor_person_id, action, target_type, target_id, result, metadata, DATE_FORMAT(created_at, '%Y-%m-%dT%H:%i:%s.000Z') AS created_at, actor_role FROM audit_event WHERE id IN (${ids.map(() => '?').join(', ')})`, [...ids]);
     return new Map(rows.map((row) => [row.id, row]));
   }
 };
@@ -72,6 +72,14 @@ export async function appendToChain(tx: Database, recordType: ChainRecordType, r
   return { seq, hash };
 }
 
+/**
+ * Every transaction that appends to the chain. READ COMMITTED lets the head row lock see a head another action committed
+ * after this transaction's first read; under MariaDB 11.8's snapshot isolation that lock would fail with ER_CHECKREAD.
+ */
+export function attendanceTransaction<T>(database: Database, work: (tx: Database) => Promise<T>): Promise<T> {
+  return database.transaction(work, { isolationLevel: 'READ COMMITTED' });
+}
+
 /** One audit row of the module plus its chain row, inside the caller's transaction. Metadata carries ids and codes only. */
 export async function attendanceAudit(tx: Database, actorPersonId: string | null, action: string, targetType: string, targetId: string, metadata: Record<string, unknown>): Promise<void> {
   const auditId = randomUUID();
@@ -79,14 +87,14 @@ export async function attendanceAudit(tx: Database, actorPersonId: string | null
   await appendToChain(tx, 'audit_event', auditId);
 }
 
-/** ตรวจสอบความต่อเนื่อง: walks the whole chain in pages and re-hashes every record as it is stored now. */
+/** ตรวจสอบความต่อเนื่อง: walks the chain up to the head read first, in pages, and re-hashes every record as it is stored now. */
 export async function verifyChain(database: Pick<Database, 'query'>): Promise<ChainCheck> {
   const [head] = await database.query<{ lastSeq: number; lastHash: string }>('SELECT last_seq AS lastSeq, last_hash AS lastHash FROM attendance_hash_chain_head WHERE id = 1');
   if (!head) return { ok: false, brokenAtSeq: 1, reason: 'HEAD_MISMATCH' };
   const finalHead = { lastSeq: Number(head.lastSeq), lastHash: head.lastHash };
   let start = { seq: 0, hash: GENESIS_HASH };
   for (;;) {
-    const rows = (await database.query<ChainRow>('SELECT seq, record_type AS recordType, record_id AS recordId, prev_hash AS prevHash, hash FROM attendance_hash_chain WHERE seq > ? ORDER BY seq LIMIT ?', [start.seq, PAGE])).map((row) => ({ ...row, seq: Number(row.seq) }));
+    const rows = (await database.query<ChainRow>('SELECT seq, record_type AS recordType, record_id AS recordId, prev_hash AS prevHash, hash FROM attendance_hash_chain WHERE seq > ? AND seq <= ? ORDER BY seq LIMIT ?', [start.seq, finalHead.lastSeq, PAGE])).map((row) => ({ ...row, seq: Number(row.seq) }));
     const records = new Map<string, Map<string, Record<string, unknown>>>();
     for (const type of new Set(rows.map((row) => row.recordType))) {
       const reader = chainRecordReaders[type as ChainRecordType];
