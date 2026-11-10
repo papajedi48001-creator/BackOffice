@@ -114,3 +114,6 @@ export * from './mass-casualty/mci-queries';
 export * from './mass-casualty/mci-export';
 export * from './attendance/attendance-chain';
 export { attendanceOutbox } from './attendance/attendance-db';
+export * from './attendance/attendance-access';
+export * from './attendance/attendance-settings-queries';
+export * from './attendance/attendance-settings-service';
