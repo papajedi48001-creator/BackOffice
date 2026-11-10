@@ -110,6 +110,7 @@ cat >> "${provider_env}" <<'ENV'
 PROVIDER_SSO_ISSUER=https://aut-waritch-hosp.moph.go.th
 PROVIDER_SSO_REDIRECT_URI=https://office-waritch-hosp.moph.go.th/api/auth/provider/callback
 PROVIDER_SSO_CLIENT_SECRET_FILE=/etc/backoffice/secrets/provider_sso_client_secret
+BACKOFFICE_PORTAL_SUBNET=10.250.255.0/24
 ENV
 for overrides in "" "${root_dir}/infra/compose/docker-compose.staging-shared-nginx.yml"; do
   files=(-f "${compose_file}")
@@ -130,6 +131,8 @@ for overrides in "" "${root_dir}/infra/compose/docker-compose.staging-shared-ngi
     if (!services.web.secrets.some((secret) => secret.source === "session_secret")) fail("web must keep its other secrets");
     const joined = Object.keys(services.web.networks ?? {});
     if (!joined.includes("portal") || networks.portal.internal) fail("web must join a non-internal portal network to reach the portal");
+    // An unpinned network may get 172.18.0.0/16 from Docker, which overlaps the hospital client network.
+    if (networks.portal.ipam?.config?.[0]?.subnet !== "10.250.255.0/24") fail("the portal network must use BACKOFFICE_PORTAL_SUBNET");
     for (const name of ["backplane", "storage", "scan"]) if (!joined.includes(name)) fail(`web must keep the ${name} network`);
     for (const [name, service] of Object.entries(services)) if (name !== "web" && Object.keys(service.networks ?? {}).includes("portal")) fail(`${name} must not join the portal network`);
     if (!(services.web.extra_hosts ?? []).some((entry) => /^aut-waritch-hosp\.moph\.go\.th[:=]192\.168\.1\.10$/.test(entry))) fail("web must resolve the portal host to 192.168.1.10");

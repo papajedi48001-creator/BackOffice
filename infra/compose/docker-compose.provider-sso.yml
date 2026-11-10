@@ -15,7 +15,11 @@ services:
       - "${PROVIDER_SSO_PORTAL_HOST:-aut-waritch-hosp.moph.go.th}:${PROVIDER_SSO_PORTAL_IP:-192.168.1.10}"
 
 networks:
-  portal: {}
+  portal:
+    # Pinned like the other staging networks: Docker's own pick can overlap the hospital client network (172.18.0.0/16).
+    ipam:
+      config:
+        - subnet: ${BACKOFFICE_PORTAL_SUBNET:?set BACKOFFICE_PORTAL_SUBNET}
 
 secrets:
   provider_sso_client_secret:

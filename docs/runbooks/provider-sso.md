@@ -44,6 +44,8 @@ container web ไม่อ่าน `.env` ที่ราก repo ให้ใ�
    PROVIDER_SSO_ISSUER=https://aut-waritch-hosp.moph.go.th
    PROVIDER_SSO_REDIRECT_URI=https://office-waritch-hosp.moph.go.th/api/auth/provider/callback
    PROVIDER_SSO_CLIENT_SECRET_FILE=/etc/backoffice/secrets/provider_sso_client_secret
+   # ช่วงที่จัดสรรแล้วและไม่ทับวงเครือข่ายโรงพยาบาล (ห้ามใช้ 172.18.0.0/16)
+   BACKOFFICE_PORTAL_SUBNET=10.250.255.0/24
    ```
 3. ใส่ `-f infra/compose/docker-compose.provider-sso.yml` ต่อท้ายไฟล์ compose เดิมทุกคำสั่ง เช่น staging ที่ใช้ nginx ร่วม (เครื่อง .251):
    ```sh
