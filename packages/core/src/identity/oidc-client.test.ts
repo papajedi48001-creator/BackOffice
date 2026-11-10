@@ -132,3 +132,31 @@ describe('PortalOidcClient', () => {
     expect(h.calls.filter((url) => url.endsWith('/oidc/jwks')).length).toBe(1);
   });
 });
+
+describe('PortalOidcClient.verifyPortalRequest', () => {
+  const typ = 'backoffice-photo-request+jwt';
+  const header = { alg: 'ES256', kid: 'k1', typ };
+  const claims = { iss: config.issuer, aud: 'backoffice', sub: 'member-1', iat: nowSeconds, exp: nowSeconds + 60 };
+  const check = (build: (h: ReturnType<typeof harness>) => string) => {
+    const h = harness();
+    return h.client.verifyPortalRequest(build(h), typ);
+  };
+
+  it('returns the member a portal-signed request names', async () => {
+    await expect(check((h) => token(h.primary.privateKey, claims, header))).resolves.toBe('member-1');
+  });
+
+  it('refuses an ID token, another type, issuer or audience', async () => {
+    await expect(check((h) => token(h.primary.privateKey, { ...claims, nonce: 'n' }))).rejects.toEqual(new OidcError('INVALID'));
+    await expect(check((h) => token(h.primary.privateKey, claims, { ...header, typ: 'other+jwt' }))).rejects.toEqual(new OidcError('INVALID'));
+    await expect(check((h) => token(h.primary.privateKey, { ...claims, iss: 'https://elsewhere.test' }, header))).rejects.toEqual(new OidcError('INVALID'));
+    await expect(check((h) => token(h.primary.privateKey, { ...claims, aud: 'other-client' }, header))).rejects.toEqual(new OidcError('INVALID'));
+  });
+
+  it('refuses an expired, long-lived or forged request', async () => {
+    await expect(check((h) => token(h.primary.privateKey, { ...claims, iat: nowSeconds - 400, exp: nowSeconds - 300 }, header))).rejects.toEqual(new OidcError('INVALID'));
+    await expect(check((h) => token(h.primary.privateKey, { ...claims, exp: nowSeconds + 3600 }, header))).rejects.toEqual(new OidcError('INVALID'));
+    await expect(check(() => token(keyPair('k1').privateKey, claims, header))).rejects.toEqual(new OidcError('INVALID'));
+    await expect(check(() => 'not-a-token')).rejects.toEqual(new OidcError('INVALID'));
+  });
+});
