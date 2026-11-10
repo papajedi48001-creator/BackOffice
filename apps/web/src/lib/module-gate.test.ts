@@ -7,6 +7,8 @@ describe('module gate', () => {
     expect(moduleForPath('/api/leave/settings')).toBe('leave');
     expect(moduleForPath('/mci/board')).toBe('mass-casualty');
     expect(moduleForPath('/api/mci/board')).toBe('mass-casualty');
+    expect(moduleForPath('/lab/stock')).toBe('lab-inventory');
+    expect(moduleForPath('/api/lab/usages')).toBe('lab-inventory');
     expect(moduleForPath('/rooms')).toBe('room-booking');
     expect(moduleForPath('/api/rooms/bookings/x')).toBe('room-booking');
     expect(moduleForPath('/api/travel')).toBe('official-travel');

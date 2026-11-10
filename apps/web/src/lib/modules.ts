@@ -1,5 +1,5 @@
 import type { AccessSubject, ModuleMode } from '@backoffice/contracts';
-import { canCommandMci, loadActor, mciCan, MciQueries, canDecideOwnRequest, AuthorizationService, FleetQueries, canUseModule, isAdmin, LeaveQueries, OfficialTravelQueries, RoomBookingQueries, canManageFleet, canManageLeave, canManageTravel, hasOpenRequestWork, listPendingApprovals } from '@backoffice/core';
+import { canManageLab, labCan, loadLabMember, LabQueries, type LabAction, canCommandMci, loadActor, mciCan, MciQueries, canDecideOwnRequest, AuthorizationService, FleetQueries, canUseModule, isAdmin, LeaveQueries, OfficialTravelQueries, RoomBookingQueries, canManageFleet, canManageLeave, canManageTravel, hasOpenRequestWork, listPendingApprovals } from '@backoffice/core';
 import type { Database } from '@backoffice/db';
 import { t, type MessageKey } from '@backoffice/i18n';
 import type { NavigationItem } from '../components/app-shell';
@@ -7,7 +7,7 @@ import { matchModule } from './module-theme';
 import { canInventory } from './inventory-access';
 
 export type ModuleGroup = 'mine' | 'people' | 'services' | 'governance';
-export type ModuleIconName = 'requests' | 'bell' | 'people' | 'org' | 'upload' | 'shield' | 'delegate' | 'audit' | 'wrench' | 'package' | 'room' | 'car' | 'clock' | 'leave' | 'travel' | 'asset' | 'monitor' | 'target' | 'heart' | 'settings';
+export type ModuleIconName = 'requests' | 'bell' | 'people' | 'org' | 'upload' | 'shield' | 'delegate' | 'audit' | 'wrench' | 'package' | 'room' | 'car' | 'clock' | 'leave' | 'travel' | 'asset' | 'monitor' | 'target' | 'heart' | 'flask' | 'settings';
 
 /** One page inside a module, shown in the module's section bar rather than on the main page. */
 export interface ModuleSection {
@@ -70,6 +70,23 @@ const mciMay = (action: 'viewPatients' | 'manageResponder') => async (db: Databa
   const actor = await loadActor(db, incident.id, subject.personId);
   return action === 'manageResponder' ? actor?.commandRole === 'ZONE_LEAD' || actor?.commandRole === 'COMMANDER' : mciCan(actor, false, action);
 };
+
+/** What the person may do in the Lab stock module, from lab_member or `lab.manage`. Hides links only; every page and API checks again. */
+const labMay = (...actions: LabAction[]) => async (db: Database, subject: AccessSubject) => {
+  if (canManageLab(subject)) return true;
+  if (!subject.personId) return false;
+  const member = await loadLabMember(db, subject.personId);
+  // A เจ้าหน้าที่ Lab acts in their own งาน; any one of them is enough to show the link.
+  return actions.some((action) => labCan(member, false, action, member?.sectionIds[0] ?? null));
+};
+/** ใบขอเบิก รออนุมัติ for the หัวหน้า Lab (or manager), รอจ่าย for the ผู้ดูแลคลัง Lab. */
+const labWaiting = (kind: 'decide' | 'issue') => async (db: Database, subject: AccessSubject) => {
+  const manages = canManageLab(subject);
+  const member = !manages && subject.personId ? await loadLabMember(db, subject.personId) : null;
+  if (!labCan(member, manages, kind)) return 0;
+  return kind === 'decide' ? new LabQueries(db).pendingDecisionCount() : new LabQueries(db).pendingIssueCount();
+};
+const labBadge = async (db: Database, subject: AccessSubject) => (await labWaiting('decide')(db, subject)) + (await labWaiting('issue')(db, subject));
 
 export const moduleRegistry: readonly ModuleEntry[] = [
   {
@@ -163,6 +180,15 @@ export const moduleRegistry: readonly ModuleEntry[] = [
     { href: '/mci/incidents', labelKey: 'mciIncidents', visible: canCommandMci },
     { href: '/mci/settings', labelKey: 'mciSettings', visible: canCommandMci }
   ]),
+  // Lab members only (lab_member) plus ผู้จัดการวัสดุคงคลัง Lab; /lab itself is the ภาพรวม page.
+  { ...withSections({ code: 'lab-inventory', href: '/lab', labelKey: 'moduleLabInventory', descriptionKey: 'moduleLabInventoryDescription', icon: 'flask', group: 'services', status: 'live' }, [
+    { href: '/lab/usage', labelKey: 'labUsage', visible: everyone, available: labMay('use') },
+    { href: '/lab/requisitions', labelKey: 'labRequisitions', visible: everyone, available: labMay('request', 'decide', 'issue'), badge: labBadge },
+    { href: '/lab/receipts', labelKey: 'labReceipts', visible: everyone, available: labMay('receive') },
+    { href: '/lab/stock', labelKey: 'labStock', visible: everyone, available: labMay('viewStock') },
+    { href: '/lab/opening', labelKey: 'labOpening', visible: everyone, available: labMay('editOpening', 'certifyOpening') },
+    { href: '/lab/settings', labelKey: 'labSettings', visible: everyone, available: labMay('manageSettings') }
+  ]), available: labMay('viewStock'), badge: labBadge },
   // ผู้ดูแลระบบ only. A new admin page is one more section here and one page under app/(app)/admin.
   withSections({ code: 'admin', href: '/admin', labelKey: 'moduleAdmin', descriptionKey: 'moduleAdminDescription', icon: 'settings', group: 'governance', status: 'live' }, [
     { href: '/admin/connections', labelKey: 'adminConnections', visible: isAdmin },

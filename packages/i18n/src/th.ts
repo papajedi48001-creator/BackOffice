@@ -127,6 +127,7 @@ export const th = {
   mciOps: 'ภาพรวม', mciPatients: 'ผู้ป่วย', mciStaff: 'กำลังคน', mciIncidents: 'เหตุ', mciSettings: 'ตั้งค่า',
   moduleMassCasualty: 'อุบัติเหตุหมู่', moduleMassCasualtyDescription: 'รายงานตัว จัดจุด และติดตามผู้ป่วยในเหตุ', adminRoleMciManager: 'ผู้จัดการอุบัติเหตุหมู่', roleDescMciManager: 'ประกาศเปิดและปิดเหตุอุบัติเหตุหมู่ จัดคน และตั้งค่าโมดูล',
   moduleLabInventory: 'รายงานวัสดุคงคลัง Lab', moduleLabInventoryDescription: 'รับเข้า ขอเบิก ตัดใช้ และยอดคงเหลือวัสดุ Lab', adminRoleLabManager: 'ผู้จัดการวัสดุคงคลัง Lab', roleDescLabManager: 'จัดการสมาชิกและตั้งค่าระบบวัสดุคงคลัง Lab และทำได้ทุกอย่างในโมดูล',
+  labUsage: 'ตัดใช้', labRequisitions: 'ใบขอเบิก', labReceipts: 'รับเข้า', labStock: 'ยอดคงเหลือ', labOpening: 'ยอดยกมา', labSettings: 'ตั้งค่า',
 } as const;
 
 export type MessageKey = keyof typeof th;
