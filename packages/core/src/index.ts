@@ -101,3 +101,5 @@ export * from './holidays/connection-secret-box';
 export * from './holidays/hosxp-settings-service';
 export * from './holidays/holiday-sync-service';
 export * from './holidays/hosxp-holiday-reader';
+export * from './mass-casualty/mci-rules';
+export * from './mass-casualty/mci-access';
