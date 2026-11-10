@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Live modules that can have ผู้ทดสอบ: every live module but `admin`, in registry order. Each gets a `<code>-tester` role. */
-export const testerModuleCodes = ['requests', 'notifications', 'hr', 'access', 'room-booking', 'leave', 'official-travel', 'inventory', 'fleet', 'mass-casualty'] as const;
+export const testerModuleCodes = ['requests', 'notifications', 'hr', 'access', 'room-booking', 'leave', 'official-travel', 'inventory', 'fleet', 'mass-casualty', 'attendance'] as const;
 export type TesterModuleCode = (typeof testerModuleCodes)[number];
 export type TesterRole = `${TesterModuleCode}-tester`;
 const testerRoles = testerModuleCodes.map((code) => `${code}-tester` as TesterRole) as [TesterRole, ...TesterRole[]];
@@ -10,7 +10,7 @@ const testerRoles = testerModuleCodes.map((code) => `${code}-tester` as TesterRo
  * Roles the ผู้ดูแลระบบ may grant from the admin module: `admin` itself, each module's ผู้จัดการ role and each module's ผู้ทดสอบ role.
  * Which module each manager role belongs to lives in `@backoffice/core` (module-managers.ts).
  */
-export const grantableRoleSchema = z.enum(['admin', 'hr-manager', 'leave-manager', 'travel-manager', 'room-manager', 'inventory-officer', 'fleet-manager', 'mci-manager', ...testerRoles]);
+export const grantableRoleSchema = z.enum(['admin', 'hr-manager', 'leave-manager', 'travel-manager', 'room-manager', 'inventory-officer', 'fleet-manager', 'mci-manager', 'attendance-manager', 'attendance-auditor', ...testerRoles]);
 export type GrantableRole = z.infer<typeof grantableRoleSchema>;
 
 export const adminGrantInputSchema = z.object({ personId: z.string().uuid(), roleName: grantableRoleSchema }).strict();

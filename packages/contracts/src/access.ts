@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const permissionSchema = z.enum(['hr.person.read', 'hr.person.manage', 'hr.organization.manage', 'hr.person.private.read', 'data.export', 'room.manage', 'room.booking.decide', 'inventory.item.manage', 'inventory.stock.receive', 'inventory.stock.read', 'inventory.opening.certify', 'leave.manage', 'travel.manage', 'fleet.manage', 'mci.command']);
+export const permissionSchema = z.enum(['hr.person.read', 'hr.person.manage', 'hr.organization.manage', 'hr.person.private.read', 'data.export', 'room.manage', 'room.booking.decide', 'inventory.item.manage', 'inventory.stock.receive', 'inventory.stock.read', 'inventory.opening.certify', 'leave.manage', 'travel.manage', 'fleet.manage', 'mci.command', 'attendance.manage', 'attendance.device.manage', 'attendance.schedule', 'attendance.audit.read']);
 export type Permission = z.infer<typeof permissionSchema>;
 
 /**
@@ -22,7 +22,11 @@ export const permissionModules: Readonly<Record<Permission, string | null>> = {
   'leave.manage': 'leave',
   'travel.manage': 'official-travel',
   'fleet.manage': 'fleet',
-  'mci.command': 'mass-casualty'
+  'mci.command': 'mass-casualty',
+  'attendance.manage': 'attendance',
+  'attendance.device.manage': 'attendance',
+  'attendance.schedule': 'attendance',
+  'attendance.audit.read': 'attendance'
 };
 
 export const accessSubjectSchema = z.object({
