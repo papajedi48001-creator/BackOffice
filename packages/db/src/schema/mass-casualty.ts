@@ -12,7 +12,7 @@ export const mciSettings = mysqlTable('mci_setting', { settingKey: varchar('sett
 export const mciIncidentLock = mysqlTable('mci_incident_lock', { id: tinyint('id').primaryKey() });
 export const mciIncidents = mysqlTable('mci_incident', {
   id: varchar('id', { length: 36 }).primaryKey(), title: varchar('title', { length: 200 }).notNull(), kind: varchar('kind', { length: 8 }).notNull(), status: varchar('status', { length: 8 }).notNull(), location: varchar('location', { length: 300 }).notNull().default(''),
-  occurredAt: datetime('occurred_at', { mode: 'date' }).notNull(), openedBy: varchar('opened_by', { length: 36 }).notNull(), openedAt: datetime('opened_at', { mode: 'date' }).notNull(), closedBy: varchar('closed_by', { length: 36 }), closedAt: datetime('closed_at', { mode: 'date' }), patientSeq: int('patient_seq').notNull().default(0), updatedAt: datetime('updated_at', { mode: 'date' })
+  occurredAt: datetime('occurred_at', { mode: 'date' }).notNull(), openedBy: varchar('opened_by', { length: 36 }).notNull(), openedAt: datetime('opened_at', { mode: 'date' }).notNull(), closedBy: varchar('closed_by', { length: 36 }), closedAt: datetime('closed_at', { mode: 'date' }), patientSeq: int('patient_seq').notNull().default(0), notifyMode: varchar('notify_mode', { length: 12 }).notNull().default('NONE'), updatedAt: datetime('updated_at', { mode: 'date' })
 }, (t) => [index('mci_incident_status_index').on(t.status, t.openedAt)]);
 /** `active_key` is a generated column (1 while checked in, NULL after) that makes one open check-in per person and เหตุ unique. */
 export const mciResponders = mysqlTable('mci_responder', {
