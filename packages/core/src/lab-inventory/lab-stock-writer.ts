@@ -15,7 +15,7 @@ export const labToday = (now: Date = new Date()) => bangkokDate(now);
 /** The lots of one item in one store with stock, locked until the transaction ends. */
 export async function lockBalances(database: Database, storeId: string, itemId: string): Promise<LotOption[]> {
   const rows = await database.query<{ lot_id: string; expiry_date: string | Date | null; created_at: string | Date; quantity: number }>(
-    'SELECT b.lot_id, l.expiry_date, l.created_at, b.quantity FROM lab_lot_balance b JOIN lab_lot l ON l.id = b.lot_id WHERE b.store_id = ? AND l.item_id = ? AND b.quantity > 0 ORDER BY b.lot_id FOR UPDATE', [storeId, itemId]);
+    'SELECT b.lot_id, l.expiry_date, l.created_at, b.quantity FROM lab_lot_balance b JOIN lab_lot l ON l.id = b.lot_id WHERE b.store_id = ? AND l.item_id = ? ORDER BY b.lot_id FOR UPDATE', [storeId, itemId]);
   return rows.map((row) => ({ lotId: row.lot_id, expiryDate: dateOnly(row.expiry_date), createdAt: new Date(row.created_at).toISOString(), available: Number(row.quantity) }));
 }
 
@@ -70,4 +70,19 @@ export function labBell(database: Database, key: string, recipientPersonId: stri
 
 export async function membersWithRole(database: Database, role: 'HEAD' | 'KEEPER'): Promise<string[]> {
   return (await database.query<{ person_id: string }>('SELECT person_id FROM lab_member WHERE role = ?', [role])).map((row) => row.person_id);
+}
+
+/**
+ * Runs stock work in one READ COMMITTED transaction (locking reads see what other transactions committed) and turns a
+ * `LabRefusal` into `{ ok: false, code }` after the rollback; a missing referenced row is `NOT_FOUND`.
+ */
+export async function labTransaction<T extends { ok: true }, C extends string>(database: Database, work: (database: Database) => Promise<T>): Promise<T | { ok: false; code: C }> {
+  try {
+    return await database.transaction(work, { isolationLevel: 'READ COMMITTED' });
+  } catch (error) {
+    if (error instanceof LabRefusal) return { ok: false, code: error.code as C };
+    const { code, errno } = (typeof error === 'object' && error !== null ? error : {}) as { code?: string; errno?: number };
+    if (code === 'ER_NO_REFERENCED_ROW_2' || errno === 1452) return { ok: false, code: 'NOT_FOUND' as C };
+    throw error;
+  }
 }
