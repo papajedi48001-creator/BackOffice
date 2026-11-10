@@ -7,7 +7,7 @@ const EMPLOYEE_ROLE = 'employee';
 const extraNames: Record<string, MessageKey> = { [EMPLOYEE_ROLE]: 'roleEmployee', manager: 'roleManagerTier', 'hr-reader': 'roleHrReader', 'data-exporter': 'roleDataExporter', 'room-booking-approver': 'roleRoomBookingApprover', 'inventory-supervisor': 'roleInventorySupervisor' };
 const descriptions: Record<string, MessageKey> = {
   [EMPLOYEE_ROLE]: 'roleDescEmployee', admin: 'roleDescAdmin', manager: 'roleDescManagerTier', 'hr-manager': 'roleDescHrManager', 'hr-reader': 'roleDescHrReader', 'leave-manager': 'roleDescLeaveManager', 'travel-manager': 'roleDescTravelManager',
-  'room-manager': 'roleDescRoomManager', 'room-booking-approver': 'roleDescRoomBookingApprover', 'inventory-officer': 'roleDescInventoryOfficer', 'inventory-supervisor': 'roleDescInventorySupervisor', 'fleet-manager': 'roleDescFleetManager', 'mci-manager': 'roleDescMciManager', 'data-exporter': 'roleDescDataExporter'
+  'room-manager': 'roleDescRoomManager', 'room-booking-approver': 'roleDescRoomBookingApprover', 'inventory-officer': 'roleDescInventoryOfficer', 'inventory-supervisor': 'roleDescInventorySupervisor', 'fleet-manager': 'roleDescFleetManager', 'mci-manager': 'roleDescMciManager', 'lab-manager': 'roleDescLabManager', 'data-exporter': 'roleDescDataExporter'
 };
 
 /** Thai name of a บทบาท, `employee` (บุคลากรทั่วไป) included. */

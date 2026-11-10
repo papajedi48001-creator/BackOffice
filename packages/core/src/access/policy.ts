@@ -10,6 +10,7 @@ const permissionsByRole: Record<string, readonly Permission[]> = {
   'inventory-supervisor': ['inventory.opening.certify', 'inventory.stock.read'],
   'fleet-manager': ['fleet.manage'],
   'mci-manager': ['mci.command'],
+  'lab-manager': ['lab.manage'],
   // ผู้จัดการ of การลา and ไปราชการ without the rest of HR; both permissions still need the HR data-owner assignment.
   'leave-manager': ['leave.manage'],
   'travel-manager': ['travel.manage']

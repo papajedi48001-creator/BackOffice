@@ -26,7 +26,7 @@ describe('buildLineAlertMessage', () => {
 
   it('uses the same module names as the web app', () => {
     expect(Object.keys(lineModuleLabels)).toEqual([...lineAlertModuleCodes]);
-    expect(lineModuleLabels).toEqual({ requests: th.requests, 'room-booking': th.moduleRoomBooking, leave: th.moduleLeave, 'official-travel': th.moduleTravel, inventory: th.moduleInventory, fleet: th.moduleFleet, 'mass-casualty': th.moduleMassCasualty });
+    expect(lineModuleLabels).toEqual({ requests: th.requests, 'room-booking': th.moduleRoomBooking, leave: th.moduleLeave, 'official-travel': th.moduleTravel, inventory: th.moduleInventory, fleet: th.moduleFleet, 'mass-casualty': th.moduleMassCasualty, 'lab-inventory': th.moduleLabInventory });
   });
 });
 

@@ -126,6 +126,7 @@ export const th = {
   ownRequestMarker: 'คำขอของคุณเอง', ownRequestReasonNotice: 'นี่คือคำขอของคุณเอง ต้องระบุเหตุผลทุกครั้ง และระบบบันทึกไว้ให้ผู้ดูแลระบบตรวจสอบ', selfApprovalsTitle: 'อนุมัติคำขอของตนเอง', selfApprovals: 'อนุมัติคำขอของตนเอง', selfApprovalsCopy: 'ผู้ที่พิจารณาคำขอของตนเองในบทบาทผู้ดูแลระบบหรือผู้จัดการ', selfApprovalsEmpty: 'ยังไม่มีการพิจารณาคำขอของตนเอง', selfApprovalWho: 'ผู้พิจารณา', selfApprovalRole: 'บทบาท', selfApprovalDecision: 'ผลการพิจารณา', selfApprovalWhen: 'เวลา',
   mciOps: 'ภาพรวม', mciPatients: 'ผู้ป่วย', mciStaff: 'กำลังคน', mciIncidents: 'เหตุ', mciSettings: 'ตั้งค่า',
   moduleMassCasualty: 'อุบัติเหตุหมู่', moduleMassCasualtyDescription: 'รายงานตัว จัดจุด และติดตามผู้ป่วยในเหตุ', adminRoleMciManager: 'ผู้จัดการอุบัติเหตุหมู่', roleDescMciManager: 'ประกาศเปิดและปิดเหตุอุบัติเหตุหมู่ จัดคน และตั้งค่าโมดูล',
+  moduleLabInventory: 'รายงานวัสดุคงคลัง Lab', moduleLabInventoryDescription: 'รับเข้า ขอเบิก ตัดใช้ และยอดคงเหลือวัสดุ Lab', adminRoleLabManager: 'ผู้จัดการวัสดุคงคลัง Lab', roleDescLabManager: 'จัดการสมาชิกและตั้งค่าระบบวัสดุคงคลัง Lab และทำได้ทุกอย่างในโมดูล',
 } as const;
 
 export type MessageKey = keyof typeof th;
