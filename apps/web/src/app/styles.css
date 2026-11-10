@@ -928,3 +928,26 @@ h2.chat-window-title { cursor: default; }
   .mci-triage-count { font-size: 1.6rem; }
 }
 @media print { .mci-no-print { display: none !important; } }
+
+/* ระบบลงเวลา */
+[data-module="attendance"] { --accent: #0f766e; }
+.attendance-page { display: grid; gap: 24px; }
+.attendance-settings-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.attendance-settings-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.attendance-shift-pill { display: inline-block; padding: 2px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-strong); font-size: .9rem; }
+.attendance-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px 16px; }
+.attendance-form-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+.attendance-form-grid .field-hint, .attendance-form-row .field-hint, .form-dialog .field-hint { margin: 4px 0 0; color: var(--muted); font-size: .9rem; }
+.form-dialog .field-error, .attendance-page .field-error { margin: 4px 0 0; color: #b91c1c; font-size: .9rem; }
+.attendance-pairing-code { margin: 8px 0; font: 700 2.4rem/1.2 ui-monospace, 'Cascadia Mono', monospace; letter-spacing: .12em; text-align: center; color: var(--ink); }
+.attendance-verify { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.kiosk { min-height: 100vh; display: grid; align-content: center; justify-items: center; gap: 24px; padding: 24px 16px; background: #0f172a; color: #f8fafc; text-align: center; font-family: var(--font-family); }
+.kiosk-header { display: grid; gap: 4px; }
+.kiosk-clock { font: 700 clamp(3rem, 14vw, 7rem)/1 var(--font-family); font-variant-numeric: tabular-nums; }
+.kiosk-date { font-size: 1.25rem; color: #cbd5e1; }
+.kiosk-note { max-width: 32rem; color: #cbd5e1; }
+.kiosk-offline { padding: 8px 16px; border-radius: 999px; background: #b45309; color: #fff; }
+.kiosk-pairing { display: grid; gap: 12px; width: min(100%, 24rem); }
+.kiosk-pairing input { padding: 12px; border-radius: 10px; border: 0; font: 700 1.8rem ui-monospace, monospace; letter-spacing: .15em; text-align: center; }
+.kiosk-pairing button { padding: 14px; border: 0; border-radius: 10px; background: #14b8a6; color: #042f2e; font-size: 1.1rem; font-weight: 700; }
+.kiosk-pairing [role="alert"] { color: #fecaca; }

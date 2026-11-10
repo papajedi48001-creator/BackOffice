@@ -18,3 +18,4 @@ export * from './admin.ts';
 export * from './support-chat.ts';
 export * from './setup.ts';
 export * from './mass-casualty.ts';
+export * from './attendance.ts';

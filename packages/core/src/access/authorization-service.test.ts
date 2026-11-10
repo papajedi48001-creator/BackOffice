@@ -124,7 +124,8 @@ describe('AuthorizationService ผู้จัดการโมดูล acts a
     { role: 'room-manager', module: 'room-booking', own: ['room.manage', 'room.booking.decide'], other: 'inventory.stock.read' },
     { role: 'inventory-officer', module: 'inventory', own: ['inventory.item.manage', 'inventory.stock.receive', 'inventory.stock.read', 'inventory.opening.certify'], other: 'room.manage' },
     { role: 'fleet-manager', module: 'fleet', own: ['fleet.manage'], other: 'hr.person.read' },
-    { role: 'mci-manager', module: 'mass-casualty', own: ['mci.command'], other: 'fleet.manage' }
+    { role: 'mci-manager', module: 'mass-casualty', own: ['mci.command'], other: 'fleet.manage' },
+    { role: 'attendance-manager', module: 'attendance', own: ['attendance.manage', 'attendance.device.manage', 'attendance.schedule', 'attendance.audit.read'], other: 'fleet.manage' }
   ];
 
   it.each(table)('$role: every $module permission like an admin, nothing outside it', async ({ role, module, own, other }) => {
@@ -140,6 +141,16 @@ describe('AuthorizationService ผู้จัดการโมดูล acts a
     expect(authorization.organizationScope(subject, other)).toEqual([]);
     await expect(authorization.canAccess(subject, 'data.export', { moduleCode: module, organizationId: 'unit-x' })).resolves.toEqual({ allowed: true, reason: 'allowed' });
     await expect(authorization.canAccess(subject, 'data.export', { moduleCode: module === 'hr' ? 'fleet' : 'hr', organizationId: 'unit-x' })).resolves.toMatchObject({ allowed: false });
+  });
+
+  it('gives ผู้ตรวจสอบระบบลงเวลา read-only audit and ผู้จัดเวร the schedule of their own unit only', () => {
+    const auditor = manager('attendance-auditor');
+    expect(authorization.organizationScope(auditor, 'attendance.audit.read')).toBe('all');
+    expect(authorization.organizationScope(auditor, 'attendance.manage')).toEqual([]);
+    expect(managedModules(auditor)).toEqual([]);
+    const scheduler = manager('attendance-scheduler', 'unit-x');
+    expect(authorization.organizationScope(scheduler, 'attendance.schedule')).toEqual(['unit-x']);
+    expect(authorization.organizationScope(scheduler, 'attendance.manage')).toEqual([]);
   });
 
   it('does not treat a unit-scoped manager assignment or a signed-out subject as a module manager', async () => {

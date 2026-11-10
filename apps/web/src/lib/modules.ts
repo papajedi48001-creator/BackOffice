@@ -1,5 +1,5 @@
 import type { AccessSubject, ModuleMode } from '@backoffice/contracts';
-import { canCommandMci, loadActor, mciCan, MciQueries, canDecideOwnRequest, AuthorizationService, FleetQueries, canUseModule, isAdmin, LeaveQueries, OfficialTravelQueries, RoomBookingQueries, canManageFleet, canManageLeave, canManageTravel, hasOpenRequestWork, listPendingApprovals } from '@backoffice/core';
+import { canManageAttendance, canManageAttendanceDevices, canReadAttendanceAudit, canCommandMci, loadActor, mciCan, MciQueries, canDecideOwnRequest, AuthorizationService, FleetQueries, canUseModule, isAdmin, LeaveQueries, OfficialTravelQueries, RoomBookingQueries, canManageFleet, canManageLeave, canManageTravel, hasOpenRequestWork, listPendingApprovals } from '@backoffice/core';
 import type { Database } from '@backoffice/db';
 import { t, type MessageKey } from '@backoffice/i18n';
 import type { NavigationItem } from '../components/app-shell';
@@ -172,7 +172,12 @@ export const moduleRegistry: readonly ModuleEntry[] = [
     { href: '/admin/provider-links', labelKey: 'adminProvider', visible: isAdmin },
     { href: '/admin/audit', labelKey: 'adminAudit', visible: isAdmin }
   ]),
-  planned('attendance', '/attendance', 'moduleAttendance', 'moduleAttendanceDescription', 'clock'),
+  // ระบบลงเวลา: ลงเวลาเกิดที่กล่องลงเวลา (/kiosk); these pages are for the people who run it.
+  withSections({ code: 'attendance', href: '/attendance', labelKey: 'moduleAttendance', descriptionKey: 'moduleAttendanceDescription', icon: 'clock', group: 'services', status: 'live' }, [
+    { href: '/attendance/settings', labelKey: 'attendanceSettings', visible: canManageAttendance },
+    { href: '/attendance/devices', labelKey: 'attendanceDevices', visible: canManageAttendanceDevices },
+    { href: '/attendance/audit', labelKey: 'attendanceAudit', visible: canReadAttendanceAudit }
+  ]),
   planned('asset-register', '/assets', 'moduleAssetRegister', 'moduleAssetRegisterDescription', 'asset'),
   planned('computer-center', '/it', 'moduleComputerCenter', 'moduleComputerCenterDescription', 'monitor'),
   planned('planning', '/planning', 'modulePlanning', 'modulePlanningDescription', 'target'),
