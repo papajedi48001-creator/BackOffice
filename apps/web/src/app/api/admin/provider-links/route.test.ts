@@ -19,7 +19,7 @@ const params = { params: Promise.resolve({ personId }) };
 beforeEach(() => {
   mocks.readSession.mockResolvedValue(admin);
   mocks.getSharedDatabase.mockReturnValue({});
-  mocks.config.mockReturnValue({ issuer: 'https://portal.test', clientId: 'b', clientSecret: 's', redirectUri: 'https://b/cb' });
+  mocks.config.mockReturnValue({ healthUrl: 'https://moph.test', apiUrl: 'https://provider.test', healthClientId: 'h', healthClientSecret: 's', providerClientId: 'p', providerSecretKey: 'k', redirectUri: 'https://b/cb' });
 });
 afterEach(() => vi.resetAllMocks());
 

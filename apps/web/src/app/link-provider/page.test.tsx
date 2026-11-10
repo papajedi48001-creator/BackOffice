@@ -23,7 +23,7 @@ it('renders per request so the Provider SSO settings are read at run time, not b
 });
 
 it('shows the Provider ID name so a person on a shared computer does not link someone else\'s account', async () => {
-  mocks.config.mockReturnValue({ issuer: 'https://portal.test' });
+  mocks.config.mockReturnValue({ apiUrl: 'https://provider.test' });
   withTicket('ticket-1');
   mocks.pendingLogin.mockResolvedValue({ displayName: 'สมชาย ใจดี' });
   render(await LinkProviderPage());
@@ -34,7 +34,7 @@ it('shows the Provider ID name so a person on a shared computer does not link so
 });
 
 it('sends a missing or expired ticket back to the sign-in page', async () => {
-  mocks.config.mockReturnValue({ issuer: 'https://portal.test' });
+  mocks.config.mockReturnValue({ apiUrl: 'https://provider.test' });
   withTicket(undefined);
   mocks.pendingLogin.mockResolvedValue(null);
   await LinkProviderPage();

@@ -12,7 +12,7 @@ function link(body: unknown = { username: 'somchai', password: 'pw' }, ticket: s
 }
 
 beforeEach(() => {
-  mocks.config.mockReturnValue({ issuer: 'https://portal.test', clientId: 'b', clientSecret: 's', redirectUri: 'https://b/cb' });
+  mocks.config.mockReturnValue({ healthUrl: 'https://moph.test', apiUrl: 'https://provider.test', healthClientId: 'h', healthClientSecret: 's', providerClientId: 'p', providerSecretKey: 'k', redirectUri: 'https://b/cb' });
   mocks.getSharedDatabase.mockReturnValue({ execute: vi.fn(), query: vi.fn() });
 });
 afterEach(() => vi.clearAllMocks());

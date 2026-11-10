@@ -23,9 +23,9 @@
 
 **Files:** `apps/web/src/lib/provider-sso.ts` (+test), `apps/web/src/app/api/auth/provider/{start,callback}/route.ts` (+tests), `apps/web/src/app/page.test.tsx`, `packages/i18n/src/th.ts`, `apps/web/e2e/provider-sso.spec.ts`.
 
-- [ ] Failing tests: `providerSsoConfig()` is null until the five values are set, maps `prd`/`uat` to the base URLs, honours the overrides and refuses another environment; the flow cookie seals only `state`; start redirects to MOPH ID; callback maps `ProviderIdError` like before and resolves against `client.issuer`.
-- [ ] Implement; the e2e stub plays MOPH ID and Provider ID.
-- [ ] `pnpm --filter @backoffice/web test` green.
+- [x] Failing tests: `providerSsoConfig()` is null until the five values are set, maps `prd`/`uat` to the base URLs, honours the overrides and refuses another environment; the flow cookie seals only `state`; start redirects to MOPH ID; callback maps `ProviderIdError` like before and resolves against `client.issuer`.
+- [x] Implement; the e2e stub plays MOPH ID and Provider ID.
+- [x] `pnpm --filter @backoffice/web test` green.
 
 ## Task 3: Docker override and runbook
 

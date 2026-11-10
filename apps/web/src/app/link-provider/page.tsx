@@ -19,7 +19,7 @@ export default async function LinkProviderPage() {
   }
   // The name from Provider ID is the only on-screen check that the portal session is this person's own (shared computers reuse it).
   const ticket = (await cookies()).get(providerTicketCookie)?.value ?? '';
-  const pending = await externalLoginService(database, config.issuer).pendingLogin(ticket);
+  const pending = await externalLoginService(database, config.apiUrl).pendingLogin(ticket);
   if (!pending) {
     redirect('/?provider=failed');
     return null;
