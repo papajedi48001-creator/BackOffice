@@ -32,6 +32,31 @@ PROVIDER_SSO_REDIRECT_URI=https://<โฮสต์ Back Office>/api/auth/provide
 - จากเครื่อง Back Office: `curl -s https://aut-waritch-hosp.moph.go.th/.well-known/openid-configuration` ได้ JSON ที่มี `ES256`
 - หน้าเข้าสู่ระบบมีปุ่ม **เข้าสู่ระบบด้วย Provider ID**
 
+### เว็บที่รันใน Docker (production หรือ staging)
+
+container web ไม่อ่าน `.env` ที่ราก repo ให้ใช้ไฟล์ override `infra/compose/docker-compose.provider-sso.yml` ซึ่งทำ 3 อย่าง ส่งค่าข้างต้นเข้า container,
+อ่าน client secret จาก Docker secret และให้ container ออกไปเรียก portal ได้ (ชื่อ `aut-waritch-hosp.moph.go.th` ชี้ไปที่ `192.168.1.10` ใน container
+เปลี่ยนได้ด้วย `PROVIDER_SSO_PORTAL_HOST` / `PROVIDER_SSO_PORTAL_IP`) ไม่ใส่ไฟล์นี้ = ปุ่มไม่ขึ้นเหมือนเดิม
+
+1. เก็บ client secret ตัวเดียวกับที่ลงทะเบียนใน portal เป็นไฟล์ mode `0600` เหมือน secret อื่น เช่น `/etc/backoffice/secrets/provider_sso_client_secret`
+2. เพิ่มใน environment file ของ Compose (`/etc/backoffice/production.env` หรือ `/etc/backoffice/staging.env`):
+   ```
+   PROVIDER_SSO_ISSUER=https://aut-waritch-hosp.moph.go.th
+   PROVIDER_SSO_REDIRECT_URI=https://office-waritch-hosp.moph.go.th/api/auth/provider/callback
+   PROVIDER_SSO_CLIENT_SECRET_FILE=/etc/backoffice/secrets/provider_sso_client_secret
+   ```
+3. ใส่ `-f infra/compose/docker-compose.provider-sso.yml` ต่อท้ายไฟล์ compose เดิมทุกคำสั่ง เช่น staging ที่ใช้ nginx ร่วม (เครื่อง .251):
+   ```sh
+   docker compose --env-file /etc/backoffice/staging.env \
+     -f infra/compose/docker-compose.staging.yml \
+     -f infra/compose/docker-compose.staging-shared-nginx.yml \
+     -f infra/compose/docker-compose.provider-sso.yml up -d web
+   ```
+4. ตรวจจากใน container: `docker compose ... exec web node -e "fetch('https://aut-waritch-hosp.moph.go.th/oidc/jwks').then(r=>console.log(r.status))"` ต้องได้ `200`
+   ถ้าได้ error ให้ตรวจว่า IP ของเครื่องที่รัน Docker อยู่ใน `/etc/nginx/hospital-portal-allow.conf` ของ portal
+
+portal ลงทะเบียน redirect URI ได้ค่าเดียว ถ้าย้ายเครื่อง (เช่นทดสอบที่เครื่องหนึ่งแล้วย้ายไป .251) ให้รัน `hospital-backoffice-sso-config set` ใหม่ด้วย redirect URI ของเครื่องใหม่
+
 ## 3. ผูกบัญชี
 
 บัญชี Provider ID หนึ่งบัญชีผูกกับบุคลากรได้หนึ่งคน และบุคลากรหนึ่งคนผูกได้หนึ่งบัญชี Provider ID

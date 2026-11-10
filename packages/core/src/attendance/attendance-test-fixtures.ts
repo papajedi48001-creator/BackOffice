@@ -1,0 +1,4 @@
+/** Seeded ids from migration 0033. */
+export const ATTENDANCE_SEED = {
+  shiftTypes: { office: '00000000-0000-4000-b000-000000000001', morning: '00000000-0000-4000-b000-000000000002', afternoon: '00000000-0000-4000-b000-000000000003', night: '00000000-0000-4000-b000-000000000004', overnight: '00000000-0000-4000-b000-000000000005' }
+} as const;

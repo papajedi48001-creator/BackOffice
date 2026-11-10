@@ -370,3 +370,12 @@ describe('Lab stock module', () => {
     expect(await shown(fakeDb([]), manager)).toEqual(['/lab/usage', '/lab/requisitions', '/lab/receipts', '/lab/stock', '/lab/opening', '/lab/settings']);
   });
 });
+
+describe('ระบบลงเวลา', () => {
+  it('is live with settings, boxes and audit sections for the managers only', () => {
+    expect(moduleRegistry.find((entry) => entry.code === 'attendance')).toMatchObject({ status: 'live', href: '/attendance', labelKey: 'moduleAttendance', icon: 'clock' });
+    expect(sectionHrefs('attendance', subject())).toEqual([]);
+    expect(sectionHrefs('attendance', subject({ roles: [{ name: 'attendance-manager', organizationId: null }] }))).toEqual(['/attendance/settings', '/attendance/devices', '/attendance/audit']);
+    expect(sectionHrefs('attendance', subject({ roles: [{ name: 'attendance-auditor', organizationId: null }] }))).toEqual(['/attendance/audit']);
+  });
+});

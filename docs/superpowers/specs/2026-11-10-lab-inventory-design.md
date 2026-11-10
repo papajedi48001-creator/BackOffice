@@ -41,7 +41,7 @@ Request (wasan, 2026-11-10): ทำโมดูล "ระบบรายงา�
 
 ระดับระบบ (ผ่าน `AuthorizationService` เท่านั้น):
 
-- โมดูลใหม่ code `lab-inventory` ชื่อ "รายงานวัสดุคงคลัง Lab" path `/lab` กลุ่ม services สี `#0F766E` (teal-700 ข้อความขาว ≥ 5:1) เพิ่มใน `testerModuleCodes` และ `lineAlertModuleCodes`
+- โมดูลใหม่ code `lab-inventory` ชื่อ "รายงานวัสดุคงคลัง Lab" path `/lab` กลุ่ม services สี `#0E7490` (cyan-700 ข้อความขาว 5.4:1; เดิมวางไว้ #0F766E แต่ซ้ำกับงานบุคคล) เพิ่มใน `testerModuleCodes` และ `lineAlertModuleCodes`
 - permission ใหม่ `lab.manage` → `permissionModules['lab.manage'] = 'lab-inventory'`; บทบาทระบบ `lab-manager` (ผู้จัดการโมดูล) → `['lab.manage']` เพิ่มใน `grantableRoleSchema` และ module-managers; `admin` ได้อัตโนมัติ
 - ผู้ถือ `lab.manage` มีสิทธิ์เท่าผู้ดูแลคลัง Lab + หัวหน้า Lab ทุกงาน และเป็นคนเดียวที่จัดการสมาชิกโมดูล
 

@@ -12,6 +12,7 @@ export const moduleManagerRoles: Readonly<Record<string, Exclude<GrantableRole, 
   inventory: 'inventory-officer',
   fleet: 'fleet-manager',
   'mass-casualty': 'mci-manager',
+  attendance: 'attendance-manager',
   'lab-inventory': 'lab-manager'
 };
 
