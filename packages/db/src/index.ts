@@ -26,3 +26,4 @@ export * from './schema/admin.ts';
 export * from './schema/support-chat.ts';
 export * from './schema/line.ts';
 export * from './schema/mass-casualty.ts';
+export * from './schema/lab-inventory.ts';
