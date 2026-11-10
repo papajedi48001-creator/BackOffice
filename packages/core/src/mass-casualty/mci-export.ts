@@ -20,7 +20,7 @@ export function csvOf(rows: ReadonlyArray<ReadonlyArray<string | number | null>>
     const safe = /^[=+\-@\t\r]/.test(text) ? `'${text}` : text;
     return `"${safe.replaceAll('"', '""')}"`;
   };
-  return `﻿${rows.map((row) => row.map(cell).join(',')).join('\r\n')}\r\n`;
+  return `\uFEFF${rows.map((row) => row.map(cell).join(',')).join('\r\n')}\r\n`;
 }
 
 /** ส่งออกสรุปเหตุที่ปิดแล้ว (ผู้ป่วย or เจ้าหน้าที่) with an audit row. Callers check `canCommandMci`. */

@@ -868,7 +868,7 @@ h2.chat-window-title { cursor: default; }
 /* อุบัติเหตุหมู่: --triage carries each สีคัดกรอง from ตั้งค่า; the accent comes from [data-module="mass-casualty"]. */
 .mci-incident-banner { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin: 0 0 16px; border-radius: 12px; background: var(--accent); color: #fff; font-weight: 700; padding: 12px 16px; }
 .mci-incident-none { background: var(--line-soft); color: var(--muted); font-weight: 400; }
-.mci-incident-drill, .mci-drill-banner { background: repeating-linear-gradient(135deg, #fef3c7 0 14px, #fde68a 14px 28px); color: #78350f; }
+.mci-incident-drill, .mci-drill-banner { background: repeating-linear-gradient(135deg, var(--dev-amber-soft) 0 14px, color-mix(in srgb, var(--dev-amber) 22%, white) 14px 28px); color: var(--dev-amber-ink); }
 .mci-drill-banner { margin: 0 0 16px; border-radius: 12px; padding: 12px 16px; font-size: 1.15rem; font-weight: 700; text-align: center; }
 .mci-triage-counts { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin: 12px 0 20px; padding: 0; list-style: none; }
 .mci-triage-counts li { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px 10px; border: 1px solid var(--line); border-left: 8px solid var(--triage); border-radius: 12px; background: var(--surface); padding: 12px 14px; }
@@ -903,7 +903,7 @@ h2.chat-window-title { cursor: default; }
 .mci-staff-zone h3 { margin: 0 0 8px; }
 .mci-staff-zone ul { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
 .mci-staff-zone li { display: grid; gap: 6px; border-top: 1px solid var(--line-soft); padding-top: 8px; }
-.mci-staff-waiting { border-color: #f59e0b; background: #fffbeb; }
+.mci-staff-waiting { border-color: var(--dev-amber); background: var(--dev-amber-soft); }
 .mci-settings-block { margin: 0 0 28px; }
 .mci-landing-card { display: grid; gap: 16px; width: min(480px, 100%); border-radius: 18px; background: var(--surface); box-shadow: var(--shadow-md); padding: 24px; }
 .mci-landing-header { display: flex; align-items: center; gap: 14px; }
