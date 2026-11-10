@@ -116,4 +116,6 @@ export * from './lab-inventory/lab-access';
 export * from './lab-inventory/lab-csv';
 export * from './lab-inventory/lab-settings-service';
 export * from './lab-inventory/lab-settings-queries';
+export * from './lab-inventory/lab-opening-service';
+export { LabRefusal, labToday } from './lab-inventory/lab-stock-writer';
 export * from './mass-casualty/mci-export';
