@@ -22,7 +22,7 @@ export * from './identity/session-service';
 export * from './identity/database-identity-repository';
 export * from './identity/database-external-identity-repository';
 export * from './identity/external-login-service';
-export * from './identity/oidc-client';
+export * from './identity/provider-id-client';
 export * from './access/delegation-service';
 export * from './workflow/request-service';
 export * from './workflow/approval-service';
