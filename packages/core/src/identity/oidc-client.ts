@@ -12,6 +12,8 @@ export class OidcError extends Error {
 const TIMEOUT_MS = 10_000;
 const JWKS_TTL_MS = 10 * 60_000;
 const SKEW_SECONDS = 60;
+/** A portal-to-BackOffice request token lives at most this long, so a leaked one is soon useless. */
+const PORTAL_REQUEST_MAX_SECONDS = 120;
 type Jwk = JsonWebKey & { kid?: string; alg?: string };
 
 const random = () => randomBytes(32).toString('base64url');
@@ -44,7 +46,7 @@ export class PortalOidcClient {
       body: new URLSearchParams({ grant_type: 'authorization_code', code, code_verifier: flow.verifier, redirect_uri: this.config.redirectUri }).toString()
     }, true);
     if (typeof body.id_token !== 'string') throw new OidcError('INVALID');
-    const claims = await this.verifyIdToken(body.id_token);
+    const { claims } = await this.verifySigned(body.id_token);
     const seconds = Math.floor(this.now().getTime() / 1000);
     const audience = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
     if (claims.iss !== this.config.issuer || !audience.includes(this.config.clientId) || claims.nonce !== flow.nonce) throw new OidcError('INVALID');
@@ -54,7 +56,22 @@ export class PortalOidcClient {
     return { issuer: this.config.issuer, subject: claims.sub, displayName: name };
   }
 
-  private async verifyIdToken(idToken: string): Promise<Record<string, unknown>> {
+  /**
+   * A server-to-server request the portal signed with its OIDC key (for example, asking for a member's profile photo).
+   * The JWT header `typ` names the request, so neither an ID token nor another kind of request is accepted here.
+   * Returns the portal member id (`sub`, the subject an identity link stores).
+   */
+  async verifyPortalRequest(token: string, typ: string): Promise<string> {
+    const { header, claims } = await this.verifySigned(token);
+    const seconds = Math.floor(this.now().getTime() / 1000);
+    const audience = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
+    if (header.typ !== typ || claims.iss !== this.config.issuer || !audience.includes(this.config.clientId)) throw new OidcError('INVALID');
+    if (typeof claims.exp !== 'number' || typeof claims.iat !== 'number' || claims.exp + SKEW_SECONDS < seconds || claims.iat - SKEW_SECONDS > seconds || claims.exp - claims.iat > PORTAL_REQUEST_MAX_SECONDS) throw new OidcError('INVALID');
+    if (typeof claims.sub !== 'string' || claims.sub.length === 0 || claims.sub.length > 255) throw new OidcError('INVALID');
+    return claims.sub;
+  }
+
+  private async verifySigned(idToken: string): Promise<{ header: Record<string, unknown>; claims: Record<string, unknown> }> {
     const parts = idToken.split('.');
     if (parts.length !== 3) throw new OidcError('INVALID');
     let header: Record<string, unknown>;
@@ -70,7 +87,7 @@ export class PortalOidcClient {
       valid = verify('sha256', Buffer.from(`${parts[0]}.${parts[1]}`), { key: createPublicKey({ key, format: 'jwk' }), dsaEncoding: 'ieee-p1363' }, signature);
     } catch { valid = false; }
     if (!valid) throw new OidcError('INVALID');
-    return claims;
+    return { header, claims };
   }
 
   private async keys(refresh: boolean): Promise<Jwk[]> {

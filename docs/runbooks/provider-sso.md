@@ -72,7 +72,15 @@ portal ลงทะเบียน redirect URI ได้ค่าเดีย�
 ทุกการผูก ยกเลิก และเข้าสู่ระบบที่ไม่สำเร็จ ถูกบันทึกใน audit (`identity.provider_link`, `identity.provider_unlink`, `identity.provider_login`)
 เหตุผลการยกเลิกเก็บแยกในตาราง `identity_link_removal` ไม่อยู่ใน audit metadata
 
-## 4. ข้อควรรู้
+## 4. รูปโปรไฟล์บน dashboard ของ portal
+
+portal แสดงรูปโปรไฟล์ Back Office ของบุคลากรที่ผูกบัญชีแล้ว โดยเครื่อง portal เรียก `GET https://<โฮสต์ Back Office>/api/portal/photo`
+พร้อม JWT ที่ลงนามด้วยกุญแจ SSO (ดู `docs/superpowers/specs/2026-11-10-portal-profile-photo-design.md`) ไม่ต้องตั้งค่าเพิ่มใน Back Office
+แต่เครื่อง portal ต้องเรียกโฮสต์ Back Office ทาง https ได้ ถ้าเรียกไม่ได้ dashboard แสดงรูปการ์ตูนเดิม
+
+ตรวจจากเครื่อง portal: `curl -s -o /dev/null -w '%{http_code}\n' https://<โฮสต์ Back Office>/api/portal/photo` ต้องได้ `401` (ไม่มี token)
+
+## 5. ข้อควรรู้
 
 - ระบบออก code ให้เฉพาะสมาชิก portal ที่สถานะ `approved` และตรวจซ้ำตอนแลก token บุคลากรที่ถูกปิดใช้งานใน Back Office เข้าไม่ได้แม้ Provider ID ยังใช้ได้
 - เครื่องใช้ร่วม: ถ้า portal ยังมี session ค้างอยู่ คนถัดไปที่กดปุ่มจะเข้าเป็นเจ้าของ session นั้นโดยไม่ต้องยืนยันตัวตนใหม่
