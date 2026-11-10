@@ -117,3 +117,6 @@ export { attendanceOutbox } from './attendance/attendance-db';
 export * from './attendance/attendance-access';
 export * from './attendance/attendance-settings-queries';
 export * from './attendance/attendance-settings-service';
+export * from './attendance/device-signature';
+export * from './attendance/device-queries';
+export * from './attendance/device-service';
