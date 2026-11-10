@@ -1,6 +1,7 @@
 import { connectionSecretBoxFrom, HolidaySyncService, HosxpSettingsService, readHosxpHolidays } from '@backoffice/core/holidays';
 import { createDatabase, readRuntimeValue } from '@backoffice/db';
 import { LineAlertConsumer } from './consumers/line-alert-consumer.ts';
+import { MciLineBroadcastConsumer } from './consumers/mci-line-broadcast-consumer.ts';
 import { NotificationConsumer } from './consumers/notification-consumer.ts';
 import { OutboxConsumer, toFailureCode } from './consumers/outbox-consumer.ts';
 import { DatabaseLineStore } from './database-line-store.ts';
@@ -16,13 +17,17 @@ const databaseUrl = await waitForDatabaseUrl();
 const database = createDatabase(databaseUrl);
 // การแจ้งเตือน LINE: without LINE_CHANNEL_ACCESS_TOKEN alerts are still queued but nothing is pushed (docs/runbooks/line-alert.md).
 const lineStore = new DatabaseLineStore(database);
-const lineAlerts = new LineAlertConsumer(lineStore, createLineClient(readRuntimeValue('LINE_CHANNEL_ACCESS_TOKEN')), readRuntimeValue('BACKOFFICE_PUBLIC_URL') ?? null);
+const lineClient = createLineClient(readRuntimeValue('LINE_CHANNEL_ACCESS_TOKEN'));
+const publicUrl = readRuntimeValue('BACKOFFICE_PUBLIC_URL') ?? null;
+const lineAlerts = new LineAlertConsumer(lineStore, lineClient, publicUrl);
+const mciBroadcasts = new MciLineBroadcastConsumer(lineStore, lineClient, publicUrl);
 const notifications = new NotificationConsumer(
   new DatabaseNotificationStore(database),
   { deliverEmail: async () => { throw new Error('EMAIL_NOT_CONFIGURED'); } },
   { deliverInApp: async () => undefined },
   lineStore,
-  lineAlerts
+  lineAlerts,
+  mciBroadcasts
 );
 const consumer = new OutboxConsumer(new DatabaseOutboxRepository(database), notifications);
 const runtime = createWorkerRuntime({

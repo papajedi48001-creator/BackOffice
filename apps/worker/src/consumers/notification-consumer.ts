@@ -8,9 +8,10 @@ export interface WorkerLineQueue { enqueue(eventId: string, payload: LineAlertPa
 export interface WorkerLineAlerts { consume(event: OutboxEvent): Promise<void>; }
 
 export class NotificationConsumer {
-  constructor(private readonly store: WorkerNotificationDeliveryStore, private readonly email: WorkerEmailProvider, private readonly inApp: WorkerInAppProvider, private readonly lineQueue?: WorkerLineQueue, private readonly lineAlerts?: WorkerLineAlerts) {}
+  constructor(private readonly store: WorkerNotificationDeliveryStore, private readonly email: WorkerEmailProvider, private readonly inApp: WorkerInAppProvider, private readonly lineQueue?: WorkerLineQueue, private readonly lineAlerts?: WorkerLineAlerts, private readonly mciBroadcasts?: WorkerLineAlerts) {}
   async consume(event: OutboxEvent): Promise<void> {
     if (event.type === 'notification.line') { await this.lineAlerts?.consume(event); return; }
+    if (event.type === 'mci.line.broadcast') { await this.mciBroadcasts?.consume(event); return; }
     const channel = event.type === 'notification.email' ? 'email' : 'in_app';
     const inAppPayload = channel === 'in_app' ? notificationEventPayloadSchema.safeParse(event.payload) : null;
     if (inAppPayload && !inAppPayload.success) throw new Error('INVALID_NOTIFICATION_EVENT');
