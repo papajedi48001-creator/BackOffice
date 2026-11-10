@@ -113,4 +113,7 @@ export * from './mass-casualty/mci-public-board';
 export * from './mass-casualty/mci-queries';
 export * from './lab-inventory/lab-rules';
 export * from './lab-inventory/lab-access';
+export * from './lab-inventory/lab-csv';
+export * from './lab-inventory/lab-settings-service';
+export * from './lab-inventory/lab-settings-queries';
 export * from './mass-casualty/mci-export';
