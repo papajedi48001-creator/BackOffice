@@ -135,6 +135,7 @@ describe('mass casualty module', () => {
     expect(await section('/mci/patients').available!(database('RECORDER'), staff)).toBe(true);
     expect(await section('/mci/staff').available!(database('RECORDER'), staff)).toBe(false);
     expect(await section('/mci/staff').available!(database('ZONE_LEAD'), staff)).toBe(true);
+    expect(await section('/mci/staff').available!(database('COMMANDER'), staff)).toBe(true);
     expect(await section('/mci/staff').available!(database(null), manager)).toBe(true);
   });
 });

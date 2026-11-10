@@ -68,7 +68,7 @@ const mciMay = (action: 'viewPatients' | 'manageResponder') => async (db: Databa
   const incident = await new MciQueries(db).openIncident();
   if (!incident || !subject.personId) return false;
   const actor = await loadActor(db, incident.id, subject.personId);
-  return action === 'manageResponder' ? actor?.commandRole === 'ZONE_LEAD' : mciCan(actor, false, action);
+  return action === 'manageResponder' ? actor?.commandRole === 'ZONE_LEAD' || actor?.commandRole === 'COMMANDER' : mciCan(actor, false, action);
 };
 
 export const moduleRegistry: readonly ModuleEntry[] = [
