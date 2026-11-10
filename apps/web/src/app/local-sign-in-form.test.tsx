@@ -49,3 +49,23 @@ test('sends a person whose password was reset to the change-password step', asyn
   await waitFor(() => expect(push).toHaveBeenCalledWith('/change-password'));
   vi.unstubAllGlobals();
 });
+
+test('returns to a page inside the app named by next, and ignores one that leaves it', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ authenticated: true }), { status: 200 })));
+  const signIn = async (next: string) => {
+    const view = render(<LocalSignInForm next={next} />);
+    fireEvent.change(screen.getByLabelText('ชื่อผู้ใช้'), { target: { value: 'somjai' } });
+    fireEvent.change(screen.getByLabelText('รหัสผ่าน'), { target: { value: 'P@ssw0rd#1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'เข้าสู่ระบบ' }));
+    await waitFor(() => expect(push).toHaveBeenCalledTimes(1));
+    const target = push.mock.calls[0]![0];
+    push.mockReset();
+    view.unmount();
+    return target;
+  };
+  expect(await signIn('/mci/ops')).toBe('/mci/ops');
+  expect(await signIn('//evil.example/x')).toBe('/dashboard');
+  expect(await signIn('https://evil.example/')).toBe('/dashboard');
+  expect(await signIn('/\\evil.example')).toBe('/dashboard');
+  vi.unstubAllGlobals();
+});

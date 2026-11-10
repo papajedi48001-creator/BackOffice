@@ -5,6 +5,8 @@ describe('module gate', () => {
   it('finds the module of a page or an API path', () => {
     expect(moduleForPath('/leave/mine')).toBe('leave');
     expect(moduleForPath('/api/leave/settings')).toBe('leave');
+    expect(moduleForPath('/mci/board')).toBe('mass-casualty');
+    expect(moduleForPath('/api/mci/board')).toBe('mass-casualty');
     expect(moduleForPath('/rooms')).toBe('room-booking');
     expect(moduleForPath('/api/rooms/bookings/x')).toBe('room-booking');
     expect(moduleForPath('/api/travel')).toBe('official-travel');
