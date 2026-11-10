@@ -1,0 +1,22 @@
+# Optional: เข้าสู่ระบบด้วย Provider ID through the radius-server portal (docs/runbooks/provider-sso.md).
+# Add this file after the production or staging files. Without it the button stays hidden.
+services:
+  web:
+    environment:
+      PROVIDER_SSO_ISSUER: ${PROVIDER_SSO_ISSUER:?set PROVIDER_SSO_ISSUER}
+      PROVIDER_SSO_CLIENT_ID: ${PROVIDER_SSO_CLIENT_ID:-backoffice}
+      PROVIDER_SSO_REDIRECT_URI: ${PROVIDER_SSO_REDIRECT_URI:?set PROVIDER_SSO_REDIRECT_URI}
+      PROVIDER_SSO_CLIENT_SECRET_FILE: /run/secrets/provider_sso_client_secret
+    secrets: [provider_sso_client_secret]
+    # The web container calls the portal's token and JWKS endpoints itself; the other networks are internal.
+    networks: [portal]
+    # The portal answers only inside the hospital, so its name is pinned to the LAN address instead of relying on DNS in Docker.
+    extra_hosts:
+      - "${PROVIDER_SSO_PORTAL_HOST:-aut-waritch-hosp.moph.go.th}:${PROVIDER_SSO_PORTAL_IP:-192.168.1.10}"
+
+networks:
+  portal: {}
+
+secrets:
+  provider_sso_client_secret:
+    file: ${PROVIDER_SSO_CLIENT_SECRET_FILE:?set PROVIDER_SSO_CLIENT_SECRET_FILE}
