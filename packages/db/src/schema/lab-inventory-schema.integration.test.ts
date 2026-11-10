@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDatabase, runMigrations } from '../index';
 
@@ -28,7 +29,9 @@ describeWithDatabase('lab inventory schema (migration 0034)', () => {
     expect(await count("SELECT COUNT(*) AS total FROM lab_section WHERE id LIKE '00000000-0000-4000-b000-%'")).toBe(6);
     expect(await count("SELECT COUNT(*) AS total FROM lab_store s JOIN lab_section c ON c.id = s.section_id WHERE s.kind = 'SECTION' AND c.id LIKE '00000000-0000-4000-b000-%'")).toBe(6);
     expect(await count("SELECT COUNT(*) AS total FROM lab_usage_type WHERE id LIKE '00000000-0000-4000-b000-%'")).toBe(5);
-    expect((await db.query<{ v: string }>("SELECT setting_value AS v FROM lab_setting WHERE setting_key = 'opening_status'"))[0]?.v).toBe('DRAFT');
+    // The migration seeds DRAFT; core suites move it later on a shared database, so only the row's presence is checked here.
+    expect(['DRAFT', 'SUBMITTED', 'CERTIFIED']).toContain((await db.query<{ v: string }>("SELECT setting_value AS v FROM lab_setting WHERE setting_key = 'opening_status'"))[0]?.v);
+    expect(readFileSync(new URL('../../migrations/0034_lab_inventory.sql', import.meta.url), 'utf8')).toMatch(/'opening_status',\s*'DRAFT'/);
   });
 
   it('merges lots with the same item, lot number, missing expiry and cost', async () => {

@@ -87,6 +87,7 @@ export function UsageForm({ stores, items, usageTypes, today, disabled = false, 
     </div>
     {lots && usable.length === 0 && <p role="alert" className="form-error">งานนี้ไม่มีวัสดุนี้คงเหลือ</p>}
     {!manual && preview && <>
+      <p className="lab-hint">ล็อตที่จะตัด (หมดอายุก่อนใช้ก่อน)</p>
       <ul className="lab-lot-list" aria-label="ล็อตที่จะตัด (หมดอายุก่อนใช้ก่อน)">
         {preview.picks.map((pick) => { const lot = lots!.find((entry) => entry.lotId === pick.lotId)!; return <li key={pick.lotId}>{lotLabel(lot)}: {formatCount(pick.quantity)} {item?.useUnit}</li>; })}
       </ul>
