@@ -12,7 +12,8 @@ export const lineModuleLabels: Readonly<Record<string, string>> = {
   leave: 'การลา',
   'official-travel': 'ไปราชการ',
   inventory: 'คลังพัสดุ',
-  fleet: 'ยานพาหนะ'
+  fleet: 'ยานพาหนะ',
+  'mass-casualty': 'อุบัติเหตุหมู่'
 };
 
 /** `@ชื่อ [โมดูล] มีคำขอใหม่ 1 รายการ` and the page link. Nothing about the requester or the request leaves the hospital. */

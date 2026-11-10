@@ -3,7 +3,12 @@
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-export function LocalSignInForm() {
+/** A page inside the app to go to after signing in: one leading slash, no second slash or backslash that would leave the site. */
+export function safeNext(next: string | undefined): string {
+  return next && /^\/(?![/\\])[^\\\s]*$/.test(next) ? next : '/dashboard';
+}
+
+export function LocalSignInForm({ next }: { next?: string } = {}) {
   const router = useRouter();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -30,7 +35,7 @@ export function LocalSignInForm() {
       if (!response.ok) throw new Error('AUTHENTICATION_REJECTED');
       const result = await response.json().catch(() => ({})) as { mustChangePassword?: boolean };
       // After a reset the person sets a new password and signs in again before using the system.
-      router.push(result.mustChangePassword ? '/change-password' : '/dashboard');
+      router.push(result.mustChangePassword ? '/change-password' : safeNext(next));
     } catch {
       setError('ไม่สามารถเข้าสู่ระบบได้ โปรดตรวจสอบชื่อผู้ใช้และรหัสผ่าน');
     } finally {

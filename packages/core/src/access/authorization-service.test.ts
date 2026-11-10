@@ -123,7 +123,8 @@ describe('AuthorizationService ผู้จัดการโมดูล acts a
     { role: 'travel-manager', module: 'official-travel', own: ['travel.manage'], other: 'leave.manage' },
     { role: 'room-manager', module: 'room-booking', own: ['room.manage', 'room.booking.decide'], other: 'inventory.stock.read' },
     { role: 'inventory-officer', module: 'inventory', own: ['inventory.item.manage', 'inventory.stock.receive', 'inventory.stock.read', 'inventory.opening.certify'], other: 'room.manage' },
-    { role: 'fleet-manager', module: 'fleet', own: ['fleet.manage'], other: 'hr.person.read' }
+    { role: 'fleet-manager', module: 'fleet', own: ['fleet.manage'], other: 'hr.person.read' },
+    { role: 'mci-manager', module: 'mass-casualty', own: ['mci.command'], other: 'fleet.manage' }
   ];
 
   it.each(table)('$role: every $module permission like an admin, nothing outside it', async ({ role, module, own, other }) => {

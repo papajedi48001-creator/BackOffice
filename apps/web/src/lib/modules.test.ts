@@ -14,7 +14,7 @@ describe('module registry', () => {
   });
 
   it('shows one entry per module and only their own profile under HR to a user without roles', () => {
-    expect(hrefs(subject())).toEqual(['/dashboard', '/requests', '/notifications', '/hr', '/access', '/rooms', '/leave', '/travel', '/fleet']);
+    expect(hrefs(subject())).toEqual(['/dashboard', '/requests', '/notifications', '/hr', '/access', '/rooms', '/leave', '/travel', '/fleet', '/mci']);
     expect(sectionHrefs('access', subject())).toEqual(['/access/audit']);
     expect(sectionHrefs('hr', subject())).toEqual(['/hr/me']);
   });
@@ -113,6 +113,30 @@ describe('official travel module', () => {
     expect(moduleRegistry.find((entry) => entry.code === 'official-travel')).toMatchObject({ status: 'live', group: 'mine', href: '/travel', labelKey: 'moduleTravel' });
     expect(sectionHrefs('official-travel', subject())).toEqual(['/travel/mine', '/travel/approvals']);
     expect(sectionHrefs('official-travel', manager)).toEqual(['/travel/mine', '/travel/approvals', '/travel/all', '/travel/settings']);
+  });
+});
+
+describe('mass casualty module', () => {
+  const manager = subject({ roles: [{ name: 'mci-manager', organizationId: null }] });
+  /** An open เหตุ and the person's check-in as `role`, or none. */
+  const database = (role: string | null) => ({ query: vi.fn(async (sql: string) => sql.includes("FROM mci_incident") ? [{ id: 'i-1' }] : role ? [{ commandRole: role, zoneId: 'er' }] : []) }) as unknown as Database;
+  const section = (href: string) => moduleRegistry.find((entry) => entry.code === 'mass-casualty')!.sections!.find((entry) => entry.href === href)!;
+
+  it('is live at /mci for everyone, with เหตุ and ตั้งค่า for the ผู้จัดการอุบัติเหตุหมู่ only', () => {
+    expect(moduleRegistry.find((entry) => entry.code === 'mass-casualty')).toMatchObject({ status: 'live', group: 'services', href: '/mci', labelKey: 'moduleMassCasualty', icon: 'heart' });
+    expect(sectionHrefs('mass-casualty', subject())).toEqual(['/mci/ops', '/mci/patients', '/mci/staff']);
+    expect(sectionHrefs('mass-casualty', manager)).toEqual(['/mci/ops', '/mci/patients', '/mci/staff', '/mci/incidents', '/mci/settings']);
+    expect(moduleCodeForPath('/mci/patients')).toBe('mass-casualty');
+  });
+
+  it('offers ผู้ป่วย to recorders and leads and กำลังคน to leads, never to plain staff', async () => {
+    const staff = subject();
+    expect(await section('/mci/patients').available!(database('STAFF'), staff)).toBe(false);
+    expect(await section('/mci/patients').available!(database('RECORDER'), staff)).toBe(true);
+    expect(await section('/mci/staff').available!(database('RECORDER'), staff)).toBe(false);
+    expect(await section('/mci/staff').available!(database('ZONE_LEAD'), staff)).toBe(true);
+    expect(await section('/mci/staff').available!(database('COMMANDER'), staff)).toBe(true);
+    expect(await section('/mci/staff').available!(database(null), manager)).toBe(true);
   });
 });
 

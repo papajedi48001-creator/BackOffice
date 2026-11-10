@@ -1,5 +1,5 @@
 import type { AccessSubject, ModuleMode } from '@backoffice/contracts';
-import { canDecideOwnRequest, AuthorizationService, FleetQueries, canUseModule, isAdmin, LeaveQueries, OfficialTravelQueries, RoomBookingQueries, canManageFleet, canManageLeave, canManageTravel, hasOpenRequestWork, listPendingApprovals } from '@backoffice/core';
+import { canCommandMci, loadActor, mciCan, MciQueries, canDecideOwnRequest, AuthorizationService, FleetQueries, canUseModule, isAdmin, LeaveQueries, OfficialTravelQueries, RoomBookingQueries, canManageFleet, canManageLeave, canManageTravel, hasOpenRequestWork, listPendingApprovals } from '@backoffice/core';
 import type { Database } from '@backoffice/db';
 import { t, type MessageKey } from '@backoffice/i18n';
 import type { NavigationItem } from '../components/app-shell';
@@ -61,6 +61,15 @@ const roomsPending = async (db: Database, subject: AccessSubject) => (subject.pe
 const fleetWaiting = async (db: Database, subject: AccessSubject) => (subject.personId && canManageFleet(subject) ? new FleetQueries(db).waitingCount() : 0);
 /** The person's เที่ยวรถ today that have not left yet; 0 for anyone who does not drive. */
 const fleetDriverToday = async (db: Database, subject: AccessSubject) => (subject.personId ? new FleetQueries(db).driverTodayCount(subject.personId) : 0);
+
+/** What the person may do in the open เหตุ, from their own check-in; nothing when no เหตุ is open. Hides links only. */
+const mciMay = (action: 'viewPatients' | 'manageResponder') => async (db: Database, subject: AccessSubject) => {
+  if (canCommandMci(subject)) return true;
+  const incident = await new MciQueries(db).openIncident();
+  if (!incident || !subject.personId) return false;
+  const actor = await loadActor(db, incident.id, subject.personId);
+  return action === 'manageResponder' ? actor?.commandRole === 'ZONE_LEAD' || actor?.commandRole === 'COMMANDER' : mciCan(actor, false, action);
+};
 
 export const moduleRegistry: readonly ModuleEntry[] = [
   {
@@ -146,6 +155,14 @@ export const moduleRegistry: readonly ModuleEntry[] = [
     submitAction: { href: '/fleet/new', label: 'fleetNew', icon: 'car' },
     badge: async (db, subject) => (await fleetWaiting(db, subject)) + (await fleetDriverToday(db, subject))
   },
+  // อุบัติเหตุหมู่: /mci itself is the public รายงานตัว page (app/mci), which sends a signed-in person on to ภาพรวม.
+  withSections({ code: 'mass-casualty', href: '/mci', labelKey: 'moduleMassCasualty', descriptionKey: 'moduleMassCasualtyDescription', icon: 'heart', group: 'services', status: 'live' }, [
+    { href: '/mci/ops', labelKey: 'mciOps', visible: everyone },
+    { href: '/mci/patients', labelKey: 'mciPatients', visible: everyone, available: mciMay('viewPatients') },
+    { href: '/mci/staff', labelKey: 'mciStaff', visible: everyone, available: mciMay('manageResponder') },
+    { href: '/mci/incidents', labelKey: 'mciIncidents', visible: canCommandMci },
+    { href: '/mci/settings', labelKey: 'mciSettings', visible: canCommandMci }
+  ]),
   // ผู้ดูแลระบบ only. A new admin page is one more section here and one page under app/(app)/admin.
   withSections({ code: 'admin', href: '/admin', labelKey: 'moduleAdmin', descriptionKey: 'moduleAdminDescription', icon: 'settings', group: 'governance', status: 'live' }, [
     { href: '/admin/connections', labelKey: 'adminConnections', visible: isAdmin },
