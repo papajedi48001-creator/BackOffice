@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDatabase, runMigrations } from '@backoffice/db';
 import { LabOpeningService } from './lab-opening-service';
+import { LabSettingsQueries } from './lab-settings-queries';
 import { addLabMember, insertLabItem, insertLabPerson, LAB_SEED, labSubject, setOpeningStatus } from './lab-test-fixtures';
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -62,5 +63,29 @@ describeWithDatabase('LabOpeningService against MariaDB', () => {
     expect(await database.query<{ id: string }>('SELECT id FROM lab_lot WHERE item_id = ?', [item.id])).toHaveLength(1);
     expect(await service.decide(labSubject(head), { decision: 'CERTIFY', reason: '' })).toEqual({ ok: false, code: 'WRONG_STATUS' });
     expect(await service.importOpening(labSubject(keeper), csv)).toEqual({ ok: false, code: 'WRONG_STATUS' });
+  });
+  it('keeps a long return reason and shows it on the draft until it is sent again', async () => {
+    await database.execute('DELETE FROM lab_opening_line');
+    await setOpeningStatus(database, 'DRAFT');
+    expect(await service.submit(labSubject(keeper))).toEqual({ ok: true });
+    const reason = 'ตรวจนับใหม่ '.repeat(40).trim();
+    expect(reason.length).toBeGreaterThan(255);
+    expect(await service.decide(labSubject(head), { decision: 'RETURN', reason })).toEqual({ ok: true });
+    expect(await new LabSettingsQueries(database).settings()).toMatchObject({ openingStatus: 'DRAFT', openingReturnReason: reason });
+    expect(await service.submit(labSubject(keeper))).toEqual({ ok: true });
+    expect((await new LabSettingsQueries(database).settings()).openingReturnReason).toBeNull();
+    expect(await service.decide(labSubject(head), { decision: 'RETURN', reason: 'อีกครั้ง' })).toEqual({ ok: true });
+  });
+
+  it('lets a ผู้จัดการ certify their own submission only from the manager tier, with a reason, flagged selfApproval', async () => {
+    const manager = await insertLabPerson(database);
+    await setOpeningStatus(database, 'DRAFT');
+    expect(await service.submit(labSubject(manager, 'lab-manager'))).toEqual({ ok: true });
+    expect(await service.decide(labSubject(manager, 'lab-manager', 'employee'), { decision: 'CERTIFY', reason: 'ไม่มีหัวหน้า' })).toEqual({ ok: false, code: 'CONFLICT_OF_INTEREST' });
+    expect(await service.decide(labSubject(manager, 'lab-manager'), { decision: 'CERTIFY', reason: '' })).toEqual({ ok: false, code: 'REASON_REQUIRED' });
+    expect(await service.decide(labSubject(manager, 'lab-manager'), { decision: 'CERTIFY', reason: 'ไม่มีหัวหน้า Lab ในวันนี้' })).toEqual({ ok: true });
+    const [audit] = await database.query<{ metadata: string }>("SELECT metadata FROM audit_event WHERE action = 'lab.opening.certify' AND actor_person_id = ? ORDER BY created_at DESC LIMIT 1", [manager]);
+    expect(JSON.parse(audit!.metadata)).toMatchObject({ selfApproval: true });
+    expect(audit!.metadata).not.toContain('ไม่มีหัวหน้า');
   });
 });

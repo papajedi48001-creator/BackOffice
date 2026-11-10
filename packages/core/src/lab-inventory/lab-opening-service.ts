@@ -1,12 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { labOpeningDecisionInputSchema, labOpeningLineInputSchema, type AccessSubject, type LabOpeningDecisionInput, type LabOpeningLineInput } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
+import { canDecideOwnRequest } from '../access/active-role';
 import { canManageLab, labCan, loadLabMember, type LabAction } from './lab-access';
 import { MAIN_STORE_CODE, parseItemCsv, parseOpeningCsv, type CsvError } from './lab-csv';
 import { isDuplicateEntry, isMissingReference, labAudit } from './lab-db';
 import { findOrCreateLot, LabRefusal, labBell, labToday, membersWithRole, move, openingStatus } from './lab-stock-writer';
 
-export type LabOpeningCode = 'FORBIDDEN' | 'INVALID_CSV' | 'WRONG_STATUS' | 'REASON_REQUIRED' | 'NOT_FOUND';
+export type LabOpeningCode = 'FORBIDDEN' | 'INVALID_CSV' | 'WRONG_STATUS' | 'REASON_REQUIRED' | 'CONFLICT_OF_INTEREST' | 'NOT_FOUND';
 export type LabOpeningResult = { ok: true; count?: number; id?: string } | { ok: false; code: LabOpeningCode; errors?: CsvError[] };
 const OPENING_PATH = '/lab/opening';
 
@@ -82,6 +83,7 @@ export class LabOpeningService {
     return this.run(subject, 'editOpening', true, async (database, actor) => {
       await setSetting(database, 'opening_status', 'SUBMITTED');
       await setSetting(database, 'opening_submitted_by', actor);
+      await database.execute("DELETE FROM lab_setting WHERE setting_key = 'opening_return_reason'");
       const [count] = await database.query<{ n: number }>('SELECT COUNT(*) AS n FROM lab_opening_line');
       await labAudit(database, this.createId, actor, 'lab.opening.submit', 'lab_opening', 'all', { lines: Number(count?.n ?? 0) });
       for (const head of await membersWithRole(database, 'HEAD')) await labBell(database, `lab-opening-submit:${this.createId()}`, head, 'ยอดยกมาวัสดุ Lab รอรับรอง', OPENING_PATH, this.createId);
@@ -97,11 +99,16 @@ export class LabOpeningService {
     return this.run(subject, 'certifyOpening', false, async (database, actor) => {
       if ((await openingStatus(database, true)) !== 'SUBMITTED') throw new LabRefusal('WRONG_STATUS');
       const [submitter] = await database.query<{ v: string }>("SELECT setting_value AS v FROM lab_setting WHERE setting_key = 'opening_submitted_by'");
+      // Only a ผู้จัดการ can both send and decide; that follows the self-decision rule (manager tier, reason, selfApproval).
+      const selfApproval = submitter?.v === actor;
+      if (selfApproval && !canDecideOwnRequest(subject.activeRole)) throw new LabRefusal('CONFLICT_OF_INTEREST');
+      if (selfApproval && !decision.reason) throw new LabRefusal('REASON_REQUIRED');
+      const flag = selfApproval ? { selfApproval: true } : {};
       const lines = await database.query<{ id: string; store_id: string; item_id: string; lot_no: string; expiry_date: string | Date | null; quantity: number; unit_cost: string }>('SELECT id, store_id, item_id, lot_no, DATE_FORMAT(expiry_date, \'%Y-%m-%d\') AS expiry_date, quantity, unit_cost FROM lab_opening_line ORDER BY row_no');
       if (decision.decision === 'RETURN') {
         await setSetting(database, 'opening_status', 'DRAFT');
         await setSetting(database, 'opening_return_reason', decision.reason);
-        await labAudit(database, this.createId, actor, 'lab.opening.return', 'lab_opening', 'all', { lines: lines.length });
+        await labAudit(database, this.createId, actor, 'lab.opening.return', 'lab_opening', 'all', { lines: lines.length, ...flag });
       } else {
         const today = labToday();
         for (const line of lines) {
@@ -110,7 +117,7 @@ export class LabOpeningService {
         }
         await setSetting(database, 'opening_status', 'CERTIFIED');
         await setSetting(database, 'opening_certified_at', new Date().toISOString());
-        await labAudit(database, this.createId, actor, 'lab.opening.certify', 'lab_opening', 'all', { lines: lines.length });
+        await labAudit(database, this.createId, actor, 'lab.opening.certify', 'lab_opening', 'all', { lines: lines.length, ...flag });
       }
       if (submitter?.v) await labBell(database, `lab-opening-${decision.decision.toLowerCase()}:${this.createId()}`, submitter.v, decision.decision === 'CERTIFY' ? 'ยอดยกมาวัสดุ Lab ได้รับการรับรองแล้ว' : 'ยอดยกมาวัสดุ Lab ถูกตีกลับ', OPENING_PATH, this.createId);
       return { ok: true };

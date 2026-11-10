@@ -10,7 +10,7 @@ import { sendLab } from '../../../../lib/lab-client';
 type Step = 'SUBMIT' | 'CERTIFY' | 'RETURN';
 
 /** ส่งรับรอง (ผู้ดูแลคลัง Lab) and รับรอง / ตีกลับ (หัวหน้า Lab); certifying creates the opening stock and opens the module. */
-export function OpeningActions({ submit, decide, summary }: { submit: boolean; decide: boolean; summary: string }) {
+export function OpeningActions({ submit, decide, summary, own = false }: { submit: boolean; decide: boolean; summary: string; own?: boolean }) {
   const router = useRouter();
   const [step, setStep] = useState<Step | null>(null);
   const [busy, setBusy] = useState(false);
@@ -28,7 +28,7 @@ export function OpeningActions({ submit, decide, summary }: { submit: boolean; d
     {submit && <button type="button" onClick={() => open('SUBMIT')}>ส่งรับรอง</button>}
     {decide && <><button type="button" onClick={() => open('CERTIFY')}>รับรองยอดยกมา</button><button type="button" className="button-secondary" onClick={() => open('RETURN')}>ตีกลับ</button></>}
     {step === 'SUBMIT' && <ActionDialog title="ส่งยอดยกมาให้หัวหน้า Lab รับรอง" message={`${summary} ระหว่างรอรับรองแก้ยอดยกมาไม่ได้`} confirmLabel="ส่งรับรอง" isSubmitting={busy} error={error} onConfirm={(reason) => void confirm(reason)} onClose={() => setStep(null)} />}
-    {step === 'CERTIFY' && <ActionDialog title="รับรองยอดยกมา" message={`${summary} รับรองแล้วระบบเริ่มใช้งานและแก้ยอดยกมาไม่ได้อีก`} confirmLabel="รับรอง" isSubmitting={busy} error={error} onConfirm={(reason) => void confirm(reason)} onClose={() => setStep(null)} />}
+    {step === 'CERTIFY' && <ActionDialog title="รับรองยอดยกมา" message={`${summary} รับรองแล้วระบบเริ่มใช้งานและแก้ยอดยกมาไม่ได้อีก${own ? ' คุณเป็นผู้ส่งเอง ต้องระบุเหตุผล' : ''}`} confirmLabel="รับรอง" reason={own} isSubmitting={busy} error={error} onConfirm={(reason) => void confirm(reason)} onClose={() => setStep(null)} />}
     {step === 'RETURN' && <ActionDialog title="ตีกลับยอดยกมา" message="ผู้ดูแลคลัง Lab จะแก้แล้วส่งใหม่" confirmLabel="ตีกลับ" reason isSubmitting={busy} error={error} onConfirm={(reason) => void confirm(reason)} onClose={() => setStep(null)} />}
   </div>;
 }

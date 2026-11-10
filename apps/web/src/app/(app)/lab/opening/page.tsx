@@ -12,7 +12,8 @@ const TITLE = 'ยอดยกมา';
 export default async function LabOpeningPage() {
   const context = await labContext({ needs: ['editOpening', 'certifyOpening', 'manageSettings'] });
   if (!context.ok) return <LabPageMessage title={TITLE} reason={context.reason} />;
-  const { queries, settings, can } = context;
+  const { queries, settings, can, session } = context;
+  const [submitter] = await context.database.query<{ v: string }>("SELECT setting_value AS v FROM lab_setting WHERE setting_key = 'opening_submitted_by'");
   const lines = await queries.openingLines();
   const status = settings.openingStatus;
   const storeName = new Map([[settings.mainStoreId, MAIN_STORE_NAME], ...settings.sections.map((section) => [section.storeId, section.name] as [string, string])]);
@@ -27,11 +28,12 @@ export default async function LabOpeningPage() {
   const items = formOptions(settings).items;
   return <section className="lab-opening">
     <h2>{TITLE} <span className={`status ${status === 'CERTIFIED' ? 'status-approved' : 'status-pending'}`}>{labOpeningStatusLabel(status)}</span></h2>
+    {status === 'DRAFT' && settings.openingReturnReason && <p className="lab-banner" role="note">ถูกตีกลับ: {settings.openingReturnReason}</p>}
     <div className="lab-actions">
       {can('manageSettings') && <OpeningImport kind="items" />}
       {editing && <OpeningImport kind="opening" />}
       {editing && <OpeningLineForm stores={stores} items={items} />}
-      <OpeningActions submit={editing} decide={can('certifyOpening') && status === 'SUBMITTED'} summary={summary} />
+      <OpeningActions submit={editing} decide={can('certifyOpening') && status === 'SUBMITTED'} summary={summary} own={submitter?.v === session.personId} />
     </div>
     <h3>สรุปต่อคลัง</h3>
     {byStore.length === 0 ? <p className="lab-empty">ยังไม่มียอดยกมา</p> : <div className="leave-table-scroll"><table>

@@ -9,6 +9,8 @@ export type LabSettings = {
   usageTypes: { id: string; name: string; sortOrder: number; isActive: boolean }[];
   members: { personId: string; displayName: string; role: LabMemberRole; sectionIds: string[] }[];
   openingStatus: LabOpeningStatus;
+  /** Why the หัวหน้า Lab ตีกลับ the ยอดยกมา; null once it is sent again. */
+  openingReturnReason: string | null;
 };
 
 const flag = (value: unknown) => Number(value) === 1;
@@ -25,6 +27,7 @@ export class LabSettingsQueries {
     const usageTypes = await this.database.query<{ id: string; name: string; sort_order: number; is_active: number }>('SELECT id, name, sort_order, is_active FROM lab_usage_type ORDER BY sort_order, name');
     const members = await this.database.query<{ person_id: string; display_name: string; role: LabMemberRole; section_id: string | null }>('SELECT m.person_id, p.display_name, m.role, s.section_id FROM lab_member m JOIN person p ON p.id = m.person_id LEFT JOIN lab_member_section s ON s.person_id = m.person_id ORDER BY p.display_name, s.section_id');
     const [opening] = await this.database.query<{ v: LabOpeningStatus }>("SELECT setting_value AS v FROM lab_setting WHERE setting_key = 'opening_status'");
+    const [returned] = await this.database.query<{ v: string }>("SELECT setting_value AS v FROM lab_setting WHERE setting_key = 'opening_return_reason'");
     const byMember = new Map<string, LabSettings['members'][number]>();
     for (const row of members) {
       const member = byMember.get(row.person_id) ?? { personId: row.person_id, displayName: row.display_name, role: row.role, sectionIds: [] };
@@ -38,7 +41,8 @@ export class LabSettingsQueries {
       vendors: vendors.map((row) => ({ id: row.id, name: row.name, phone: row.phone, isActive: flag(row.is_active) })),
       usageTypes: usageTypes.map((row) => ({ id: row.id, name: row.name, sortOrder: Number(row.sort_order), isActive: flag(row.is_active) })),
       members: [...byMember.values()],
-      openingStatus: opening?.v ?? 'DRAFT'
+      openingStatus: opening?.v ?? 'DRAFT',
+      openingReturnReason: returned?.v ?? null
     };
   }
 }

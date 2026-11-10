@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { formatCount } from '../../../lib/lab-client';
 import { labRoleLabel } from '../../../lib/lab-labels';
 import { labContext, LabPageMessage, NotCertifiedBanner, formOptions } from './lab-page';
-import { labDate } from './lab-text';
+import { labDate, labDayOf } from './lab-text';
 import { UsageForm } from './usage/usage-form';
 
 export const dynamic = 'force-dynamic';
@@ -21,7 +21,7 @@ export default async function LabOverviewPage() {
   const list = (heading: string, rows: typeof decide) => <section className="lab-block" aria-label={heading}>
     <h3>{heading} <span className="lab-count">{formatCount(rows.length)}</span></h3>
     {rows.length === 0 ? <p className="lab-empty">ไม่มีรายการ</p> : <ul className="lab-doc-list">{rows.map((row) => <li key={row.id}>
-      <Link href={`/lab/requisitions/${row.id}`}>{row.docNo}</Link> <span>{row.sectionName}</span> <span>{row.requesterName}</span> <time>{labDate(row.requestedAt.slice(0, 10))}</time>
+      <Link href={`/lab/requisitions/${row.id}`}>{row.docNo}</Link> <span>{row.sectionName}</span> <span>{row.requesterName}</span> <time>{labDate(labDayOf(row.requestedAt))}</time>
     </li>)}</ul>}
   </section>;
   return <section className="lab-overview">

@@ -64,4 +64,12 @@ describeWithDatabase('LabUsageService against MariaDB', () => {
     const own = await use(staff, { quantity: 1 });
     expect(await service.reverse(labSubject(staff), own.ok ? own.usageId : '', { reason: 'ผิด' })).toEqual({ ok: true });
   });
+  it('dates a reversal today, not on the day of the usage it undoes', async () => {
+    const yesterday = new Date(Date.parse(`${today}T00:00:00Z`) - 86_400_000).toISOString().slice(0, 10);
+    const result = await use(staff, { quantity: 1, entryDate: yesterday });
+    const usageId = result.ok ? result.usageId : '';
+    expect(await service.reverse(labSubject(staff), usageId, { reason: 'ผิดวัน' })).toEqual({ ok: true });
+    const [row] = await database.query<{ d: string }>("SELECT DATE_FORMAT(entry_date, '%Y-%m-%d') AS d FROM lab_movement WHERE ref_type = 'USAGE' AND ref_id = ? AND kind = 'USE_REVERSAL'", [usageId]);
+    expect(row?.d).toBe(today);
+  });
 });

@@ -1,5 +1,5 @@
 import type { LabRequisitionStatus } from '@backoffice/contracts';
-import { formatBangkokDateOnly } from '../../../lib/bangkok-time';
+import { bangkokToday, formatBangkokDateOnly } from '../../../lib/bangkok-time';
 
 /** A Bangkok date (`YYYY-MM-DD`) or a dash. */
 export const labDate = (value: string | null | undefined) => (value ? formatBangkokDateOnly(value) : '—');
@@ -14,3 +14,6 @@ export const one = (value: string | string[] | undefined) => (Array.isArray(valu
 
 /** Status pill colour for a ใบขอเบิก. */
 export const requisitionTone: Record<LabRequisitionStatus, string> = { SUBMITTED: 'status-pending', RETURNED: 'status-returned', REJECTED: 'status-rejected', APPROVED: 'status-pending', ISSUED: 'status-approved', CANCELLED: 'status-cancelled' };
+
+/** The Bangkok calendar day of a stored UTC instant. */
+export const labDayOf = (instant: string) => bangkokToday(new Date(instant));

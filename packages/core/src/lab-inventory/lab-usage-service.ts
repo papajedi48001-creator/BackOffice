@@ -58,7 +58,7 @@ export class LabUsageService {
       if (!own && !labCan(member, manages, 'reverseAnyUse')) throw new LabRefusal('FORBIDDEN');
       if (usage.status !== 'POSTED') throw new LabRefusal('WRONG_STATUS');
       const movements = await database.query<{ lot_id: string; quantity: number }>("SELECT lot_id, quantity FROM lab_movement WHERE ref_type = 'USAGE' AND ref_id = ? AND kind = 'USE'", [usageId]);
-      for (const row of movements) await move(database, { lotId: row.lot_id, storeId: usage.store_id, quantity: -Number(row.quantity), kind: 'USE_REVERSAL', entryDate: usage.entry_date, usageTypeId: usage.usage_type_id, refType: 'USAGE', refId: usageId, actorPersonId: actor }, this.createId);
+      for (const row of movements) await move(database, { lotId: row.lot_id, storeId: usage.store_id, quantity: -Number(row.quantity), kind: 'USE_REVERSAL', entryDate: labToday(), usageTypeId: usage.usage_type_id, refType: 'USAGE', refId: usageId, actorPersonId: actor }, this.createId);
       await database.execute("UPDATE lab_usage SET status = 'REVERSED', reverse_reason = ?, reversed_by = ?, reversed_at = UTC_TIMESTAMP() WHERE id = ?", [reason, actor, usageId]);
       await labAudit(database, this.createId, actor, 'lab.usage.reverse', 'lab_usage', usageId, { itemId: usage.item_id, quantity: Number(usage.quantity) });
       return { ok: true as const };
