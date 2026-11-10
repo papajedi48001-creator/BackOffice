@@ -87,6 +87,9 @@ export class MciResponderService {
     if (Number(target.out) === 1) return { ok: false, code: 'ALREADY_OUT' };
     if (selfAllowed && target.personId === subject.personId) return null;
     const actor = await loadActor(database, target.incidentId, subject.personId!);
-    return mciCan(actor, canCommandMci(subject), action, target.zoneId) ? null : { ok: false, code: 'FORBIDDEN' };
+    const commands = canCommandMci(subject);
+    // Only a ผู้บัญชาการเหตุ places themself or another ผู้บัญชาการเหตุ; a หัวหน้าจุด would otherwise move into any zone and lead it.
+    if (!commands && actor?.commandRole !== 'COMMANDER' && (target.personId === subject.personId || target.commandRole === 'COMMANDER')) return { ok: false, code: 'FORBIDDEN' };
+    return mciCan(actor, commands, action, target.zoneId) ? null : { ok: false, code: 'FORBIDDEN' };
   }
 }

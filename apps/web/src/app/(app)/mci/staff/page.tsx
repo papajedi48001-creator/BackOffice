@@ -18,9 +18,11 @@ export default async function MciStaffPage() {
   const responders = await queries.responders(incident.id);
   const zones = settings.zones.filter((zone) => zone.isActive).map(({ id, name }) => ({ id, name }));
   const canAssignRole = mciCan(actor, commands, 'assignRole');
+  // A หัวหน้าจุด sees and manages only their own จุด; a ผู้บัญชาการเหตุ sees every จุด.
+  const leadZoneId = canAssignRole ? undefined : actor?.zoneId ?? null;
   const groups = [{ id: null as string | null, name: mciText.waitingZone }, ...settings.zones.filter((zone) => zone.isActive || responders.some((responder) => responder.zoneId === zone.id))]
     .map((zone) => ({ ...zone, people: responders.filter((responder) => (responder.zoneId ?? null) === zone.id) }))
-    .filter((group) => group.id !== null || group.people.length > 0);
+    .filter((group) => leadZoneId === undefined ? group.id !== null || group.people.length > 0 : group.id === leadZoneId);
   const professionCounts = settings.professions.map((profession) => ({ name: profession.name, count: responders.filter((responder) => responder.professionId === profession.id).length })).filter((entry) => entry.count > 0);
   return <section className="mci-staff">
     <h2>{TITLE}</h2>
@@ -32,7 +34,7 @@ export default async function MciStaffPage() {
         {group.people.length === 0 ? <p className="muted">ยังไม่มีคน</p> : <ul>
           {group.people.map((responder) => {
             const name = responder.displayName ?? '—';
-            const manage = mciCan(actor, commands, 'manageResponder', responder.zoneId);
+            const manage = mciCan(actor, commands, 'manageResponder', responder.zoneId) && (canAssignRole || (responder.personId !== context.session.personId && responder.commandRole !== 'COMMANDER'));
             return <li key={responder.id}>
               <div><strong>{name}</strong> <span className="muted">{responder.professionName ?? '—'} · {mciRoleLabel(responder.commandRole)} · {formatBangkokTime(responder.checkedInAt)}</span></div>
               {manage && <div className="request-actions">

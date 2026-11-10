@@ -79,6 +79,17 @@ describeWithDatabase('check-in, staffing and casualties against MariaDB', () => 
       expect(await responders.checkOut(nurse, other.responderId)).toEqual({ ok: false, code: 'FORBIDDEN' });
       expect(await responders.checkOut(manager, other.responderId)).toEqual({ ok: true });
     });
+
+    it('stops a zone lead moving themself to another zone or touching a ผู้บัญชาการเหตุ in their zone', async () => {
+      const lead = await checkIn(nurse, MCI_SEED.professions.nurse);
+      const commander = await checkIn(manager, MCI_SEED.professions.doctor);
+      await responders.update(manager, lead.responderId, { zoneId: MCI_SEED.zones.opd, commandRole: 'ZONE_LEAD' });
+      await responders.update(manager, commander.responderId, { zoneId: MCI_SEED.zones.opd, commandRole: 'COMMANDER' });
+      expect(await responders.update(nurse, lead.responderId, { zoneId: MCI_SEED.zones.er, commandRole: 'ZONE_LEAD' })).toEqual({ ok: false, code: 'FORBIDDEN' });
+      expect(await responders.update(nurse, commander.responderId, { zoneId: MCI_SEED.zones.er, commandRole: 'COMMANDER' })).toEqual({ ok: false, code: 'FORBIDDEN' });
+      expect(await responders.checkOut(nurse, commander.responderId)).toEqual({ ok: false, code: 'FORBIDDEN' });
+      expect(await responders.checkOut(nurse, lead.responderId)).toEqual({ ok: true });
+    });
   });
 
   describe('casualties', () => {

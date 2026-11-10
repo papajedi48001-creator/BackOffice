@@ -51,11 +51,11 @@
 - `mciLineBroadcastPayloadSchema = { incidentId: uuid, event: 'OPENED'|'CLOSED' }`.
 - Permission `mci.command`; `grantableRoleSchema` gains `mci-manager`; `testerModuleCodes` gains `mass-casualty`; `lineAlertModuleCodes` gains `mass-casualty`; policy `'mci-manager': ['mci.command']`; `moduleManagerRoles['mass-casualty'] = 'mci-manager'`.
 
-- [ ] **Step 1: Write failing tests** — `mass-casualty.test.ts`: open input rejects empty title and unknown keys; patient input rejects `ageEstimate: 131` and colour `#12345`; broadcast payload rejects non-uuid. `authorization-service.test.ts`: `mci-manager` (unscoped) gets `organizationScope(…, 'mci.command') === 'all'`; plain staff gets `[]`.
-- [ ] **Step 2: Run** `pnpm --filter @backoffice/contracts test && pnpm --filter @backoffice/core test -- authorization` → FAIL (module missing).
-- [ ] **Step 3: Implement** the schemas and the map/role entries above.
-- [ ] **Step 4: Run** the same commands → PASS; also `pnpm typecheck` (exhaustive Records such as `admin-labels.ts` will now demand entries — add `adminRoleMciManager`, `moduleMassCasualty` keys in Task 9; until then add them here so typecheck passes).
-- [ ] **Step 5: Commit** `feat(mci): add mass-casualty contracts, mci.command and mci-manager`
+- [x] **Step 1: Write failing tests** — `mass-casualty.test.ts`: open input rejects empty title and unknown keys; patient input rejects `ageEstimate: 131` and colour `#12345`; broadcast payload rejects non-uuid. `authorization-service.test.ts`: `mci-manager` (unscoped) gets `organizationScope(…, 'mci.command') === 'all'`; plain staff gets `[]`.
+- [x] **Step 2: Run** `pnpm --filter @backoffice/contracts test && pnpm --filter @backoffice/core test -- authorization` → FAIL (module missing).
+- [x] **Step 3: Implement** the schemas and the map/role entries above.
+- [x] **Step 4: Run** the same commands → PASS; also `pnpm typecheck` (exhaustive Records such as `admin-labels.ts` will now demand entries — add `adminRoleMciManager`, `moduleMassCasualty` keys in Task 9; until then add them here so typecheck passes).
+- [x] **Step 5: Commit** `feat(mci): add mass-casualty contracts, mci.command and mci-manager`
 
 ### Task 2: Migration and Drizzle schema
 
@@ -65,11 +65,11 @@
 
 Tables exactly as the spec's "ข้อมูล" section, plus: `mci_patient.public_hidden TINYINT(1) NOT NULL DEFAULT 0`; `mci_incident_lock (id TINYINT PRIMARY KEY)` seeded with row `1` (serialises open); unique `mci_responder_active (incident_id, person_id, active_key)` where `active_key` is a generated column `IF(checked_out_at IS NULL, 1, NULL)`; unique `mci_patient_tag (incident_id, tag_no)`; seeds with fixed uuids `00000000-0000-4000-a000-0000000000NN` via `INSERT IGNORE`. Settings columns `is_active`, `sort_order`, `created_at`, `updated_at`.
 
-- [ ] **Step 1: Write failing test** — integration: after `runMigrations`, 5 triage rows with exactly one `is_deceased = 1`, 6 statuses, 4 zones, 7 professions, and a second open responder row for the same person/incident fails with `ER_DUP_ENTRY`.
-- [ ] **Step 2: Run** `DATABASE_URL=… pnpm --filter @backoffice/db test:integration -- mass-casualty` → FAIL.
-- [ ] **Step 3: Implement** the SQL, schema file and version list.
-- [ ] **Step 4: Run** the integration test and `pnpm --filter @backoffice/db test` → PASS.
-- [ ] **Step 5: Commit** `feat(db): add mass casualty tables (0032)`
+- [x] **Step 1: Write failing test** — integration: after `runMigrations`, 5 triage rows with exactly one `is_deceased = 1`, 6 statuses, 4 zones, 7 professions, and a second open responder row for the same person/incident fails with `ER_DUP_ENTRY`.
+- [x] **Step 2: Run** `DATABASE_URL=… pnpm --filter @backoffice/db test:integration -- mass-casualty` → FAIL.
+- [x] **Step 3: Implement** the SQL, schema file and version list.
+- [x] **Step 4: Run** the integration test and `pnpm --filter @backoffice/db test` → PASS.
+- [x] **Step 5: Commit** `feat(db): add mass casualty tables (0032)`
 
 ### Task 3: Pure rules and in-incident access
 
@@ -86,11 +86,11 @@ Tables exactly as the spec's "ข้อมูล" section, plus: `mci_patient.pu
 - `type MciActor = { personId: string; commandRole: MciCommandRole; zoneId: string | null } | null` (null = not checked in)
 - `mciCan(actor: MciActor, commands: boolean, action: 'record' | 'editPatient' | 'manageResponder' | 'assignRole' | 'viewPatients', targetZoneId?: string | null): boolean` — table from the spec; `commands === true` acts as COMMANDER even when not checked in.
 
-- [ ] **Step 1: Write failing tests** covering every row of the spec's permission table (including ZONE_LEAD on another zone → false, STAFF record → false, RECORDER editPatient any zone → true), `formatTag(7) === 'MCI-007'`, `formatTag(1000) === 'MCI-1000'`, `publicName('สมชาย','ใจดี') === 'สมชาย ใ.'`, `publicName('  ','x') === null`, deceased reconciliation in both directions, and `defaultZoneFor` returning null for an inactive zone.
-- [ ] **Step 2: Run** `pnpm --filter @backoffice/core test -- mci-` → FAIL.
-- [ ] **Step 3: Implement.**
-- [ ] **Step 4: Run** → PASS.
-- [ ] **Step 5: Commit** `feat(mci): add tag, public name, deceased and access rules`
+- [x] **Step 1: Write failing tests** covering every row of the spec's permission table (including ZONE_LEAD on another zone → false, STAFF record → false, RECORDER editPatient any zone → true), `formatTag(7) === 'MCI-007'`, `formatTag(1000) === 'MCI-1000'`, `publicName('สมชาย','ใจดี') === 'สมชาย ใ.'`, `publicName('  ','x') === null`, deceased reconciliation in both directions, and `defaultZoneFor` returning null for an inactive zone.
+- [x] **Step 2: Run** `pnpm --filter @backoffice/core test -- mci-` → FAIL.
+- [x] **Step 3: Implement.**
+- [x] **Step 4: Run** → PASS.
+- [x] **Step 5: Commit** `feat(mci): add tag, public name, deceased and access rules`
 
 ### Task 4: Settings service and queries
 
@@ -101,9 +101,9 @@ Tables exactly as the spec's "ข้อมูล" section, plus: `mci_patient.pu
 - `class MciSettingsService(database, createId?)` with `saveZone(actor, id|null, input)`, `saveTriageLevel(actor, id|null, input)`, `saveStatus(actor, id|null, input)`, `saveProfession(actor, id|null, input)`, `saveRules(actor, input)`, `saveContact(actor, input)`; each returns `{ ok: true; id? } | { ok: false; code: 'NOT_FOUND' | 'DUPLICATE_NAME' | 'PROTECTED' }`. `PROTECTED`: deactivating the deceased triage level or status, or the first status. Audit actions `mci.settings.<kind>.save`.
 - `class MciSettingsQueries(database)` → `settings(): Promise<MciSettings>` where `MciSettings = { zones; triageLevels; statuses; professions: (… & { positionIds: string[] })[]; rules; publicContactPhone: string; deceasedTriageId; deceasedStatusId; intakeStatusId }` (ordered by sort_order).
 
-- [ ] **Step 1: Write failing integration test**: rename ER, add zone, duplicate name → `DUPLICATE_NAME`, deactivate black → `PROTECTED`, rules round-trip, audit row written per save.
-- [ ] **Step 2: Run** → FAIL. **Step 3: Implement.** **Step 4: Run** → PASS.
-- [ ] **Step 5: Commit** `feat(mci): add settings service`
+- [x] **Step 1: Write failing integration test**: rename ER, add zone, duplicate name → `DUPLICATE_NAME`, deactivate black → `PROTECTED`, rules round-trip, audit row written per save.
+- [x] **Step 2: Run** → FAIL. **Step 3: Implement.** **Step 4: Run** → PASS.
+- [x] **Step 5: Commit** `feat(mci): add settings service`
 
 ### Task 5: Incident service (open/close + notices)
 
@@ -115,9 +115,9 @@ Tables exactly as the spec's "ข้อมูล" section, plus: `mci_patient.pu
   - `open(actorPersonId, input: MciOpenIncidentInput): Promise<{ ok: true; incidentId } | { ok: false; code: 'INCIDENT_ALREADY_OPEN' }>` — `SELECT … FROM mci_incident_lock WHERE id = 1 FOR UPDATE`, check no OPEN row, insert, audit `mci.incident.open` `{ kind }`, outbox `notification.in_app` for each recipient (ACTIVE people with an account; filtered by profession via `mci_profession_position` ↔ `hr_person_profile.position_id` when mode PROFESSIONS; none when NONE), subject `ประกาศเหตุอุบัติเหตุหมู่ — กรุณารายงานตัว` prefixed `[ซ้อมแผน] ` for DRILL, `targetPath: '/mci'`, `moduleCode: 'mass-casualty'`, key `notification.in_app:mci-open:<incidentId>:<personId>`; plus one `mci.line.broadcast` `{ incidentId, event: 'OPENED' }` unless NONE.
   - `close(actorPersonId, incidentId): Promise<{ ok: true } | { ok: false; code: 'NOT_FOUND' | 'INCIDENT_CLOSED' }>` — sets CLOSED, checks out open responders at the same timestamp with `checked_out_by = actor`, audit `mci.incident.close`, in-app notice `ปิดเหตุอุบัติเหตุหมู่แล้ว` to every person who checked in, one `mci.line.broadcast` `CLOSED`.
 
-- [ ] **Step 1: Write failing integration tests**: open twice → second `INCIDENT_ALREADY_OPEN`; two concurrent opens → one ok; PROFESSIONS notifies only matching positions; close checks out responders and writes outbox; payloads contain no title.
-- [ ] **Step 2–4:** run FAIL → implement → PASS.
-- [ ] **Step 5: Commit** `feat(mci): open and close incidents with notices`
+- [x] **Step 1: Write failing integration tests**: open twice → second `INCIDENT_ALREADY_OPEN`; two concurrent opens → one ok; PROFESSIONS notifies only matching positions; close checks out responders and writes outbox; payloads contain no title.
+- [x] **Step 2–4:** run FAIL → implement → PASS.
+- [x] **Step 5: Commit** `feat(mci): open and close incidents with notices`
 
 ### Task 6: Responder and casualty services
 
@@ -134,9 +134,9 @@ Tables exactly as the spec's "ข้อมูล" section, plus: `mci_patient.pu
   - `create(subject, input: MciNewPatientInput): Promise<{ ok: true; patientId; tag } | { ok:false; code: 'NO_OPEN_INCIDENT'|'FORBIDDEN'|'NOT_FOUND' }>` — locks incident row, `patient_seq + 1`, status = `intakeStatusId` (black → deceased status). Audit `mci.patient.create` `{ tag, triageCode }`.
   - `update(subject, patientId, input: MciPatientInput)` → codes `NOT_FOUND|FORBIDDEN|INCIDENT_CLOSED|DESTINATION_REQUIRED|TRIAGE_REQUIRED`; `publicHidden` change only when `mciCan(..)` as COMMANDER, else kept. Audit `mci.patient.update` `{ tag, triageLevelId, statusId, zoneId }`.
 
-- [ ] **Step 1: Write failing integration tests**: check-in twice returns same responder; rule puts พยาบาล in ER; no rule → null zone; manager → COMMANDER; ZONE_LEAD moving someone in another zone → FORBIDDEN; 10 concurrent creates → tags MCI-001…MCI-010 unique; STAFF create → FORBIDDEN; ส่งต่อ without destination → DESTINATION_REQUIRED; closed incident update → INCIDENT_CLOSED; audit metadata has no name/HN.
-- [ ] **Step 2–4:** run FAIL → implement → PASS.
-- [ ] **Step 5: Commit** `feat(mci): add check-in, staffing and casualty services`
+- [x] **Step 1: Write failing integration tests**: check-in twice returns same responder; rule puts พยาบาล in ER; no rule → null zone; manager → COMMANDER; ZONE_LEAD moving someone in another zone → FORBIDDEN; 10 concurrent creates → tags MCI-001…MCI-010 unique; STAFF create → FORBIDDEN; ส่งต่อ without destination → DESTINATION_REQUIRED; closed incident update → INCIDENT_CLOSED; audit metadata has no name/HN.
+- [x] **Step 2–4:** run FAIL → implement → PASS.
+- [x] **Step 5: Commit** `feat(mci): add check-in, staffing and casualty services`
 
 ### Task 7: Queries and the public projection
 
@@ -147,9 +147,9 @@ Tables exactly as the spec's "ข้อมูล" section, plus: `mci_patient.pu
 - `buildPublicBoard(incident, patients: PatientRow[], settings: MciSettings): PublicBoard` (pure) where `PublicBoard = { incident: { title; kind; occurredAt } | null; updatedAt: string; total: number; byTriage: {name; colorHex; count}[]; byStatus: {name; count}[] (deceased excluded); people: { name: string; place: string }[] (sorted by name); contactPhone: string }`. Place: zone name, `ส่งต่อ <รพ.>`, `กลับบ้านแล้ว`, or `กรุณาติดต่อจุดประชาสัมพันธ์` (deceased or hidden).
 - `class MciQueries(database)`: `openIncident()`, `incident(id)`, `incidents(kind?)`, `myResponder(incidentId, personId)`, `responders(incidentId)` (with display name, profession, zone, role, times), `staffing(incidentId)` (zone × profession counts of checked-in), `patients(incidentId, filter)`, `patient(id)`, `publicBoard(): Promise<PublicBoard>`, `summary(incidentId)`.
 
-- [ ] **Step 1: Write failing unit test** for `buildPublicBoard`: no surname/HN/tag/colour in serialised output (`JSON.stringify` does not contain `ใจดี`, `HN`, `MCI-`), deceased named → contact text, hidden → contact text, unnamed → absent but counted, byStatus excludes deceased. Integration: `publicBoard()` with no open incident returns `incident: null`.
-- [ ] **Step 2–4:** FAIL → implement → PASS.
-- [ ] **Step 5: Commit** `feat(mci): add queries and public board projection`
+- [x] **Step 1: Write failing unit test** for `buildPublicBoard`: no surname/HN/tag/colour in serialised output (`JSON.stringify` does not contain `ใจดี`, `HN`, `MCI-`), deceased named → contact text, hidden → contact text, unnamed → absent but counted, byStatus excludes deceased. Integration: `publicBoard()` with no open incident returns `incident: null`.
+- [x] **Step 2–4:** FAIL → implement → PASS.
+- [x] **Step 5: Commit** `feat(mci): add queries and public board projection`
 
 ### Task 8: Worker LINE broadcast
 
@@ -159,37 +159,37 @@ Tables exactly as the spec's "ข้อมูล" section, plus: `mci_patient.pu
 
 **Interfaces:** `buildMciBroadcast(kind, event, title, link|null): { type: 'text'; text }` → `[อุบัติเหตุหมู่] ประกาศเหตุ: <title>\nรายงานตัว: <link>` (OPENED) / `[อุบัติเหตุหมู่] ปิดเหตุแล้ว: <title>` (CLOSED), prefixed `[ซ้อมแผน] ` for DRILL. Push to the module route group, retry key = event id, same success/409/throw rules as `LineAlertConsumer`; no client/route/incident → done.
 
-- [ ] **Step 1–4:** tests for message text, no-route no-op, 500 → throws `LINE_PUSH_FAILED`; FAIL → implement → PASS (`pnpm --filter @backoffice/worker test`).
-- [ ] **Step 5: Commit** `feat(worker): broadcast mass casualty incidents to LINE`
+- [x] **Step 1–4:** tests for message text, no-route no-op, 500 → throws `LINE_PUSH_FAILED`; FAIL → implement → PASS (`pnpm --filter @backoffice/worker test`).
+- [x] **Step 5: Commit** `feat(worker): broadcast mass casualty incidents to LINE`
 
 ### Task 9: API routes
 
 **Files:**
 - Create under `apps/web/src/app/api/mci/`: `mci-route.ts` (helpers + `mciResult` status map: NOT_FOUND 404, FORBIDDEN 403, INCIDENT_ALREADY_OPEN/INCIDENT_CLOSED/NO_OPEN_INCIDENT/ALREADY_OUT/DUPLICATE_NAME/PROTECTED 409, else 400), `board/route.ts` (GET, public), `incidents/route.ts` (POST open), `incidents/[id]/closure/route.ts` (POST), `incidents/[id]/export/route.ts` (GET `?kind=patients|responders`, CSV with BOM, `mci.command` only, audit `mci.incident.export`, CLOSED only), `check-in/route.ts` (POST), `responders/[id]/route.ts` (PATCH), `responders/[id]/check-out/route.ts` (POST), `patients/route.ts` (POST), `patients/[id]/route.ts` (PUT), `settings/[kind]/route.ts` (POST create / `settings/[kind]/[id]/route.ts` PUT) for zones|triage|statuses|professions, `settings/rules/route.ts` (PUT), `settings/contact/route.ts` (PUT); `route.test.ts`.
 
-- [ ] **Step 1: Write failing route tests** (mock services like `api/fleet/route.test.ts`): 401 signed out on every write; `board` answers 200 without a session and sets `no-store`; open/close/settings/export 403 for staff, 200/201 for `mci-manager`; open conflict → 409; invalid body → 400 with field names only.
-- [ ] **Step 2–4:** FAIL → implement → PASS (`pnpm --filter @backoffice/web test -- api/mci`).
-- [ ] **Step 5: Commit** `feat(web): add mass casualty API`
+- [x] **Step 1: Write failing route tests** (mock services like `api/fleet/route.test.ts`): 401 signed out on every write; `board` answers 200 without a session and sets `no-store`; open/close/settings/export 403 for staff, 200/201 for `mci-manager`; open conflict → 409; invalid body → 400 with field names only.
+- [x] **Step 2–4:** FAIL → implement → PASS (`pnpm --filter @backoffice/web test -- api/mci`).
+- [x] **Step 5: Commit** `feat(web): add mass casualty API`
 
 ### Task 10: Registry, labels, styles, sign-in redirect
 
 **Files:**
 - Modify: `apps/web/src/lib/modules.ts` (entry with sections `/mci/ops` ภาพรวม everyone, `/mci/patients` everyone (page checks), `/mci/staff` everyone, `/mci/incidents` `canCommandMci`, `/mci/settings` `canCommandMci`), `apps/web/src/lib/admin-labels.ts`, `apps/web/src/lib/role-choice-labels.ts`, `packages/i18n/src/th.ts` (all `mci*` keys), `apps/web/src/app/styles.css` (`[data-module="mass-casualty"] { --accent: #b91c1c; }`, `.mci-*` styles, board styles, print CSS), `apps/web/src/app/local-sign-in-form.tsx` (`next?: string` prop, `safeNext(next) → string` accepts only `^/(?!/)` paths without `\`), `apps/web/src/lib/mci-labels.ts`; tests `modules.test.ts`, `local-sign-in-form.test.tsx`, `module-gate.test.ts`.
-- [ ] **Step 1: Failing tests**: registry has `mass-casualty` with href `/mci`; `moduleForPath('/mci/board') === 'mass-casualty'`; sign-in with `next='/mci/ops'` pushes `/mci/ops`, with `//evil.com` pushes `/dashboard`.
-- [ ] **Step 2–4:** FAIL → implement → PASS.
-- [ ] **Step 5: Commit** `feat(web): register the mass casualty module`
+- [x] **Step 1: Failing tests**: registry has `mass-casualty` with href `/mci`; `moduleForPath('/mci/board') === 'mass-casualty'`; sign-in with `next='/mci/ops'` pushes `/mci/ops`, with `//evil.com` pushes `/dashboard`.
+- [x] **Step 2–4:** FAIL → implement → PASS.
+- [x] **Step 5: Commit** `feat(web): register the mass casualty module`
 
 ### Task 11: Pages
 
 **Files:**
 - Create: `apps/web/src/app/mci/page.tsx` (public landing: signed in → `redirect('/mci/ops')`; else red banner with open incident or "ขณะนี้ไม่มีเหตุ", DRILL banner, `<LocalSignInForm next="/mci/ops" />`, link to board), `apps/web/src/app/mci/board/page.tsx` + `board-view.tsx` (client, polls `/api/mci/board` every 30 s, search box), `apps/web/src/app/(app)/mci/layout.tsx`, `mci-page.tsx` (context helper like `fleetContext`), `ops/page.tsx` (my-duty card + counts by colour/status + incident banner), `ops/check-in-card.tsx` (ActionDialog with profession select prefilled), `patients/page.tsx` + `patient-form.tsx` (FormDialog new/edit; tag shown large after create), `staff/page.tsx` + `responder-actions.tsx` (move/role/check-out dialogs, staffing grid), `incidents/page.tsx` + `open-incident-form.tsx` + `close-incident-button.tsx`, `incidents/[id]/page.tsx` (summary, print, CSV links), `settings/page.tsx` + forms per tab; tests `board-view.test.tsx`, `check-in-card.test.tsx`, `patient-form.test.tsx`.
-- [ ] **Step 1: Failing component tests**: board view renders counts and filters names by search; check-in confirm posts `{ professionId }` and shows the zone; patient form requires colour and zone, shows destination when ส่งต่อ selected, and Esc does not close the dialog.
-- [ ] **Step 2–4:** FAIL → implement → PASS.
-- [ ] **Step 5: Commit** `feat(web): add mass casualty pages and public board`
+- [x] **Step 1: Failing component tests**: board view renders counts and filters names by search; check-in confirm posts `{ professionId }` and shows the zone; patient form requires colour and zone, shows destination when ส่งต่อ selected, and Esc does not close the dialog.
+- [x] **Step 2–4:** FAIL → implement → PASS.
+- [x] **Step 5: Commit** `feat(web): add mass casualty pages and public board`
 
 ### Task 12: Docs and verification
 
 **Files:** `CONTEXT.md` (section อุบัติเหตุหมู่ with the spec glossary), `DESIGN.md` (colour row, board rules), `docs/integration/modules.md` if it lists modules.
-- [ ] Run: `pnpm lint && pnpm typecheck && pnpm test`, `DATABASE_URL=… DATABASE_ADMIN_URL=… pnpm test:integration`, `pnpm --filter @backoffice/web build`, `git diff --check` — all exit 0.
-- [ ] Screenshots 1280/390 of `/mci`, `/mci/board`, `/mci/ops`, `/mci/patients` into `/mnt/project-files/mass-casualty/screens/`.
-- [ ] Commit `docs: record mass casualty vocabulary and design rules`
+- [x] Run: `pnpm lint && pnpm typecheck && pnpm test`, `DATABASE_URL=… DATABASE_ADMIN_URL=… pnpm test:integration`, `pnpm --filter @backoffice/web build`, `git diff --check` — all exit 0.
+- [x] Screenshots 1280/390 of `/mci`, `/mci/board`, `/mci/ops`, `/mci/patients` into `/mnt/project-files/mass-casualty/screens/`.
+- [x] Commit `docs: record mass casualty vocabulary and design rules`
