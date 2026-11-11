@@ -18,8 +18,8 @@
 **Produces:** `NationalIdHashMatcher(database, protector).findActivePerson(hashCid): Promise<string | null>`;
 `ExternalLoginDependencies.findPersonByNationalIdHash?`; `resolve(identity, { hashCid })`.
 
-- [ ] Failing tests: one match links with `method: 'national_id'` and returns linked; no match, two matches, an inactive person or a person already linked go to pending; `linkWithPassword` is gone.
-- [ ] Implement; `pnpm --filter @backoffice/core test -- external-login national-id-hash` green.
+- [x] Failing tests: one match links with `method: 'national_id'` and returns linked; no match, two matches, an inactive person or a person already linked go to pending; `linkWithPassword` is gone.
+- [x] Implement; `pnpm --filter @backoffice/core test -- external-login national-id-hash` green.
 
 ## Task 3: web
 

@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
-import type { AuditInput, ExternalIdentity, LocalCredentials } from '@backoffice/contracts';
-import type { LocalAuthService, LoginAuditRecorder } from './auth-service';
+import type { AuditInput, ExternalIdentity } from '@backoffice/contracts';
+import type { LoginAuditRecorder } from './auth-service';
 
 export interface ExternalIdentityLink { id: string; personId: string; issuer: string; subject: string; displayName: string | null; linkedByPersonId: string | null; linkedAt: Date }
 export interface PendingExternalLogin { id: string; issuer: string; subject: string; displayName: string | null; lastSeenAt: Date }
@@ -22,12 +22,13 @@ export interface ExternalIdentityRepository {
 
 export interface ExternalLoginDependencies {
   repository: ExternalIdentityRepository;
-  localAuth: LocalAuthService;
   isActivePerson(personId: string): Promise<boolean>;
   audit: LoginAuditRecorder;
   /** The portal issuer this BackOffice trusts; links are kept per issuer. */
   issuer: string;
   now?: () => Date;
+  /** The one ACTIVE บุคลากร whose national ID gives Provider ID's hash_cid, or null; left out when the national-ID keys are not set. */
+  findPersonByNationalIdHash?: (hashCid: string) => Promise<string | null>;
 }
 
 export type ExternalResolution = { kind: 'linked'; personId: string } | { kind: 'unlinked'; ticket: string } | { kind: 'inactive' };
@@ -35,7 +36,7 @@ export type ExternalResolution = { kind: 'linked'; personId: string } | { kind: 
 const TICKET_MS = 10 * 60_000;
 const ticketHash = (ticket: string) => createHash('sha256').update(ticket, 'utf8').digest('hex');
 
-/** เข้าสู่ระบบด้วย Provider ID: finds the บุคลากร a portal account is linked to, or lets the person or an admin link one. */
+/** เข้าสู่ระบบด้วย Provider ID: finds the บุคลากร a Provider ID account is linked to, links it by national ID, or leaves it for an admin. */
 export class ExternalLoginService {
   private readonly now: () => Date;
 
@@ -43,8 +44,10 @@ export class ExternalLoginService {
     this.now = deps.now ?? (() => new Date());
   }
 
-  async resolve(identity: ExternalIdentity): Promise<ExternalResolution> {
+  /** `hashCid` is only compared, never stored or audited. */
+  async resolve(identity: ExternalIdentity, options: { hashCid?: string | null } = {}): Promise<ExternalResolution> {
     const link = await this.deps.repository.findLink(identity.issuer, identity.subject);
+    if (!link && options.hashCid && (await this.linkByNationalId(identity, options.hashCid))) return this.resolve(identity);
     if (link) {
       if (!(await this.deps.isActivePerson(link.personId))) {
         await this.deps.audit.recordAudit({ actorPersonId: link.personId, action: 'identity.provider_login', targetType: 'person', targetId: link.personId, result: 'FAILURE', metadata: { stage: 'inactive' } });
@@ -65,16 +68,14 @@ export class ExternalLoginService {
     return pending ? { displayName: pending.displayName } : null;
   }
 
-  /** Throws TICKET_EXPIRED, ALREADY_LINKED, or the local sign-in errors (INVALID_CREDENTIALS, LOGIN_LOCKED). */
-  async linkWithPassword(ticket: string, credentials: LocalCredentials): Promise<{ personId: string; mustChangePassword: boolean }> {
-    const pending = ticket ? await this.deps.repository.findPendingByTicket(ticketHash(ticket), this.now()) : null;
-    if (!pending) throw new Error('TICKET_EXPIRED');
-    const { personId, mustChangePassword } = await this.deps.localAuth.authenticateLocal(credentials);
-    if (await this.deps.repository.findLinkForPerson(personId, pending.issuer)) throw new Error('ALREADY_LINKED');
-    const result = await this.deps.repository.link({ personId, issuer: pending.issuer, subject: pending.subject, displayName: pending.displayName, linkedByPersonId: null,
-      audit: { actorPersonId: personId, action: 'identity.provider_link', targetType: 'person', targetId: personId, result: 'SUCCESS', metadata: { method: 'self' } } });
-    if (!result.ok) throw new Error('ALREADY_LINKED');
-    return { personId, mustChangePassword };
+  /** Links a first login to the matched บุคลากร when that person is active and has no Provider ID account yet. */
+  private async linkByNationalId(identity: ExternalIdentity, hashCid: string): Promise<boolean> {
+    const personId = await this.deps.findPersonByNationalIdHash?.(hashCid);
+    if (!personId || !(await this.deps.isActivePerson(personId))) return false;
+    if (await this.deps.repository.findLinkForPerson(personId, identity.issuer)) return false;
+    const result = await this.deps.repository.link({ personId, issuer: identity.issuer, subject: identity.subject, displayName: identity.displayName, linkedByPersonId: null,
+      audit: { actorPersonId: personId, action: 'identity.provider_link', targetType: 'person', targetId: personId, result: 'SUCCESS', metadata: { method: 'national_id' } } });
+    return result.ok;
   }
 
   async adminLink(actorPersonId: string, pendingId: string, personId: string): Promise<{ ok: true } | { ok: false; code: 'NOT_FOUND' | 'ALREADY_LINKED' | 'PERSON_NOT_ACTIVE' }> {
