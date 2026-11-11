@@ -27,6 +27,11 @@ beforeEach(() => {
 afterEach(() => vi.clearAllMocks());
 
 describe('GET /api/auth/provider/callback', () => {
+  it('redirects to the public origin of the redirect URI, not the container address', async () => {
+    const response = await GET(new Request('https://0.0.0.0:3000/api/auth/provider/callback?code=c&state=other'));
+    expect(location(response)).toBe('https://backoffice.test/?provider=failed');
+  });
+
   it('is 404 when not configured', async () => {
     mocks.config.mockReturnValue(null);
     expect((await callback('code=c&state=state-1')).status).toBe(404);
