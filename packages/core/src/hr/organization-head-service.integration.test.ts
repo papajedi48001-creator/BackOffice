@@ -54,6 +54,17 @@ describeWithDatabase('OrganizationHeadService against MariaDB', () => {
     await expect(service.assign({ organizationId, personId: second, effectiveFrom: new Date('2026-05-31T20:00:00Z') }, actor)).resolves.toEqual({ kind: 'error', code: 'EFFECTIVE_FROM_BEFORE_CURRENT' });
   });
 
+  it('lists a unit once and closes every open term when a unit has been left with two current heads', async () => {
+    const organizationId = await organization();
+    const [stale, current, next] = [await person(), await person(), await person()];
+    for (const [personId, from] of [[stale, '2026-01-01 00:00:00'], [current, '2026-02-01 00:00:00']] as const) await database.execute('INSERT INTO hr_organization_head (id, organization_id, person_id, effective_from, effective_until, created_at) VALUES (?, ?, ?, ?, NULL, UTC_TIMESTAMP())', [randomUUID(), organizationId, personId, from]);
+    const listed = (await new HrDirectory(database).listOrganizations()).filter((unit) => unit.id === organizationId);
+    expect(listed).toHaveLength(1);
+    expect(listed[0]!.headPersonId).toBe(current);
+    await service.assign({ organizationId, personId: next, effectiveFrom: new Date('2026-06-01T00:00:00Z') }, actor);
+    expect((await heads(organizationId)).filter((row) => row.effectiveUntil === null).map((row) => row.personId)).toEqual([next]);
+  });
+
   it('lists each organization with its unit type and current head', async () => {
     const organizationId = await organization();
     const head = await person();
