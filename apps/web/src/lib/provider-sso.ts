@@ -1,5 +1,5 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
-import { AuditService, DatabaseAuditRepository, DatabaseExternalIdentityRepository, DatabaseLocalAccountRepository, DatabaseLoginThrottle, ExternalLoginService, LocalAuthService, PortalOidcClient, type OidcClientConfig, type OidcFlow } from '@backoffice/core';
+import { AuditService, DatabaseAuditRepository, DatabaseExternalIdentityRepository, DatabaseLocalAccountRepository, DatabaseLoginThrottle, ExternalLoginService, LocalAuthService, PortalOidcClient, ProviderIdClient, type OidcClientConfig, type ProviderIdConfig, type ProviderIdFlow } from '@backoffice/core';
 import type { Database } from '@backoffice/db';
 import { readRuntimeValue } from './runtime-env';
 
@@ -7,6 +7,12 @@ export const providerFlowCookie = 'backoffice_provider_flow';
 export const providerTicketCookie = 'backoffice_provider_ticket';
 export const providerFlowPath = '/api/auth/provider';
 export const providerCookieSeconds = 600;
+
+/** MOPH ID and Provider ID base URLs per environment, as in the radius-server portal. */
+const environments: Record<string, { healthUrl: string; apiUrl: string }> = {
+  prd: { healthUrl: 'https://moph.id.th', apiUrl: 'https://provider.id.th' },
+  uat: { healthUrl: 'https://uat-moph.id.th', apiUrl: 'https://uat-provider.id.th' }
+};
 
 function absoluteUrl(value: string | undefined): string | null {
   if (!value) return null;
@@ -16,8 +22,34 @@ function absoluteUrl(value: string | undefined): string | null {
   } catch { return null; }
 }
 
-/** เข้าสู่ระบบด้วย Provider ID is on only when the portal issuer, client ID, secret and redirect URI are all set. */
-export function providerSsoConfig(): OidcClientConfig | null {
+/** เข้าสู่ระบบด้วย Provider ID is on only when both clients, both secrets and the redirect URI are set. */
+export function providerSsoConfig(): ProviderIdConfig | null {
+  let healthClientSecret: string | undefined;
+  let providerSecretKey: string | undefined;
+  try {
+    healthClientSecret = readRuntimeValue('PROVIDER_ID_HEALTH_CLIENT_SECRET');
+    providerSecretKey = readRuntimeValue('PROVIDER_ID_SECRET_KEY');
+  } catch { return null; }
+  const environment = environments[readRuntimeValue('PROVIDER_ID_ENV') || 'prd'];
+  if (!environment) return null;
+  const healthUrl = readRuntimeValue('PROVIDER_ID_HEALTH_URL') ? absoluteUrl(readRuntimeValue('PROVIDER_ID_HEALTH_URL')) : environment.healthUrl;
+  const apiUrl = readRuntimeValue('PROVIDER_ID_API_URL') ? absoluteUrl(readRuntimeValue('PROVIDER_ID_API_URL')) : environment.apiUrl;
+  const redirectUri = absoluteUrl(readRuntimeValue('PROVIDER_ID_REDIRECT_URI'));
+  const healthClientId = readRuntimeValue('PROVIDER_ID_HEALTH_CLIENT_ID');
+  const providerClientId = readRuntimeValue('PROVIDER_ID_CLIENT_ID');
+  if (!healthUrl || !apiUrl || !redirectUri || !healthClientId || !providerClientId || !healthClientSecret || !providerSecretKey) return null;
+  return { healthUrl, apiUrl, healthClientId, healthClientSecret, providerClientId, providerSecretKey, redirectUri };
+}
+
+export const providerSsoEnabled = (): boolean => providerSsoConfig() !== null;
+
+export const providerIdClient = (config: ProviderIdConfig): ProviderIdClient => new ProviderIdClient(config);
+
+/**
+ * The radius-server portal's OIDC settings, kept only for the portal's server-to-server photo requests (/api/portal/photo).
+ * Sign-in no longer goes through the portal.
+ */
+export function portalSsoConfig(): OidcClientConfig | null {
   let clientSecret: string | undefined;
   try { clientSecret = readRuntimeValue('PROVIDER_SSO_CLIENT_SECRET'); } catch { return null; }
   const issuer = absoluteUrl(readRuntimeValue('PROVIDER_SSO_ISSUER'));
@@ -27,37 +59,35 @@ export function providerSsoConfig(): OidcClientConfig | null {
   return { issuer, clientId, clientSecret, redirectUri };
 }
 
-export const providerSsoEnabled = (): boolean => providerSsoConfig() !== null;
-
-let cachedClient: { key: string; client: PortalOidcClient } | undefined;
+let cachedPortalClient: { key: string; client: PortalOidcClient } | undefined;
 
 /** One client per configuration so its JWKS cache lives across requests. */
 export function portalOidcClient(config: OidcClientConfig): PortalOidcClient {
   const key = JSON.stringify(config);
-  if (cachedClient?.key !== key) cachedClient = { key, client: new PortalOidcClient(config) };
-  return cachedClient.client;
+  if (cachedPortalClient?.key !== key) cachedPortalClient = { key, client: new PortalOidcClient(config) };
+  return cachedPortalClient.client;
 }
 
 const cookieKey = (secret: string) => createHash('sha256').update(`backoffice-provider-flow:${secret}`).digest();
 
-/** The state, nonce and PKCE verifier ride in an encrypted, ten-minute cookie so nothing about the flow is stored server side or put in a URL. */
-export function sealFlow(flow: OidcFlow, secret: string, now: Date = new Date()): string {
+/** The state rides in an encrypted, ten-minute cookie so nothing about the flow is stored server side. */
+export function sealFlow(flow: ProviderIdFlow, secret: string, now: Date = new Date()): string {
   const iv = randomBytes(12);
   const cipher = createCipheriv('aes-256-gcm', cookieKey(secret), iv);
   const body = Buffer.concat([cipher.update(JSON.stringify({ ...flow, expiresAt: now.getTime() + providerCookieSeconds * 1000 }), 'utf8'), cipher.final()]);
   return Buffer.concat([iv, cipher.getAuthTag(), body]).toString('base64url');
 }
 
-export function openFlow(value: string | undefined, secret: string, now: Date = new Date()): OidcFlow | null {
+export function openFlow(value: string | undefined, secret: string, now: Date = new Date()): ProviderIdFlow | null {
   if (!value) return null;
   try {
     const raw = Buffer.from(value, 'base64url');
     const decipher = createDecipheriv('aes-256-gcm', cookieKey(secret), raw.subarray(0, 12));
     decipher.setAuthTag(raw.subarray(12, 28));
-    const parsed = JSON.parse(Buffer.concat([decipher.update(raw.subarray(28)), decipher.final()]).toString('utf8')) as OidcFlow & { expiresAt: number };
+    const parsed = JSON.parse(Buffer.concat([decipher.update(raw.subarray(28)), decipher.final()]).toString('utf8')) as ProviderIdFlow & { expiresAt: number };
     if (typeof parsed.expiresAt !== 'number' || parsed.expiresAt < now.getTime()) return null;
-    if (typeof parsed.state !== 'string' || typeof parsed.nonce !== 'string' || typeof parsed.verifier !== 'string') return null;
-    return { state: parsed.state, nonce: parsed.nonce, verifier: parsed.verifier };
+    if (typeof parsed.state !== 'string' || !parsed.state) return null;
+    return { state: parsed.state };
   } catch { return null; }
 }
 

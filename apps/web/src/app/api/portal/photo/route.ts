@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { DatabaseExternalIdentityRepository, HrProfileService, OidcError } from '@backoffice/core';
 import { attachmentService, attachmentsEnabled } from '../../../../lib/attachments';
 import { getSharedDatabase } from '../../../../lib/database';
-import { portalOidcClient, providerSsoConfig } from '../../../../lib/provider-sso';
+import { portalOidcClient, portalSsoConfig } from '../../../../lib/provider-sso';
 
 /** The JWT `typ` the portal puts on a photo request; an ID token (`typ: JWT`) is never accepted here. */
 const photoRequestType = 'backoffice-photo-request+jwt';
@@ -15,7 +15,7 @@ const answer = (error: string, status: number) => NextResponse.json({ error }, {
  * Provider ID sign-in) naming the portal member; the photo is that of the บุคลากร the member is linked to. No browser session is used.
  */
 export async function GET(request: Request): Promise<Response> {
-  const config = providerSsoConfig();
+  const config = portalSsoConfig();
   if (!config) return answer('not_found', 404);
   const [scheme, token] = (request.headers.get('authorization') ?? '').split(' ');
   if (scheme?.toLowerCase() !== 'bearer' || !token || token.length > 4096) return answer('unauthenticated', 401);

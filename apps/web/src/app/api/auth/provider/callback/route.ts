@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { AuditService, DatabaseAuditRepository, OidcError } from '@backoffice/core';
+import { AuditService, DatabaseAuditRepository, ProviderIdError } from '@backoffice/core';
 import { getSharedDatabase } from '../../../../../lib/database';
-import { externalLoginService, openFlow, portalOidcClient, providerCookieOptions, providerFlowCookie, providerFlowPath, providerSsoConfig, providerTicketCookie } from '../../../../../lib/provider-sso';
+import { externalLoginService, openFlow, providerCookieOptions, providerIdClient, providerFlowCookie, providerFlowPath, providerSsoConfig, providerTicketCookie } from '../../../../../lib/provider-sso';
 import { sessionCookieName, sessionCookieOptions, sessionService, startSession } from '../../../../../lib/session';
 
 type Outcome = 'unavailable' | 'failed' | 'inactive';
@@ -30,27 +30,28 @@ export async function GET(request: Request): Promise<Response> {
   const config = providerSsoConfig();
   if (!config) return NextResponse.json({ error: 'not_found' }, { status: 404 });
   const query = new URL(request.url).searchParams;
-  const flow = openFlow(readCookie(request, providerFlowCookie), config.clientSecret);
+  const flow = openFlow(readCookie(request, providerFlowCookie), config.healthClientSecret);
   const code = query.get('code');
   if (!flow || query.get('state') !== flow.state || !code || code.length > 512 || query.has('error')) {
     await auditFailure('state');
     return back(request, 'failed');
   }
+  const client = providerIdClient(config);
   let identity;
   try {
-    identity = await portalOidcClient(config).complete(code, flow);
+    identity = await client.complete(code);
   } catch (error) {
-    if (error instanceof OidcError && error.code === 'INVALID') {
+    if (error instanceof ProviderIdError && error.code === 'INVALID') {
       await auditFailure('token');
       return back(request, 'failed');
     }
-    console.error('provider sign-in failed', error instanceof OidcError ? error.code : 'UNKNOWN');
+    console.error('provider sign-in failed', error instanceof ProviderIdError ? error.code : 'UNKNOWN');
     return back(request, 'unavailable');
   }
   const database = getSharedDatabase();
   if (!database) return back(request, 'unavailable');
   try {
-    const result = await externalLoginService(database, config.issuer).resolve(identity);
+    const result = await externalLoginService(database, client.issuer).resolve(identity);
     if (result.kind === 'inactive') return back(request, 'inactive');
     if (result.kind === 'unlinked') {
       const response = NextResponse.redirect(new URL('/link-provider', request.url), 303);

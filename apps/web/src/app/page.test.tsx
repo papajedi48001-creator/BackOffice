@@ -22,10 +22,11 @@ describe('HomePage', () => {
   });
 
   it('shows the Provider ID button and message when SSO is configured', async () => {
-    vi.stubEnv('PROVIDER_SSO_ISSUER', 'https://portal.test');
-    vi.stubEnv('PROVIDER_SSO_CLIENT_ID', 'backoffice');
-    vi.stubEnv('PROVIDER_SSO_CLIENT_SECRET', 'secret-value-that-is-long-enough-0123');
-    vi.stubEnv('PROVIDER_SSO_REDIRECT_URI', 'https://backoffice.test/api/auth/provider/callback');
+    vi.stubEnv('PROVIDER_ID_HEALTH_CLIENT_ID', 'health-client');
+    vi.stubEnv('PROVIDER_ID_HEALTH_CLIENT_SECRET', 'secret-value-that-is-long-enough-0123');
+    vi.stubEnv('PROVIDER_ID_CLIENT_ID', 'provider-client');
+    vi.stubEnv('PROVIDER_ID_SECRET_KEY', 'provider-secret-key');
+    vi.stubEnv('PROVIDER_ID_REDIRECT_URI', 'https://backoffice.test/api/auth/provider/callback');
     render(await HomePage({ searchParams: Promise.resolve({ provider: 'unavailable' }) }));
     expect(screen.getByRole('link', { name: 'เข้าสู่ระบบด้วย Provider ID' })).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent('ระบบ Provider ID ไม่พร้อมใช้งาน');

@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { OidcError } from '@backoffice/core';
 
 const mocks = vi.hoisted(() => ({ config: vi.fn(), getSharedDatabase: vi.fn(), enabled: vi.fn(), open: vi.fn(), verify: vi.fn(), findLink: vi.fn(), isActivePerson: vi.fn(), photoAttachmentOf: vi.fn() }));
-vi.mock('../../../../lib/provider-sso', () => ({ providerSsoConfig: mocks.config, portalOidcClient: () => ({ verifyPortalRequest: mocks.verify }) }));
+vi.mock('../../../../lib/provider-sso', () => ({ portalSsoConfig: mocks.config, portalOidcClient: () => ({ verifyPortalRequest: mocks.verify }) }));
 vi.mock('../../../../lib/database', () => ({ getSharedDatabase: mocks.getSharedDatabase }));
 vi.mock('../../../../lib/attachments', () => ({ attachmentsEnabled: mocks.enabled, attachmentService: () => ({ openAttachment: mocks.open }) }));
 vi.mock('@backoffice/core', async (importOriginal) => ({

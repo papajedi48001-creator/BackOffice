@@ -11,6 +11,6 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ p
     const { personId } = await params;
     const input = await readInput(request, providerUnlinkInputSchema);
     if (!input.ok) return input.response;
-    return adminResult(await externalLoginService(database, config.issuer).adminUnlink(session.personId, personId, input.value.reason));
+    return adminResult(await externalLoginService(database, config.apiUrl).adminUnlink(session.personId, personId, input.value.reason));
   });
 }

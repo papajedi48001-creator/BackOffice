@@ -14,7 +14,7 @@ export default async function AdminProviderLinksPage() {
   const config = providerSsoConfig();
   if (!config) return <section className="admin-page"><h2>{t('adminProviderTitle')}</h2><p className="admin-note">{t('adminProviderNotConfigured')}</p></section>;
   const repository = new DatabaseExternalIdentityRepository(context.database);
-  const [pending, links] = await Promise.all([repository.listPending(), repository.listLinks(config.issuer)]);
+  const [pending, links] = await Promise.all([repository.listPending(), repository.listLinks(config.apiUrl)]);
   return <section className="admin-page">
     <h2>{t('adminProviderTitle')}</h2>
     <p className="admin-note">{t('adminProviderCopy')}</p>

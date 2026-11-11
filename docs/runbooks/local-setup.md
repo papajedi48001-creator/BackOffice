@@ -103,12 +103,12 @@ $env:BACKOFFICE_DB_PORT = '3310'; $env:BACKOFFICE_REDIS_PORT = '6390'; node scri
 
 ## เข้าสู่ระบบด้วย Provider ID (ไม่บังคับ)
 
-ปุ่ม **เข้าสู่ระบบด้วย Provider ID** ขึ้นเมื่อ `.env` มี `PROVIDER_SSO_ISSUER`, `PROVIDER_SSO_CLIENT_ID`, `PROVIDER_SSO_CLIENT_SECRET` (หรือ `PROVIDER_SSO_CLIENT_SECRET_FILE`) และ `PROVIDER_SSO_REDIRECT_URI` ครบ ไม่ใส่ = ใช้ชื่อผู้ใช้และรหัสผ่านตามเดิม ขั้นตอนเชื่อม portal จริงอยู่ที่ `docs/runbooks/provider-sso.md`
+ปุ่ม **เข้าสู่ระบบด้วย Provider ID** ขึ้นเมื่อ `.env` มี `PROVIDER_ID_HEALTH_CLIENT_ID`, `PROVIDER_ID_HEALTH_CLIENT_SECRET` (หรือ `_FILE`), `PROVIDER_ID_CLIENT_ID`, `PROVIDER_ID_SECRET_KEY` (หรือ `_FILE`) และ `PROVIDER_ID_REDIRECT_URI` ครบ ไม่ใส่ = ใช้ชื่อผู้ใช้และรหัสผ่านตามเดิม การเชื่อม MOPH ID จริงอยู่ที่ `docs/runbooks/provider-sso.md`
 
-ทดสอบบนเครื่องโดยไม่ต้องมี portal: เปิดเว็บด้วย `PROVIDER_SSO_ISSUER=http://127.0.0.1:4455`, `PROVIDER_SSO_CLIENT_ID=backoffice`, `PROVIDER_SSO_CLIENT_SECRET=<ค่าสุ่ม 32 ตัวขึ้นไป>`, `PROVIDER_SSO_REDIRECT_URI=http://localhost:3000/api/auth/provider/callback` แล้วรัน e2e ซึ่งเปิด portal จำลองที่พอร์ต 4455 เอง
+ทดสอบบนเครื่องโดยไม่ต้องต่อกระทรวง: เปิดเว็บด้วย `PROVIDER_ID_HEALTH_URL=http://127.0.0.1:4455`, `PROVIDER_ID_API_URL=http://127.0.0.1:4455`, `PROVIDER_ID_HEALTH_CLIENT_ID=e2e-health`, `PROVIDER_ID_CLIENT_ID=e2e-provider`, `PROVIDER_ID_HEALTH_CLIENT_SECRET` และ `PROVIDER_ID_SECRET_KEY` เป็นค่าสุ่มค่าเดียวกัน 32 ตัวขึ้นไป, `PROVIDER_ID_REDIRECT_URI=http://localhost:3000/api/auth/provider/callback` แล้วรัน e2e ซึ่งเปิด MOPH ID และ Provider ID จำลองที่พอร์ต 4455 เอง
 
 ```bash
-cd apps/web && E2E_BASE_URL=http://localhost:3000 R0_E2E_PASSWORD=<รหัสผ่าน seed> E2E_PROVIDER_STUB_PORT=4455 E2E_PROVIDER_SECRET=<ค่าเดียวกับ CLIENT_SECRET> \
+cd apps/web && E2E_BASE_URL=http://localhost:3000 R0_E2E_PASSWORD=<รหัสผ่าน seed> E2E_PROVIDER_STUB_PORT=4455 E2E_PROVIDER_SECRET=<ค่าสุ่มเดียวกัน> \
   npx playwright test e2e/provider-sso.spec.ts --trace off
 ```
 

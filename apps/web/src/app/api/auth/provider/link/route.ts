@@ -16,7 +16,7 @@ export async function POST(request: Request): Promise<Response> {
   const ticket = request.headers.get('cookie')?.split(';').map((value) => value.trim()).find((value) => value.startsWith(`${providerTicketCookie}=`))?.slice(providerTicketCookie.length + 1) ?? '';
   try {
     const body = await request.json();
-    const { personId, mustChangePassword } = await externalLoginService(database, config.issuer).linkWithPassword(ticket, body);
+    const { personId, mustChangePassword } = await externalLoginService(database, config.apiUrl).linkWithPassword(ticket, body);
     const session = await startSession(personId);
     const response = NextResponse.json({ authenticated: true, mustChangePassword });
     response.cookies.set(sessionCookieName, session.token, sessionCookieOptions(session.maxAgeSeconds));

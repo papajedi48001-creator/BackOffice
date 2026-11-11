@@ -10,6 +10,6 @@ export async function POST(request: Request): Promise<Response> {
     if (!config) return NextResponse.json({ error: 'NOT_FOUND' }, { status: 404 });
     const input = await readInput(request, providerLinkInputSchema);
     if (!input.ok) return input.response;
-    return adminResult(await externalLoginService(database, config.issuer).adminLink(session.personId, input.value.pendingId, input.value.personId), 201);
+    return adminResult(await externalLoginService(database, config.apiUrl).adminLink(session.personId, input.value.pendingId, input.value.personId), 201);
   });
 }

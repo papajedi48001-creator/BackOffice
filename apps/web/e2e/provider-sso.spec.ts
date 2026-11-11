@@ -1,59 +1,66 @@
-import { createHash, generateKeyPairSync, randomUUID, sign } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { createServer, type Server } from 'node:http';
 import { expect, test } from '@playwright/test';
 
-// Runs against a seeded R0 environment whose web server was started with PROVIDER_SSO_ISSUER=http://127.0.0.1:<E2E_PROVIDER_STUB_PORT>,
-// PROVIDER_SSO_CLIENT_ID=backoffice, PROVIDER_SSO_CLIENT_SECRET=<E2E_PROVIDER_SECRET> and PROVIDER_SSO_REDIRECT_URI=<E2E_BASE_URL>/api/auth/provider/callback.
-// This file plays the portal: a minimal OpenID provider that signs every member in as `stub.subject`.
+// Runs against a seeded R0 environment whose web server was started with
+// PROVIDER_ID_HEALTH_URL=PROVIDER_ID_API_URL=http://127.0.0.1:<E2E_PROVIDER_STUB_PORT>, PROVIDER_ID_HEALTH_CLIENT_ID=e2e-health,
+// PROVIDER_ID_CLIENT_ID=e2e-provider, PROVIDER_ID_HEALTH_CLIENT_SECRET=PROVIDER_ID_SECRET_KEY=<E2E_PROVIDER_SECRET>
+// and PROVIDER_ID_REDIRECT_URI=<E2E_BASE_URL>/api/auth/provider/callback.
+// This file plays MOPH ID and Provider ID: every sign-in comes back as `stub.subject`.
 const port = Number(process.env.E2E_PROVIDER_STUB_PORT);
 const secret = process.env.E2E_PROVIDER_SECRET ?? '';
-test.skip(!process.env.E2E_BASE_URL || !process.env.R0_E2E_PASSWORD || !port || !secret, 'requires a seeded R0 environment started with the Provider SSO stub settings');
+test.skip(!process.env.E2E_BASE_URL || !process.env.R0_E2E_PASSWORD || !port || !secret, 'requires a seeded R0 environment started with the Provider ID stub settings');
 
-const issuer = `http://127.0.0.1:${port}`;
-const { privateKey, publicKey } = generateKeyPairSync('ec', { namedCurve: 'P-256' });
-// A fresh kid per run, like the portal's thumbprint kid: the web server caches JWKS for 10 minutes and must not match a previous run's key.
-const kid = `stub-${randomUUID()}`;
-const jwk = { ...publicKey.export({ format: 'jwk' }), kid, alg: 'ES256', use: 'sig' };
-const stub = { subject: '', name: '' };
-const codes = new Map<string, { nonce: string; challenge: string; subject: string; name: string }>();
-const b64 = (value: string | Buffer) => Buffer.from(value).toString('base64url');
-
-function idToken(claims: Record<string, unknown>): string {
-  const input = `${b64(JSON.stringify({ alg: 'ES256', kid, typ: 'JWT' }))}.${b64(JSON.stringify(claims))}`;
-  return `${input}.${b64(sign('sha256', Buffer.from(input), { key: privateKey, dsaEncoding: 'ieee-p1363' }))}`;
-}
+const base = `http://127.0.0.1:${port}`;
+const stub = { subject: '', firstname: '', lastname: '' };
+const codes = new Map<string, { subject: string; firstname: string; lastname: string }>();
+const tokens = new Map<string, { subject: string; firstname: string; lastname: string }>();
+const json = (response: import('node:http').ServerResponse, status: number, body: unknown) => response.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify(body));
 
 test.describe.configure({ mode: 'serial' });
 
 let server: Server;
 test.beforeAll(async () => {
   server = createServer((request, response) => {
-    const url = new URL(request.url ?? '/', issuer);
-    if (url.pathname === '/oidc/authorize') {
+    const url = new URL(request.url ?? '/', base);
+    if (url.pathname === '/oauth/redirect') {
       const code = randomUUID();
-      codes.set(code, { nonce: url.searchParams.get('nonce') ?? '', challenge: url.searchParams.get('code_challenge') ?? '', subject: stub.subject, name: stub.name });
+      codes.set(code, { ...stub });
       const target = new URL(url.searchParams.get('redirect_uri') ?? '');
       target.search = new URLSearchParams({ code, state: url.searchParams.get('state') ?? '' }).toString();
       response.writeHead(303, { location: target.toString() }).end();
       return;
     }
-    if (url.pathname === '/oidc/jwks') { response.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ keys: [jwk] })); return; }
-    if (url.pathname === '/oidc/token') {
-      let body = '';
-      request.on('data', (chunk) => { body += chunk; });
-      request.on('end', () => {
+    let body = '';
+    request.on('data', (chunk) => { body += chunk; });
+    request.on('end', () => {
+      if (url.pathname === '/api/v1/token') {
         const form = new URLSearchParams(body);
         const grant = codes.get(form.get('code') ?? '');
         codes.delete(form.get('code') ?? '');
-        const authorized = request.headers.authorization === `Basic ${Buffer.from(`backoffice:${secret}`).toString('base64')}`;
-        if (!authorized) { response.writeHead(401, { 'content-type': 'application/json' }).end(JSON.stringify({ error: 'invalid_client' })); return; }
-        if (!grant || createHash('sha256').update(form.get('code_verifier') ?? '').digest('base64url') !== grant.challenge) { response.writeHead(400, { 'content-type': 'application/json' }).end(JSON.stringify({ error: 'invalid_grant' })); return; }
-        const now = Math.floor(Date.now() / 1000);
-        response.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ token_type: 'Bearer', expires_in: 300, id_token: idToken({ iss: issuer, aud: 'backoffice', sub: grant.subject, iat: now, exp: now + 300, nonce: grant.nonce, auth_time: now, name: grant.name, preferred_username: null }) }));
-      });
-      return;
-    }
-    response.writeHead(404).end();
+        if (form.get('client_id') !== 'e2e-health' || form.get('client_secret') !== secret || !grant) { json(response, 400, { message: 'invalid code' }); return; }
+        const token = randomUUID();
+        tokens.set(token, grant);
+        json(response, 200, { access_token: token });
+        return;
+      }
+      if (url.pathname === '/api/v1/services/token') {
+        const input = JSON.parse(body || '{}') as Record<string, string>;
+        const grant = tokens.get(input.token ?? '');
+        if (input.client_id !== 'e2e-provider' || input.secret_key !== secret || !grant) { json(response, 401, { message: 'unauthorized' }); return; }
+        const token = randomUUID();
+        tokens.set(token, grant);
+        json(response, 200, { status: 200, data: { access_token: token } });
+        return;
+      }
+      if (url.pathname === '/api/v1/services/profile') {
+        const grant = tokens.get((request.headers.authorization ?? '').replace(/^Bearer /, ''));
+        if (!grant || request.headers['secret-key'] !== secret) { json(response, 401, { message: 'unauthorized' }); return; }
+        json(response, 200, { status: 200, data: { account_id: grant.subject, firstname_th: grant.firstname, lastname_th: grant.lastname, hash_cid: 'f'.repeat(64) } });
+        return;
+      }
+      response.writeHead(404).end();
+    });
   });
   await new Promise<void>((resolve) => server.listen(port, '127.0.0.1', resolve));
 });
@@ -62,7 +69,8 @@ test.afterAll(async () => { await new Promise<void>((resolve) => server.close(()
 test('an unlinked Provider ID login links once with the password, then signs straight in', async ({ page, context }) => {
   // A fixed subject: the first run against a fresh seed links it, and any later run finds it already linked.
   stub.subject = 'e2e-member-requestor';
-  stub.name = 'ผู้ทดสอบ Provider ID';
+  stub.firstname = 'ผู้ทดสอบ';
+  stub.lastname = 'Provider ID';
   await page.goto('/');
   await page.getByRole('link', { name: 'เข้าสู่ระบบด้วย Provider ID' }).click();
   await page.waitForURL(/\/(link-provider|dashboard)$/);
@@ -83,7 +91,8 @@ test('an unlinked Provider ID login links once with the password, then signs str
 
 test('a second Provider ID account cannot take a person who is already linked', async ({ page }) => {
   stub.subject = `e2e-member-${randomUUID()}`;
-  stub.name = 'บัญชีที่สอง';
+  stub.firstname = 'บัญชีที่สอง';
+  stub.lastname = '';
   await page.goto('/');
   await page.getByRole('link', { name: 'เข้าสู่ระบบด้วย Provider ID' }).click();
   await expect(page.getByText('บัญชีที่สอง', { exact: true })).toBeVisible();
