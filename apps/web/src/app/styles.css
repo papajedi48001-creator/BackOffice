@@ -642,7 +642,7 @@ video.inventory-camera { display: block; flex-basis: 100%; width: 100%; max-widt
 
 /* A box's แก้ไขข้อมูล button sits on the heading row, without the form card around it. */
 .profile-box-header { margin-bottom: 12px; }
-.profile-box-header .profile-form { display: flex; align-items: center; gap: 8px; border: 0; background: none; padding: 0; }
+.profile-box-header > .profile-form { display: flex; align-items: center; gap: 8px; border: 0; background: none; padding: 0; }
 .profile-box-header .profile-form button.section-edit, .profile-box-header button.section-edit { min-height: 36px; padding: 6px 14px; background: #fff; color: var(--accent); border: 1px solid var(--accent); }
 
 /* Text read by screen readers only. */
@@ -1013,3 +1013,7 @@ h2.chat-window-title { cursor: default; }
 }
 @media (max-width: 420px) { .login-tiles { display: none; } }
 @media (prefers-reduced-motion: reduce) { .provider-sign-in-button:hover { transform: none; } }
+/* A box's form shown in its แก้ไขข้อมูล popup: fields one or two per row, no card, and the popup title stands in for the form heading. */
+.form-dialog-body .profile-form { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); align-items: start; border: 0; border-radius: 0; background: none; padding: 0; }
+.form-dialog-body .profile-form > h4 { display: none; }
+.form-dialog-body .profile-form fieldset, .form-dialog-body .profile-form > button[type=submit] { grid-column: 1 / -1; }
