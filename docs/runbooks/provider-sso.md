@@ -64,7 +64,17 @@
 ทุกการผูก ยกเลิก และเข้าสู่ระบบที่ไม่สำเร็จ ถูกบันทึกใน audit (`identity.provider_link`, `identity.provider_unlink`, `identity.provider_login`)
 เหตุผลการยกเลิกเก็บแยกในตาราง `identity_link_removal` ไม่อยู่ใน audit metadata
 
-## 4. ข้อควรรู้
+## 4. รูปโปรไฟล์บน dashboard ของ portal
+
+portal แสดงรูปโปรไฟล์ Back Office ของบุคลากรที่ผูกบัญชีแล้ว โดยเครื่อง portal เรียก `GET https://<โฮสต์ Back Office>/api/portal/photo`
+พร้อม JWT ที่ลงนามด้วยกุญแจ SSO ของ portal (ดู `docs/superpowers/specs/2026-11-10-portal-profile-photo-design.md`) ใช้ได้เมื่อตั้ง `PROVIDER_SSO_ISSUER`, `PROVIDER_SSO_CLIENT_ID`,
+`PROVIDER_SSO_CLIENT_SECRET(_FILE)` และ `PROVIDER_SSO_REDIRECT_URI` ของ portal ไว้ด้วย การเข้าสู่ระบบไม่ได้ใช้ค่าเหล่านี้แล้ว
+ข้อจำกัดตอนนี้: รูปหาได้เฉพาะบัญชีที่เคยผูกผ่าน portal เพราะการผูกที่ทำผ่าน MOPH ID โดยตรงเก็บ `account_id` ไม่ใช่รหัสสมาชิก portal
+แต่เครื่อง portal ต้องเรียกโฮสต์ Back Office ทาง https ได้ ถ้าเรียกไม่ได้ dashboard แสดงรูปการ์ตูนเดิม
+
+ตรวจจากเครื่อง portal: `curl -s -o /dev/null -w '%{http_code}\n' https://<โฮสต์ Back Office>/api/portal/photo` ต้องได้ `401` (ไม่มี token)
+
+## 5. ข้อควรรู้
 
 - ระบบเก็บเฉพาะ `account_id` และชื่อ-สกุลจาก Provider ID ไม่เก็บ `hash_cid` หน่วยงาน หรือตำแหน่ง
 - บุคลากรที่ถูกปิดใช้งานใน Back Office เข้าไม่ได้แม้ Provider ID ยังใช้ได้

@@ -46,7 +46,9 @@ BackOffice redirect URI. The portal's own redirect URI must stay registered.
 `PROVIDER_ID_HEALTH_CLIENT_SECRET_FILE` and `PROVIDER_ID_SECRET_KEY_FILE`, and puts only web on a non-internal `egress` network
 pinned to `BACKOFFICE_EGRESS_SUBNET` (never 172.18.0.0/16). The portal host pin is removed.
 
-## Removed
+## Removed or kept
 
-`PortalOidcClient` and the `PROVIDER_SSO_*` variables. Links made through the portal keep their old issuer and are not matched by the new issuer;
-none are in use.
+Sign-in no longer uses `PortalOidcClient` or the `PROVIDER_SSO_*` variables. Both stay only for the portal's photo requests
+(`/api/portal/photo`, `2026-11-10-portal-profile-photo-design.md`), read through `portalSsoConfig()`. That route finds links by portal member id,
+so it finds only links made through the portal; links made here are keyed by Provider ID `account_id`. Aligning the two is follow-up work.
+Links made through the portal keep their old issuer and are not matched by sign-in; none are in use.

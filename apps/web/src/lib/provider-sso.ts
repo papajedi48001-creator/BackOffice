@@ -1,5 +1,5 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
-import { AuditService, DatabaseAuditRepository, DatabaseExternalIdentityRepository, DatabaseLocalAccountRepository, DatabaseLoginThrottle, ExternalLoginService, LocalAuthService, ProviderIdClient, type ProviderIdConfig, type ProviderIdFlow } from '@backoffice/core';
+import { AuditService, DatabaseAuditRepository, DatabaseExternalIdentityRepository, DatabaseLocalAccountRepository, DatabaseLoginThrottle, ExternalLoginService, LocalAuthService, PortalOidcClient, ProviderIdClient, type OidcClientConfig, type ProviderIdConfig, type ProviderIdFlow } from '@backoffice/core';
 import type { Database } from '@backoffice/db';
 import { readRuntimeValue } from './runtime-env';
 
@@ -44,6 +44,29 @@ export function providerSsoConfig(): ProviderIdConfig | null {
 export const providerSsoEnabled = (): boolean => providerSsoConfig() !== null;
 
 export const providerIdClient = (config: ProviderIdConfig): ProviderIdClient => new ProviderIdClient(config);
+
+/**
+ * The radius-server portal's OIDC settings, kept only for the portal's server-to-server photo requests (/api/portal/photo).
+ * Sign-in no longer goes through the portal.
+ */
+export function portalSsoConfig(): OidcClientConfig | null {
+  let clientSecret: string | undefined;
+  try { clientSecret = readRuntimeValue('PROVIDER_SSO_CLIENT_SECRET'); } catch { return null; }
+  const issuer = absoluteUrl(readRuntimeValue('PROVIDER_SSO_ISSUER'));
+  const redirectUri = absoluteUrl(readRuntimeValue('PROVIDER_SSO_REDIRECT_URI'));
+  const clientId = readRuntimeValue('PROVIDER_SSO_CLIENT_ID');
+  if (!issuer || !redirectUri || !clientId || !clientSecret) return null;
+  return { issuer, clientId, clientSecret, redirectUri };
+}
+
+let cachedPortalClient: { key: string; client: PortalOidcClient } | undefined;
+
+/** One client per configuration so its JWKS cache lives across requests. */
+export function portalOidcClient(config: OidcClientConfig): PortalOidcClient {
+  const key = JSON.stringify(config);
+  if (cachedPortalClient?.key !== key) cachedPortalClient = { key, client: new PortalOidcClient(config) };
+  return cachedPortalClient.client;
+}
 
 const cookieKey = (secret: string) => createHash('sha256').update(`backoffice-provider-flow:${secret}`).digest();
 
