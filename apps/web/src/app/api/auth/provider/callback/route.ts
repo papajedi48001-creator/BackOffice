@@ -11,8 +11,13 @@ function readCookie(request: Request, name: string): string | undefined {
   return request.headers.get('cookie')?.split(';').map((value) => value.trim()).find((value) => value.startsWith(`${name}=`))?.slice(name.length + 1) || undefined;
 }
 
+/** Behind the proxy request.url is the container's own address; the registered redirect URI carries the public origin. */
+function publicUrl(path: string, request: Request): URL {
+  return new URL(path, providerSsoConfig()?.redirectUri ?? request.url);
+}
+
 function back(request: Request, outcome: Outcome): NextResponse {
-  const response = NextResponse.redirect(new URL(`/?provider=${outcome}`, request.url), 303);
+  const response = NextResponse.redirect(publicUrl(`/?provider=${outcome}`, request), 303);
   response.cookies.set(providerFlowCookie, '', { ...providerCookieOptions(providerFlowPath), maxAge: 0 });
   return response;
 }
@@ -32,7 +37,7 @@ export async function GET(request: Request): Promise<Response> {
   const query = new URL(request.url).searchParams;
   const flow = openFlow(readCookie(request, providerFlowCookie), config.healthClientSecret);
   const code = query.get('code');
-  if (!flow || query.get('state') !== flow.state || !code || code.length > 512 || query.has('error')) {
+  if (!flow || query.get('state') !== flow.state || !code || code.length > 4096 || query.has('error')) {
     await auditFailure('state');
     return back(request, 'failed');
   }
@@ -54,14 +59,14 @@ export async function GET(request: Request): Promise<Response> {
     const result = await externalLoginService(database, client.issuer).resolve(identity);
     if (result.kind === 'inactive') return back(request, 'inactive');
     if (result.kind === 'unlinked') {
-      const response = NextResponse.redirect(new URL('/link-provider', request.url), 303);
+      const response = NextResponse.redirect(publicUrl('/link-provider', request), 303);
       response.cookies.set(providerFlowCookie, '', { ...providerCookieOptions(providerFlowPath), maxAge: 0 });
       response.cookies.set(providerTicketCookie, result.ticket, providerCookieOptions('/'));
       return response;
     }
     const session = await startSession(result.personId);
     const mustChange = await sessionService(database).pendingPasswordChange(session.token);
-    const response = NextResponse.redirect(new URL(mustChange ? '/change-password' : '/dashboard', request.url), 303);
+    const response = NextResponse.redirect(publicUrl(mustChange ? '/change-password' : '/dashboard', request), 303);
     response.cookies.set(providerFlowCookie, '', { ...providerCookieOptions(providerFlowPath), maxAge: 0 });
     response.cookies.set(sessionCookieName, session.token, sessionCookieOptions(session.maxAgeSeconds));
     return response;

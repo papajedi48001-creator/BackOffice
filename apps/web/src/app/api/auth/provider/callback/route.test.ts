@@ -27,6 +27,11 @@ beforeEach(() => {
 afterEach(() => vi.clearAllMocks());
 
 describe('GET /api/auth/provider/callback', () => {
+  it('redirects to the public origin of the redirect URI, not the container address', async () => {
+    const response = await GET(new Request('https://0.0.0.0:3000/api/auth/provider/callback?code=c&state=other'));
+    expect(location(response)).toBe('https://backoffice.test/?provider=failed');
+  });
+
   it('is 404 when not configured', async () => {
     mocks.config.mockReturnValue(null);
     expect((await callback('code=c&state=state-1')).status).toBe(404);
@@ -37,6 +42,12 @@ describe('GET /api/auth/provider/callback', () => {
     expect(location(response)).toBe('https://backoffice.test/?provider=failed');
     expect(mocks.complete).not.toHaveBeenCalled();
     expect(mocks.recordAudit).toHaveBeenCalledWith(expect.objectContaining({ action: 'identity.provider_login', result: 'FAILURE', metadata: { stage: 'state' } }));
+  });
+
+  it('accepts the 1024-character code MOPH ID issues', async () => {
+    mocks.complete.mockRejectedValue(new ProviderIdError('UNAVAILABLE'));
+    await callback(`code=${'a'.repeat(1024)}&state=state-1`);
+    expect(mocks.complete).toHaveBeenCalled();
   });
 
   it('a state from another tab is failed', async () => {
