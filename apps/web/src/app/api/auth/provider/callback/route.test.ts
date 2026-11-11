@@ -44,6 +44,16 @@ describe('GET /api/auth/provider/callback', () => {
     expect(location(await internal('code=c&state=state-1'))).toBe('https://backoffice.test/dashboard');
   });
 
+  it('accepts the 1024-character codes MOPH ID really sends, and still refuses absurd ones', async () => {
+    mocks.complete.mockResolvedValue({ subject: 'provider-1' });
+    mocks.resolve.mockResolvedValue({ kind: 'unlinked', ticket: 'ticket-1' });
+    expect(location(await callback(`code=${'a'.repeat(1024)}&state=state-1`))).toBe('https://backoffice.test/link-provider');
+    expect(mocks.complete).toHaveBeenCalledWith('a'.repeat(1024));
+    mocks.complete.mockClear();
+    expect(location(await callback(`code=${'a'.repeat(8193)}&state=state-1`))).toBe('https://backoffice.test/?provider=failed');
+    expect(mocks.complete).not.toHaveBeenCalled();
+  });
+
   it('without the flow cookie goes back to sign-in as failed and never calls MOPH ID', async () => {
     const response = await callback('code=c&state=state-1', null);
     expect(location(response)).toBe('https://backoffice.test/?provider=failed');

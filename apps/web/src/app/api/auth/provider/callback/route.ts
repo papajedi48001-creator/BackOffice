@@ -6,6 +6,8 @@ import { sessionCookieName, sessionCookieOptions, sessionService, startSession }
 
 type Outcome = 'unavailable' | 'failed' | 'inactive';
 const unknownTarget = '00000000-0000-0000-0000-000000000000';
+// MOPH ID sends 1024-character codes (seen on staging 2026-11-11); the cap only refuses absurd input.
+const maxCodeLength = 8192;
 
 function readCookie(request: Request, name: string): string | undefined {
   return request.headers.get('cookie')?.split(';').map((value) => value.trim()).find((value) => value.startsWith(`${name}=`))?.slice(name.length + 1) || undefined;
@@ -38,7 +40,7 @@ export async function GET(request: Request): Promise<Response> {
   const query = new URL(request.url).searchParams;
   const flow = openFlow(readCookie(request, providerFlowCookie), config.healthClientSecret);
   const code = query.get('code');
-  if (!flow || query.get('state') !== flow.state || !code || code.length > 512 || query.has('error')) {
+  if (!flow || query.get('state') !== flow.state || !code || code.length > maxCodeLength || query.has('error')) {
     await auditFailure('state');
     return back(config.redirectUri, 'failed');
   }
