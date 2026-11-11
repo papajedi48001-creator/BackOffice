@@ -169,3 +169,52 @@ node -e '
 ' <<< "${rendered}"
 rm -f "${photo_env}" "${provider_env}"
 echo "the portal-photo override lets web check the portal's photo requests"
+
+# การแจ้งเตือน LINE stays off unless the operator adds docker-compose.line.yml (docs/runbooks/line-alert.md).
+rendered="$(docker compose --env-file "${env_file}" -f "${compose_file}" config --format json)"
+node -e '
+  const { services } = JSON.parse(require("fs").readFileSync(0, "utf8"));
+  for (const name of ["web", "worker"]) if (Object.keys(services[name].environment ?? {}).some((key) => key.startsWith("LINE_"))) { console.error(`${name} must not receive LINE settings without the line override`); process.exit(1); }
+' <<< "${rendered}"
+line_env="$(mktemp)"
+cat "${env_file}" > "${line_env}"
+cat >> "${line_env}" <<'ENV'
+LINE_CHANNEL_ACCESS_TOKEN_FILE=/etc/backoffice/secrets/line_channel_access_token
+LINE_CHANNEL_SECRET_FILE=/etc/backoffice/secrets/line_channel_secret
+LINE_BOT_BASIC_ID=@123abcd
+BACKOFFICE_PUBLIC_URL=https://office-waritch-hosp.moph.go.th
+BACKOFFICE_EGRESS_SUBNET=10.250.255.0/24
+ENV
+for overrides in "" "${root_dir}/infra/compose/docker-compose.staging-shared-nginx.yml"; do
+  files=(-f "${compose_file}")
+  env_for_run="${line_env}"
+  if [[ -n "${overrides}" ]]; then
+    files=(-f "${root_dir}/infra/compose/docker-compose.staging.yml" -f "${overrides}")
+    env_for_run="$(mktemp)"; cat "${root_dir}/infra/compose/.env.staging.example" "${line_env}" | grep -v '^COMPOSE_PROJECT_NAME=waritch-backoffice-production' > "${env_for_run}"
+  fi
+  rendered="$(docker compose --env-file "${env_for_run}" "${files[@]}" -f "${root_dir}/infra/compose/docker-compose.line.yml" config --format json)"
+  node -e '
+    const { services, networks, secrets } = JSON.parse(require("fs").readFileSync(0, "utf8"));
+    const fail = (message) => { console.error(message); process.exit(1); };
+    for (const name of ["web", "worker"]) {
+      const env = services[name].environment;
+      if (env.LINE_CHANNEL_ACCESS_TOKEN_FILE !== "/run/secrets/line_channel_access_token" || env.LINE_CHANNEL_ACCESS_TOKEN) fail(`${name} must read the LINE access token only from the secret file`);
+      if (env.LINE_CHANNEL_SECRET_FILE !== "/run/secrets/line_channel_secret" || env.LINE_CHANNEL_SECRET) fail(`${name} must read the LINE channel secret only from the secret file`);
+      if (env.LINE_BOT_BASIC_ID !== "@123abcd") fail(`${name} must receive LINE_BOT_BASIC_ID`);
+      if (env.BACKOFFICE_PUBLIC_URL !== "https://office-waritch-hosp.moph.go.th") fail(`${name} must receive BACKOFFICE_PUBLIC_URL for links in messages`);
+      for (const secret of ["line_channel_access_token", "line_channel_secret"]) if (!services[name].secrets.some((s) => s.source === secret)) fail(`${name} must mount the ${secret} secret`);
+      if (!env.BACKOFFICE_CONFIG_DIR && !env.DATABASE_URL_FILE) fail(`${name} must keep its own settings`);
+    }
+    if (!services.web.secrets.some((s) => s.source === "session_secret")) fail("web must keep its other secrets");
+    for (const [name, file] of [["line_channel_access_token", "/etc/backoffice/secrets/line_channel_access_token"], ["line_channel_secret", "/etc/backoffice/secrets/line_channel_secret"]]) if (secrets[name]?.file !== file) fail(`the ${name} secret must come from its _FILE setting`);
+    // The worker pushes to api.line.me; it needs the same pinned, non-internal egress network the web uses for MOPH ID.
+    const workerNetworks = Object.keys(services.worker.networks ?? {});
+    if (!workerNetworks.includes("egress") || networks.egress.internal) fail("worker must join a non-internal egress network to reach api.line.me");
+    if (networks.egress.ipam?.config?.[0]?.subnet !== "10.250.255.0/24") fail("the egress network must use BACKOFFICE_EGRESS_SUBNET");
+    if (!workerNetworks.includes("backplane")) fail("worker must keep the backplane network");
+    for (const name of ["mariadb", "redis", "seaweedfs", "clamav"]) if (Object.keys(services[name]?.networks ?? {}).includes("egress")) fail(`${name} must not join the egress network`);
+  ' <<< "${rendered}"
+  if [[ "${env_for_run}" != "${line_env}" ]]; then rm -f "${env_for_run}"; fi
+done
+rm -f "${line_env}"
+echo "the line override lets web and worker send LINE alerts"
