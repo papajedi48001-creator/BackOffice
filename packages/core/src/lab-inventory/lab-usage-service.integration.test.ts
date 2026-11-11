@@ -11,7 +11,7 @@ const describeWithDatabase = databaseUrl ? describe : describe.skip;
 describeWithDatabase('LabUsageService against MariaDB', () => {
   const database = databaseUrl ? createDatabase(databaseUrl) : undefined as never;
   const service = new LabUsageService(database);
-  let keeper: string; let staff: string; let otherStaff: string;
+  let keeper: string; let staff: string; let otherStaff: string; let head: string;
   let item: { id: string; code: string };
   const lots: Record<string, string> = {};
   const today = labToday();
@@ -24,6 +24,8 @@ describeWithDatabase('LabUsageService against MariaDB', () => {
     await addLabMember(database, keeper, 'KEEPER');
     await addLabMember(database, staff, 'STAFF', [LAB_SEED.sections.chem]);
     await addLabMember(database, otherStaff, 'STAFF', [LAB_SEED.sections.chem]);
+    head = await insertLabPerson(database);
+    await addLabMember(database, head, 'HEAD');
     await setOpeningStatus(database, 'CERTIFIED');
     item = await insertLabItem(database, 10);
     await database.transaction(async (tx) => {
@@ -71,5 +73,9 @@ describeWithDatabase('LabUsageService against MariaDB', () => {
     expect(await service.reverse(labSubject(staff), usageId, { reason: 'ผิดวัน' })).toEqual({ ok: true });
     const [row] = await database.query<{ d: string }>("SELECT DATE_FORMAT(entry_date, '%Y-%m-%d') AS d FROM lab_movement WHERE ref_type = 'USAGE' AND ref_id = ? AND kind = 'USE_REVERSAL'", [usageId]);
     expect(row?.d).toBe(today);
+  });
+  it("lets the หัวหน้า Lab reverse anyone's usage", async () => {
+    const result = await use(staff, { quantity: 1 });
+    expect(await service.reverse(labSubject(head), result.ok ? result.usageId : '', { reason: 'บันทึกซ้ำ' })).toEqual({ ok: true });
   });
 });
