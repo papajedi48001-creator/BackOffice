@@ -25,8 +25,8 @@
 
 **Files:** `apps/web/src/lib/provider-sso.ts`, callback route (+test), `/link-provider` page (+test), remove `link-provider-form*` and `api/auth/provider/link`, `apps/web/e2e/provider-sso.spec.ts`, runbook.
 
-- [ ] Failing tests: callback passes `hashCid` to resolve; `/link-provider` shows the contact-admin message and no password field.
-- [ ] Implement; `pnpm --filter @backoffice/web test` green.
+- [x] Failing tests: callback passes `hashCid` to resolve; `/link-provider` shows the contact-admin message and no password field.
+- [x] Implement; `pnpm --filter @backoffice/web test` green.
 
 ## Verification
 

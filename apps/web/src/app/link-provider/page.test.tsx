@@ -22,7 +22,7 @@ it('renders per request so the Provider SSO settings are read at run time, not b
   expect(page.dynamic).toBe('force-dynamic');
 });
 
-it('shows the Provider ID name so a person on a shared computer does not link someone else\'s account', async () => {
+it('shows the Provider ID name and sends the person to the admin, with no password form', async () => {
   mocks.config.mockReturnValue({ apiUrl: 'https://provider.test' });
   withTicket('ticket-1');
   mocks.pendingLogin.mockResolvedValue({ displayName: 'สมชาย ใจดี' });
@@ -30,7 +30,9 @@ it('shows the Provider ID name so a person on a shared computer does not link so
   expect(mocks.pendingLogin).toHaveBeenCalledWith('ticket-1');
   expect(screen.getByText('สมชาย ใจดี')).toBeInTheDocument();
   expect(screen.getByText(/ถ้าไม่ใช่ชื่อของคุณ/)).toBeInTheDocument();
-  expect(screen.getByLabelText('ชื่อผู้ใช้')).toBeInTheDocument();
+  expect(screen.getByText(/ติดต่อผู้ดูแลระบบ/)).toBeInTheDocument();
+  expect(screen.queryByLabelText('ชื่อผู้ใช้')).toBeNull();
+  expect(screen.queryByLabelText('รหัสผ่าน')).toBeNull();
 });
 
 it('sends a missing or expired ticket back to the sign-in page', async () => {

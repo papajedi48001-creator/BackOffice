@@ -42,9 +42,9 @@ export async function GET(request: Request): Promise<Response> {
     return back(request, 'failed');
   }
   const client = providerIdClient(config);
-  let identity;
+  let login;
   try {
-    identity = await client.complete(code);
+    login = await client.complete(code);
   } catch (error) {
     if (error instanceof ProviderIdError && error.code === 'INVALID') {
       await auditFailure('token');
@@ -56,7 +56,7 @@ export async function GET(request: Request): Promise<Response> {
   const database = getSharedDatabase();
   if (!database) return back(request, 'unavailable');
   try {
-    const result = await externalLoginService(database, client.issuer).resolve(identity);
+    const result = await externalLoginService(database, client.issuer).resolve(login.identity, { hashCid: login.hashCid });
     if (result.kind === 'inactive') return back(request, 'inactive');
     if (result.kind === 'unlinked') {
       const response = NextResponse.redirect(publicUrl('/link-provider', request), 303);
