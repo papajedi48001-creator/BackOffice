@@ -5,8 +5,31 @@ import HomePage from './page';
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
+const mocks = vi.hoisted(() => ({ getSharedDatabase: vi.fn(() => null as object | null), version: vi.fn() }));
+vi.mock('../lib/database', () => ({ getSharedDatabase: mocks.getSharedDatabase }));
+vi.mock('@backoffice/core', async (importOriginal) => ({ ...await importOriginal<typeof import('@backoffice/core')>(), SiteImageService: class { version = mocks.version; } }));
 
 describe('HomePage', () => {
+  it('puts the hospital photo the admin uploaded behind the hero, linked by its version', async () => {
+    mocks.getSharedDatabase.mockReturnValue({});
+    mocks.version.mockResolvedValue('abcdef0123456789');
+    render(await HomePage({ searchParams: Promise.resolve({}) }));
+    const hero = screen.getByRole('region', { name: 'โรงพยาบาลวาริชภูมิ' });
+    expect(hero).toHaveClass('login-hero-photo');
+    expect(hero.style.getPropertyValue('--login-photo')).toBe('url("/api/site/login-photo?v=abcdef0123456789")');
+    mocks.getSharedDatabase.mockReturnValue(null);
+  });
+
+  it('keeps the plain blue hero when no photo is set or the database is down', async () => {
+    mocks.getSharedDatabase.mockReturnValue({});
+    mocks.version.mockResolvedValue(null);
+    render(await HomePage({ searchParams: Promise.resolve({}) }));
+    expect(screen.getByRole('region', { name: 'โรงพยาบาลวาริชภูมิ' })).not.toHaveClass('login-hero-photo');
+    mocks.version.mockRejectedValue(new Error('down'));
+    render(await HomePage({ searchParams: Promise.resolve({}) }));
+    mocks.getSharedDatabase.mockReturnValue(null);
+  });
+
   it('renders the Thai Back Office title', async () => {
     render(await HomePage({ searchParams: Promise.resolve({}) }));
 

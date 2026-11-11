@@ -30,7 +30,7 @@ describe('runMigrations', () => {
     await runMigrations(database);
 
     expect(queried.some((sql) => sql.includes('CREATE TABLE IF NOT EXISTS schema_migration'))).toBe(false);
-    expect(queried.filter((sql) => sql.includes('SELECT version FROM schema_migration'))).toHaveLength(36);
+    expect(queried.filter((sql) => sql.includes('SELECT version FROM schema_migration'))).toHaveLength(37);
     expect(executed.some((sql) => sql.startsWith('ALTER TABLE notification'))).toBe(true);
     expect(executed.some((sql) => sql.includes('IF NOT EXISTS'))).toBe(true);
     expect(executed.some((sql) => sql.startsWith('INSERT IGNORE INTO schema_migration') && sql.endsWith('|["0001_in_app_notifications.sql"]'))).toBe(true);
@@ -101,6 +101,8 @@ describe('runMigrations', () => {
     expect(executed.some((sql) => sql.startsWith('INSERT IGNORE INTO schema_migration') && sql.endsWith('|["0033_attendance_foundation.sql"]'))).toBe(true);
     expect(executed.some((sql) => sql.startsWith('INSERT IGNORE INTO schema_migration') && sql.endsWith('|["0035_person_soft_delete.sql"]'))).toBe(true);
     expect(executed.some((sql) => sql.startsWith('CREATE TABLE IF NOT EXISTS lab_lot (') && sql.includes('PERSISTENT'))).toBe(true);
+    expect(executed.some((sql) => sql.startsWith('CREATE TABLE IF NOT EXISTS site_image (') && sql.includes('MEDIUMBLOB'))).toBe(true);
+    expect(executed.some((sql) => sql.startsWith('INSERT IGNORE INTO schema_migration') && sql.endsWith('|["0036_site_image.sql"]'))).toBe(true);
     expect(executed.some((sql) => sql.includes('CREATE TABLE IF NOT EXISTS organization'))).toBe(false);
   });
 

@@ -991,6 +991,9 @@ h2.chat-window-title { cursor: default; }
 /* Sign-in page (2026-11-11): hospital photo behind the hero, module tiles, icons in the inputs, ministry-style Provider ID button. */
 .login-hero { justify-content: space-between; min-height: 560px; background-color: var(--brand-deep); background-image: linear-gradient(160deg, rgba(29, 78, 216, .88), rgba(30, 58, 138, .78) 55%, rgba(15, 23, 42, .82)); background-position: center; background-size: cover; }
 .login-hero::after { display: none; }
+.login-hero-photo { background-image: linear-gradient(160deg, rgba(29, 78, 216, .82), rgba(30, 58, 138, .72) 55%, rgba(15, 23, 42, .8)), var(--login-photo); }
+.login-photo-preview { display: block; width: min(100%, 520px); aspect-ratio: 16 / 10; border-radius: 12px; object-fit: cover; box-shadow: var(--shadow-md); }
+.login-photo-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin-top: 16px; }
 .login-hero-head { display: grid; gap: 12px; }
 .login-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 24px 0 0; padding: 0; list-style: none; }
 .login-tiles li { display: flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; border: 1px solid rgba(255, 255, 255, .22); border-radius: 14px; background: rgba(255, 255, 255, .14); backdrop-filter: blur(6px); color: #fff; font-size: .88rem; font-weight: 600; padding: 9px 10px; }

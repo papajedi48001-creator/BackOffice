@@ -6,7 +6,7 @@ import { readSession, sessionCookieName } from './lib/session';
 import { isSetupMode } from './lib/setup-mode';
 
 /** Paths a signed-in person with several roles may use before choosing one: sign-in, sign-out, password change, the picker, health. */
-const openBeforeRoleChoice = (pathname: string) => pathname === '/' || pathname === '/choose-role' || pathname === '/change-password' || pathname.startsWith('/api/auth/') || pathname === '/api/health';
+const openBeforeRoleChoice = (pathname: string) => pathname === '/' || pathname === '/choose-role' || pathname === '/change-password' || pathname.startsWith('/api/auth/') || pathname.startsWith('/api/site/') || pathname === '/api/health';
 
 const openDuringSetup = (pathname: string) => pathname === '/setup' || pathname.startsWith('/api/setup/') || pathname === '/api/health';
 
