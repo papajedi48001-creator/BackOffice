@@ -12,6 +12,8 @@ export interface ProviderIdConfig {
   redirectUri: string;
 }
 export interface ProviderIdFlow { state: string }
+/** `hashCid` is kept apart from the identity so it can only be used to match a บุคลากร, never stored with the link. */
+export interface ProviderIdLogin { identity: ExternalIdentity; hashCid: string | null }
 
 /** UNAVAILABLE: a service could not be reached or answered nonsense. INVALID: it refused the code, the token or the account. */
 export class ProviderIdError extends Error {
@@ -38,7 +40,7 @@ const text = (value: unknown): string | null => (typeof value === 'string' && va
 /**
  * เข้าสู่ระบบด้วย Provider ID straight against the ministry, as the radius-server portal does:
  * MOPH ID authorization code → MOPH ID token → Provider ID service token → Provider ID profile.
- * Only account_id and the Thai name leave this class; hash_cid and organizations are dropped.
+ * The identity carries only account_id and the Thai name; hash_cid rides beside it for matching and organizations are dropped.
  */
 export class ProviderIdClient {
   constructor(private readonly config: ProviderIdConfig, private readonly fetchImpl: typeof fetch = fetch) {}
@@ -53,7 +55,7 @@ export class ProviderIdClient {
     return { flow, url };
   }
 
-  async complete(code: string): Promise<ExternalIdentity> {
+  async complete(code: string): Promise<ProviderIdLogin> {
     const health = await this.request(`${this.config.healthUrl}/api/v1/token`, {
       method: 'POST',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
@@ -71,7 +73,8 @@ export class ProviderIdClient {
     const subject = text(profile.account_id);
     if (!subject || subject.length > 255) throw new ProviderIdError('INVALID');
     const name = [text(profile.firstname_th), text(profile.lastname_th)].filter(Boolean).join(' ');
-    return { issuer: this.config.apiUrl, subject, displayName: name ? name.slice(0, 255) : null };
+    const hash = typeof profile.hash_cid === 'string' ? profile.hash_cid.trim().toLowerCase() : '';
+    return { identity: { issuer: this.config.apiUrl, subject, displayName: name ? name.slice(0, 255) : null }, hashCid: /^[0-9a-f]{64}$/.test(hash) ? hash : null };
   }
 
   /** A 4xx is the person's code, token or account being refused; anything else that is not a JSON success is the service being unavailable. */

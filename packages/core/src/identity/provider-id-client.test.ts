@@ -43,7 +43,7 @@ describe('ProviderIdClient', () => {
 
   it('complete exchanges the code at MOPH ID, then reads the Provider ID profile', async () => {
     const { client, calls } = harness();
-    const identity = await client.complete('the-code');
+    const { identity } = await client.complete('the-code');
     expect(identity).toEqual({ issuer: 'https://provider.test', subject: 'acc-1', displayName: 'สมชาย ใจดี' });
     expect(client.issuer).toBe('https://provider.test');
 
@@ -57,14 +57,23 @@ describe('ProviderIdClient', () => {
     for (const call of calls) expect(call.init?.redirect).toBe('error');
   });
 
-  it('keeps nothing from the profile but the account and the name', async () => {
-    const identity = await harness().client.complete('the-code');
+  it('keeps hash_cid apart from the identity, for matching only', async () => {
+    const { identity, hashCid } = await harness().client.complete('the-code');
     expect(JSON.stringify(identity)).not.toContain('a'.repeat(64));
     expect(Object.keys(identity).sort()).toEqual(['displayName', 'issuer', 'subject']);
+    expect(hashCid).toBe('a'.repeat(64));
+  });
+
+  it('lower-cases hash_cid and drops a missing or malformed one', async () => {
+    const profile = (hash: unknown) => () => json({ data: { account_id: 'acc-1', hash_cid: hash } });
+    expect((await harness({ profile: profile('AB'.repeat(32)) }).client.complete('c')).hashCid).toBe('ab'.repeat(32));
+    expect((await harness({ profile: profile(undefined) }).client.complete('c')).hashCid).toBeNull();
+    expect((await harness({ profile: profile('not-a-hash') }).client.complete('c')).hashCid).toBeNull();
+    expect((await harness({ profile: profile(12) }).client.complete('c')).hashCid).toBeNull();
   });
 
   it('a profile without a name has a null display name', async () => {
-    const identity = await harness({ profile: () => json({ data: { account_id: 'acc-2' } }) }).client.complete('c');
+    const { identity } = await harness({ profile: () => json({ data: { account_id: 'acc-2' } }) }).client.complete('c');
     expect(identity.displayName).toBeNull();
   });
 
