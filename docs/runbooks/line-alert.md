@@ -41,6 +41,23 @@ BACKOFFICE_PUBLIC_URL=https://192.168.1.20:8443
 
 ไม่ใส่ `LINE_CHANNEL_ACCESS_TOKEN` = ระบบทำงานตามเดิม แค่ไม่ส่ง LINE
 
+### เว็บที่รันใน Docker (production หรือ staging)
+
+ใช้ไฟล์ override `infra/compose/docker-compose.line.yml` ซึ่งส่งค่าข้างต้นเข้า container web และ worker อ่าน token กับ secret จาก Docker secret
+และให้ worker ออก HTTPS ไปที่ `api.line.me` ผ่าน network `egress` (วงเดียวกับที่ Provider ID ใช้) ไม่ใส่ไฟล์นี้ = คิวแจ้งเตือนยังเก็บไว้ แต่ไม่ส่ง LINE
+
+1. เก็บ token และ secret เป็นไฟล์ root mode `0600` เช่น `/etc/backoffice/secrets/line_channel_access_token` และ `/etc/backoffice/secrets/line_channel_secret`
+2. เพิ่มใน environment file ของ Compose:
+   ```
+   LINE_CHANNEL_ACCESS_TOKEN_FILE=/etc/backoffice/secrets/line_channel_access_token
+   LINE_CHANNEL_SECRET_FILE=/etc/backoffice/secrets/line_channel_secret
+   LINE_BOT_BASIC_ID=@123abcd
+   BACKOFFICE_PUBLIC_URL=https://office-waritch-hosp.moph.go.th
+   BACKOFFICE_EGRESS_SUBNET=10.250.255.0/24
+   ```
+3. ใส่ `-f infra/compose/docker-compose.line.yml` ต่อท้ายไฟล์ compose เดิมทุกคำสั่ง รวมถึงสคริปต์ deploy อัตโนมัติ แล้วสร้าง web และ worker ใหม่
+4. ตรวจจากใน container: `docker compose ... exec worker node -e "fetch('https://api.line.me/v2/bot/info').then(r=>console.log(r.status)).catch(e=>console.log(e.cause?.code||e.message))"` ต้องได้เลข HTTP (401 = ออกเน็ตได้ แต่ไม่ได้ส่ง token)
+
 ## 3. เปิด webhook ให้ LINE เรียกเข้ามา
 
 LINE ต้องเรียก `https://<โดเมนสาธารณะ>/api/line/webhook` ด้วยใบรับรอง HTTPS ที่เชื่อถือได้ (ใบรับรองของ CA ภายในที่ใช้ใน LAN ใช้ไม่ได้) เลือกทางใดทางหนึ่ง

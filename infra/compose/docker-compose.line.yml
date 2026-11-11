@@ -1,0 +1,33 @@
+# Optional: การแจ้งเตือน LINE from a Docker deployment (docs/runbooks/line-alert.md, "เว็บที่รันใน Docker").
+# Add this file after the production or staging files. Without it alerts are still queued but nothing is pushed.
+services:
+  web:
+    environment:
+      LINE_CHANNEL_ACCESS_TOKEN_FILE: /run/secrets/line_channel_access_token
+      LINE_CHANNEL_SECRET_FILE: /run/secrets/line_channel_secret
+      LINE_BOT_BASIC_ID: ${LINE_BOT_BASIC_ID:-}
+      BACKOFFICE_PUBLIC_URL: ${BACKOFFICE_PUBLIC_URL:?set BACKOFFICE_PUBLIC_URL}
+    secrets: [line_channel_access_token, line_channel_secret]
+
+  worker:
+    environment:
+      LINE_CHANNEL_ACCESS_TOKEN_FILE: /run/secrets/line_channel_access_token
+      LINE_CHANNEL_SECRET_FILE: /run/secrets/line_channel_secret
+      LINE_BOT_BASIC_ID: ${LINE_BOT_BASIC_ID:-}
+      BACKOFFICE_PUBLIC_URL: ${BACKOFFICE_PUBLIC_URL:?set BACKOFFICE_PUBLIC_URL}
+    secrets: [line_channel_access_token, line_channel_secret]
+    # The worker pushes to api.line.me itself; its other networks are internal.
+    networks: [egress]
+
+networks:
+  egress:
+    # Pinned like the other staging networks: Docker's own pick can overlap the hospital client network (172.18.0.0/16).
+    ipam:
+      config:
+        - subnet: ${BACKOFFICE_EGRESS_SUBNET:?set BACKOFFICE_EGRESS_SUBNET}
+
+secrets:
+  line_channel_access_token:
+    file: ${LINE_CHANNEL_ACCESS_TOKEN_FILE:?set LINE_CHANNEL_ACCESS_TOKEN_FILE}
+  line_channel_secret:
+    file: ${LINE_CHANNEL_SECRET_FILE:?set LINE_CHANNEL_SECRET_FILE}
