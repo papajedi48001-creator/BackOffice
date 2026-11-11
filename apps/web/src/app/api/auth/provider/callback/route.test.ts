@@ -32,6 +32,18 @@ describe('GET /api/auth/provider/callback', () => {
     expect((await callback('code=c&state=state-1')).status).toBe(404);
   });
 
+  it('sends the browser back to the public host, not the address the server listens on', async () => {
+    // Behind nginx the standalone server sees request.url as http://0.0.0.0:3000/...
+    const internal = (query: string) => GET(new Request(`http://0.0.0.0:3000/api/auth/provider/callback?${query}`, { headers: { cookie: `backoffice_provider_flow=${sealFlow(flow, config.healthClientSecret)}` } }));
+    expect(location(await internal('code=c&state=other-tab'))).toBe('https://backoffice.test/?provider=failed');
+    mocks.complete.mockResolvedValue({ subject: 'provider-1' });
+    mocks.resolve.mockResolvedValue({ kind: 'unlinked', ticket: 'ticket-1' });
+    expect(location(await internal('code=c&state=state-1'))).toBe('https://backoffice.test/link-provider');
+    mocks.resolve.mockResolvedValue({ kind: 'linked', personId: 'person-1' });
+    mocks.startSession.mockResolvedValue({ token: 'session-token', maxAgeSeconds: 60 });
+    expect(location(await internal('code=c&state=state-1'))).toBe('https://backoffice.test/dashboard');
+  });
+
   it('without the flow cookie goes back to sign-in as failed and never calls MOPH ID', async () => {
     const response = await callback('code=c&state=state-1', null);
     expect(location(response)).toBe('https://backoffice.test/?provider=failed');

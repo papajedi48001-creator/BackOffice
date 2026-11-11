@@ -11,8 +11,14 @@ function readCookie(request: Request, name: string): string | undefined {
   return request.headers.get('cookie')?.split(';').map((value) => value.trim()).find((value) => value.startsWith(`${name}=`))?.slice(name.length + 1) || undefined;
 }
 
-function back(request: Request, outcome: Outcome): NextResponse {
-  const response = NextResponse.redirect(new URL(`/?provider=${outcome}`, request.url), 303);
+// Behind the reverse proxy request.url is the address the server listens on (http://0.0.0.0:3000), so every redirect
+// goes to the public host of the registered callback instead.
+function publicUrl(path: string, redirectUri: string): URL {
+  return new URL(path, redirectUri);
+}
+
+function back(redirectUri: string, outcome: Outcome): NextResponse {
+  const response = NextResponse.redirect(publicUrl(`/?provider=${outcome}`, redirectUri), 303);
   response.cookies.set(providerFlowCookie, '', { ...providerCookieOptions(providerFlowPath), maxAge: 0 });
   return response;
 }
@@ -34,7 +40,7 @@ export async function GET(request: Request): Promise<Response> {
   const code = query.get('code');
   if (!flow || query.get('state') !== flow.state || !code || code.length > 512 || query.has('error')) {
     await auditFailure('state');
-    return back(request, 'failed');
+    return back(config.redirectUri, 'failed');
   }
   const client = providerIdClient(config);
   let identity;
@@ -43,30 +49,30 @@ export async function GET(request: Request): Promise<Response> {
   } catch (error) {
     if (error instanceof ProviderIdError && error.code === 'INVALID') {
       await auditFailure('token');
-      return back(request, 'failed');
+      return back(config.redirectUri, 'failed');
     }
     console.error('provider sign-in failed', error instanceof ProviderIdError ? error.code : 'UNKNOWN');
-    return back(request, 'unavailable');
+    return back(config.redirectUri, 'unavailable');
   }
   const database = getSharedDatabase();
-  if (!database) return back(request, 'unavailable');
+  if (!database) return back(config.redirectUri, 'unavailable');
   try {
     const result = await externalLoginService(database, client.issuer).resolve(identity);
-    if (result.kind === 'inactive') return back(request, 'inactive');
+    if (result.kind === 'inactive') return back(config.redirectUri, 'inactive');
     if (result.kind === 'unlinked') {
-      const response = NextResponse.redirect(new URL('/link-provider', request.url), 303);
+      const response = NextResponse.redirect(publicUrl('/link-provider', config.redirectUri), 303);
       response.cookies.set(providerFlowCookie, '', { ...providerCookieOptions(providerFlowPath), maxAge: 0 });
       response.cookies.set(providerTicketCookie, result.ticket, providerCookieOptions('/'));
       return response;
     }
     const session = await startSession(result.personId);
     const mustChange = await sessionService(database).pendingPasswordChange(session.token);
-    const response = NextResponse.redirect(new URL(mustChange ? '/change-password' : '/dashboard', request.url), 303);
+    const response = NextResponse.redirect(publicUrl(mustChange ? '/change-password' : '/dashboard', config.redirectUri), 303);
     response.cookies.set(providerFlowCookie, '', { ...providerCookieOptions(providerFlowPath), maxAge: 0 });
     response.cookies.set(sessionCookieName, session.token, sessionCookieOptions(session.maxAgeSeconds));
     return response;
   } catch {
     console.error('provider sign-in failed', 'RESOLVE');
-    return back(request, 'unavailable');
+    return back(config.redirectUri, 'unavailable');
   }
 }
