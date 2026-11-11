@@ -71,20 +71,30 @@ describe('GET /api/auth/provider/callback', () => {
   });
 
   it('a linked person gets a session and the dashboard, and the flow cookie is cleared', async () => {
-    mocks.complete.mockResolvedValue({ issuer: 'https://provider.test', subject: 'member-1', displayName: 'สมชาย' });
+    mocks.complete.mockResolvedValue({ identity: { issuer: 'https://provider.test', subject: 'member-1', displayName: 'สมชาย' }, hashCid: null });
     mocks.resolve.mockResolvedValue({ kind: 'linked', personId: 'person-1' });
     mocks.startSession.mockResolvedValue({ token: 'session-token', maxAgeSeconds: 43_200 });
     const response = await callback('code=c&state=state-1');
     expect(mocks.complete).toHaveBeenCalledWith('c');
     expect(mocks.service).toHaveBeenCalledWith(expect.anything(), 'https://provider.test');
+    expect(mocks.resolve).toHaveBeenCalledWith({ issuer: 'https://provider.test', subject: 'member-1', displayName: 'สมชาย' }, { hashCid: null });
     expect(location(response)).toBe('https://backoffice.test/dashboard');
     const cookies = response.headers.getSetCookie().join('\n');
     expect(cookies).toContain('backoffice_session=session-token');
     expect(cookies).toMatch(/backoffice_provider_flow=;/);
   });
 
+  it('passes hash_cid to the national-ID match and never into a cookie', async () => {
+    const hashCid = 'd'.repeat(64);
+    mocks.complete.mockResolvedValue({ identity: { issuer: 'https://provider.test', subject: 'member-1', displayName: null }, hashCid });
+    mocks.resolve.mockResolvedValue({ kind: 'unlinked', ticket: 'ticket-1' });
+    const response = await callback('code=c&state=state-1');
+    expect(mocks.resolve).toHaveBeenCalledWith(expect.objectContaining({ subject: 'member-1' }), { hashCid });
+    expect(response.headers.getSetCookie().join('\n')).not.toContain(hashCid);
+  });
+
   it('a linked person who must change the password goes to change-password', async () => {
-    mocks.complete.mockResolvedValue({ issuer: 'https://provider.test', subject: 'member-1', displayName: null });
+    mocks.complete.mockResolvedValue({ identity: { issuer: 'https://provider.test', subject: 'member-1', displayName: null }, hashCid: null });
     mocks.resolve.mockResolvedValue({ kind: 'linked', personId: 'person-1' });
     mocks.startSession.mockResolvedValue({ token: 'session-token', maxAgeSeconds: 43_200 });
     mocks.pending.mockResolvedValue({ personId: 'person-1' });
@@ -92,7 +102,7 @@ describe('GET /api/auth/provider/callback', () => {
   });
 
   it('an unlinked login gets a ticket cookie and the link page', async () => {
-    mocks.complete.mockResolvedValue({ issuer: 'https://provider.test', subject: 'member-1', displayName: 'สมชาย' });
+    mocks.complete.mockResolvedValue({ identity: { issuer: 'https://provider.test', subject: 'member-1', displayName: 'สมชาย' }, hashCid: null });
     mocks.resolve.mockResolvedValue({ kind: 'unlinked', ticket: 'ticket-1' });
     const response = await callback('code=c&state=state-1');
     expect(location(response)).toBe('https://backoffice.test/link-provider');
@@ -101,7 +111,7 @@ describe('GET /api/auth/provider/callback', () => {
   });
 
   it('an inactive person is sent back with inactive', async () => {
-    mocks.complete.mockResolvedValue({ issuer: 'https://provider.test', subject: 'member-1', displayName: null });
+    mocks.complete.mockResolvedValue({ identity: { issuer: 'https://provider.test', subject: 'member-1', displayName: null }, hashCid: null });
     mocks.resolve.mockResolvedValue({ kind: 'inactive' });
     expect(location(await callback('code=c&state=state-1'))).toBe('https://backoffice.test/?provider=inactive');
   });

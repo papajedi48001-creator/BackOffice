@@ -1,7 +1,6 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import type { AuditInput } from '@backoffice/contracts';
-import { LocalAuthService, hashPassword } from './auth-service';
 import { ExternalLoginService, type ExternalIdentityLink, type ExternalIdentityRepository, type PendingExternalLogin } from './external-login-service';
 
 const issuer = 'https://portal.test';
@@ -40,19 +39,18 @@ class MemoryRepository implements ExternalIdentityRepository {
   }
 }
 
-async function setup(options: { mustChangePassword?: boolean; active?: string[] } = {}) {
+async function setup(options: { active?: string[]; matches?: Record<string, string> } = {}) {
   const repository = new MemoryRepository();
   const audits: AuditInput[] = [];
-  const account = { id: 'account-1', personId: 'person-1', username: 'somchai', passwordHash: await hashPassword('correct-password'), mustChangePassword: options.mustChangePassword };
-  const localAuth = new LocalAuthService({ findByUsername: async (username) => username === 'somchai' ? account : null });
   const active = new Set(options.active ?? ['person-1', 'person-2']);
   let now = new Date('2026-11-09T06:00:00Z');
-  const service = new ExternalLoginService({ repository, localAuth, isActivePerson: async (id) => active.has(id), audit: { recordAudit: async (input) => { audits.push(input); } }, issuer, now: () => now });
+  const matches = options.matches;
+  const findPersonByNationalIdHash = matches ? async (hash: string) => matches[hash] ?? null : undefined;
+  const service = new ExternalLoginService({ repository, isActivePerson: async (id) => active.has(id), audit: { recordAudit: async (input) => { audits.push(input); } }, issuer, now: () => now, findPersonByNationalIdHash });
   return { repository, service, audits, advance: (ms: number) => { now = new Date(now.getTime() + ms); } };
 }
 
 const identity = { issuer, subject: 'member-1', displayName: 'สมชาย ใจดี' };
-const credentials = { username: 'somchai', password: 'correct-password' };
 
 describe('ExternalLoginService', () => {
   it('resolves a linked active person and audits the login', async () => {
@@ -78,14 +76,6 @@ describe('ExternalLoginService', () => {
     expect(repository.pending).toEqual([expect.objectContaining({ subject: 'member-1', displayName: 'สมชาย ใจดี', ticketHash: sha(ticket) })]);
   });
 
-  it('links with the password and returns mustChangePassword', async () => {
-    const { repository, service } = await setup({ mustChangePassword: true });
-    const { ticket } = await service.resolve(identity) as { ticket: string };
-    await expect(service.linkWithPassword(ticket, credentials)).resolves.toEqual({ personId: 'person-1', mustChangePassword: true });
-    expect(repository.links).toEqual([expect.objectContaining({ personId: 'person-1', subject: 'member-1', linkedByPersonId: null })]);
-    expect(repository.audits).toContainEqual(expect.objectContaining({ action: 'identity.provider_link', actorPersonId: 'person-1', targetId: 'person-1', metadata: { method: 'self' } }));
-  });
-
   it('shows the Provider ID name for a live ticket so the person can see whose account they are linking', async () => {
     const { service, advance } = await setup();
     const { ticket } = await service.resolve(identity) as { ticket: string };
@@ -94,28 +84,6 @@ describe('ExternalLoginService', () => {
     await expect(service.pendingLogin('not-a-ticket')).resolves.toBeNull();
     advance(10 * 60_000 + 1);
     await expect(service.pendingLogin(ticket)).resolves.toBeNull();
-  });
-
-  it('refuses an expired ticket', async () => {
-    const { service, advance } = await setup();
-    const { ticket } = await service.resolve(identity) as { ticket: string };
-    advance(10 * 60_000 + 1);
-    await expect(service.linkWithPassword(ticket, credentials)).rejects.toThrow('TICKET_EXPIRED');
-  });
-
-  it('refuses a person already linked to another subject', async () => {
-    const { repository, service } = await setup();
-    await repository.link({ personId: 'person-1', issuer, subject: 'member-other', displayName: null, linkedByPersonId: null, audit: {} as AuditInput });
-    const { ticket } = await service.resolve(identity) as { ticket: string };
-    await expect(service.linkWithPassword(ticket, credentials)).rejects.toThrow('ALREADY_LINKED');
-  });
-
-  it('a wrong password does not link and keeps the ticket', async () => {
-    const { repository, service } = await setup();
-    const { ticket } = await service.resolve(identity) as { ticket: string };
-    await expect(service.linkWithPassword(ticket, { username: 'somchai', password: 'wrong' })).rejects.toThrow('INVALID_CREDENTIALS');
-    expect(repository.links).toEqual([]);
-    await expect(service.linkWithPassword(ticket, credentials)).resolves.toMatchObject({ personId: 'person-1' });
   });
 
   it('adminLink links a pending login and audits the admin', async () => {
@@ -142,5 +110,35 @@ describe('ExternalLoginService', () => {
     expect(repository.removals).toEqual([{ personId: 'person-1', reason: 'ผูกผิดคน' }]);
     expect(repository.audits.at(-1)).toEqual(expect.objectContaining({ action: 'identity.provider_unlink', actorPersonId: 'admin-1', targetId: 'person-1', metadata: {} }));
     await expect(service.adminUnlink('admin-1', 'person-1', 'อีกครั้ง')).resolves.toEqual({ ok: false, code: 'NOT_FOUND' });
+  });
+});
+
+describe('ExternalLoginService national-ID matching', () => {
+  const hashCid = 'c'.repeat(64);
+
+  it('links a first login to the one person whose national ID matches and signs straight in', async () => {
+    const { repository, service, audits } = await setup({ matches: { [hashCid]: 'person-2' } });
+    await expect(service.resolve(identity, { hashCid })).resolves.toEqual({ kind: 'linked', personId: 'person-2' });
+    expect(repository.links).toEqual([expect.objectContaining({ personId: 'person-2', subject: 'member-1', linkedByPersonId: null })]);
+    expect(repository.audits).toContainEqual(expect.objectContaining({ action: 'identity.provider_link', targetId: 'person-2', metadata: { method: 'national_id' } }));
+    expect(audits).toContainEqual(expect.objectContaining({ action: 'identity.provider_login', result: 'SUCCESS', actorPersonId: 'person-2' }));
+    expect(JSON.stringify([repository.audits, audits, repository.pending])).not.toContain(hashCid);
+  });
+
+  it('sends the login to the admin list when nobody matches, the hash is missing or the matcher is off', async () => {
+    for (const [options, hash] of [[{ matches: {} }, hashCid], [{ matches: { [hashCid]: 'person-2' } }, null], [{}, hashCid]] as const) {
+      const { repository, service } = await setup(options);
+      expect((await service.resolve(identity, { hashCid: hash })).kind).toBe('unlinked');
+      expect(repository.links).toEqual([]);
+    }
+  });
+
+  it('does not take a matched person who is inactive or already linked to another Provider ID account', async () => {
+    const inactive = await setup({ matches: { [hashCid]: 'person-2' }, active: ['person-1'] });
+    expect((await inactive.service.resolve(identity, { hashCid })).kind).toBe('unlinked');
+    const taken = await setup({ matches: { [hashCid]: 'person-2' } });
+    await taken.repository.link({ personId: 'person-2', issuer, subject: 'member-other', displayName: null, linkedByPersonId: null, audit: {} as AuditInput });
+    expect((await taken.service.resolve(identity, { hashCid })).kind).toBe('unlinked');
+    expect(taken.repository.links).toHaveLength(1);
   });
 });

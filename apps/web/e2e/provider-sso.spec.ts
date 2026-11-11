@@ -66,40 +66,18 @@ test.beforeAll(async () => {
 });
 test.afterAll(async () => { await new Promise<void>((resolve) => server.close(() => resolve())); });
 
-test('an unlinked Provider ID login links once with the password, then signs straight in', async ({ page, context }) => {
-  // A fixed subject: the first run against a fresh seed links it, and any later run finds it already linked.
-  stub.subject = 'e2e-member-requestor';
+test('a Provider ID login that matches no บุคลากร national ID waits for the admin', async ({ page }) => {
+  // The stub's hash_cid matches no seeded national ID, so nobody is linked automatically.
+  stub.subject = `e2e-member-${randomUUID()}`;
   stub.firstname = 'ผู้ทดสอบ';
   stub.lastname = 'Provider ID';
   await page.goto('/');
   await page.getByRole('link', { name: 'เข้าสู่ระบบด้วย Provider ID' }).click();
-  await page.waitForURL(/\/(link-provider|dashboard)$/);
-  if (page.url().endsWith('/link-provider')) {
-    await expect(page.getByRole('heading', { name: 'ผูกบัญชี Provider ID' })).toBeVisible();
-    await expect(page.getByText('ผู้ทดสอบ Provider ID', { exact: true })).toBeVisible();
-    await page.getByLabel('ชื่อผู้ใช้').fill('r0-e2e-requestor');
-    await page.getByLabel('รหัสผ่าน').fill(process.env.R0_E2E_PASSWORD!);
-    await page.getByRole('button', { name: 'ผูกบัญชีและเข้าสู่ระบบ' }).click();
-  }
-  await expect(page).toHaveURL(/\/dashboard$/);
-
-  await context.clearCookies();
-  await page.goto('/');
-  await page.getByRole('link', { name: 'เข้าสู่ระบบด้วย Provider ID' }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
-});
-
-test('a second Provider ID account cannot take a person who is already linked', async ({ page }) => {
-  stub.subject = `e2e-member-${randomUUID()}`;
-  stub.firstname = 'บัญชีที่สอง';
-  stub.lastname = '';
-  await page.goto('/');
-  await page.getByRole('link', { name: 'เข้าสู่ระบบด้วย Provider ID' }).click();
-  await expect(page.getByText('บัญชีที่สอง', { exact: true })).toBeVisible();
-  await page.getByLabel('ชื่อผู้ใช้').fill('r0-e2e-requestor');
-  await page.getByLabel('รหัสผ่าน').fill(process.env.R0_E2E_PASSWORD!);
-  await page.getByRole('button', { name: 'ผูกบัญชีและเข้าสู่ระบบ' }).click();
-  await expect(page.getByRole('alert').filter({ hasText: 'บัญชีบุคลากรนี้ผูกกับ Provider ID อื่นแล้ว กรุณาติดต่อผู้ดูแลระบบ' })).toBeVisible();
+  await expect(page).toHaveURL(/\/link-provider$/);
+  await expect(page.getByRole('heading', { name: 'ผูกบัญชี Provider ID' })).toBeVisible();
+  await expect(page.getByText('ผู้ทดสอบ Provider ID', { exact: true })).toBeVisible();
+  await expect(page.getByText(/ติดต่อผู้ดูแลระบบ/).first()).toBeVisible();
+  await expect(page.getByLabel('รหัสผ่าน')).toHaveCount(0);
 });
 
 test('a forged callback goes back to the sign-in page with a Thai message', async ({ page }) => {

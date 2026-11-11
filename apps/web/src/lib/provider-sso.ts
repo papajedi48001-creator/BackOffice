@@ -1,6 +1,7 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
-import { AuditService, DatabaseAuditRepository, DatabaseExternalIdentityRepository, DatabaseLocalAccountRepository, DatabaseLoginThrottle, ExternalLoginService, LocalAuthService, PortalOidcClient, ProviderIdClient, type ProviderIdConfig, type ProviderIdFlow } from '@backoffice/core';
+import { AuditService, DatabaseAuditRepository, DatabaseExternalIdentityRepository, ExternalLoginService, NationalIdHashMatcher, PortalOidcClient, ProviderIdClient, type ProviderIdConfig, type ProviderIdFlow } from '@backoffice/core';
 import type { Database } from '@backoffice/db';
+import { getNationalIdProtector } from './national-id';
 import { readRuntimeValue } from './runtime-env';
 
 export const providerFlowCookie = 'backoffice_provider_flow';
@@ -94,8 +95,10 @@ export function openFlow(value: string | undefined, secret: string, now: Date = 
 export function externalLoginService(database: Database, issuer: string): ExternalLoginService {
   const repository = new DatabaseExternalIdentityRepository(database);
   const audit = new AuditService(new DatabaseAuditRepository(database));
-  const localAuth = new LocalAuthService(new DatabaseLocalAccountRepository(database), { throttle: new DatabaseLoginThrottle(database), audit });
-  return new ExternalLoginService({ repository, localAuth, isActivePerson: (personId) => repository.isActivePerson(personId), audit, issuer });
+  const protector = getNationalIdProtector();
+  const matcher = protector ? new NationalIdHashMatcher(database, protector) : null;
+  return new ExternalLoginService({ repository, isActivePerson: (personId) => repository.isActivePerson(personId), audit, issuer,
+    findPersonByNationalIdHash: matcher ? (hashCid) => matcher.findActivePerson(hashCid) : undefined });
 }
 
 export function providerCookieOptions(path: string) {
