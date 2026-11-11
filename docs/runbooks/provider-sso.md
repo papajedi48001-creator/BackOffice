@@ -67,10 +67,20 @@
 ## 4. รูปโปรไฟล์บน dashboard ของ portal
 
 portal แสดงรูปโปรไฟล์ Back Office ของบุคลากรที่ผูกบัญชีแล้ว โดยเครื่อง portal เรียก `GET https://<โฮสต์ Back Office>/api/portal/photo`
-พร้อม JWT ที่ลงนามด้วยกุญแจ SSO ของ portal (ดู `docs/superpowers/specs/2026-11-10-portal-profile-photo-design.md`) ใช้ได้เมื่อตั้ง `PROVIDER_SSO_ISSUER`, `PROVIDER_SSO_CLIENT_ID`,
-`PROVIDER_SSO_CLIENT_SECRET(_FILE)` และ `PROVIDER_SSO_REDIRECT_URI` ของ portal ไว้ด้วย การเข้าสู่ระบบไม่ได้ใช้ค่าเหล่านี้แล้ว
-ข้อจำกัดตอนนี้: รูปหาได้เฉพาะบัญชีที่เคยผูกผ่าน portal เพราะการผูกที่ทำผ่าน MOPH ID โดยตรงเก็บ `account_id` ไม่ใช่รหัสสมาชิก portal
-แต่เครื่อง portal ต้องเรียกโฮสต์ Back Office ทาง https ได้ ถ้าเรียกไม่ได้ dashboard แสดงรูปการ์ตูนเดิม
+พร้อม JWT ที่ลงนามด้วยกุญแจ SSO ของ portal (ดู `docs/superpowers/specs/2026-11-11-portal-photo-provider-id-design.md`)
+JWT บอก `account_id` ของ Provider ID ที่ portal ผูกกับสมาชิกไว้ Back Office จึงหาบุคลากรจากการผูกบัญชี Provider ID ในข้อ 3 ได้
+(radius-server ต้องเป็นรุ่นที่ส่ง `provider_iss`/`provider_sub` ถ้ายังเป็นรุ่นเก่า หาได้เฉพาะการผูกที่เคยทำผ่าน portal)
+
+เปิดใช้โดยเพิ่ม `-f infra/compose/docker-compose.portal-photo.yml` ต่อจาก `docker-compose.provider-sso.yml` และตั้งใน `.env`
+
+```bash
+PROVIDER_SSO_ISSUER=https://aut-waritch-hosp.moph.go.th
+# PROVIDER_SSO_CLIENT_ID=backoffice          # ค่าเริ่มต้น ต้องตรงกับ client ที่ลงทะเบียนไว้ใน portal
+# PROVIDER_SSO_PORTAL_IP=192.168.1.10        # IP ของ portal ใน LAN
+```
+
+ไม่ต้องมี client secret หรือ redirect URI ของ portal เครื่อง portal ต้องเรียกโฮสต์ Back Office ทาง https ได้ และ web ต้องเรียก `/oidc/jwks` ของ portal ได้
+ถ้าเรียกไม่ได้ dashboard แสดงรูปการ์ตูนเดิม
 
 ตรวจจากเครื่อง portal: `curl -s -o /dev/null -w '%{http_code}\n' https://<โฮสต์ Back Office>/api/portal/photo` ต้องได้ `401` (ไม่มี token)
 
