@@ -2,8 +2,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { OidcError } from '@backoffice/core';
 
-const mocks = vi.hoisted(() => ({ config: vi.fn(), getSharedDatabase: vi.fn(), enabled: vi.fn(), open: vi.fn(), verify: vi.fn(), findLink: vi.fn(), isActivePerson: vi.fn(), photoAttachmentOf: vi.fn() }));
-vi.mock('../../../../lib/provider-sso', () => ({ portalSsoConfig: mocks.config, portalOidcClient: () => ({ verifyPortalRequest: mocks.verify }) }));
+const mocks = vi.hoisted(() => ({ config: vi.fn(), providerConfig: vi.fn(), getSharedDatabase: vi.fn(), enabled: vi.fn(), open: vi.fn(), verify: vi.fn(), findLink: vi.fn(), isActivePerson: vi.fn(), photoAttachmentOf: vi.fn() }));
+vi.mock('../../../../lib/provider-sso', () => ({ portalSsoConfig: mocks.config, providerSsoConfig: mocks.providerConfig, portalOidcClient: () => ({ verifyPortalRequest: mocks.verify }) }));
 vi.mock('../../../../lib/database', () => ({ getSharedDatabase: mocks.getSharedDatabase }));
 vi.mock('../../../../lib/attachments', () => ({ attachmentsEnabled: mocks.enabled, attachmentService: () => ({ openAttachment: mocks.open }) }));
 vi.mock('@backoffice/core', async (importOriginal) => ({
@@ -14,11 +14,11 @@ vi.mock('@backoffice/core', async (importOriginal) => ({
 
 import { GET } from './route';
 
-const config = { issuer: 'https://portal.test', clientId: 'backoffice', clientSecret: 's', redirectUri: 'https://office.test/api/auth/provider/callback' };
+const config = { issuer: 'https://portal.test', clientId: 'backoffice' };
 const get = (authorization: string | null = 'Bearer signed.request.token') => GET(new Request('http://localhost/api/portal/photo', { headers: authorization ? { authorization } : {} }));
 const ready = () => {
   mocks.config.mockReturnValue(config); mocks.getSharedDatabase.mockReturnValue({}); mocks.enabled.mockReturnValue(true);
-  mocks.verify.mockResolvedValue('member-1'); mocks.findLink.mockResolvedValue({ personId: 'person-1' }); mocks.isActivePerson.mockResolvedValue(true);
+  mocks.verify.mockResolvedValue({ memberId: 'member-1', provider: null }); mocks.providerConfig.mockReturnValue({ apiUrl: 'https://provider.id.th' }); mocks.findLink.mockResolvedValue({ personId: 'person-1' }); mocks.isActivePerson.mockResolvedValue(true);
 };
 
 afterEach(() => vi.clearAllMocks());
@@ -54,6 +54,38 @@ describe('GET /api/portal/photo', () => {
     expect((await get()).status).toBe(404);
     expect(mocks.findLink).toHaveBeenCalledWith('https://portal.test', 'member-1');
     expect(mocks.open).not.toHaveBeenCalled();
+  });
+
+  it('finds the person by the Provider ID account the portal names, as Provider ID sign-in links it', async () => {
+    ready();
+    mocks.verify.mockResolvedValue({ memberId: 'member-1', provider: { issuer: 'https://provider.id.th', subject: 'acc-1' } });
+    mocks.findLink.mockImplementation(async (issuer: string, subject: string) => (issuer === 'https://provider.id.th' && subject === 'acc-1' ? { personId: 'person-2' } : null));
+    mocks.photoAttachmentOf.mockResolvedValue(null);
+    expect((await get()).status).toBe(404);
+    expect(mocks.findLink).toHaveBeenCalledTimes(1);
+    expect(mocks.photoAttachmentOf).toHaveBeenCalledWith('person-2');
+  });
+
+  it('falls back to a link made through the portal when the Provider ID account is not linked', async () => {
+    ready();
+    mocks.verify.mockResolvedValue({ memberId: 'member-1', provider: { issuer: 'https://provider.id.th', subject: 'acc-1' } });
+    mocks.findLink.mockImplementation(async (issuer: string) => (issuer === 'https://portal.test' ? { personId: 'person-1' } : null));
+    mocks.photoAttachmentOf.mockResolvedValue(null);
+    await get();
+    expect(mocks.findLink.mock.calls).toEqual([['https://provider.id.th', 'acc-1'], ['https://portal.test', 'member-1']]);
+    expect(mocks.photoAttachmentOf).toHaveBeenCalledWith('person-1');
+  });
+
+  it('ignores a Provider ID account from another environment or while Provider ID sign-in is off', async () => {
+    ready();
+    mocks.verify.mockResolvedValue({ memberId: 'member-1', provider: { issuer: 'https://uat-provider.id.th', subject: 'acc-1' } });
+    await get();
+    expect(mocks.findLink.mock.calls).toEqual([['https://portal.test', 'member-1']]);
+    mocks.findLink.mockClear();
+    mocks.providerConfig.mockReturnValue(null);
+    mocks.verify.mockResolvedValue({ memberId: 'member-1', provider: { issuer: 'https://provider.id.th', subject: 'acc-1' } });
+    await get();
+    expect(mocks.findLink.mock.calls).toEqual([['https://portal.test', 'member-1']]);
   });
 
   it('returns the linked person\'s current photo, opening only that file and not caching it', async () => {
