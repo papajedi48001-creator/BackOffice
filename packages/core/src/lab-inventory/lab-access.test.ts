@@ -12,7 +12,7 @@ describe('labCan (spec permission table)', () => {
     expect(allowed(null, true)).toEqual(all);
   });
   it('gives หัวหน้า Lab certify, decide, request, use and stock views', () => {
-    expect(allowed(head)).toEqual(['certifyOpening', 'request', 'decide', 'use', 'viewStock']);
+    expect(allowed(head)).toEqual(['certifyOpening', 'request', 'decide', 'use', 'reverseAnyUse', 'viewStock']);
   });
   it('gives ผู้ดูแลคลัง Lab settings, opening, receive, issue, request, use, reversal and stock views', () => {
     expect(allowed(keeper)).toEqual(['manageSettings', 'editOpening', 'receive', 'request', 'issue', 'use', 'reverseAnyUse', 'viewStock']);

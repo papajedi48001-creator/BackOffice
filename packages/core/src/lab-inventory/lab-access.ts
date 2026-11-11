@@ -14,7 +14,7 @@ export type LabMember = { role: LabMemberRole; sectionIds: string[] } | null;
 export type LabAction = 'manageMembers' | 'manageSettings' | 'editOpening' | 'certifyOpening' | 'receive' | 'request' | 'decide' | 'issue' | 'use' | 'reverseAnyUse' | 'viewStock';
 
 const byRole: Record<LabMemberRole, ReadonlySet<LabAction>> = {
-  HEAD: new Set(['certifyOpening', 'request', 'decide', 'use', 'viewStock']),
+  HEAD: new Set(['certifyOpening', 'request', 'decide', 'use', 'reverseAnyUse', 'viewStock']),
   KEEPER: new Set(['manageSettings', 'editOpening', 'receive', 'request', 'issue', 'use', 'reverseAnyUse', 'viewStock']),
   STAFF: new Set(['request', 'use', 'viewStock'])
 };
