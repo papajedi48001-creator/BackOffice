@@ -143,7 +143,20 @@ describe('PortalOidcClient.verifyPortalRequest', () => {
   };
 
   it('returns the member a portal-signed request names', async () => {
-    await expect(check((h) => token(h.primary.privateKey, claims, header))).resolves.toBe('member-1');
+    await expect(check((h) => token(h.primary.privateKey, claims, header))).resolves.toEqual({ memberId: 'member-1', provider: null });
+  });
+
+  it('returns the Provider ID account the portal names alongside the member', async () => {
+    const provider = { provider_iss: 'https://provider.id.th', provider_sub: 'acc-1' };
+    await expect(check((h) => token(h.primary.privateKey, { ...claims, ...provider }, header)))
+      .resolves.toEqual({ memberId: 'member-1', provider: { issuer: 'https://provider.id.th', subject: 'acc-1' } });
+  });
+
+  it('refuses a request with half a Provider ID account or a malformed one', async () => {
+    for (const extra of [{ provider_iss: 'https://provider.id.th' }, { provider_sub: 'acc-1' }, { provider_iss: 'https://provider.id.th', provider_sub: 7 },
+      { provider_iss: 'https://provider.id.th', provider_sub: '' }, { provider_iss: 'https://provider.id.th', provider_sub: 'a'.repeat(256) }, { provider_iss: 'not a url', provider_sub: 'acc-1' }]) {
+      await expect(check((h) => token(h.primary.privateKey, { ...claims, ...extra }, header))).rejects.toEqual(new OidcError('INVALID'));
+    }
   });
 
   it('refuses an ID token, another type, issuer or audience', async () => {

@@ -3,6 +3,8 @@ import type { ExternalIdentity } from '@backoffice/contracts';
 
 export interface OidcClientConfig { issuer: string; clientId: string; clientSecret: string; redirectUri: string }
 export interface OidcFlow { state: string; nonce: string; verifier: string }
+/** A portal-signed request: the portal member, and the Provider ID account the portal has bound to that member, when it has one. */
+export interface PortalRequest { memberId: string; provider: { issuer: string; subject: string } | null }
 
 /** UNAVAILABLE: the portal could not be reached or answered nonsense. INVALID: the answer was refused (bad code, token or signature). */
 export class OidcError extends Error {
@@ -21,6 +23,12 @@ const decodeJson = (part: string): Record<string, unknown> => {
   const value: unknown = JSON.parse(Buffer.from(part, 'base64url').toString('utf8'));
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new OidcError('INVALID');
   return value as Record<string, unknown>;
+};
+
+const isSubject = (value: unknown): value is string => typeof value === 'string' && value.length > 0 && value.length <= 255;
+const isWebUrl = (value: unknown): value is string => {
+  if (typeof value !== 'string' || value.length > 255) return false;
+  try { const { protocol } = new URL(value); return protocol === 'https:' || protocol === 'http:'; } catch { return false; }
 };
 
 /** The BackOffice side of the portal's OpenID Connect provider: authorization code + PKCE, ES256 ID tokens checked with node:crypto. */
@@ -59,16 +67,18 @@ export class PortalOidcClient {
   /**
    * A server-to-server request the portal signed with its OIDC key (for example, asking for a member's profile photo).
    * The JWT header `typ` names the request, so neither an ID token nor another kind of request is accepted here.
-   * Returns the portal member id (`sub`, the subject an identity link stores).
+   * Returns the portal member id (`sub`) and, when the portal names one with `provider_iss` + `provider_sub`, the member's Provider ID account.
    */
-  async verifyPortalRequest(token: string, typ: string): Promise<string> {
+  async verifyPortalRequest(token: string, typ: string): Promise<PortalRequest> {
     const { header, claims } = await this.verifySigned(token);
     const seconds = Math.floor(this.now().getTime() / 1000);
     const audience = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
     if (header.typ !== typ || claims.iss !== this.config.issuer || !audience.includes(this.config.clientId)) throw new OidcError('INVALID');
     if (typeof claims.exp !== 'number' || typeof claims.iat !== 'number' || claims.exp + SKEW_SECONDS < seconds || claims.iat - SKEW_SECONDS > seconds || claims.exp - claims.iat > PORTAL_REQUEST_MAX_SECONDS) throw new OidcError('INVALID');
-    if (typeof claims.sub !== 'string' || claims.sub.length === 0 || claims.sub.length > 255) throw new OidcError('INVALID');
-    return claims.sub;
+    if (!isSubject(claims.sub)) throw new OidcError('INVALID');
+    if (claims.provider_iss === undefined && claims.provider_sub === undefined) return { memberId: claims.sub, provider: null };
+    if (!isSubject(claims.provider_sub) || !isWebUrl(claims.provider_iss)) throw new OidcError('INVALID');
+    return { memberId: claims.sub, provider: { issuer: claims.provider_iss, subject: claims.provider_sub } };
   }
 
   private async verifySigned(idToken: string): Promise<{ header: Record<string, unknown>; claims: Record<string, unknown> }> {

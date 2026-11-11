@@ -1,5 +1,5 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
-import { AuditService, DatabaseAuditRepository, DatabaseExternalIdentityRepository, DatabaseLocalAccountRepository, DatabaseLoginThrottle, ExternalLoginService, LocalAuthService, PortalOidcClient, ProviderIdClient, type OidcClientConfig, type ProviderIdConfig, type ProviderIdFlow } from '@backoffice/core';
+import { AuditService, DatabaseAuditRepository, DatabaseExternalIdentityRepository, DatabaseLocalAccountRepository, DatabaseLoginThrottle, ExternalLoginService, LocalAuthService, PortalOidcClient, ProviderIdClient, type ProviderIdConfig, type ProviderIdFlow } from '@backoffice/core';
 import type { Database } from '@backoffice/db';
 import { readRuntimeValue } from './runtime-env';
 
@@ -45,26 +45,26 @@ export const providerSsoEnabled = (): boolean => providerSsoConfig() !== null;
 
 export const providerIdClient = (config: ProviderIdConfig): ProviderIdClient => new ProviderIdClient(config);
 
+/** What BackOffice needs to check a request the radius-server portal signed: the portal issuer (for its JWKS) and the audience it signs for. */
+export interface PortalRequestConfig { issuer: string; clientId: string }
+
 /**
- * The radius-server portal's OIDC settings, kept only for the portal's server-to-server photo requests (/api/portal/photo).
- * Sign-in no longer goes through the portal.
+ * The radius-server portal, kept only for its server-to-server photo requests (/api/portal/photo). Sign-in no longer goes through the
+ * portal, so neither the portal client secret nor its redirect URI is needed.
  */
-export function portalSsoConfig(): OidcClientConfig | null {
-  let clientSecret: string | undefined;
-  try { clientSecret = readRuntimeValue('PROVIDER_SSO_CLIENT_SECRET'); } catch { return null; }
+export function portalSsoConfig(): PortalRequestConfig | null {
   const issuer = absoluteUrl(readRuntimeValue('PROVIDER_SSO_ISSUER'));
-  const redirectUri = absoluteUrl(readRuntimeValue('PROVIDER_SSO_REDIRECT_URI'));
   const clientId = readRuntimeValue('PROVIDER_SSO_CLIENT_ID');
-  if (!issuer || !redirectUri || !clientId || !clientSecret) return null;
-  return { issuer, clientId, clientSecret, redirectUri };
+  if (!issuer || !clientId) return null;
+  return { issuer, clientId };
 }
 
 let cachedPortalClient: { key: string; client: PortalOidcClient } | undefined;
 
-/** One client per configuration so its JWKS cache lives across requests. */
-export function portalOidcClient(config: OidcClientConfig): PortalOidcClient {
+/** One client per configuration so its JWKS cache lives across requests. Only `verifyPortalRequest` is used, so no secret is passed. */
+export function portalOidcClient(config: PortalRequestConfig): PortalOidcClient {
   const key = JSON.stringify(config);
-  if (cachedPortalClient?.key !== key) cachedPortalClient = { key, client: new PortalOidcClient(config) };
+  if (cachedPortalClient?.key !== key) cachedPortalClient = { key, client: new PortalOidcClient({ ...config, clientSecret: '', redirectUri: '' }) };
   return cachedPortalClient.client;
 }
 

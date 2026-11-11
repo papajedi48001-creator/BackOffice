@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { DatabaseExternalIdentityRepository, HrProfileService, OidcError } from '@backoffice/core';
+import { DatabaseExternalIdentityRepository, HrProfileService, OidcError, type PortalRequest } from '@backoffice/core';
 import { attachmentService, attachmentsEnabled } from '../../../../lib/attachments';
 import { getSharedDatabase } from '../../../../lib/database';
-import { portalOidcClient, portalSsoConfig } from '../../../../lib/provider-sso';
+import { portalOidcClient, portalSsoConfig, providerSsoConfig } from '../../../../lib/provider-sso';
 
 /** The JWT `typ` the portal puts on a photo request; an ID token (`typ: JWT`) is never accepted here. */
 const photoRequestType = 'backoffice-photo-request+jwt';
@@ -12,7 +12,9 @@ const answer = (error: string, status: number) => NextResponse.json({ error }, {
 /**
  * The portal (radius-server) asks, server to server, for the profile photo of the member signed in there, so its dashboard shows
  * the same face as Back Office. The request is a short-lived JWT the portal signs with its OIDC key (checked against the same JWKS as
- * Provider ID sign-in) naming the portal member; the photo is that of the บุคลากร the member is linked to. No browser session is used.
+ * Provider ID sign-in) naming the portal member and, when the portal has one bound, the member's Provider ID account. The photo is that of
+ * the บุคลากร linked to that Provider ID account (as Provider ID sign-in links it), or else to the portal member (links made through the
+ * portal before sign-in went straight to MOPH ID). No browser session is used.
  */
 export async function GET(request: Request): Promise<Response> {
   const config = portalSsoConfig();
@@ -21,14 +23,18 @@ export async function GET(request: Request): Promise<Response> {
   if (scheme?.toLowerCase() !== 'bearer' || !token || token.length > 4096) return answer('unauthenticated', 401);
   const database = getSharedDatabase();
   if (!database || !attachmentsEnabled()) return answer('service_unavailable', 503);
-  let memberId: string;
+  let portalRequest: PortalRequest;
   try {
-    memberId = await portalOidcClient(config).verifyPortalRequest(token, photoRequestType);
+    portalRequest = await portalOidcClient(config).verifyPortalRequest(token, photoRequestType);
   } catch (error) {
     return error instanceof OidcError && error.code === 'UNAVAILABLE' ? answer('service_unavailable', 503) : answer('unauthenticated', 401);
   }
   const identities = new DatabaseExternalIdentityRepository(database);
-  const link = await identities.findLink(config.issuer, memberId);
+  // Only an account of the environment BackOffice signs in against counts: a UAT account never finds a PRD link.
+  const providerIssuer = providerSsoConfig()?.apiUrl;
+  const { provider } = portalRequest;
+  const link = (provider && provider.issuer === providerIssuer ? await identities.findLink(provider.issuer, provider.subject) : null)
+    ?? await identities.findLink(config.issuer, portalRequest.memberId);
   if (!link || !(await identities.isActivePerson(link.personId))) return answer('not_found', 404);
   const photoId = await new HrProfileService(database).photoAttachmentOf(link.personId);
   if (!photoId) return answer('not_found', 404);
