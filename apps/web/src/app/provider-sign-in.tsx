@@ -12,7 +12,11 @@ export function ProviderSignIn({ enabled, outcome }: { enabled: boolean; outcome
     <div className="provider-sign-in">
       <p className="provider-sign-in-divider"><span>หรือ</span></p>
       {message && <p className="form-error" role="alert">{message}</p>}
-      <a className="provider-sign-in-button" href="/api/auth/provider/start">เข้าสู่ระบบด้วย Provider ID</a>
+      <a className="provider-sign-in-button" href="/api/auth/provider/start">
+        {/* The ministry's own Provider ID mark, as on its sign-in buttons; the text below names the link. */}
+        <span className="provider-sign-in-logo"><img src="/provider-id-logo.png" alt="" width={150} height={64} /></span>
+        <span className="provider-sign-in-label">เข้าสู่ระบบด้วย Provider ID<span aria-hidden="true"> →</span></span>
+      </a>
     </div>
   );
 }

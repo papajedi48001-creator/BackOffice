@@ -988,6 +988,31 @@ h2.chat-window-title { cursor: default; }
 .kiosk-pairing button { padding: 14px; border: 0; border-radius: 10px; background: #14b8a6; color: #042f2e; font-size: 1.1rem; font-weight: 700; }
 .kiosk-pairing [role="alert"] { color: #fecaca; }
 
+/* Sign-in page (2026-11-11): hospital photo behind the hero, module tiles, icons in the inputs, ministry-style Provider ID button. */
+.login-hero { justify-content: space-between; min-height: 560px; background-color: var(--brand-deep); background-image: linear-gradient(160deg, rgba(29, 78, 216, .88), rgba(30, 58, 138, .78) 55%, rgba(15, 23, 42, .82)); background-position: center; background-size: cover; }
+.login-hero::after { display: none; }
+.login-hero-photo { background-image: linear-gradient(160deg, rgba(29, 78, 216, .82), rgba(30, 58, 138, .72) 55%, rgba(15, 23, 42, .8)), var(--login-photo); }
+.login-photo-preview { display: block; width: min(100%, 520px); aspect-ratio: 16 / 10; border-radius: 12px; object-fit: cover; box-shadow: var(--shadow-md); }
+.login-photo-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin-top: 16px; }
+.login-hero-head { display: grid; gap: 12px; }
+.login-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 24px 0 0; padding: 0; list-style: none; }
+.login-tiles li { display: flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; border: 1px solid rgba(255, 255, 255, .22); border-radius: 14px; background: rgba(255, 255, 255, .14); backdrop-filter: blur(6px); color: #fff; font-size: .88rem; font-weight: 600; padding: 9px 10px; }
+.login-tile-icon { display: grid; flex: none; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: #fff; color: var(--brand); }
+.login-tile-icon svg { width: 18px; height: 18px; }
+.input-with-icon { position: relative; }
+.input-with-icon .input-icon { position: absolute; top: 50%; left: 14px; color: var(--muted); pointer-events: none; transform: translateY(-50%); }
+.login-card .input-with-icon input, .input-with-icon input { width: 100%; padding-left: 46px; }
+.provider-sign-in-button { display: grid; overflow: hidden; min-height: 0; border: 1px solid #b9e4dc; border-radius: 16px; box-shadow: 0 8px 20px rgba(15, 118, 110, .14); background: #fff; padding: 0; transition: box-shadow var(--motion-fast) var(--ease-out), transform var(--motion-fast) var(--ease-out); }
+.provider-sign-in-button:hover { background: #fff; box-shadow: 0 12px 26px rgba(15, 118, 110, .22); transform: translateY(-1px); }
+.provider-sign-in-logo { display: flex; justify-content: center; padding: 14px 16px 10px; background: #fff; }
+.provider-sign-in-logo img { width: auto; height: 52px; }
+.provider-sign-in-label { display: block; background: linear-gradient(120deg, #1aa99b, #0e8a86); color: #fff; font-size: 1.02rem; font-weight: 700; padding: 13px 16px; text-align: center; }
+@media (max-width: 760px) {
+  .login-hero { min-height: 0; }
+  .login-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 420px) { .login-tiles { display: none; } }
+@media (prefers-reduced-motion: reduce) { .provider-sign-in-button:hover { transform: none; } }
 /* A box's form shown in its แก้ไขข้อมูล popup: fields one or two per row, no card, and the popup title stands in for the form heading. */
 .form-dialog-body .profile-form { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); align-items: start; border: 0; border-radius: 0; background: none; padding: 0; }
 .form-dialog-body .profile-form > h4 { display: none; }

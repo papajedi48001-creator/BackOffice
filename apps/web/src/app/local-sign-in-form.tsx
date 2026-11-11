@@ -48,12 +48,18 @@ export function LocalSignInForm({ next }: { next?: string } = {}) {
       <p className="sign-in-caption">บัญชีท้องถิ่นสำหรับโครงการนำร่อง</p>
       <div className="form-field">
         <label htmlFor="username">ชื่อผู้ใช้</label>
-        <input id="username" name="username" autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} aria-invalid={Boolean(error)} aria-describedby={error ? 'sign-in-error' : undefined} />
+        <div className="input-with-icon">
+          <svg className="input-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>
+          <input id="username" name="username" autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} aria-invalid={Boolean(error)} aria-describedby={error ? 'sign-in-error' : undefined} />
+        </div>
       </div>
       <div className="form-field">
         <label htmlFor="password">รหัสผ่าน</label>
         <div className="password-field">
-          <input id="password" name="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} aria-invalid={Boolean(error)} aria-describedby={error ? 'sign-in-error' : undefined} />
+          <div className="input-with-icon">
+            <svg className="input-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            <input id="password" name="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} aria-invalid={Boolean(error)} aria-describedby={error ? 'sign-in-error' : undefined} />
+          </div>
           <button type="button" className="password-toggle" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'}>
             {showPassword ? 'ซ่อน' : 'แสดง'}
           </button>

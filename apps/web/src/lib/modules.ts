@@ -195,6 +195,7 @@ export const moduleRegistry: readonly ModuleEntry[] = [
     { href: '/admin/modules', labelKey: 'adminModules', visible: isAdmin },
     { href: '/admin/grants', labelKey: 'adminGrants', visible: isAdmin },
     { href: '/admin/line', labelKey: 'adminLine', visible: isAdmin },
+    { href: '/admin/appearance', labelKey: 'adminAppearance', visible: isAdmin },
     { href: '/admin/provider-links', labelKey: 'adminProvider', visible: isAdmin },
     { href: '/admin/audit', labelKey: 'adminAudit', visible: isAdmin }
   ]),
