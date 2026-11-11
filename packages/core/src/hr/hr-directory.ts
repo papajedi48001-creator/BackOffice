@@ -13,7 +13,7 @@ export class HrDirectory {
 
   async listPeople(scope: DirectoryScope): Promise<DirectoryPerson[]> {
     if (scope.organizationIds !== 'all' && scope.organizationIds.length === 0) return [];
-    const scoped = scope.organizationIds === 'all' ? '' : `WHERE a.organization_id IN (${scope.organizationIds.map(() => '?').join(', ')})`;
+    const scoped = scope.organizationIds === 'all' ? 'WHERE p.deleted_at IS NULL' : `WHERE p.deleted_at IS NULL AND a.organization_id IN (${scope.organizationIds.map(() => '?').join(', ')})`;
     return this.database.query<DirectoryPerson>(
       `SELECT p.id, p.employee_code AS employeeCode, p.display_name AS displayName, p.position_title AS positionTitle, p.employment_status AS employmentStatus, p.national_id_masked AS nationalIdMasked, t.name AS employmentTypeName, o.name AS organizationName, o.code AS organizationCode
        FROM person p

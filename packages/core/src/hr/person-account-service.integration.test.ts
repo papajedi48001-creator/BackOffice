@@ -7,6 +7,8 @@ import { LocalAuthService } from '../identity/auth-service';
 import { DatabaseLocalAccountRepository } from '../identity/database-identity-repository';
 import { nationalId } from './national-id-fixture';
 import { PersonAccountService } from './person-account-service';
+import { HrDirectory } from './hr-directory';
+import { HrProfileService } from './profile-service';
 
 const databaseUrl = process.env.DATABASE_URL;
 const describeWithDatabase = databaseUrl ? describe : describe.skip;
@@ -154,6 +156,31 @@ describeWithDatabase('PersonAccountService against MariaDB', () => {
     // A ผู้ดูแลระบบ may reset a role holder's password, but never their own.
     await expect(service.resetPassword(id, admin)).resolves.toEqual({ ok: true });
     await expect(service.resetPassword(admin.personId, admin)).resolves.toEqual({ ok: false, code: 'PROTECTED_ACCOUNT' });
+  });
+
+  it('deletes a person softly: hidden, signed out and locked out, with an audit and nothing else removed', async () => {
+    const values = input();
+    const id = created(await service.create(values, hrManager));
+    await database.execute('INSERT INTO user_session (id, token_hash, person_id, created_at, last_seen_at, expires_at) VALUES (?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP(), UTC_TIMESTAMP() + INTERVAL 1 DAY)', [randomUUID(), randomUUID().replace(/-/g, '').padEnd(64, '0'), id]);
+    await expect(service.deletePerson(id, hrManager)).resolves.toEqual({ ok: true });
+    expect(await count('SELECT COUNT(*) AS n FROM person WHERE id = ? AND deleted_at IS NOT NULL AND employment_status = ?', [id, 'INACTIVE'])).toBe(1);
+    expect(await count('SELECT COUNT(*) AS n FROM user_session WHERE person_id = ? AND revoked_at IS NULL', [id])).toBe(0);
+    await expect(login(values.username, values.password)).rejects.toThrow('INVALID_CREDENTIALS');
+    expect(await count('SELECT COUNT(*) AS n FROM audit_event WHERE target_id = ? AND action = ?', [id, 'hr.person.delete'])).toBe(1);
+    await expect(service.deletePerson(id, hrManager)).resolves.toEqual({ ok: false, code: 'NOT_FOUND' });
+    expect((await new HrDirectory(database).listPeople({ organizationIds: 'all' })).some((person) => person.id === id)).toBe(false);
+    await expect(new HrProfileService(database).get(id, hrManager)).resolves.toBe('NOT_FOUND');
+  });
+
+  it('lets only HR managers and admins delete, never themselves, and only an admin a role holder', async () => {
+    const id = created(await service.create(input(), hrManager));
+    await expect(service.deletePerson(id, scoped)).resolves.toEqual({ ok: false, code: 'FORBIDDEN' });
+    await expect(service.deletePerson(actor, hrManager)).resolves.toEqual({ ok: false, code: 'PROTECTED_ACCOUNT' });
+    const roleId = randomUUID();
+    await database.execute('INSERT INTO role (id, name, created_at) VALUES (?, ?, UTC_TIMESTAMP())', [roleId, `role-${short()}`]);
+    await database.execute('INSERT INTO role_assignment (id, person_id, role_id, organization_id, created_at) VALUES (?, ?, ?, NULL, UTC_TIMESTAMP())', [randomUUID(), id, roleId]);
+    await expect(service.deletePerson(id, hrManager)).resolves.toEqual({ ok: false, code: 'PROTECTED_ACCOUNT' });
+    await expect(service.deletePerson(id, admin)).resolves.toEqual({ ok: true });
   });
 
   it('records the phone among the fields of the creation audit', async () => {

@@ -84,7 +84,7 @@ export class HrProfileService {
        LEFT JOIN organization o ON o.id = a.organization_id
        LEFT JOIN hr_person_profile pr ON pr.person_id = p.id
        LEFT JOIN hr_employment_type t ON t.id = pr.employment_type_id
-       WHERE p.id = ?`, [personId]);
+       WHERE p.id = ? AND p.deleted_at IS NULL`, [personId]);
     if (!work) return 'NOT_FOUND';
     const access = profileAccess(viewer, { personId, organizationId: work.organizationId });
     if (!access.viewWork) return 'FORBIDDEN';

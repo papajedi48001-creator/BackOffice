@@ -1,16 +1,17 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ readSession: vi.fn(), getSharedDatabase: vi.fn(), getNationalIdProtector: vi.fn(), create: vi.fn(), updateIdentity: vi.fn(), resetPassword: vi.fn(), createAccount: vi.fn() }));
+const mocks = vi.hoisted(() => ({ readSession: vi.fn(), getSharedDatabase: vi.fn(), getNationalIdProtector: vi.fn(), create: vi.fn(), updateIdentity: vi.fn(), resetPassword: vi.fn(), createAccount: vi.fn(), deletePerson: vi.fn() }));
 vi.mock('../../../../lib/session', () => ({ readSession: mocks.readSession }));
 vi.mock('../../../../lib/database', () => ({ getSharedDatabase: mocks.getSharedDatabase }));
 vi.mock('../../../../lib/national-id', () => ({ getNationalIdProtector: mocks.getNationalIdProtector }));
-vi.mock('@backoffice/core', async (importOriginal) => ({ ...await importOriginal<typeof import('@backoffice/core')>(), PersonAccountService: class { create = mocks.create; updateIdentity = mocks.updateIdentity; resetPassword = mocks.resetPassword; createAccount = mocks.createAccount; } }));
+vi.mock('@backoffice/core', async (importOriginal) => ({ ...await importOriginal<typeof import('@backoffice/core')>(), PersonAccountService: class { create = mocks.create; updateIdentity = mocks.updateIdentity; resetPassword = mocks.resetPassword; createAccount = mocks.createAccount; deletePerson = mocks.deletePerson; } }));
 
 import { POST as postPerson } from './route';
 import { POST as postAccount } from './[personId]/account/route';
 import { PUT as putIdentity } from './[personId]/identity/route';
 import { POST as postReset } from './[personId]/password/route';
+import { DELETE as removePerson } from './[personId]/route';
 
 const manager = { authenticated: true, personId: 'person-a', roles: [{ name: 'hr-manager', organizationId: null }], dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: ['hr'] };
 const params = { params: Promise.resolve({ personId: 'person-b' }) };
@@ -109,5 +110,18 @@ describe('identity, password and account of an existing person', () => {
     ready();
     mocks.resetPassword.mockResolvedValueOnce({ ok: false, code: 'PROTECTED_ACCOUNT' });
     expect((await postReset(request('POST', {}), params)).status).toBe(409);
+  });
+
+  it('deletes a person for the session actor and maps refusals', async () => {
+    ready();
+    mocks.deletePerson.mockResolvedValueOnce({ ok: true });
+    expect((await removePerson(request('DELETE', ''), params)).status).toBe(200);
+    expect(mocks.deletePerson).toHaveBeenCalledWith('person-b', manager);
+    for (const [code, status] of [['FORBIDDEN', 403], ['NOT_FOUND', 404], ['PROTECTED_ACCOUNT', 409]] as const) {
+      mocks.deletePerson.mockResolvedValueOnce({ ok: false, code });
+      expect((await removePerson(request('DELETE', ''), params)).status).toBe(status);
+    }
+    mocks.readSession.mockResolvedValueOnce(null);
+    expect((await removePerson(request('DELETE', ''), params)).status).toBe(401);
   });
 });

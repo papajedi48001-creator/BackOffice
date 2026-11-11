@@ -7,6 +7,7 @@ import { genderForPrefix, type Gender } from '@backoffice/contracts';
 import { t, type MessageKey } from '@backoffice/i18n';
 import { genderLabelKeys } from '../lib/hr-profile-labels';
 import type { ProfileFormPosition, ProfileFormUnit } from './hr-profile-forms';
+import { ActionDialog } from './action-dialog';
 import { FormDialog } from './form-dialog';
 import { NewPasswordField, passwordProblem } from './new-password-field';
 
@@ -211,4 +212,23 @@ export function AccountForm({ personId, username, self = false }: { personId: st
     <p className="form-hint">{t('hrUsernameFixed')} {t('passwordFirstLoginNote')}</p>
     <button type="submit" disabled={busy}>{t('hrCreateAccount')}</button>
   </form>;
+}
+
+/** ลบบุคลากร: a danger confirmation; the server decides who may delete whom. */
+export function DeletePersonButton({ personId, name }: { personId: string; name: string }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function confirm() {
+    setBusy(true); setError(null);
+    const result = await send(`/api/hr/people/${personId}`, 'DELETE', undefined);
+    setBusy(false);
+    if (result.ok) { setOpen(false); router.push('/hr/people'); router.refresh(); return; }
+    setError(result.text === t('hrErrorProtectedAccount') ? t('hrDeletePersonProtected') : result.text);
+  }
+  return <>
+    <button type="button" className="button-danger" onClick={() => { setError(null); setOpen(true); }}>{t('hrDeletePerson')}</button>
+    {open && <ActionDialog title={t('hrDeletePerson')} message={t('hrDeletePersonConfirm').replace('{name}', name)} confirmLabel={t('hrDeletePerson')} tone="danger" isSubmitting={busy} error={error} onConfirm={() => void confirm()} onClose={() => setOpen(false)} />}
+  </>;
 }

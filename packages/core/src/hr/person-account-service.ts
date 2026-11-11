@@ -86,6 +86,22 @@ export class PersonAccountService {
    * รีเซ็ตรหัสผ่าน: HR (hospital-wide) or a ผู้ดูแลระบบ puts the account back on DEFAULT_RESET_PASSWORD and the owner must choose a new
    * one at the next login. Nobody resets their own account; HR may not reset anyone holding a role in the system, a ผู้ดูแลระบบ may.
    */
+  /** ลบบุคลากร: hides the person (soft delete), marks them ลาออก and signs them out; their records elsewhere stay. HR manager or ผู้ดูแลระบบ; never oneself, and only an admin may delete a role holder. */
+  async deletePerson(personId: string, actor: AccessSubject): Promise<{ ok: true } | { ok: false; code: 'FORBIDDEN' | 'NOT_FOUND' | 'PROTECTED_ACCOUNT' }> {
+    const admin = isAdmin(actor);
+    if (!admin && !canManagePeople(actor)) return { ok: false, code: 'FORBIDDEN' };
+    return this.database.transaction(async (database) => {
+      const [person] = await database.query<{ id: string }>('SELECT id FROM person WHERE id = ? AND deleted_at IS NULL FOR UPDATE', [personId]);
+      if (!person) return { ok: false as const, code: 'NOT_FOUND' as const };
+      if (personId === actor.personId) return { ok: false as const, code: 'PROTECTED_ACCOUNT' as const };
+      if (!admin && (await database.query('SELECT id FROM role_assignment WHERE person_id = ? LIMIT 1', [personId])).length > 0) return { ok: false as const, code: 'PROTECTED_ACCOUNT' as const };
+      await database.execute("UPDATE person SET deleted_at = UTC_TIMESTAMP(), employment_status = 'INACTIVE' WHERE id = ?", [personId]);
+      await database.execute('UPDATE user_session SET revoked_at = UTC_TIMESTAMP() WHERE person_id = ? AND revoked_at IS NULL', [personId]);
+      await this.audit(database, actor.personId!, 'hr.person.delete', 'person', personId, {});
+      return { ok: true as const };
+    }, { isolationLevel: 'READ COMMITTED' });
+  }
+
   async resetPassword(personId: string, actor: AccessSubject): Promise<PasswordResult> {
     const admin = isAdmin(actor);
     if (!admin && !canManagePeople(actor)) return { ok: false, code: 'FORBIDDEN' };
