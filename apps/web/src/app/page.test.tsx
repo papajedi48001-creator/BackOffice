@@ -21,6 +21,13 @@ describe('HomePage', () => {
     expect(screen.getByText('ลืมรหัสผ่าน ติดต่อกลุ่มงานเทคโนโลยีสารสนเทศ')).toBeInTheDocument();
   });
 
+  it('lists the main modules as tiles with an icon each', async () => {
+    render(await HomePage({ searchParams: Promise.resolve({}) }));
+    const tiles = screen.getByRole('list', { name: 'โมดูลหลัก' }).querySelectorAll('li');
+    expect([...tiles].map((tile) => tile.textContent)).toEqual(['การลา', 'ไปราชการ', 'จองห้องประชุม', 'ยานพาหนะ', 'คลังพัสดุ', 'งานบุคคล']);
+    for (const tile of tiles) expect(tile.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+  });
+
   it('shows the Provider ID button and message when SSO is configured', async () => {
     vi.stubEnv('PROVIDER_ID_HEALTH_CLIENT_ID', 'health-client');
     vi.stubEnv('PROVIDER_ID_HEALTH_CLIENT_SECRET', 'secret-value-that-is-long-enough-0123');

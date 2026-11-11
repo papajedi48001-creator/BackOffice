@@ -22,6 +22,14 @@ describe('ProviderSignIn', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(message);
   });
 
+  it('shows the Provider ID logo on the button, as the ministry button does', () => {
+    render(<ProviderSignIn enabled outcome={undefined} />);
+    const link = screen.getByRole('link', { name: 'เข้าสู่ระบบด้วย Provider ID' });
+    const logo = link.querySelector('img');
+    expect(logo).toHaveAttribute('src', '/provider-id-logo.png');
+    expect(logo).toHaveAttribute('alt', '');
+  });
+
   it('ignores an unknown outcome', () => {
     render(<ProviderSignIn enabled outcome="<script>" />);
     expect(screen.queryByRole('alert')).toBeNull();
