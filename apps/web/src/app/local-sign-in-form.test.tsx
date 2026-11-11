@@ -69,3 +69,18 @@ test('returns to a page inside the app named by next, and ignores one that leave
   expect(await signIn('/\\evil.example')).toBe('/dashboard');
   vi.unstubAllGlobals();
 });
+
+test('shows and hides the password with an eye button inside the password box', () => {
+  render(<LocalSignInForm />);
+  const password = screen.getByLabelText('รหัสผ่าน');
+  const show = screen.getByRole('button', { name: 'แสดงรหัสผ่าน' });
+  // The eye sits inside the same box as the input, so both boxes are as wide as each other.
+  expect(show.closest('.input-with-icon')).toBe(password.closest('.input-with-icon'));
+  expect(show).not.toHaveTextContent(/\S/);
+  expect(show.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+  expect(password).toHaveAttribute('type', 'password');
+  fireEvent.click(show);
+  expect(password).toHaveAttribute('type', 'text');
+  fireEvent.click(screen.getByRole('button', { name: 'ซ่อนรหัสผ่าน' }));
+  expect(password).toHaveAttribute('type', 'password');
+});

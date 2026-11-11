@@ -1017,3 +1017,10 @@ h2.chat-window-title { cursor: default; }
 .form-dialog-body .profile-form { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); align-items: start; border: 0; border-radius: 0; background: none; padding: 0; }
 .form-dialog-body .profile-form > h4 { display: none; }
 .form-dialog-body .profile-form fieldset, .form-dialog-body .profile-form > button[type=submit] { grid-column: 1 / -1; }
+
+/* The password box is as wide as the username box; the eye button sits at its right end. */
+.input-with-toggle input, .login-card .input-with-toggle input { padding-right: 48px; }
+.password-eye { position: absolute; top: 50%; right: 6px; display: grid; place-items: center; width: 38px; height: 38px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; transform: translateY(-50%); }
+.password-eye:hover { background: var(--line-soft); color: var(--brand); }
+.password-eye[aria-pressed="true"] { color: var(--brand); }
+.password-eye:focus-visible { outline: 3px solid var(--brand); outline-offset: 0; }
