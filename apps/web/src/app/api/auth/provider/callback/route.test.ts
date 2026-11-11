@@ -44,6 +44,12 @@ describe('GET /api/auth/provider/callback', () => {
     expect(mocks.recordAudit).toHaveBeenCalledWith(expect.objectContaining({ action: 'identity.provider_login', result: 'FAILURE', metadata: { stage: 'state' } }));
   });
 
+  it('accepts the 1024-character code MOPH ID issues', async () => {
+    mocks.complete.mockRejectedValue(new ProviderIdError('UNAVAILABLE'));
+    await callback(`code=${'a'.repeat(1024)}&state=state-1`);
+    expect(mocks.complete).toHaveBeenCalled();
+  });
+
   it('a state from another tab is failed', async () => {
     expect(location(await callback('code=c&state=other-tab'))).toBe('https://backoffice.test/?provider=failed');
     expect(mocks.complete).not.toHaveBeenCalled();

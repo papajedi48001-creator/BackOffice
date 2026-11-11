@@ -37,7 +37,7 @@ export async function GET(request: Request): Promise<Response> {
   const query = new URL(request.url).searchParams;
   const flow = openFlow(readCookie(request, providerFlowCookie), config.healthClientSecret);
   const code = query.get('code');
-  if (!flow || query.get('state') !== flow.state || !code || code.length > 512 || query.has('error')) {
+  if (!flow || query.get('state') !== flow.state || !code || code.length > 4096 || query.has('error')) {
     await auditFailure('state');
     return back(request, 'failed');
   }
