@@ -79,6 +79,7 @@ describe('PersonProfilePage', () => {
     expect(screen.getByRole('button', { name: 'แก้ไขข้อมูลส่วนตัวและข้อมูลงาน' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'แก้ไขข้อมูลติดต่อ' })).toBeInTheDocument();
     expect(screen.getByText('ยังไม่มีการเปลี่ยนแปลง')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'ลบบุคลากร' })).toBeInTheDocument();
   });
 
   it('fills gender from a known prefix and sends the profile to the person endpoint', async () => {

@@ -47,7 +47,8 @@ export class OrganizationHeadService {
     const decision = decideHeadAssignment({ organizationExists: organization.length > 0, personStatus: person?.status ?? null, current: current ? { ...current, effectiveFrom: new Date(current.effectiveFrom) } : null, personId: input.personId, effectiveFrom: input.effectiveFrom });
     if (decision.kind !== 'assign') return decision;
     const effectiveFrom = toMariaDbDatetime(input.effectiveFrom);
-    if (decision.closeCurrentId) await database.execute('UPDATE hr_organization_head SET effective_until = ? WHERE id = ?', [effectiveFrom, decision.closeCurrentId]);
+    // Every open term ends, so a unit left with more than one current head (an old import or seed) is put right too.
+    if (decision.closeCurrentId) await database.execute('UPDATE hr_organization_head SET effective_until = GREATEST(effective_from, ?) WHERE organization_id = ? AND effective_until IS NULL', [effectiveFrom, input.organizationId]);
     await database.execute('INSERT INTO hr_organization_head (id, organization_id, person_id, effective_from, effective_until, created_at) VALUES (?, ?, ?, ?, NULL, UTC_TIMESTAMP())', [this.createId(), input.organizationId, input.personId, effectiveFrom]);
     await new AuditService(new DatabaseAuditRepository(database), this.createId).recordAudit({ actorPersonId, action: 'hr.organization.head.assign', targetType: 'organization', targetId: input.organizationId, result: 'SUCCESS', metadata: { organizationId: input.organizationId, personId: input.personId } });
     return decision;

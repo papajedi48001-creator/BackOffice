@@ -13,7 +13,7 @@ export class HrDirectory {
 
   async listPeople(scope: DirectoryScope): Promise<DirectoryPerson[]> {
     if (scope.organizationIds !== 'all' && scope.organizationIds.length === 0) return [];
-    const scoped = scope.organizationIds === 'all' ? '' : `WHERE a.organization_id IN (${scope.organizationIds.map(() => '?').join(', ')})`;
+    const scoped = scope.organizationIds === 'all' ? 'WHERE p.deleted_at IS NULL' : `WHERE p.deleted_at IS NULL AND a.organization_id IN (${scope.organizationIds.map(() => '?').join(', ')})`;
     return this.database.query<DirectoryPerson>(
       `SELECT p.id, p.employee_code AS employeeCode, p.display_name AS displayName, p.position_title AS positionTitle, p.employment_status AS employmentStatus, p.national_id_masked AS nationalIdMasked, t.name AS employmentTypeName, o.name AS organizationName, o.code AS organizationCode
        FROM person p
@@ -31,7 +31,7 @@ export class HrDirectory {
     const rows = await this.database.query<Omit<DirectoryOrganization, 'headActive'> & { activePeople: number | string; headStatus: string | null }>(
       `SELECT o.id, o.code, o.name, o.parent_id AS parentId, o.unit_type AS unitType, h.person_id AS headPersonId, hp.display_name AS headDisplayName, hp.employment_status AS headStatus, COUNT(p.id) AS activePeople
        FROM organization o
-       LEFT JOIN hr_organization_head h ON h.organization_id = o.id AND h.effective_from <= UTC_TIMESTAMP() AND (h.effective_until IS NULL OR h.effective_until > UTC_TIMESTAMP())
+       LEFT JOIN hr_organization_head h ON h.id = (SELECT latest.id FROM hr_organization_head latest WHERE latest.organization_id = o.id AND latest.effective_from <= UTC_TIMESTAMP() AND (latest.effective_until IS NULL OR latest.effective_until > UTC_TIMESTAMP()) ORDER BY latest.effective_from DESC, latest.created_at DESC LIMIT 1)
        LEFT JOIN person hp ON hp.id = h.person_id
        LEFT JOIN employment_assignment a ON a.organization_id = o.id AND a.effective_until IS NULL
        LEFT JOIN person p ON p.id = a.person_id AND p.employment_status = 'ACTIVE'

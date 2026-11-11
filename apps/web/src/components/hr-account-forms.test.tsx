@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({ refresh: vi.fn(), push: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: mocks.refresh, push: mocks.push }) }));
 
-import { AccountForm, IdentityForm, NewPersonForm } from './hr-account-forms';
+import { AccountForm, DeletePersonButton, IdentityForm, NewPersonForm } from './hr-account-forms';
 
 const units = [
   { id: 'nur', name: 'กลุ่มการพยาบาล', unitType: 'DIVISION', parentId: 'hosp' },
@@ -134,5 +134,29 @@ describe('AccountForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'รีเซ็ตรหัสผ่าน' }));
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'รีเซ็ตรหัสผ่าน' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('ผู้ดูแลระบบ');
+  });
+});
+
+describe('DeletePersonButton', () => {
+  it('asks to confirm, deletes the person and goes back to the register', async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<DeletePersonButton personId="p9" name="สมใจ ใจดี" />);
+    fireEvent.click(screen.getByRole('button', { name: 'ลบบุคลากร' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText(/สมใจ ใจดี/)).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'ลบบุคลากร' }));
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith('/hr/people'));
+    expect(fetchMock).toHaveBeenCalledWith('/api/hr/people/p9', { method: 'DELETE' });
+  });
+
+  it('keeps the dialog open with the reason when the person cannot be deleted', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ error: 'PROTECTED_ACCOUNT' }), { status: 409 })));
+    render(<DeletePersonButton personId="p9" name="สมใจ ใจดี" />);
+    fireEvent.click(screen.getByRole('button', { name: 'ลบบุคลากร' }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'ลบบุคลากร' }));
+    expect(await within(screen.getByRole('dialog')).findByText('ลบไม่ได้: เป็นตัวคุณเอง หรือเป็นผู้มีบทบาทในระบบ (ให้ผู้ดูแลระบบลบ)')).toBeInTheDocument();
+    expect(mocks.push).not.toHaveBeenCalled();
   });
 });
