@@ -20,4 +20,4 @@
 - [x] Implement in `support-chat.tsx` / `support-chat-window.tsx` (`refreshKey` prop), CSS pulse, i18n. Commit `feat(chat): open and alert on new messages live`.
 
 ### Task 3: Verify
-- [ ] `pnpm lint && pnpm typecheck && pnpm test`, integration with MariaDB, real two-browser check that a reply appears without refresh.
+- [x] `pnpm lint && pnpm typecheck && pnpm test`, integration with MariaDB, real two-browser check that a reply appears without refresh.
