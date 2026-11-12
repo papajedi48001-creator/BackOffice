@@ -39,7 +39,7 @@ describeWithDatabase('MciQueries against MariaDB', () => {
     expect(await queries.responders(opened.incidentId)).toHaveLength(1);
     expect(await queries.patient(created.patientId)).toMatchObject({ incidentId: opened.incidentId, tagNo: 1, firstName: 'สมชาย', publicHidden: false });
     const board = await queries.publicBoard();
-    expect(board).toMatchObject({ incident: { title: 'ไฟไหม้โรงงาน' }, total: 1, people: [{ name: 'สมชาย ใ.', place: 'ER' }] });
+    expect(board).toMatchObject({ incident: { title: 'ไฟไหม้โรงงาน' }, total: 1, people: [{ name: 'สมชาย ใจดี', place: 'ER' }] });
     expect((await queries.incidents()).find((row) => row.id === opened.incidentId)).toMatchObject({ patients: 1, responders: 1 });
   });
 
