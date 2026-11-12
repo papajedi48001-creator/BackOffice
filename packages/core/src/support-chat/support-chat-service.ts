@@ -8,6 +8,7 @@ import { DatabaseAuditRepository } from '../audit/database-audit-repository';
 type Tx = Pick<Database, 'execute' | 'query'>;
 export type SupportChatFailure = 'FORBIDDEN' | 'NOT_FOUND' | 'EMPTY_MESSAGE' | 'INVALID_ATTACHMENT';
 type Failure = { ok: false; code: SupportChatFailure };
+export interface SupportChatLiveState { unread: number; lastMessageAt: string | null; conversationId: string | null; }
 export type SentMessage = { ok: true; id: string; conversationId: string } | Failure;
 
 const MESSAGE_LIMIT = 200;
@@ -94,6 +95,22 @@ export class SupportChatService {
     }
     const [row] = await this.database.query<{ total: number }>('SELECT COUNT(*) AS total FROM support_conversation c JOIN support_message m ON m.conversation_id = c.id WHERE c.person_id = ? AND m.from_admin = 1 AND (c.person_read_at IS NULL OR m.created_at > c.person_read_at)', [subject.personId]);
     return Number(row?.total ?? 0);
+  }
+
+  /**
+   * What the live chat stream compares between checks: the button count, the newest message time the person may see, and the
+   * conversation it is in (for ผู้ดูแลระบบ, the newest one still waiting for them). Never any message text.
+   */
+  async liveState(subject: AccessSubject): Promise<SupportChatLiveState> {
+    const unread = await this.unreadCount(subject);
+    if (!subject.authenticated || !subject.personId) return { unread, lastMessageAt: null, conversationId: null };
+    if (isAdmin(subject)) {
+      const [latest] = await this.database.query<{ lastMessageAt: string | null }>(`SELECT ${iso('MAX(last_message_at)')} AS lastMessageAt FROM support_conversation`);
+      const [waiting] = await this.database.query<{ id: string }>('SELECT c.id FROM support_conversation c WHERE EXISTS (SELECT 1 FROM support_message m WHERE m.conversation_id = c.id AND m.from_admin = 0 AND (c.admin_read_at IS NULL OR m.created_at > c.admin_read_at)) ORDER BY c.last_message_at DESC LIMIT 1');
+      return { unread, lastMessageAt: latest?.lastMessageAt ?? null, conversationId: waiting?.id ?? null };
+    }
+    const [own] = await this.database.query<{ id: string; lastMessageAt: string }>(`SELECT id, ${iso('last_message_at')} AS lastMessageAt FROM support_conversation WHERE person_id = ?`, [subject.personId]);
+    return { unread, lastMessageAt: own?.lastMessageAt ?? null, conversationId: own?.id ?? null };
   }
 
   private async ownConversationId(subject: AccessSubject): Promise<string | null> {
