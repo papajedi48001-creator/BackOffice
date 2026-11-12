@@ -2,10 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProviderIdError } from '@backoffice/core';
 import { sealFlow } from '../../../../../lib/provider-sso';
 
-const mocks = vi.hoisted(() => ({ config: vi.fn(), complete: vi.fn(), resolve: vi.fn(), service: vi.fn(), getSharedDatabase: vi.fn(), startSession: vi.fn(), pending: vi.fn(), recordAudit: vi.fn() }));
+const mocks = vi.hoisted(() => ({ config: vi.fn(), complete: vi.fn(), resolve: vi.fn(), service: vi.fn(), getSharedDatabase: vi.fn(), startSession: vi.fn(), pending: vi.fn(), resolveSession: vi.fn(), recordAudit: vi.fn() }));
 vi.mock('../../../../../lib/provider-sso', async (importOriginal) => ({ ...await importOriginal<typeof import('../../../../../lib/provider-sso')>(), providerSsoConfig: mocks.config, providerIdClient: () => ({ complete: mocks.complete, issuer: 'https://provider.test' }), externalLoginService: mocks.service }));
 vi.mock('../../../../../lib/database', () => ({ getSharedDatabase: mocks.getSharedDatabase }));
-vi.mock('../../../../../lib/session', async (importOriginal) => ({ ...await importOriginal<typeof import('../../../../../lib/session')>(), startSession: mocks.startSession, sessionService: () => ({ pendingPasswordChange: mocks.pending }) }));
+vi.mock('../../../../../lib/session', async (importOriginal) => ({ ...await importOriginal<typeof import('../../../../../lib/session')>(), startSession: mocks.startSession, sessionService: () => ({ pendingPasswordChange: mocks.pending, resolve: mocks.resolveSession }) }));
 vi.mock('@backoffice/core', async (importOriginal) => ({ ...await importOriginal<typeof import('@backoffice/core')>(), AuditService: class { recordAudit = mocks.recordAudit; } }));
 
 import { GET } from './route';
@@ -91,6 +91,17 @@ describe('GET /api/auth/provider/callback', () => {
     const response = await callback('code=c&state=state-1');
     expect(mocks.resolve).toHaveBeenCalledWith(expect.objectContaining({ subject: 'member-1' }), { hashCid });
     expect(response.headers.getSetCookie().join('\n')).not.toContain(hashCid);
+  });
+
+  it('a linked person with several roles chooses one before anything else', async () => {
+    mocks.complete.mockResolvedValue({ identity: { issuer: 'https://provider.test', subject: 'member-1', displayName: null }, hashCid: null });
+    mocks.resolve.mockResolvedValue({ kind: 'linked', personId: 'person-1' });
+    mocks.startSession.mockResolvedValue({ token: 'session-token', maxAgeSeconds: 43_200 });
+    mocks.resolveSession.mockResolvedValue({ authenticated: true, personId: 'person-1', roleSelectionRequired: true });
+    const response = await callback('code=c&state=state-1');
+    expect(mocks.resolveSession).toHaveBeenCalledWith('session-token');
+    expect(location(response)).toBe('https://backoffice.test/choose-role');
+    expect(response.headers.getSetCookie().join('\n')).toContain('backoffice_session=session-token');
   });
 
   it('a linked person who must change the password goes to change-password', async () => {

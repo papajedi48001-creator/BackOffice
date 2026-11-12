@@ -37,7 +37,8 @@ Endpoints (DOPA production, overridable by `THAID_API_URL` for the e2e stub only
 4. Any 4xx, a bad `id_token` or an invalid `pid` is `failed` (audit stage `token`). A network error, timeout, 5xx or non-JSON answer is
    `unavailable` and logs `thaid sign-in failed UNAVAILABLE` without the request.
 5. The person is `person.national_id_lookup = NationalIdProtector.lookup(pid)` (the HMAC already kept for every บุคลากร),
-   not deleted. ACTIVE → session starts, audit `identity.thaid_login` SUCCESS, then `/change-password` or `/dashboard` as for Provider ID.
+   not deleted. ACTIVE → session starts, audit `identity.thaid_login` SUCCESS, then `/change-password`, `/choose-role` (several roles: the user asked that
+   a person with several roles picks one first after ThaID or Provider ID) or `/dashboard`, as for Provider ID.
    Not ACTIVE → `?thaid=inactive`, audit FAILURE stage `inactive`. No person → `?thaid=not_found`, audit FAILURE stage `not_found`,
    and the sign-in page says "ไม่พบเลขบัตรประชาชนนี้ในทะเบียนบุคลากร กรุณาติดต่อผู้ดูแลระบบ".
 6. ThaID needs no link table: the HR national ID is the link. When the national-ID keys are not set, ThaID is shown as not ready and stays off.

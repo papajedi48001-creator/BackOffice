@@ -39,39 +39,41 @@
 **Interfaces:**
 - Produces: `passwordSignInOpen(input: { externalRouteReady: boolean; override: string | undefined }): boolean` and `isPasswordSignInOpen(): boolean` (reads `providerSsoEnabled()` and `readRuntimeValue('PASSWORD_SIGN_IN')`; PR 2 adds ThaID).
 
-- [ ] **Step 1: failing tests** — `open when no external route is ready`; `closed when an external route is ready`; `PASSWORD_SIGN_IN=on reopens it` (also `' ON '`); `other override values ('1','true','off') do not reopen`.
-- [ ] **Step 2:** `pnpm --filter @backoffice/web exec vitest run src/lib/password-sign-in.test.ts` → FAIL (module missing).
-- [ ] **Step 3:** implement both functions.
-- [ ] **Step 4:** same command → PASS.
-- [ ] **Step 5:** commit `feat(web): password sign-in closes once an external sign-in route is ready`.
+- [x] **Step 1: failing tests** — `open when no external route is ready`; `closed when an external route is ready`; `PASSWORD_SIGN_IN=on reopens it` (also `' ON '`); `other override values ('1','true','off') do not reopen`.
+- [x] **Step 2:** `pnpm --filter @backoffice/web exec vitest run src/lib/password-sign-in.test.ts` → FAIL (module missing).
+- [x] **Step 3:** implement both functions.
+- [x] **Step 4:** same command → PASS.
+- [x] **Step 5:** commit `feat(web): password sign-in closes once an external sign-in route is ready`.
 
 ### Task 2: `/api/auth/local` refuses when closed
 
 **Files:** Modify `apps/web/src/app/api/auth/local/route.ts`, test `route.test.ts`
 
-- [ ] **Step 1: failing test** `answers 403 password_sign_in_off without touching the database when password sign-in is closed` — mock `../../../../lib/password-sign-in` `isPasswordSignInOpen` → false; expect status 403, body `{ error: 'password_sign_in_off' }`, `getSharedDatabase` and `authenticateLocal` not called. Existing tests mock it → true.
-- [ ] **Step 2:** run route test → FAIL.
-- [ ] **Step 3:** first line of `POST`: `if (!isPasswordSignInOpen()) return 403`.
-- [ ] **Step 4:** run → PASS.
-- [ ] **Step 5:** commit `feat(web): /api/auth/local refuses when password sign-in is closed`.
+- [x] **Step 1: failing test** `answers 403 password_sign_in_off without touching the database when password sign-in is closed` — mock `../../../../lib/password-sign-in` `isPasswordSignInOpen` → false; expect status 403, body `{ error: 'password_sign_in_off' }`, `getSharedDatabase` and `authenticateLocal` not called. Existing tests mock it → true.
+- [x] **Step 2:** run route test → FAIL.
+- [x] **Step 3:** first line of `POST`: `if (!isPasswordSignInOpen()) return 403`.
+- [x] **Step 4:** run → PASS.
+- [x] **Step 5:** commit `feat(web): /api/auth/local refuses when password sign-in is closed`.
 
 ### Task 3: sign-in page hides the form
 
 **Files:** Modify `apps/web/src/app/page.tsx`, test `apps/web/src/app/page.test.tsx`
 
-- [ ] **Step 1: failing test** `shows no username or password box and no forgot-password line when password sign-in is closed` (mock `isPasswordSignInOpen` → false; `queryByLabelText(/รหัสผ่าน/)` null, `queryByText('ลืมรหัสผ่าน ติดต่อกลุ่มงานเทคโนโลยีสารสนเทศ')` null). Existing tests mock → true.
-- [ ] **Step 2:** run page test → FAIL.
-- [ ] **Step 3:** render `LocalSignInForm` and the help line only when open.
-- [ ] **Step 4:** run → PASS.
-- [ ] **Step 5:** commit `feat(web): sign-in page shows only external routes when password sign-in is closed`.
+- [x] **Step 1: failing test** `shows no username or password box and no forgot-password line when password sign-in is closed` (mock `isPasswordSignInOpen` → false; `queryByLabelText(/รหัสผ่าน/)` null, `queryByText('ลืมรหัสผ่าน ติดต่อกลุ่มงานเทคโนโลยีสารสนเทศ')` null). Existing tests mock → true.
+- [x] **Step 2:** run page test → FAIL.
+- [x] **Step 3:** render `LocalSignInForm` and the help line only when open.
+- [x] **Step 4:** run → PASS.
+- [x] **Step 5:** commit `feat(web): sign-in page shows only external routes when password sign-in is closed`.
 
 ### Task 4: break-glass wiring and runbook
 
 **Files:** Modify `infra/compose/docker-compose.provider-sso.yml` (web env `PASSWORD_SIGN_IN: ${PASSWORD_SIGN_IN:-}`), `infra/compose/compose-config.test.sh` (assert the variable is passed and empty by default), `docs/runbooks/provider-sso.md` (section "ปิดการเข้าด้วยรหัสผ่าน / เปิดฉุกเฉิน").
 
-- [ ] **Step 1:** add assertion to `compose-config.test.sh`; `bash infra/compose/compose-config.test.sh` → FAIL.
-- [ ] **Step 2:** add the env line; rerun → PASS.
-- [ ] **Step 3:** runbook section; commit `docs(runbook): break-glass PASSWORD_SIGN_IN for closed password sign-in`.
+- [x] **Step 1:** add assertion to `compose-config.test.sh`; `bash infra/compose/compose-config.test.sh` → FAIL.
+- [x] **Step 2:** add the env line; rerun → PASS.
+- [x] **Step 3:** runbook section; commit `docs(runbook): break-glass PASSWORD_SIGN_IN for closed password sign-in`.
+
+PR 1 review fixes (done): `/mci` follows the rule; a stale form gets a reload message on 403; Provider ID credentials present but broken keep the box closed (warn once); unreadable `PASSWORD_SIGN_IN_FILE` = no override; Provider ID callback goes to `/choose-role` when several roles (user ask 2026-11-12).
 
 PR 1 verification: `pnpm lint && pnpm typecheck && pnpm test`, `git diff --check`, then open PR.
 
@@ -119,7 +121,7 @@ Columns: `method VARCHAR(16) PK` (`THAID`|`PROVIDER_ID`), `enabled TINYINT NOT N
 
 **Files:** Create `apps/web/src/app/api/auth/thaid/start/route.ts`, `.../callback/route.ts` + tests; modify `apps/web/src/app/page.tsx`, create `apps/web/src/app/thaid-sign-in.tsx`; i18n keys.
 
-- [ ] Failing tests: start 404 when not ready, 303 to authorize URL with sealed cookie; callback outcomes `failed` (state/error/long code/INVALID), `unavailable`, `not_found`, `inactive`, success → session cookie + `/dashboard` or `/change-password`; audit `identity.thaid_login` metadata `{ stage }` only; no `pid` in any audit/log call. → implement → PASS → commit `feat(web): sign in with ThaID`.
+- [ ] Failing tests: start 404 when not ready, 303 to authorize URL with sealed cookie; callback outcomes `failed` (state/error/long code/INVALID), `unavailable`, `not_found`, `inactive`, success → session cookie + `/change-password`, `/choose-role` (several roles) or `/dashboard`; audit `identity.thaid_login` metadata `{ stage }` only; no `pid` in any audit/log call. → implement → PASS → commit `feat(web): sign in with ThaID`.
 
 ### Task 10: Provider ID pending → ยืนยันด้วย ThaID
 
