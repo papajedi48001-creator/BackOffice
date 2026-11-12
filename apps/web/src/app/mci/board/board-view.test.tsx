@@ -21,6 +21,13 @@ it('shows the drill banner, the counts by colour with their names, and the conta
   expect(screen.getByText(/043-777777/)).toBeInTheDocument();
 });
 
+it('lets a relative tap the phone to call and shows how many names match', () => {
+  render(<BoardView initial={board} poll={false} />);
+  expect(screen.getByRole('link', { name: /043-777777/ })).toHaveAttribute('href', 'tel:043777777');
+  fireEvent.change(screen.getByLabelText('ค้นหาชื่อผู้ป่วย'), { target: { value: 'สม' } });
+  expect(screen.getByText('พบ 1 คน')).toBeInTheDocument();
+});
+
 it('filters the name list as a relative types', () => {
   render(<BoardView initial={board} poll={false} />);
   fireEvent.change(screen.getByLabelText('ค้นหาชื่อผู้ป่วย'), { target: { value: 'มานี' } });
