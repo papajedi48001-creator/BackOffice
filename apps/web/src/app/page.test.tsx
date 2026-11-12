@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
-import { vi } from 'vitest';
+import { beforeEach, vi } from 'vitest';
 import HomePage from './page';
+import { clearSignInRoutesCache } from '../lib/sign-in-settings';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -9,6 +10,8 @@ const mocks = vi.hoisted(() => ({ getSharedDatabase: vi.fn(() => null as object 
 vi.mock('../lib/password-sign-in', () => ({ isPasswordSignInOpen: mocks.isPasswordSignInOpen }));
 vi.mock('../lib/database', () => ({ getSharedDatabase: mocks.getSharedDatabase }));
 vi.mock('@backoffice/core', async (importOriginal) => ({ ...await importOriginal<typeof import('@backoffice/core')>(), SiteImageService: class { version = mocks.version; } }));
+
+beforeEach(() => clearSignInRoutesCache());
 
 describe('HomePage', () => {
   it('shows no username or password box and no forgot-password line when password sign-in is closed', async () => {

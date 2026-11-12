@@ -31,7 +31,7 @@ export async function GET(request: Request): Promise<Response> {
   }
   const identities = new DatabaseExternalIdentityRepository(database);
   // Only an account of the environment BackOffice signs in against counts: a UAT account never finds a PRD link.
-  const providerIssuer = providerSsoConfig()?.apiUrl;
+  const providerIssuer = (await providerSsoConfig())?.apiUrl;
   const { provider } = portalRequest;
   const link = (provider && provider.issuer === providerIssuer ? await identities.findLink(provider.issuer, provider.subject) : null)
     ?? await identities.findLink(config.issuer, portalRequest.memberId);

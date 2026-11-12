@@ -149,6 +149,12 @@ export class SignInSettingsService {
     };
   }
 
+  /** Both routes from one read, for the sign-in page. */
+  async routes(): Promise<{ thaid: ThaidSettings | null; providerId: ProviderIdConfig | null }> {
+    const rows = await this.rows();
+    return { thaid: this.thaidFrom(this.effective('THAID', rows.get('THAID'))), providerId: this.providerFrom(this.effective('PROVIDER_ID', rows.get('PROVIDER_ID'))) };
+  }
+
   async thaid(): Promise<ThaidSettings | null> {
     return this.thaidFrom(this.effective('THAID', (await this.rows()).get('THAID')));
   }

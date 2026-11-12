@@ -6,7 +6,7 @@ import { adminResult, readInput, withAdmin } from '../admin-route';
 /** ผูกบัญชี Provider ID ที่รอผูกเข้ากับบุคลากร: ผู้ดูแลระบบ only. */
 export async function POST(request: Request): Promise<Response> {
   return withAdmin(request, async (session, database) => {
-    const config = providerSsoConfig();
+    const config = await providerSsoConfig();
     if (!config) return NextResponse.json({ error: 'NOT_FOUND' }, { status: 404 });
     const input = await readInput(request, providerLinkInputSchema);
     if (!input.ok) return input.response;

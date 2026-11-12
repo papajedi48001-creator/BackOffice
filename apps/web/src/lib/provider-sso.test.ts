@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { openFlow, portalSsoConfig, providerSsoConfig, providerSsoEnabled, sealFlow } from './provider-sso';
+import { clearSignInRoutesCache } from './sign-in-settings';
 
 const env = {
   PROVIDER_ID_HEALTH_CLIENT_ID: 'health-client', PROVIDER_ID_HEALTH_CLIENT_SECRET: 'health-secret-value-long-enough-0123',
@@ -9,34 +10,34 @@ const env = {
 const keys = [...Object.keys(env), 'PROVIDER_ID_ENV', 'PROVIDER_ID_HEALTH_URL', 'PROVIDER_ID_API_URL', 'PROVIDER_SSO_ISSUER', 'PROVIDER_SSO_CLIENT_ID', 'PROVIDER_SSO_CLIENT_SECRET', 'PROVIDER_SSO_REDIRECT_URI'];
 const saved = { ...process.env };
 afterEach(() => { process.env = { ...saved }; });
-const set = (values: Record<string, string>) => { for (const key of keys) delete process.env[key]; Object.assign(process.env, values); };
+const set = (values: Record<string, string>) => { for (const key of keys) delete process.env[key]; Object.assign(process.env, values); clearSignInRoutesCache(); };
 
-describe('Provider ID configuration', () => {
-  it('is disabled until the two clients and the redirect URI are set', () => {
+describe('Provider ID configuration', async () => {
+  it('is disabled until the two clients and the redirect URI are set', async () => {
     set({});
-    expect(providerSsoConfig()).toBeNull();
+    expect(await providerSsoConfig()).toBeNull();
     set({ ...env, PROVIDER_ID_SECRET_KEY: '' });
-    expect(providerSsoEnabled()).toBe(false);
+    expect(await providerSsoEnabled()).toBe(false);
     set(env);
-    expect(providerSsoConfig()).toEqual({
+    expect(await providerSsoConfig()).toEqual({
       healthUrl: 'https://moph.id.th', apiUrl: 'https://provider.id.th',
       healthClientId: 'health-client', healthClientSecret: env.PROVIDER_ID_HEALTH_CLIENT_SECRET,
       providerClientId: 'provider-client', providerSecretKey: 'provider-secret-key', redirectUri: env.PROVIDER_ID_REDIRECT_URI
     });
   });
 
-  it('uses the UAT services only when asked and refuses another environment', () => {
+  it('uses the UAT services only when asked and refuses another environment', async () => {
     set({ ...env, PROVIDER_ID_ENV: 'uat' });
-    expect(providerSsoConfig()).toMatchObject({ healthUrl: 'https://uat-moph.id.th', apiUrl: 'https://uat-provider.id.th' });
+    expect(await providerSsoConfig()).toMatchObject({ healthUrl: 'https://uat-moph.id.th', apiUrl: 'https://uat-provider.id.th' });
     set({ ...env, PROVIDER_ID_ENV: 'staging' });
-    expect(providerSsoConfig()).toBeNull();
+    expect(await providerSsoConfig()).toBeNull();
   });
 
-  it('takes base-URL overrides for a stub and ignores a redirect URI that is not absolute', () => {
+  it('takes base-URL overrides for a stub and ignores a redirect URI that is not absolute', async () => {
     set({ ...env, PROVIDER_ID_HEALTH_URL: 'http://127.0.0.1:4010/', PROVIDER_ID_API_URL: 'http://127.0.0.1:4010' });
-    expect(providerSsoConfig()).toMatchObject({ healthUrl: 'http://127.0.0.1:4010', apiUrl: 'http://127.0.0.1:4010' });
+    expect(await providerSsoConfig()).toMatchObject({ healthUrl: 'http://127.0.0.1:4010', apiUrl: 'http://127.0.0.1:4010' });
     set({ ...env, PROVIDER_ID_REDIRECT_URI: 'backoffice.test/callback' });
-    expect(providerSsoConfig()).toBeNull();
+    expect(await providerSsoConfig()).toBeNull();
   });
 });
 

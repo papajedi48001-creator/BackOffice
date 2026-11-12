@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 
 /** ผูกบัญชี Provider ID: reached from the callback when no บุคลากร matched the Provider ID national ID; an admin links it. */
 export default async function LinkProviderPage() {
-  const config = providerSsoConfig();
+  const config = await providerSsoConfig();
   const database = getSharedDatabase();
   if (!config || !database) {
     redirect('/');

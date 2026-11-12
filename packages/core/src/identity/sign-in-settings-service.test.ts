@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { Database } from '@backoffice/db';
 import { ConnectionSecretBox } from '../holidays/connection-secret-box.ts';
 import { SignInSettingsService } from './sign-in-settings-service.ts';
@@ -93,5 +93,16 @@ describe('SignInSettingsService', () => {
     await service.save('THAID', thaidInput('s'), 'a');
     expect(await service.save('PROVIDER_ID', { enabled: false, values: { environment: 'prd', healthClientId: 'env-health', providerClientId: 'env-provider', redirectUri: providerRedirect }, secrets: {} }, 'a')).toEqual({ ok: true });
     expect(await service.providerId()).toBeNull();
+  });
+});
+
+describe('SignInSettingsService.routes', () => {
+  it('gives both routes from one read', async () => {
+    const { database } = store();
+    const query = vi.spyOn(database, 'query');
+    const routes = await new SignInSettingsService(database, box, envOf(providerEnv)).routes();
+    expect(routes.thaid).toBeNull();
+    expect(routes.providerId).toMatchObject({ healthClientId: 'env-health' });
+    expect(query).toHaveBeenCalledTimes(1);
   });
 });

@@ -3,7 +3,7 @@ import { providerCookieOptions, providerIdClient, providerFlowCookie, providerFl
 
 /** เข้าสู่ระบบด้วย Provider ID: sends the browser to MOPH ID; the state stays in an encrypted cookie. */
 export async function GET(): Promise<Response> {
-  const config = providerSsoConfig();
+  const config = await providerSsoConfig();
   if (!config) return NextResponse.json({ error: 'not_found' }, { status: 404 });
   const { flow, url } = providerIdClient(config).begin();
   const response = NextResponse.redirect(url, 303);

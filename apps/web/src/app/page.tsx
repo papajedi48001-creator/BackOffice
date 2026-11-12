@@ -22,7 +22,7 @@ async function loginPhotoVersion(): Promise<string | null> {
 export default async function HomePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const provider = (await searchParams).provider;
   const photo = await loginPhotoVersion();
-  const passwordOpen = isPasswordSignInOpen();
+  const passwordOpen = await isPasswordSignInOpen();
   return (
     <main className="welcome-shell">
       <div className="login-card">
@@ -43,7 +43,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           <h1 id="page-title"><AppName /></h1>
           <p className="welcome-status" role="status">กำลังเตรียมระบบพื้นฐานสำหรับโครงการนำร่อง</p>
           {passwordOpen ? <LocalSignInForm /> : null}
-          <ProviderSignIn enabled={providerSsoEnabled()} outcome={typeof provider === 'string' ? provider : undefined} passwordOpen={passwordOpen} />
+          <ProviderSignIn enabled={await providerSsoEnabled()} outcome={typeof provider === 'string' ? provider : undefined} passwordOpen={passwordOpen} />
           {passwordOpen ? <p className="login-help">ลืมรหัสผ่าน ติดต่อกลุ่มงานเทคโนโลยีสารสนเทศ</p> : null}
         </section>
       </div>

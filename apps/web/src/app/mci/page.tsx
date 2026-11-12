@@ -20,6 +20,7 @@ export default async function MciLandingPage() {
   if (session?.authenticated) redirect('/mci/ops');
   const database = getSharedDatabase();
   const incident = database ? await new MciQueries(database).openIncident() : null;
+  const passwordOpen = await isPasswordSignInOpen();
   return <main className="welcome-shell mci-landing" data-module="mass-casualty">
     <div className="mci-landing-card">
       <header className="mci-landing-header">
@@ -31,7 +32,7 @@ export default async function MciLandingPage() {
         <span>{mciKindLabel(incident.kind)}: {incident.title}</span>
         <span>เข้าสู่ระบบแล้วกด “{mciText.checkIn}”</span>
       </div> : <p className="mci-incident-banner mci-incident-none" role="status">{mciText.noIncident}</p>}
-      {isPasswordSignInOpen() ? <LocalSignInForm next="/mci/ops" /> : <ProviderSignIn enabled={providerSsoEnabled()} outcome={undefined} passwordOpen={false} />}
+      {passwordOpen ? <LocalSignInForm next="/mci/ops" /> : <ProviderSignIn enabled={await providerSsoEnabled()} outcome={undefined} passwordOpen={false} />}
       <p><Link href="/mci/board">{mciText.boardLink}</Link></p>
     </div>
   </main>;
