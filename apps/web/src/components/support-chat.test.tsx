@@ -3,6 +3,18 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { SupportChat } from './support-chat';
 
 type Handler = (url: string, init?: RequestInit) => unknown;
+class FakeEventSource {
+  static instances: FakeEventSource[] = [];
+  listeners: Record<string, ((event: MessageEvent) => void)[]> = {};
+  closed = false;
+  constructor(public url: string) { FakeEventSource.instances.push(this); }
+  addEventListener(type: string, listener: (event: MessageEvent) => void) { (this.listeners[type] ??= []).push(listener); }
+  close() { this.closed = true; }
+  emit(state: { unread: number; lastMessageAt: string | null; conversationId: string | null }) {
+    act(() => { for (const listener of this.listeners.chat ?? []) listener(new MessageEvent('chat', { data: JSON.stringify(state) })); });
+  }
+}
+const stream = () => FakeEventSource.instances.at(-1)!;
 let routes: Record<string, Handler>;
 const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
   const key = `${init?.method ?? 'GET'} ${url}`;
@@ -18,10 +30,12 @@ beforeEach(() => {
     'GET /api/support-chat/mine': () => ({ messages: [{ id: 'm1', fromAdmin: true, senderName: 'ผู้ดูแล ระบบ', body: 'สวัสดีครับ', attachmentId: null, createdAt: '2026-11-02T03:00:00.000Z', mine: false }] })
   };
   vi.stubGlobal('fetch', fetchMock);
+  FakeEventSource.instances = [];
+  vi.stubGlobal('EventSource', FakeEventSource);
   URL.createObjectURL = vi.fn(() => 'blob:preview');
   URL.revokeObjectURL = vi.fn();
 });
-afterEach(() => { vi.unstubAllGlobals(); fetchMock.mockClear(); });
+afterEach(() => { vi.unstubAllGlobals(); fetchMock.mockClear(); document.title = ''; });
 
 const calls = (key: string) => fetchMock.mock.calls.filter(([url, init]) => `${init?.method ?? 'GET'} ${url}` === key);
 
@@ -100,4 +114,53 @@ it('lets ผู้ดูแลระบบ keep three chats open at once; a four
   expect(screen.queryByRole('region', { name: 'คุณก' })).not.toBeInTheDocument();
   for (const name of ['คุณข', 'คุณค', 'คุณง']) expect(screen.getByRole('region', { name })).toBeInTheDocument();
   await waitFor(() => expect(calls('POST /api/support-chat/conversations/c3/read')).toHaveLength(1));
+});
+
+it('listens live and raises the count the moment a reply arrives, without polling', () => {
+  render(<SupportChat admin={false} images unread={0} />);
+  expect(stream().url).toBe('/api/support-chat/stream');
+  stream().emit({ unread: 0, lastMessageAt: '2026-11-12T14:00:00.000000Z', conversationId: 'c1' });
+  expect(screen.getByRole('button', { name: 'แชตกับผู้ดูแลระบบ' })).toBeInTheDocument();
+  stream().emit({ unread: 2, lastMessageAt: '2026-11-12T14:01:00.000000Z', conversationId: 'c1' });
+  expect(screen.getByRole('button', { name: 'แชตกับผู้ดูแลระบบ 2 ข้อความที่ยังไม่อ่าน' })).toBeInTheDocument();
+  expect(calls('GET /api/support-chat/summary')).toHaveLength(0);
+});
+
+it('opens the person\'s chat by itself when ผู้ดูแลระบบ replies, and flags the tab while it is hidden', async () => {
+  document.title = 'Back Office';
+  const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
+  render(<SupportChat admin={false} images unread={0} />);
+  stream().emit({ unread: 0, lastMessageAt: 'a', conversationId: 'c1' });
+  expect(screen.queryByRole('region', { name: 'ผู้ดูแลระบบ' })).not.toBeInTheDocument();
+  stream().emit({ unread: 1, lastMessageAt: 'b', conversationId: 'c1' });
+  expect(await screen.findByRole('region', { name: 'ผู้ดูแลระบบ' })).toBeInTheDocument();
+  expect(document.title).toBe('(1) ข้อความใหม่ · Back Office');
+  hidden.mockReturnValue(false);
+  act(() => { document.dispatchEvent(new Event('visibilitychange')); });
+  expect(document.title).toBe('Back Office');
+});
+
+it('reloads an open chat the moment the stream says something changed', async () => {
+  render(<SupportChat admin={false} images unread={0} />);
+  stream().emit({ unread: 0, lastMessageAt: 'a', conversationId: 'c1' });
+  fireEvent.click(screen.getByRole('button', { name: /แชตกับผู้ดูแลระบบ/ }));
+  await screen.findByRole('region', { name: 'ผู้ดูแลระบบ' });
+  await waitFor(() => expect(calls('GET /api/support-chat/mine')).toHaveLength(1));
+  stream().emit({ unread: 0, lastMessageAt: 'b', conversationId: 'c1' });
+  await waitFor(() => expect(calls('GET /api/support-chat/mine')).toHaveLength(2));
+});
+
+it('opens the waiting conversation for ผู้ดูแลระบบ by itself when a person writes', async () => {
+  routes['GET /api/support-chat/conversations'] = () => ({ ok: true, conversations: [{ id: 'c9', personId: 'p9', displayName: 'คุณใหม่', positionTitle: null, lastMessage: 'สวัสดี', lastHasImage: false, lastMessageAt: 'b', unread: 1 }] });
+  routes['GET /api/support-chat/conversations/c9'] = () => ({ ok: true, person: { id: 'p9', displayName: 'คุณใหม่', positionTitle: null }, messages: [] });
+  render(<SupportChat admin images unread={0} />);
+  stream().emit({ unread: 0, lastMessageAt: 'a', conversationId: null });
+  stream().emit({ unread: 1, lastMessageAt: 'b', conversationId: 'c9' });
+  expect(await screen.findByRole('region', { name: 'คุณใหม่' })).toBeInTheDocument();
+});
+
+it('closes the live connection when the page goes away', () => {
+  const { unmount } = render(<SupportChat admin={false} images unread={0} />);
+  unmount();
+  expect(stream().closed).toBe(true);
 });

@@ -16,8 +16,8 @@
 - [x] Caddyfile: no `encode` for `/api/support-chat/stream`. Commit `feat(chat): live chat stream`.
 
 ### Task 2: live client + alerts
-- [ ] `support-chat.test.tsx`: a stream event raises the count without polling; person window opens itself on a new admin reply; admin window for the waiting conversation opens itself; tab title shows "(1) ข้อความใหม่"; an open window reloads on a stream event.
-- [ ] Implement in `support-chat.tsx` / `support-chat-window.tsx` (`refreshKey` prop), CSS pulse, i18n. Commit `feat(chat): open and alert on new messages live`.
+- [x] `support-chat.test.tsx`: a stream event raises the count without polling; person window opens itself on a new admin reply; admin window for the waiting conversation opens itself; tab title shows "(1) ข้อความใหม่"; an open window reloads on a stream event.
+- [x] Implement in `support-chat.tsx` / `support-chat-window.tsx` (`refreshKey` prop), CSS pulse, i18n. Commit `feat(chat): open and alert on new messages live`.
 
 ### Task 3: Verify
 - [ ] `pnpm lint && pnpm typecheck && pnpm test`, integration with MariaDB, real two-browser check that a reply appears without refresh.
