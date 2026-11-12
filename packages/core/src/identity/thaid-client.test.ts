@@ -50,9 +50,15 @@ describe('ThaidClient', () => {
     ['a pid sent as a number', { pid: Number(pid) }],
     ['a pid with a wrong check digit', { pid: pid.slice(0, 12) + String((Number(pid[12]) + 1) % 10) }],
     ['no pid at all', { access_token: 't' }],
-    ['a broken id_token', { id_token: 'not-a-jwt' }]
+    ['a broken id_token', { id_token: 'not-a-jwt' }],
+    ['an id_token that expired over five minutes ago', { id_token: jwt({ aud: 'thaid-client', pid, exp: Math.floor(Date.now() / 1000) - 301 }) }],
+    ['an id_token whose exp is not a number', { id_token: jwt({ aud: 'thaid-client', pid, exp: 'soon' }) }]
   ])('refuses %s as INVALID', async (_name, body) => {
     await expect(new ThaidClient(settings, answer(body)).citizenIdForCode('c')).rejects.toEqual(new ThaidError('INVALID'));
+  });
+
+  it('accepts an id_token within five minutes of clock skew after exp', async () => {
+    expect(await new ThaidClient(settings, answer({ id_token: jwt({ aud: 'thaid-client', pid, exp: Math.floor(Date.now() / 1000) - 120 }) })).citizenIdForCode('c')).toBe(pid);
   });
 
   it('a 4xx is INVALID; a 5xx, a network error or non-JSON is UNAVAILABLE', async () => {

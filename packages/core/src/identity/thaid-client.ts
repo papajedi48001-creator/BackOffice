@@ -10,6 +10,8 @@ const AUTHORIZE_PATH = '/api/v2/oauth2/auth/';
 const TOKEN_PATH = '/api/v2/oauth2/token/';
 /** Only the citizen ID: BackOffice needs nothing else from ThaID to find the บุคลากร. */
 const SCOPE = 'pid';
+/** Clock skew allowed past an ID token's exp. */
+const EXP_SKEW_SECONDS = 300;
 
 /** A Thai citizen ID: 13 ASCII digits whose last digit is the mod-11 check digit. */
 export function validCitizenId(value: unknown): value is string {
@@ -65,6 +67,7 @@ export class ThaidClient {
       const claims = jwtClaims(body.id_token);
       const audiences = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
       if (!audiences.includes(this.settings.clientId)) throw new ThaidError('INVALID');
+      if (claims.exp !== undefined && (typeof claims.exp !== 'number' || claims.exp + EXP_SKEW_SECONDS < Date.now() / 1000)) throw new ThaidError('INVALID');
       if (pid === undefined) pid = claims.pid;
       else if (claims.pid !== undefined && claims.pid !== pid) throw new ThaidError('INVALID');
     } else if (body.id_token !== undefined && body.id_token !== null) {
