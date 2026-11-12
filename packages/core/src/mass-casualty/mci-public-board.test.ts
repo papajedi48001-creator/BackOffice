@@ -37,20 +37,20 @@ describe('buildPublicBoard', () => {
     expect(board.byStatus).toEqual([{ name: 'กำลังรักษา', count: 3 }, { name: 'ส่งต่อโรงพยาบาลอื่น', count: 1 }, { name: 'กลับบ้านได้', count: 1 }]);
   });
 
-  it('lists named casualties by first name and surname initial with where they are, hiding the dead and the hidden', () => {
+  it('lists named casualties by full name with where they are, hiding the dead and the hidden', () => {
     expect(board.people).toEqual([
-      { name: 'ชูใจ ใ.', place: CONTACT_PLACE },
-      { name: 'ปิติ พ.', place: CONTACT_PLACE },
-      { name: 'มานี ม.', place: 'ส่งต่อ รพ.มหาสารคาม' },
-      { name: 'วีระ ก.', place: 'กลับบ้านแล้ว' },
-      { name: 'สมชาย ใ.', place: 'ER' }
+      { name: 'ชูใจ ใจงาม', place: CONTACT_PLACE },
+      { name: 'ปิติ พอใจ', place: CONTACT_PLACE },
+      { name: 'มานี มีนา', place: 'ส่งต่อ รพ.มหาสารคาม' },
+      { name: 'วีระ กล้า', place: 'กลับบ้านแล้ว' },
+      { name: 'สมชาย ใจดี', place: 'ER' }
     ]);
     expect(CONTACT_PLACE).toBe('กรุณาติดต่อจุดประชาสัมพันธ์');
   });
 
-  it('never carries a full surname, HN, tag, age, gender or a colour per person', () => {
+  it('never carries an HN, tag, age, gender or a colour per person', () => {
     const serialised = JSON.stringify(board);
-    for (const secret of ['ใจดี', 'HN998877', 'MCI-', '"40"', 'MALE', 'tag']) expect(serialised).not.toContain(secret);
+    for (const secret of ['HN998877', 'MCI-', '"40"', 'MALE', 'tag']) expect(serialised).not.toContain(secret);
     expect(Object.keys(board.people[0]!)).toEqual(['name', 'place']);
   });
 

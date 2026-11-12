@@ -3,12 +3,12 @@ export function formatTag(sequence: number): string {
   return `MCI-${String(sequence).padStart(3, '0')}`;
 }
 
-/** The name the กระดานสาธารณะ may show: first name and the first letter of the surname. `null` when no first name is known. */
+/** The name the กระดานสาธารณะ shows: the full first name and surname, so a relative can find them. `null` when no first name is known. */
 export function publicName(firstName: string, lastName: string): string | null {
   const first = firstName.trim();
   if (!first) return null;
-  const initial = Array.from(lastName.trim())[0];
-  return initial ? `${first} ${initial}.` : first;
+  const last = lastName.trim();
+  return last ? `${first} ${last}` : first;
 }
 
 export interface TriageChoice { triageLevelId: string; statusId: string }

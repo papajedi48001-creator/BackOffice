@@ -9,9 +9,9 @@ describe('formatTag', () => {
 });
 
 describe('publicName', () => {
-  it('keeps the first name and the first letter of the surname', () => {
-    expect(publicName('สมชาย', 'ใจดี')).toBe('สมชาย ใ.');
-    expect(publicName(' Somchai ', ' jaidee')).toBe('Somchai j.');
+  it('shows the full first name and surname', () => {
+    expect(publicName('สมชาย', 'ใจดี')).toBe('สมชาย ใจดี');
+    expect(publicName(' Somchai ', ' jaidee')).toBe('Somchai jaidee');
   });
   it('shows a first name alone, and nothing for a casualty without one', () => {
     expect(publicName('สมชาย', '')).toBe('สมชาย');
