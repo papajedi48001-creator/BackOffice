@@ -5,11 +5,20 @@ import HomePage from './page';
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
-const mocks = vi.hoisted(() => ({ getSharedDatabase: vi.fn(() => null as object | null), version: vi.fn() }));
+const mocks = vi.hoisted(() => ({ getSharedDatabase: vi.fn(() => null as object | null), version: vi.fn(), isPasswordSignInOpen: vi.fn(() => true) }));
+vi.mock('../lib/password-sign-in', () => ({ isPasswordSignInOpen: mocks.isPasswordSignInOpen }));
 vi.mock('../lib/database', () => ({ getSharedDatabase: mocks.getSharedDatabase }));
 vi.mock('@backoffice/core', async (importOriginal) => ({ ...await importOriginal<typeof import('@backoffice/core')>(), SiteImageService: class { version = mocks.version; } }));
 
 describe('HomePage', () => {
+  it('shows no username or password box and no forgot-password line when password sign-in is closed', async () => {
+    mocks.isPasswordSignInOpen.mockReturnValueOnce(false);
+    render(await HomePage({ searchParams: Promise.resolve({}) }));
+    expect(screen.queryByLabelText(/ชื่อผู้ใช้/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/รหัสผ่าน/)).not.toBeInTheDocument();
+    expect(screen.queryByText('ลืมรหัสผ่าน ติดต่อกลุ่มงานเทคโนโลยีสารสนเทศ')).not.toBeInTheDocument();
+  });
+
   it('puts the hospital photo the admin uploaded behind the hero, linked by its version', async () => {
     mocks.getSharedDatabase.mockReturnValue({});
     mocks.version.mockResolvedValue('abcdef0123456789');

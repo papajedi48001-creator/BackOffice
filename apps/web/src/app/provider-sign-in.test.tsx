@@ -2,6 +2,12 @@ import { render, screen } from '@testing-library/react';
 import { ProviderSignIn } from './provider-sign-in';
 
 describe('ProviderSignIn', () => {
+  it('drops the หรือ divider and the password advice when password sign-in is closed', () => {
+    render(<ProviderSignIn enabled outcome="unavailable" passwordOpen={false} />);
+    expect(screen.queryByText('หรือ')).toBeNull();
+    expect(screen.getByRole('alert')).toHaveTextContent('ระบบ Provider ID ไม่พร้อมใช้งาน กรุณาลองใหม่ภายหลัง');
+  });
+
   it('renders nothing when Provider SSO is off', () => {
     const { container } = render(<ProviderSignIn enabled={false} outcome="unavailable" />);
     expect(container).toBeEmptyDOMElement();
