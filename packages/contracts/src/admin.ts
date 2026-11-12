@@ -47,3 +47,13 @@ export type HosxpSettingsInputBody = z.infer<typeof hosxpSettingsInputSchema>;
 export const providerLinkInputSchema = z.object({ pendingId: z.string().uuid(), personId: z.string().uuid() }).strict();
 /** ยกเลิกการผูกบัญชี Provider ID: the reason is kept apart from audit metadata. */
 export const providerUnlinkInputSchema = z.object({ reason: z.string().trim().min(1).max(500) }).strict();
+
+/** ผู้ดูแลระบบ > การเข้าสู่ระบบ: one route per save. Secrets are write-only; a blank one keeps the stored value. */
+const settingFields = z.record(z.string().regex(/^[A-Za-z]{1,32}$/), z.string().max(512));
+export const signInSettingInputSchema = z.object({
+  method: z.enum(['THAID', 'PROVIDER_ID']),
+  enabled: z.boolean(),
+  values: settingFields,
+  secrets: settingFields
+});
+export type SignInSettingInputBody = z.infer<typeof signInSettingInputSchema>;
