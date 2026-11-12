@@ -102,10 +102,11 @@ as for the HOSxP password), `updated_by_person_id`, `updated_at`.
 
 ## Deployment
 
-- No new compose file: ThaID needs only outbound HTTPS from web, which the existing `egress` network of
-  `infra/compose/docker-compose.provider-sso.yml` gives. `imauth.bora.dopa.go.th` must be reachable from .251.
-- `CONNECTION_SECRET_KEY` must be set for web. If .251 does not have it yet, `infra/staging-251/setup-sign-in-settings.sh` (run once with sudo by
-  the machine owner) creates `/etc/backoffice/secrets/connection-secret-key` (root, 0600) and adds it to the provider-sso override.
+- ThaID needs only outbound HTTPS from web, which the existing `egress` network of `infra/compose/docker-compose.provider-sso.yml`
+  gives. `imauth.bora.dopa.go.th` must be reachable from .251.
+- Secrets typed on the web need `CONNECTION_SECRET_KEY`. `infra/scripts/setup-sign-in-settings.sh` (run once with sudo by the machine
+  owner) creates `/etc/backoffice/secrets/connection_secret_key` (root, 0600) and adds `CONNECTION_SECRET_KEY_FILE` to the staging env;
+  the deploy then adds `-f infra/compose/docker-compose.sign-in-settings.yml`, which hands that file to web and worker as a secret.
 - The ThaID redirect URI `https://office-waritch-hosp.moph.go.th/api/auth/thaid/callback` must be registered with DOPA for the hospital's client.
 
 ## Testing
