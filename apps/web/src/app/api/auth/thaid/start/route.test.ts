@@ -1,14 +1,16 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { openThaidFlow } from '../../../../../lib/thaid';
 
-const mocks = vi.hoisted(() => ({ config: vi.fn(), protector: vi.fn() }));
+const mocks = vi.hoisted(() => ({ config: vi.fn(), protector: vi.fn(), pendingLogin: vi.fn() }));
 vi.mock('../../../../../lib/thaid', async (importOriginal) => ({ ...await importOriginal<typeof import('../../../../../lib/thaid')>(), thaidConfig: mocks.config }));
 vi.mock('../../../../../lib/national-id', () => ({ getNationalIdProtector: mocks.protector }));
+vi.mock('../../../../../lib/database', () => ({ getSharedDatabase: () => ({}) }));
+vi.mock('../../../../../lib/provider-sso', async (importOriginal) => ({ ...await importOriginal<typeof import('../../../../../lib/provider-sso')>(), providerSsoConfig: async () => ({ apiUrl: 'https://provider.test' }), externalLoginService: () => ({ pendingLogin: mocks.pendingLogin }) }));
 
 import { GET } from './route';
 
 const config = { clientId: 'thaid-client', clientSecret: 'thaid-secret', redirectUri: 'https://backoffice.test/api/auth/thaid/callback', apiUrl: 'https://imauth.test' };
-const start = (query = '') => GET(new Request(`https://backoffice.test/api/auth/thaid/start${query}`));
+const start = (query = '', cookie = '') => GET(new Request(`https://backoffice.test/api/auth/thaid/start${query}`, { headers: cookie ? { cookie } : {} }));
 const flowFrom = (response: Response) => openThaidFlow(/backoffice_thaid_flow=([^;]+)/.exec(response.headers.get('set-cookie') ?? '')?.[1], config.clientSecret);
 afterEach(() => vi.clearAllMocks());
 
@@ -41,7 +43,20 @@ describe('GET /api/auth/thaid/start', () => {
   it('remembers purpose=link from รอผูกบัญชี and treats anything else as sign_in', async () => {
     mocks.config.mockResolvedValue(config);
     mocks.protector.mockReturnValue({});
-    expect(flowFrom(await start('?purpose=link'))?.purpose).toBe('link');
+    mocks.pendingLogin.mockResolvedValue({ displayName: 'สมชาย ใจดี' });
+    expect(flowFrom(await start('?purpose=link', 'backoffice_provider_ticket=ticket-1'))?.purpose).toBe('link');
+    expect(mocks.pendingLogin).toHaveBeenCalledWith('ticket-1');
     expect(flowFrom(await start('?purpose=admin'))?.purpose).toBe('sign_in');
+  });
+
+  it('purpose=link without a live pending Provider ID login goes back to the sign-in page instead of to DOPA', async () => {
+    mocks.config.mockResolvedValue(config);
+    mocks.protector.mockReturnValue({});
+    mocks.pendingLogin.mockResolvedValue(null);
+    const response = await start('?purpose=link', 'backoffice_provider_ticket=gone');
+    expect(response.status).toBe(303);
+    expect(response.headers.get('location')).toBe('https://backoffice.test/?provider=failed');
+    expect(response.headers.get('set-cookie') ?? '').not.toContain('backoffice_thaid_flow=');
+    expect((await start('?purpose=link')).headers.get('location')).toBe('https://backoffice.test/?provider=failed');
   });
 });

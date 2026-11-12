@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThaidError } from '@backoffice/core';
-import { sealThaidFlow } from '../../../../../lib/thaid';
+import { openThaidLink, sealThaidFlow, ticketHashOf } from '../../../../../lib/thaid';
 
-const mocks = vi.hoisted(() => ({ config: vi.fn(), citizenIdForCode: vi.fn(), resolve: vi.fn(), linkPending: vi.fn(), getSharedDatabase: vi.fn(), startSession: vi.fn(), afterSignIn: vi.fn(), recordAudit: vi.fn(), protector: vi.fn() }));
+const mocks = vi.hoisted(() => ({ config: vi.fn(), citizenIdForCode: vi.fn(), resolve: vi.fn(), findActivePerson: vi.fn(), pendingLogin: vi.fn(), linkPending: vi.fn(), getSharedDatabase: vi.fn(), startSession: vi.fn(), afterSignIn: vi.fn(), recordAudit: vi.fn(), protector: vi.fn() }));
 vi.mock('../../../../../lib/thaid', async (importOriginal) => ({ ...await importOriginal<typeof import('../../../../../lib/thaid')>(), thaidConfig: mocks.config, thaidClient: () => ({ citizenIdForCode: mocks.citizenIdForCode }) }));
 vi.mock('../../../../../lib/national-id', () => ({ getNationalIdProtector: mocks.protector }));
 vi.mock('../../../../../lib/database', () => ({ getSharedDatabase: mocks.getSharedDatabase }));
 vi.mock('../../../../../lib/after-sign-in', () => ({ afterSignInPath: mocks.afterSignIn }));
-vi.mock('../../../../../lib/provider-sso', async (importOriginal) => ({ ...await importOriginal<typeof import('../../../../../lib/provider-sso')>(), providerSsoConfig: async () => ({ apiUrl: 'https://provider.test' }), externalLoginService: () => ({ linkPendingToPerson: mocks.linkPending }) }));
+vi.mock('../../../../../lib/provider-sso', async (importOriginal) => ({ ...await importOriginal<typeof import('../../../../../lib/provider-sso')>(), providerSsoConfig: async () => ({ apiUrl: 'https://provider.test' }), externalLoginService: () => ({ linkPendingToPerson: mocks.linkPending, pendingLogin: mocks.pendingLogin }) }));
 vi.mock('../../../../../lib/session', async (importOriginal) => ({ ...await importOriginal<typeof import('../../../../../lib/session')>(), startSession: mocks.startSession }));
-vi.mock('@backoffice/core', async (importOriginal) => ({ ...await importOriginal<typeof import('@backoffice/core')>(), AuditService: class { recordAudit = mocks.recordAudit; }, ThaidLoginService: class { resolve = mocks.resolve; } }));
+vi.mock('@backoffice/core', async (importOriginal) => ({ ...await importOriginal<typeof import('@backoffice/core')>(), AuditService: class { recordAudit = mocks.recordAudit; }, ThaidLoginService: class { resolve = mocks.resolve; findActivePerson = mocks.findActivePerson; } }));
 
 import { GET } from './route';
 
@@ -74,25 +74,27 @@ describe('GET /api/auth/thaid/callback', () => {
     expect(mocks.startSession).not.toHaveBeenCalled();
   });
 
-  it('purpose link: links the pending Provider ID login to the บุคลากร, clears the ticket and signs in', async () => {
+  it('purpose link: does not link yet; it sends the person to confirm on screen which Provider ID account becomes theirs', async () => {
     mocks.citizenIdForCode.mockResolvedValue(pid);
-    mocks.resolve.mockResolvedValue({ kind: 'active', personId: 'person-1' });
-    mocks.linkPending.mockResolvedValue({ ok: true });
+    mocks.findActivePerson.mockResolvedValue('person-1');
+    mocks.pendingLogin.mockResolvedValue({ displayName: 'สมชาย ใจดี' });
     const response = await callback('code=c&state=state-1', 'link', '; backoffice_provider_ticket=ticket-1');
-    expect(mocks.linkPending).toHaveBeenCalledWith('ticket-1', 'person-1');
-    expect(location(response)).toBe('https://backoffice.test/dashboard');
-    const cookies = response.headers.getSetCookie().join('\n');
-    expect(cookies).toMatch(/backoffice_provider_ticket=;/);
-    expect(cookies).toContain('backoffice_session=session-token');
+    expect(mocks.findActivePerson).toHaveBeenCalledWith(pid);
+    expect(mocks.linkPending).not.toHaveBeenCalled();
+    expect(mocks.startSession).not.toHaveBeenCalled();
+    expect(location(response)).toBe('https://backoffice.test/link-provider/confirm');
+    const sealed = /backoffice_thaid_link=([^;]+)/.exec(response.headers.getSetCookie().join('\n'))?.[1];
+    expect(openThaidLink(sealed, config.clientSecret)).toEqual({ personId: 'person-1', ticketHash: ticketHashOf('ticket-1') });
+    expect(response.headers.getSetCookie().join('\n')).not.toContain(pid);
   });
 
-  it('purpose link: a refused link or no matching บุคลากร stays on รอผูกบัญชี with a message and no session', async () => {
+  it('purpose link: no matching บุคลากร or no live pending login stays on รอผูกบัญชี with a message', async () => {
     mocks.citizenIdForCode.mockResolvedValue(pid);
-    mocks.resolve.mockResolvedValue({ kind: 'active', personId: 'person-1' });
-    mocks.linkPending.mockResolvedValue({ ok: false, code: 'ALREADY_LINKED' });
-    expect(location(await callback('code=c&state=state-1', 'link', '; backoffice_provider_ticket=ticket-1'))).toBe('https://backoffice.test/link-provider?thaid=failed');
-    mocks.resolve.mockResolvedValue({ kind: 'not_found' });
+    mocks.findActivePerson.mockResolvedValue(null);
     expect(location(await callback('code=c&state=state-1', 'link', '; backoffice_provider_ticket=ticket-1'))).toBe('https://backoffice.test/link-provider?thaid=not_found');
+    mocks.findActivePerson.mockResolvedValue('person-1');
+    mocks.pendingLogin.mockResolvedValue(null);
+    expect(location(await callback('code=c&state=state-1', 'link', '; backoffice_provider_ticket=ticket-1'))).toBe('https://backoffice.test/link-provider?thaid=failed');
     expect(mocks.startSession).not.toHaveBeenCalled();
   });
 

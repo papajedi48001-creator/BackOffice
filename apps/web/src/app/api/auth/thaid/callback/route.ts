@@ -3,9 +3,9 @@ import { AuditService, DatabaseAuditRepository, ThaidError, ThaidLoginService } 
 import { afterSignInPath } from '../../../../../lib/after-sign-in';
 import { getSharedDatabase } from '../../../../../lib/database';
 import { getNationalIdProtector } from '../../../../../lib/national-id';
-import { externalLoginService, providerCookieOptions, providerSsoConfig, providerTicketCookie } from '../../../../../lib/provider-sso';
+import { externalLoginService, providerSsoConfig, providerTicketCookie } from '../../../../../lib/provider-sso';
 import { sessionCookieName, sessionCookieOptions, startSession } from '../../../../../lib/session';
-import { openThaidFlow, thaidClient, thaidConfig, thaidCookieOptions, thaidFlowCookie, thaidFlowPath, type ThaidPurpose } from '../../../../../lib/thaid';
+import { openThaidFlow, sealThaidLink, thaidClient, thaidConfig, thaidCookieOptions, thaidFlowCookie, thaidFlowPath, thaidLinkCookie, thaidLinkSeconds, ticketHashOf, type ThaidPurpose } from '../../../../../lib/thaid';
 
 type Outcome = 'unavailable' | 'failed' | 'inactive' | 'not_found';
 const unknownTarget = '00000000-0000-0000-0000-000000000000';
@@ -59,20 +59,26 @@ export async function GET(request: Request): Promise<Response> {
   const database = getSharedDatabase();
   if (!database) return back(config.redirectUri, purpose, 'unavailable');
   try {
-    const result = await new ThaidLoginService(database, protector, new AuditService(new DatabaseAuditRepository(database))).resolve(citizenId);
-    if (result.kind !== 'active') return back(config.redirectUri, purpose, result.kind);
-    let clearTicket = false;
+    const service = new ThaidLoginService(database, protector, new AuditService(new DatabaseAuditRepository(database)));
     if (purpose === 'link') {
+      // On a shared computer the MOPH ID session may belong to someone else, so nothing is linked until the person confirms
+      // on screen that the Provider ID name is theirs (/link-provider/confirm). Only the person ID and the ticket's hash travel.
+      const personId = await service.findActivePerson(citizenId);
+      if (!personId) return back(config.redirectUri, purpose, 'not_found');
       const provider = await providerSsoConfig();
       const ticket = readCookie(request, providerTicketCookie) ?? '';
-      const linked = provider ? await externalLoginService(database, provider.apiUrl).linkPendingToPerson(ticket, result.personId) : { ok: false };
-      if (!linked.ok) return back(config.redirectUri, purpose, 'failed');
-      clearTicket = true;
+      const pending = provider && ticket ? await externalLoginService(database, provider.apiUrl).pendingLogin(ticket) : null;
+      if (!pending) return back(config.redirectUri, purpose, 'failed');
+      const response = NextResponse.redirect(publicUrl('/link-provider/confirm', config.redirectUri), 303);
+      response.cookies.set(thaidFlowCookie, '', { ...thaidCookieOptions(thaidFlowPath), maxAge: 0 });
+      response.cookies.set(thaidLinkCookie, sealThaidLink({ personId, ticketHash: ticketHashOf(ticket) }, config.clientSecret), { ...thaidCookieOptions('/'), maxAge: thaidLinkSeconds });
+      return response;
     }
+    const result = await service.resolve(citizenId);
+    if (result.kind !== 'active') return back(config.redirectUri, purpose, result.kind);
     const session = await startSession(result.personId);
     const response = NextResponse.redirect(publicUrl(await afterSignInPath(database, session.token), config.redirectUri), 303);
     response.cookies.set(thaidFlowCookie, '', { ...thaidCookieOptions(thaidFlowPath), maxAge: 0 });
-    if (clearTicket) response.cookies.set(providerTicketCookie, '', { ...providerCookieOptions('/'), maxAge: 0 });
     response.cookies.set(sessionCookieName, session.token, sessionCookieOptions(session.maxAgeSeconds));
     return response;
   } catch {

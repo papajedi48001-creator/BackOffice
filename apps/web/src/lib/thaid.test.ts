@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { openThaidFlow, sealThaidFlow } from './thaid';
+import { openThaidFlow, openThaidLink, sealThaidFlow, sealThaidLink } from './thaid';
 
 const secret = 'thaid-client-secret';
 const now = new Date('2026-11-12T10:00:00Z');
@@ -19,5 +19,14 @@ describe('ThaID flow cookie', () => {
     expect(openThaidFlow(`${sealed.slice(0, -2)}xx`, secret, now)).toBeNull();
     expect(openThaidFlow(undefined, secret, now)).toBeNull();
     expect(openThaidFlow(sealThaidFlow({ state: 's', purpose: 'admin' as 'link' }, secret, now), secret, now)).toBeNull();
+  });
+});
+
+describe('ThaID link cookie', () => {
+  it('round-trips for five minutes and cannot be read as a flow cookie', () => {
+    const sealed = sealThaidLink({ personId: 'person-1', ticketHash: 'a'.repeat(64) }, secret, now);
+    expect(openThaidLink(sealed, secret, now)).toEqual({ personId: 'person-1', ticketHash: 'a'.repeat(64) });
+    expect(openThaidLink(sealed, secret, new Date(now.getTime() + 301_000))).toBeNull();
+    expect(openThaidFlow(sealed, secret, now)).toBeNull();
   });
 });
