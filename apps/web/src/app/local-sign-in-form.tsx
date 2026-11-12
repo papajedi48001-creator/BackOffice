@@ -32,6 +32,10 @@ export function LocalSignInForm({ next }: { next?: string } = {}) {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ username: username.trim(), password }),
       });
+      if (response.status === 403) {
+        setError('ปิดการเข้าสู่ระบบด้วยรหัสผ่านแล้ว กรุณาโหลดหน้านี้ใหม่แล้วใช้ปุ่มเข้าสู่ระบบด้านล่าง');
+        return;
+      }
       if (!response.ok) throw new Error('AUTHENTICATION_REJECTED');
       const result = await response.json().catch(() => ({})) as { mustChangePassword?: boolean };
       // After a reset the person sets a new password and signs in again before using the system.

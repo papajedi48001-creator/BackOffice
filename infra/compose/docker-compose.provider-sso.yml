@@ -9,6 +9,8 @@ services:
       PROVIDER_ID_REDIRECT_URI: ${PROVIDER_ID_REDIRECT_URI:?set PROVIDER_ID_REDIRECT_URI}
       PROVIDER_ID_HEALTH_CLIENT_SECRET_FILE: /run/secrets/provider_id_health_client_secret
       PROVIDER_ID_SECRET_KEY_FILE: /run/secrets/provider_id_secret_key
+      # With Provider ID ready, username-and-password sign-in is closed. PASSWORD_SIGN_IN=on is the break-glass (docs/runbooks/provider-sso.md).
+      PASSWORD_SIGN_IN: ${PASSWORD_SIGN_IN:-}
     secrets: [provider_id_health_client_secret, provider_id_secret_key]
     # The web container calls moph.id.th and provider.id.th itself; the other networks are internal.
     networks: [egress]

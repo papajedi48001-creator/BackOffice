@@ -5,6 +5,7 @@ import { BrandLogo } from '../components/brand-logo';
 import { ModuleIcon } from '../components/module-icon';
 import type { ModuleIconName } from '../lib/modules';
 import { getSharedDatabase } from '../lib/database';
+import { isPasswordSignInOpen } from '../lib/password-sign-in';
 import { providerSsoEnabled } from '../lib/provider-sso';
 import { LocalSignInForm } from './local-sign-in-form';
 import { ProviderSignIn } from './provider-sign-in';
@@ -21,6 +22,7 @@ async function loginPhotoVersion(): Promise<string | null> {
 export default async function HomePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const provider = (await searchParams).provider;
   const photo = await loginPhotoVersion();
+  const passwordOpen = isPasswordSignInOpen();
   return (
     <main className="welcome-shell">
       <div className="login-card">
@@ -40,9 +42,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           <div className="login-mobile-brand"><BrandLogo size={48} decorative /><p className="eyebrow">{t('hospitalName')}</p></div>
           <h1 id="page-title"><AppName /></h1>
           <p className="welcome-status" role="status">กำลังเตรียมระบบพื้นฐานสำหรับโครงการนำร่อง</p>
-          <LocalSignInForm />
-          <ProviderSignIn enabled={providerSsoEnabled()} outcome={typeof provider === 'string' ? provider : undefined} />
-          <p className="login-help">ลืมรหัสผ่าน ติดต่อกลุ่มงานเทคโนโลยีสารสนเทศ</p>
+          {passwordOpen ? <LocalSignInForm /> : null}
+          <ProviderSignIn enabled={providerSsoEnabled()} outcome={typeof provider === 'string' ? provider : undefined} passwordOpen={passwordOpen} />
+          {passwordOpen ? <p className="login-help">ลืมรหัสผ่าน ติดต่อกลุ่มงานเทคโนโลยีสารสนเทศ</p> : null}
         </section>
       </div>
     </main>

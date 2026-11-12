@@ -65,8 +65,11 @@ export async function GET(request: Request): Promise<Response> {
       return response;
     }
     const session = await startSession(result.personId);
-    const mustChange = await sessionService(database).pendingPasswordChange(session.token);
-    const response = NextResponse.redirect(publicUrl(mustChange ? '/change-password' : '/dashboard', request), 303);
+    const sessions = sessionService(database);
+    const mustChange = await sessions.pendingPasswordChange(session.token);
+    // A person with several roles picks one before anything else, as after a password sign-in.
+    const roleChoice = !mustChange && (await sessions.resolve(session.token))?.roleSelectionRequired === true;
+    const response = NextResponse.redirect(publicUrl(mustChange ? '/change-password' : roleChoice ? '/choose-role' : '/dashboard', request), 303);
     response.cookies.set(providerFlowCookie, '', { ...providerCookieOptions(providerFlowPath), maxAge: 0 });
     response.cookies.set(sessionCookieName, session.token, sessionCookieOptions(session.maxAgeSeconds));
     return response;

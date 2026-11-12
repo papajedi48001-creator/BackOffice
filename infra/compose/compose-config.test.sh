@@ -130,6 +130,7 @@ for overrides in "" "${root_dir}/infra/compose/docker-compose.staging-shared-ngi
     if (env.PROVIDER_ID_HEALTH_CLIENT_SECRET_FILE !== "/run/secrets/provider_id_health_client_secret" || env.PROVIDER_ID_HEALTH_CLIENT_SECRET) fail("web must read the MOPH ID secret only from the secret file");
     if (env.PROVIDER_ID_SECRET_KEY_FILE !== "/run/secrets/provider_id_secret_key" || env.PROVIDER_ID_SECRET_KEY) fail("web must read the Provider ID secret key only from the secret file");
     if (env.PROVIDER_ID_HEALTH_URL || env.PROVIDER_ID_API_URL) fail("the stub base-URL overrides must never reach a deployed web");
+    if (!("PASSWORD_SIGN_IN" in env) || env.PASSWORD_SIGN_IN !== "") fail("web must receive PASSWORD_SIGN_IN, empty (password sign-in closed) unless the operator sets it");
     for (const [name, file] of [["provider_id_health_client_secret", "/etc/backoffice/secrets/provider_id_health_client_secret"], ["provider_id_secret_key", "/etc/backoffice/secrets/provider_id_secret_key"]]) {
       if (!services.web.secrets.some((secret) => secret.source === name)) fail(`web must mount the ${name} secret`);
       if (secrets[name]?.file !== file) fail(`the ${name} secret must come from its _FILE setting`);

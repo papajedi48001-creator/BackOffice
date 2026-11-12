@@ -84,3 +84,12 @@ test('shows and hides the password with an eye button inside the password box', 
   fireEvent.click(screen.getByRole('button', { name: 'ซ่อนรหัสผ่าน' }));
   expect(password).toHaveAttribute('type', 'password');
 });
+
+test('tells a page loaded before password sign-in closed to reload instead of blaming the password', async () => {
+  vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ error: 'password_sign_in_off' }), { status: 403 }));
+  render(<LocalSignInForm />);
+  fireEvent.change(screen.getByLabelText('ชื่อผู้ใช้'), { target: { value: 'r0-e2e-requestor' } });
+  fireEvent.change(screen.getByLabelText('รหัสผ่าน'), { target: { value: 'any-password' } });
+  fireEvent.submit(screen.getByRole('button', { name: 'เข้าสู่ระบบ' }).closest('form')!);
+  expect(await screen.findByRole('alert')).toHaveTextContent('ปิดการเข้าสู่ระบบด้วยรหัสผ่านแล้ว กรุณาโหลดหน้านี้ใหม่แล้วใช้ปุ่มเข้าสู่ระบบด้านล่าง');
+});

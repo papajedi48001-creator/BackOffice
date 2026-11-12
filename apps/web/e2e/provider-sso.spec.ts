@@ -5,7 +5,8 @@ import { expect, test } from '@playwright/test';
 // Runs against a seeded R0 environment whose web server was started with
 // PROVIDER_ID_HEALTH_URL=PROVIDER_ID_API_URL=http://127.0.0.1:<E2E_PROVIDER_STUB_PORT>, PROVIDER_ID_HEALTH_CLIENT_ID=e2e-health,
 // PROVIDER_ID_CLIENT_ID=e2e-provider, PROVIDER_ID_HEALTH_CLIENT_SECRET=PROVIDER_ID_SECRET_KEY=<E2E_PROVIDER_SECRET>
-// and PROVIDER_ID_REDIRECT_URI=<E2E_BASE_URL>/api/auth/provider/callback.
+// and PROVIDER_ID_REDIRECT_URI=<E2E_BASE_URL>/api/auth/provider/callback. Password sign-in is then closed, so the other
+// suites (which sign in with a password) run against a server started without these settings.
 // This file plays MOPH ID and Provider ID: every sign-in comes back as `stub.subject`.
 const port = Number(process.env.E2E_PROVIDER_STUB_PORT);
 const secret = process.env.E2E_PROVIDER_SECRET ?? '';
@@ -83,5 +84,14 @@ test('a Provider ID login that matches no บุคลากร national ID wait
 test('a forged callback goes back to the sign-in page with a Thai message', async ({ page }) => {
   await page.goto('/api/auth/provider/callback?code=forged&state=forged');
   await expect(page.getByRole('alert').filter({ hasText: 'เข้าสู่ระบบด้วย Provider ID ไม่สำเร็จ กรุณาลองใหม่' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'เข้าสู่ระบบ' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'เข้าสู่ระบบด้วย Provider ID' })).toBeVisible();
+});
+
+test('with Provider ID ready the password box is closed, on the page and on the server', async ({ page, request }) => {
+  await page.goto('/');
+  await expect(page.getByLabel('ชื่อผู้ใช้')).toHaveCount(0);
+  await expect(page.getByLabel('รหัสผ่าน')).toHaveCount(0);
+  const response = await request.post('/api/auth/local', { data: { username: 'r0-requestor', password: process.env.R0_E2E_PASSWORD } });
+  expect(response.status()).toBe(403);
+  expect(await response.json()).toEqual({ error: 'password_sign_in_off' });
 });
