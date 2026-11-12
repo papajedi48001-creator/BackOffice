@@ -8,8 +8,8 @@ afterEach(() => { vi.restoreAllMocks(); refresh.mockReset(); });
 
 const thaidRedirect = 'https://office-waritch-hosp.moph.go.th/api/auth/thaid/callback';
 const view = {
-  thaid: { enabled: true, ready: false, source: 'NONE' as const, values: { clientId: '', redirectUri: '' }, secretsSet: { clientSecret: false } },
-  providerId: { enabled: true, ready: true, source: 'ENV' as const, values: { environment: 'prd', healthClientId: 'health-1', providerClientId: 'provider-1', redirectUri: 'https://office-waritch-hosp.moph.go.th/api/auth/provider/callback' }, secretsSet: { healthClientSecret: true, providerSecretKey: true } },
+  thaid: { enabled: true, ready: false, source: 'NONE' as const, values: { clientId: '', redirectUri: '' }, secretsSet: { clientSecret: false }, secretsUnreadable: false },
+  providerId: { enabled: true, ready: true, source: 'ENV' as const, values: { environment: 'prd', healthClientId: 'health-1', providerClientId: 'provider-1', redirectUri: 'https://office-waritch-hosp.moph.go.th/api/auth/provider/callback' }, secretsSet: { healthClientSecret: true, providerSecretKey: true }, secretsUnreadable: false },
   canStoreSecrets: true
 };
 
@@ -53,4 +53,9 @@ it('switching a route off asks in an ActionDialog and says when it is the last w
 it('warns when secrets cannot be stored on this server', () => {
   render(<SignInSettings view={{ ...view, canStoreSecrets: false }} defaultThaidRedirectUri={thaidRedirect} />);
   expect(screen.getByText(/CONNECTION_SECRET_KEY/)).toBeInTheDocument();
+});
+
+it('says when saved secrets cannot be opened and must be typed again', () => {
+  render(<SignInSettings view={{ ...view, thaid: { ...view.thaid, source: 'SETTINGS', secretsUnreadable: true } }} defaultThaidRedirectUri={thaidRedirect} />);
+  expect(within(screen.getByRole('region', { name: 'ThaID' })).getByRole('alert')).toHaveTextContent('เปิด Secret ที่บันทึกไว้ไม่ได้ (CONNECTION_SECRET_KEY ไม่มีหรือถูกเปลี่ยน) กรุณาใส่ Secret ใหม่');
 });

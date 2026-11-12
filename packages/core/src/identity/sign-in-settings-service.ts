@@ -16,6 +16,8 @@ export interface SignInMethodView {
   values: Record<string, string>;
   /** Whether each secret is set; never the secret itself. */
   secretsSet: Record<string, boolean>;
+  /** Secrets were saved here but cannot be opened (CONNECTION_SECRET_KEY missing or changed): type them again. */
+  secretsUnreadable: boolean;
 }
 export interface SignInSettingsView { thaid: SignInMethodView; providerId: SignInMethodView; canStoreSecrets: boolean }
 export interface SignInSettingInput { enabled: boolean; values: Record<string, string>; secrets: Record<string, string> }
@@ -45,7 +47,7 @@ const providerEnvironments: Record<string, { healthUrl: string; apiUrl: string }
 export const THAID_API_URL = 'https://imauth.bora.dopa.go.th';
 
 type Row = { method: string; enabled: number | boolean; settingsJson: string; secretCiphertext: string | null };
-interface Effective { enabled: boolean; source: SignInMethodView['source']; fields: Record<string, string>; stored: { values: Record<string, string>; secrets: Record<string, string> } }
+interface Effective { enabled: boolean; source: SignInMethodView['source']; fields: Record<string, string>; stored: { values: Record<string, string>; secrets: Record<string, string> }; secretsUnreadable: boolean }
 
 const clientIdPattern = /^[A-Za-z0-9._~:-]{1,128}$/;
 
@@ -83,15 +85,25 @@ export class SignInSettingsService {
     return new Map(rows.map((row) => [row.method, row]));
   }
 
-  private openSecrets(row: Row | undefined): Record<string, string> {
-    if (!row?.secretCiphertext || !this.box) return {};
-    try { return JSON.parse(this.box.open(row.secretCiphertext)) as Record<string, string>; } catch { return {}; }
+  private openSecrets(row: Row | undefined): Record<string, string> | null {
+    if (!row?.secretCiphertext) return {};
+    if (!this.box) return null;
+    try { return JSON.parse(this.box.open(row.secretCiphertext)) as Record<string, string>; } catch { return null; }
+  }
+
+  private savedValues(row: Row | undefined): Record<string, string> {
+    if (!row) return {};
+    try {
+      const parsed = JSON.parse(row.settingsJson) as unknown;
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, string> : {};
+    } catch { return {}; }
   }
 
   private effective(method: SignInMethod, row: Row | undefined): Effective {
     const spec = specs[method];
-    const values = row ? (JSON.parse(row.settingsJson) as Record<string, string>) : {};
-    const secrets = this.openSecrets(row);
+    const values = this.savedValues(row);
+    const opened = this.openSecrets(row);
+    const secrets = opened ?? {};
     const fields: Record<string, string> = {};
     let fromEnv = false;
     for (const name of [...spec.values, ...spec.secrets]) {
@@ -102,7 +114,7 @@ export class SignInSettingsService {
     }
     if (method === 'PROVIDER_ID' && !fields.environment) fields.environment = 'prd';
     const source = row ? 'SETTINGS' : fromEnv ? 'ENV' : 'NONE';
-    return { enabled: row ? Boolean(Number(row.enabled)) : true, source, fields, stored: { values, secrets } };
+    return { enabled: row ? Boolean(Number(row.enabled)) : true, source, fields, stored: { values, secrets }, secretsUnreadable: opened === null };
   }
 
   private thaidFrom(effective: Effective): ThaidSettings | null {
@@ -136,7 +148,8 @@ export class SignInSettingsService {
       ready: this.ready(method, effective),
       source: effective.source,
       values: Object.fromEntries(spec.values.map((name) => [name, effective.fields[name] ?? ''])),
-      secretsSet: Object.fromEntries(spec.secrets.map((name) => [name, Boolean(effective.fields[name])]))
+      secretsSet: Object.fromEntries(spec.secrets.map((name) => [name, Boolean(effective.fields[name])])),
+      secretsUnreadable: effective.secretsUnreadable
     };
   }
 
@@ -149,10 +162,14 @@ export class SignInSettingsService {
     };
   }
 
-  /** Both routes from one read, for the sign-in page. */
-  async routes(): Promise<{ thaid: ThaidSettings | null; providerId: ProviderIdConfig | null }> {
+  /**
+   * Both routes from one read, for the sign-in page. `configured` is true when a route is switched on in the saved settings even if it is
+   * not usable now (say its secrets cannot be opened), so password sign-in stays closed instead of reopening on the internet.
+   */
+  async routes(): Promise<{ thaid: ThaidSettings | null; providerId: ProviderIdConfig | null; configured: boolean }> {
     const rows = await this.rows();
-    return { thaid: this.thaidFrom(this.effective('THAID', rows.get('THAID'))), providerId: this.providerFrom(this.effective('PROVIDER_ID', rows.get('PROVIDER_ID'))) };
+    return { thaid: this.thaidFrom(this.effective('THAID', rows.get('THAID'))), providerId: this.providerFrom(this.effective('PROVIDER_ID', rows.get('PROVIDER_ID'))),
+      configured: [...rows.values()].some((row) => Boolean(Number(row.enabled))) };
   }
 
   async thaid(): Promise<ThaidSettings | null> {

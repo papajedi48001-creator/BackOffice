@@ -106,3 +106,28 @@ describe('SignInSettingsService.routes', () => {
     expect(query).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('SignInSettingsService when saved secrets cannot be opened', () => {
+  it('says the route was set up on the web (so password sign-in stays closed) and that its secrets are unreadable', async () => {
+    const { database } = store();
+    await new SignInSettingsService(database, box, envOf({})).save('THAID', thaidInput('s'), 'a');
+    const rotated = new SignInSettingsService(database, new ConnectionSecretBox('ef'.repeat(32)), envOf({}));
+    const routes = await rotated.routes();
+    expect(routes.thaid).toBeNull();
+    expect(routes.configured).toBe(true);
+    expect((await rotated.view()).thaid).toMatchObject({ ready: false, secretsUnreadable: true });
+    const withoutKey = new SignInSettingsService(database, null, envOf({}));
+    expect((await withoutKey.routes()).configured).toBe(true);
+    expect((await withoutKey.view()).thaid).toMatchObject({ secretsUnreadable: true });
+  });
+
+  it('nothing saved and nothing enabled on the web is not configured', async () => {
+    expect((await new SignInSettingsService(store().database, box, envOf({})).routes()).configured).toBe(false);
+  });
+
+  it('a corrupt settings row reads as empty instead of failing the admin page', async () => {
+    const { database, rows } = store();
+    rows.set('THAID', { method: 'THAID', enabled: 1, settingsJson: '{not json', secretCiphertext: null });
+    await expect(new SignInSettingsService(database, box, envOf({})).view()).resolves.toMatchObject({ thaid: { source: 'SETTINGS', ready: false } });
+  });
+});

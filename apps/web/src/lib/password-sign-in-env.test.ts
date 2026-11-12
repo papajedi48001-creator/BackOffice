@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ signInRoutes: vi.fn(async () => ({ thaid: null as object | null, providerId: null as object | null })) }));
+const mocks = vi.hoisted(() => ({ signInRoutes: vi.fn(async () => ({ thaid: null as object | null, providerId: null as object | null, configured: false })) }));
 vi.mock('./sign-in-settings', () => ({ signInRoutes: mocks.signInRoutes }));
 
 import { isPasswordSignInOpen } from './password-sign-in';
@@ -14,13 +14,20 @@ describe('isPasswordSignInOpen', () => {
     process.env.PROVIDER_ID_CLIENT_ID = 'provider-client';
     delete process.env.PASSWORD_SIGN_IN;
     expect(await isPasswordSignInOpen()).toBe(false);
-    expect(warn).toHaveBeenCalledWith('password sign-in closed: Provider ID settings are present but incomplete');
+    expect(warn).toHaveBeenCalledWith('password sign-in closed: ThaID or Provider ID settings are present but incomplete');
+  });
+
+  it('stays closed when a route is switched on in the saved settings but its secrets cannot be opened', async () => {
+    for (const key of Object.keys(process.env)) if (key.startsWith('PROVIDER_ID_') || key.startsWith('THAID_')) delete process.env[key];
+    delete process.env.PASSWORD_SIGN_IN;
+    mocks.signInRoutes.mockResolvedValueOnce({ thaid: null, providerId: null, configured: true });
+    expect(await isPasswordSignInOpen()).toBe(false);
   });
 
   it('closes once ThaID alone is ready', async () => {
     for (const key of Object.keys(process.env)) if (key.startsWith('PROVIDER_ID_')) delete process.env[key];
     delete process.env.PASSWORD_SIGN_IN;
-    mocks.signInRoutes.mockResolvedValueOnce({ thaid: { clientId: 'c' }, providerId: null });
+    mocks.signInRoutes.mockResolvedValueOnce({ thaid: { clientId: 'c' }, providerId: null, configured: true });
     expect(await isPasswordSignInOpen()).toBe(false);
   });
 
@@ -31,7 +38,7 @@ describe('isPasswordSignInOpen', () => {
   });
 
   it('treats an unreadable PASSWORD_SIGN_IN_FILE as no override instead of failing the sign-in page', async () => {
-    mocks.signInRoutes.mockResolvedValueOnce({ thaid: {}, providerId: null });
+    mocks.signInRoutes.mockResolvedValueOnce({ thaid: {}, providerId: null, configured: true });
     delete process.env.PASSWORD_SIGN_IN;
     process.env.PASSWORD_SIGN_IN_FILE = '/nonexistent/password-sign-in';
     expect(await isPasswordSignInOpen()).toBe(false);

@@ -75,6 +75,7 @@ function RouteCard({ method, view, canStoreSecrets, defaultRedirectUri }: { meth
   const titleId = `sign-in-${method.toLowerCase()}-title`;
   return <section className="admin-hosxp" aria-labelledby={titleId}>
     <h3 id={titleId}>{route.title}</h3>
+    {view.secretsUnreadable ? <p role="alert" className="form-error">{t('signInSecretsUnreadable')}</p> : null}
     <dl className="admin-line-facts">
       <div><dt>{t('signInStatus')}</dt><dd><span className={`status status-${status.tone}`}>{t(status.key)}</span></dd></div>
       <div><dt>{t('signInSource')}</dt><dd>{t(`signInSource${view.source}` as MessageKey)}</dd></div>

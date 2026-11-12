@@ -27,9 +27,19 @@ describe('signInRoutes', () => {
     expect(query).toHaveBeenCalledTimes(2);
   });
 
+  it('retries the database after 5 seconds when it failed, not 30', async () => {
+    const query = vi.fn(async () => { throw new Error('down'); });
+    mocks.getSharedDatabase.mockReturnValue({ query, execute: vi.fn(), transaction: vi.fn(), close: vi.fn() });
+    await signInRoutes(1_000);
+    await signInRoutes(4_000);
+    expect(query).toHaveBeenCalledTimes(1);
+    await signInRoutes(6_500);
+    expect(query).toHaveBeenCalledTimes(2);
+  });
+
   it('a database error falls back to the environment instead of failing the sign-in page', async () => {
     mocks.getSharedDatabase.mockReturnValue({ query: vi.fn(async () => { throw new Error('down'); }), execute: vi.fn(), transaction: vi.fn(), close: vi.fn() });
     for (const key of Object.keys(process.env)) if (key.startsWith('THAID_') || key.startsWith('PROVIDER_ID_')) delete process.env[key];
-    expect(await signInRoutes()).toEqual({ thaid: null, providerId: null });
+    expect(await signInRoutes()).toEqual({ thaid: null, providerId: null, configured: true });
   });
 });

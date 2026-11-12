@@ -28,10 +28,10 @@ function override(): string | undefined {
 export async function isPasswordSignInOpen(): Promise<boolean> {
   const routes = await signInRoutes();
   const ready = routes.providerId !== null || routes.thaid !== null;
-  const intended = !ready && externalRouteIntended();
+  const intended = !ready && (routes.configured || externalRouteIntended());
   if (intended && !warnedIncomplete) {
     warnedIncomplete = true;
-    console.warn('password sign-in closed: Provider ID settings are present but incomplete');
+    console.warn('password sign-in closed: ThaID or Provider ID settings are present but incomplete');
   }
   return passwordSignInOpen({ externalRouteReady: ready || intended, override: override() });
 }
