@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ authenticateLocal: vi.fn(), startSession: vi.fn(), getSharedDatabase: vi.fn() }));
+const mocks = vi.hoisted(() => ({ authenticateLocal: vi.fn(), startSession: vi.fn(), getSharedDatabase: vi.fn(), isPasswordSignInOpen: vi.fn(() => true) }));
+vi.mock('../../../../lib/password-sign-in', () => ({ isPasswordSignInOpen: mocks.isPasswordSignInOpen }));
 vi.mock('@backoffice/core', async (importOriginal) => ({ ...await importOriginal<typeof import('@backoffice/core')>(), LocalAuthService: class { authenticateLocal = mocks.authenticateLocal; } }));
 vi.mock('../../../../lib/database', () => ({ getSharedDatabase: mocks.getSharedDatabase }));
 vi.mock('../../../../lib/session', async (importOriginal) => ({ ...await importOriginal<typeof import('../../../../lib/session')>(), startSession: mocks.startSession }));
@@ -14,6 +15,18 @@ function login(body: unknown = { username: 'r0-requestor', password: 'secret-pas
 afterEach(() => vi.clearAllMocks());
 
 describe('POST /api/auth/local', () => {
+  it('answers 403 password_sign_in_off without touching the database when password sign-in is closed', async () => {
+    mocks.isPasswordSignInOpen.mockReturnValueOnce(false);
+
+    const response = await login();
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({ error: 'password_sign_in_off' });
+    expect(mocks.getSharedDatabase).not.toHaveBeenCalled();
+    expect(mocks.authenticateLocal).not.toHaveBeenCalled();
+    expect(mocks.startSession).not.toHaveBeenCalled();
+  });
+
   it('sets an http-only session cookie that expires with the session', async () => {
     mocks.getSharedDatabase.mockReturnValue({ execute: vi.fn(), query: vi.fn() });
     mocks.authenticateLocal.mockResolvedValue({ personId: 'person-a', accountId: 'account-a' });
