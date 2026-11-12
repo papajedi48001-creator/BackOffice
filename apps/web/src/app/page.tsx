@@ -9,6 +9,9 @@ import { isPasswordSignInOpen } from '../lib/password-sign-in';
 import { providerSsoEnabled } from '../lib/provider-sso';
 import { LocalSignInForm } from './local-sign-in-form';
 import { ProviderSignIn } from './provider-sign-in';
+import { ThaidSignIn } from './thaid-sign-in';
+import { getNationalIdProtector } from '../lib/national-id';
+import { thaidConfig } from '../lib/thaid';
 
 const heroModules: ReadonlyArray<[string, ModuleIconName]> = [['การลา', 'leave'], ['ไปราชการ', 'travel'], ['จองห้องประชุม', 'room'], ['ยานพาหนะ', 'car'], ['คลังพัสดุ', 'package'], ['งานบุคคล', 'people']];
 
@@ -20,9 +23,13 @@ async function loginPhotoVersion(): Promise<string | null> {
 }
 
 export default async function HomePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const provider = (await searchParams).provider;
+  const query = await searchParams;
+  const provider = query.provider;
+  const thaid = query.thaid;
   const photo = await loginPhotoVersion();
   const passwordOpen = await isPasswordSignInOpen();
+  // ThaID matches a บุคลากร by national ID, so it needs the national-ID keys as well as its own settings.
+  const thaidEnabled = (await thaidConfig()) !== null && getNationalIdProtector() !== null;
   return (
     <main className="welcome-shell">
       <div className="login-card">
@@ -43,7 +50,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           <h1 id="page-title"><AppName /></h1>
           <p className="welcome-status" role="status">กำลังเตรียมระบบพื้นฐานสำหรับโครงการนำร่อง</p>
           {passwordOpen ? <LocalSignInForm /> : null}
-          <ProviderSignIn enabled={await providerSsoEnabled()} outcome={typeof provider === 'string' ? provider : undefined} passwordOpen={passwordOpen} />
+          <ThaidSignIn enabled={thaidEnabled} outcome={typeof thaid === 'string' ? thaid : undefined} divider={passwordOpen} />
+          <ProviderSignIn enabled={await providerSsoEnabled()} outcome={typeof provider === 'string' ? provider : undefined} passwordOpen={passwordOpen} divider={passwordOpen || thaidEnabled} />
           {passwordOpen ? <p className="login-help">ลืมรหัสผ่าน ติดต่อกลุ่มงานเทคโนโลยีสารสนเทศ</p> : null}
         </section>
       </div>

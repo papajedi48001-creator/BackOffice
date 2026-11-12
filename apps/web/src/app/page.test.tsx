@@ -7,6 +7,7 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 const mocks = vi.hoisted(() => ({ getSharedDatabase: vi.fn(() => null as object | null), version: vi.fn(), isPasswordSignInOpen: vi.fn(() => true) }));
+vi.mock('../lib/national-id', () => ({ getNationalIdProtector: () => ({}) }));
 vi.mock('../lib/password-sign-in', () => ({ isPasswordSignInOpen: mocks.isPasswordSignInOpen }));
 vi.mock('../lib/database', () => ({ getSharedDatabase: mocks.getSharedDatabase }));
 vi.mock('@backoffice/core', async (importOriginal) => ({ ...await importOriginal<typeof import('@backoffice/core')>(), SiteImageService: class { version = mocks.version; } }));
@@ -72,6 +73,16 @@ describe('HomePage', () => {
     render(await HomePage({ searchParams: Promise.resolve({ provider: 'unavailable' }) }));
     expect(screen.getByRole('link', { name: 'เข้าสู่ระบบด้วย Provider ID' })).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent('ระบบ Provider ID ไม่พร้อมใช้งาน');
+    vi.unstubAllEnvs();
+  });
+
+  it('shows the ThaID button and its message when ThaID is ready', async () => {
+    vi.stubEnv('THAID_CLIENT_ID', 'thaid-client');
+    vi.stubEnv('THAID_CLIENT_SECRET', 'thaid-secret');
+    vi.stubEnv('THAID_REDIRECT_URI', 'https://backoffice.test/api/auth/thaid/callback');
+    render(await HomePage({ searchParams: Promise.resolve({ thaid: 'not_found' }) }));
+    expect(screen.getByRole('link', { name: 'เข้าสู่ระบบด้วย ThaID' })).toHaveAttribute('href', '/api/auth/thaid/start');
+    expect(screen.getByRole('alert')).toHaveTextContent('ไม่พบเลขบัตรประชาชนนี้ในทะเบียนบุคลากร');
     vi.unstubAllEnvs();
   });
 

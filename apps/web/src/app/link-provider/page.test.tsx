@@ -1,10 +1,12 @@
 import { render, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ cookies: vi.fn(), redirect: vi.fn(), pendingLogin: vi.fn(), config: vi.fn() }));
+const mocks = vi.hoisted(() => ({ cookies: vi.fn(), redirect: vi.fn(), pendingLogin: vi.fn(), config: vi.fn(), thaid: vi.fn(async () => null as object | null), protector: vi.fn(() => ({}) as object | null) }));
 vi.mock('next/headers', () => ({ cookies: mocks.cookies }));
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect, useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
 vi.mock('../../lib/database', () => ({ getSharedDatabase: () => ({}) }));
+vi.mock('../../lib/national-id', () => ({ getNationalIdProtector: () => mocks.protector() }));
+vi.mock('../../lib/thaid', () => ({ thaidConfig: mocks.thaid }));
 vi.mock('../../lib/provider-sso', () => ({
   providerTicketCookie: 'backoffice_provider_ticket',
   providerSsoConfig: mocks.config,
@@ -48,4 +50,34 @@ it('goes to the sign-in page when Provider SSO is off', async () => {
   withTicket('ticket-1');
   await LinkProviderPage();
   expect(mocks.redirect).toHaveBeenCalledWith('/');
+});
+
+it('offers ยืนยันด้วย ThaID when ThaID is ready, so the person links the account themselves', async () => {
+  mocks.config.mockReturnValue({ apiUrl: 'https://provider.test' });
+  mocks.thaid.mockResolvedValue({ clientId: 'c' });
+  withTicket('ticket-1');
+  mocks.pendingLogin.mockResolvedValue({ displayName: 'สมชาย ใจดี' });
+  render(await LinkProviderPage({ searchParams: Promise.resolve({}) }));
+  expect(screen.getByRole('link', { name: 'ยืนยันด้วย ThaID' })).toHaveAttribute('href', '/api/auth/thaid/start?purpose=link');
+});
+
+it.each([
+  ['failed', 'ผูกบัญชีด้วย ThaID ไม่สำเร็จ บัญชีนี้อาจผูกกับ Provider ID อื่นอยู่แล้ว กรุณาติดต่อผู้ดูแลระบบ'],
+  ['not_found', 'ไม่พบเลขบัตรประชาชนนี้ในทะเบียนบุคลากร กรุณาติดต่อผู้ดูแลระบบ']
+])('says why a ThaID confirmation (%s) did not link', async (outcome, message) => {
+  mocks.config.mockReturnValue({ apiUrl: 'https://provider.test' });
+  mocks.thaid.mockResolvedValue({ clientId: 'c' });
+  withTicket('ticket-1');
+  mocks.pendingLogin.mockResolvedValue({ displayName: null });
+  render(await LinkProviderPage({ searchParams: Promise.resolve({ thaid: outcome }) }));
+  expect(screen.getByRole('alert')).toHaveTextContent(message);
+});
+
+it('hides ยืนยันด้วย ThaID when ThaID is not ready', async () => {
+  mocks.config.mockReturnValue({ apiUrl: 'https://provider.test' });
+  mocks.thaid.mockResolvedValue(null);
+  withTicket('ticket-1');
+  mocks.pendingLogin.mockResolvedValue({ displayName: null });
+  render(await LinkProviderPage({ searchParams: Promise.resolve({}) }));
+  expect(screen.queryByRole('link', { name: 'ยืนยันด้วย ThaID' })).toBeNull();
 });
