@@ -22,6 +22,7 @@ export * from './identity/session-service';
 export * from './identity/database-identity-repository';
 export * from './identity/database-external-identity-repository';
 export * from './identity/external-login-service';
+export * from './identity/sign-in-settings-service';
 export * from './identity/oidc-client';
 export * from './identity/provider-id-client';
 export * from './identity/national-id-hash-matcher';
