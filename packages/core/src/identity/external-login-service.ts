@@ -78,6 +78,18 @@ export class ExternalLoginService {
     return result.ok;
   }
 
+  /**
+   * รอผูกบัญชี → ยืนยันด้วย ThaID: links the pending Provider ID login behind a live ticket to the บุคลากร ThaID confirmed by national ID,
+   * with no admin. The person links their own account, so they are the actor.
+   */
+  async linkPendingToPerson(ticket: string, personId: string): Promise<{ ok: true } | { ok: false; code: 'NOT_FOUND' | 'ALREADY_LINKED' | 'PERSON_NOT_ACTIVE' }> {
+    const pending = ticket ? await this.deps.repository.findPendingByTicket(ticketHash(ticket), this.now()) : null;
+    if (!pending) return { ok: false, code: 'NOT_FOUND' };
+    if (!(await this.deps.isActivePerson(personId))) return { ok: false, code: 'PERSON_NOT_ACTIVE' };
+    return this.deps.repository.link({ personId, issuer: pending.issuer, subject: pending.subject, displayName: pending.displayName, linkedByPersonId: null,
+      audit: { actorPersonId: personId, action: 'identity.provider_link', targetType: 'person', targetId: personId, result: 'SUCCESS', metadata: { method: 'thaid' } } });
+  }
+
   async adminLink(actorPersonId: string, pendingId: string, personId: string): Promise<{ ok: true } | { ok: false; code: 'NOT_FOUND' | 'ALREADY_LINKED' | 'PERSON_NOT_ACTIVE' }> {
     const pending = await this.deps.repository.findPending(pendingId);
     if (!pending) return { ok: false, code: 'NOT_FOUND' };
