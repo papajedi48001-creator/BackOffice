@@ -1,0 +1,17 @@
+# Optional: lets ผู้ดูแลระบบ > การเข้าสู่ระบบ (ThaID, Provider ID) and the HOSxP connection keep secrets typed on the web,
+# sealed under CONNECTION_SECRET_KEY (docs/runbooks/provider-sso.md, "ThaID"). Add this file after the production or staging files.
+# Without it the web pages say secrets cannot be stored and the server environment stays the only source.
+services:
+  web:
+    environment:
+      CONNECTION_SECRET_KEY_FILE: /run/secrets/connection_secret_key
+    secrets: [connection_secret_key]
+
+  worker:
+    environment:
+      CONNECTION_SECRET_KEY_FILE: /run/secrets/connection_secret_key
+    secrets: [connection_secret_key]
+
+secrets:
+  connection_secret_key:
+    file: ${CONNECTION_SECRET_KEY_FILE:?set CONNECTION_SECRET_KEY_FILE}

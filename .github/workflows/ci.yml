@@ -46,6 +46,7 @@ jobs:
       - run: bash infra/compose/compose-config.test.sh
       - run: bash infra/backup/restore-verify.test.sh
       - run: bash infra/scripts/staging-release-guard.test.sh
+      - run: bash infra/scripts/setup-sign-in-settings.test.sh
       - run: node infra/ci/trufflehog-default-range.test.mjs
       - uses: trufflesecurity/trufflehog@main
         with: { path: ./ }

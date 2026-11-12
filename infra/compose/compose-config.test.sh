@@ -171,6 +171,29 @@ node -e '
 rm -f "${photo_env}" "${provider_env}"
 echo "the portal-photo override lets web check the portal's photo requests"
 
+# Secrets typed on the web stay unstorable unless the operator adds docker-compose.sign-in-settings.yml.
+rendered="$(docker compose --env-file "${env_file}" -f "${compose_file}" config --format json)"
+node -e '
+  const { services } = JSON.parse(require("fs").readFileSync(0, "utf8"));
+  for (const name of ["web", "worker"]) if (Object.keys(services[name].environment ?? {}).some((key) => key.startsWith("CONNECTION_SECRET_KEY"))) { console.error(`${name} must not receive CONNECTION_SECRET_KEY without the sign-in-settings override`); process.exit(1); }
+' <<< "${rendered}"
+key_env="$(mktemp)"
+cat "${env_file}" > "${key_env}"
+echo "CONNECTION_SECRET_KEY_FILE=/etc/backoffice/secrets/connection_secret_key" >> "${key_env}"
+rendered="$(docker compose --env-file "${key_env}" -f "${compose_file}" -f "${root_dir}/infra/compose/docker-compose.sign-in-settings.yml" config --format json)"
+node -e '
+  const { services, secrets } = JSON.parse(require("fs").readFileSync(0, "utf8"));
+  const fail = (message) => { console.error(message); process.exit(1); };
+  for (const name of ["web", "worker"]) {
+    const env = services[name].environment;
+    if (env.CONNECTION_SECRET_KEY_FILE !== "/run/secrets/connection_secret_key" || env.CONNECTION_SECRET_KEY) fail(`${name} must read CONNECTION_SECRET_KEY only from the secret file`);
+    if (!services[name].secrets.some((secret) => secret.source === "connection_secret_key")) fail(`${name} must mount the connection_secret_key secret`);
+  }
+  if (secrets.connection_secret_key.file !== "/etc/backoffice/secrets/connection_secret_key") fail("the key must come from /etc/backoffice/secrets");
+' <<< "${rendered}"
+rm -f "${key_env}"
+echo "the sign-in-settings override lets web and worker keep secrets typed on the web"
+
 # การแจ้งเตือน LINE stays off unless the operator adds docker-compose.line.yml (docs/runbooks/line-alert.md).
 rendered="$(docker compose --env-file "${env_file}" -f "${compose_file}" config --format json)"
 node -e '

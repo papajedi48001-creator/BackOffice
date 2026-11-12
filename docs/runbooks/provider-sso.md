@@ -122,3 +122,48 @@ PROVIDER_SSO_ISSUER=https://aut-waritch-hosp.moph.go.th
 | ไม่มีช่องรหัสผ่านที่หน้าเข้าสู่ระบบ | ตั้งใจปิดไว้เมื่อ Provider ID พร้อมใช้ ดูหัวข้อเปิดรหัสผ่านชั่วคราว |
 | "ระบบ Provider ID ไม่พร้อมใช้งาน" | container เรียก `moph.id.th` หรือ `provider.id.th` ไม่ถึง หรือบริการของกระทรวงขัดข้อง ดู log เว็บบรรทัด `provider sign-in failed` |
 | "เข้าสู่ระบบด้วย Provider ID ไม่สำเร็จ" | ใช้เกิน 10 นาที เปิดสองแท็บพร้อมกัน code ถูกใช้แล้ว secret ไม่ตรง หรือบัญชีไม่มี Provider ID ให้กดปุ่มใหม่ ดู audit `identity.provider_login` ช่อง `stage` |
+
+# เข้าสู่ระบบด้วย ThaID และหน้า ผู้ดูแลระบบ > การเข้าสู่ระบบ
+
+spec: `docs/superpowers/specs/2026-11-12-thaid-sign-in-design.md`
+
+## 1. ลงทะเบียนกับกรมการปกครอง (DOPA)
+
+| ค่า | ใช้ |
+|---|---|
+| Redirect URI | `https://office-waritch-hosp.moph.go.th/api/auth/thaid/callback` |
+| Scope | `pid` อย่างเดียว |
+| สิ่งที่ DOPA ออกให้ | Client ID และ Client Secret |
+
+endpoint ที่ใช้: `https://imauth.bora.dopa.go.th/api/v2/oauth2/auth/` และ `.../api/v2/oauth2/token/` (HTTP Basic ด้วย Client ID/Secret)
+เหมือน portal ของ radius-server ถ้า DOPA ออก Client ให้ portal แล้ว ต้องเพิ่ม Redirect URI ข้างบนในรายการของ Client เดียวกัน หรือขอ Client ใหม่
+
+## 2. เตรียมเครื่อง .251 (ครั้งเดียว)
+
+1. เจ้าของเครื่องรัน `sudo bash infra/scripts/setup-sign-in-settings.sh` ใน release ล่าสุด สคริปต์สร้างกุญแจ
+   `/etc/backoffice/secrets/connection_secret_key` (root 0600) และเพิ่ม `CONNECTION_SECRET_KEY_FILE` ใน `/etc/backoffice/staging.env`
+   รันซ้ำได้ กุญแจเดิมไม่ถูกเปลี่ยน (ถ้าเปลี่ยน secret ที่บันทึกไว้บนเว็บจะอ่านไม่ได้)
+2. เพิ่ม `-f infra/compose/docker-compose.sign-in-settings.yml` ต่อจาก `docker-compose.provider-sso.yml` ในคำสั่ง deploy
+3. container web ต้องเรียก `imauth.bora.dopa.go.th` ได้ผ่าน network `egress` (ใช้ network เดียวกับ Provider ID)
+4. ต้องมี `NATIONAL_ID_ENCRYPTION_KEY` และ `NATIONAL_ID_LOOKUP_KEY` อยู่แล้ว ThaID ใช้ค่า lookup ของเลขบัตรหาบุคลากร
+
+## 3. ตั้งค่าบนเว็บ
+
+ผู้ดูแลระบบ > การเข้าสู่ระบบ > แก้ไข ThaID ใส่ Client ID, Client Secret และ Redirect URI แล้วบันทึก สถานะต้องเป็น "พร้อมใช้งาน"
+หน้าเข้าสู่ระบบจะมีปุ่ม "เข้าสู่ระบบด้วย ThaID" ภายใน 30 วินาที Provider ID ตั้งที่หน้าเดียวกันได้ ค่าที่บันทึกบนเว็บใช้แทน `PROVIDER_ID_*`
+ช่องที่เว้นว่างใช้ค่าของเซิร์ฟเวอร์ ปิดช่องทางสุดท้ายที่ใช้งานได้จากเว็บไม่ได้
+
+## 4. การทำงาน
+
+- ThaID หาบุคลากรสถานะปฏิบัติงานด้วยเลขบัตรประชาชน ไม่ต้องผูกบัญชี เลขบัตรไม่ถูกเก็บ ไม่ลง log หรือ audit (audit `identity.thaid_login` มีแค่ `stage`)
+- คนที่เข้า Provider ID แล้วไม่พบเลขบัตรตรงกัน (รอผูกบัญชี) กด "ยืนยันด้วย ThaID" ระบบผูก Provider ID นั้นกับบุคลากรที่ ThaID ยืนยันทันที
+  (audit `identity.provider_link` `method: thaid`)
+- เมื่อ ThaID หรือ Provider ID พร้อมใช้ ช่องรหัสผ่านปิดอยู่ (ดูหัวข้อด้านบน)
+
+| อาการ | สาเหตุและวิธีแก้ |
+|---|---|
+| ไม่มีปุ่ม ThaID | ยังตั้งค่าไม่ครบ ปิดอยู่ หรือไม่มีกุญแจเลขบัตรประชาชน |
+| "ไม่พบเลขบัตรประชาชนนี้ในทะเบียนบุคลากร" | เลขบัตรในทะเบียน HR ไม่ตรงหรือยังไม่มีบุคลากรคนนี้ ให้แก้ที่งานบุคคล |
+| "ระบบ ThaID ไม่พร้อมใช้งาน" | container เรียก DOPA ไม่ถึง หรือ DOPA ขัดข้อง ดู log `thaid sign-in failed` |
+| "เข้าสู่ระบบด้วย ThaID ไม่สำเร็จ" | เกิน 10 นาที Client Secret ไม่ตรง หรือ Redirect URI ไม่ได้ลงทะเบียน ดู audit `identity.thaid_login` ช่อง `stage` |
+| หน้าตั้งค่าบอกว่าเก็บ Secret ไม่ได้ | ยังไม่ได้ทำข้อ 2 |
