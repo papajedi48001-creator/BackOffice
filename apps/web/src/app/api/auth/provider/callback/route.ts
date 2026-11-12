@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { AuditService, DatabaseAuditRepository, ProviderIdError } from '@backoffice/core';
 import { getSharedDatabase } from '../../../../../lib/database';
 import { externalLoginService, openFlow, providerCookieOptions, providerIdClient, providerFlowCookie, providerFlowPath, providerSsoConfig, providerTicketCookie } from '../../../../../lib/provider-sso';
-import { sessionCookieName, sessionCookieOptions, sessionService, startSession } from '../../../../../lib/session';
+import { afterSignInPath } from '../../../../../lib/after-sign-in';
+import { sessionCookieName, sessionCookieOptions, startSession } from '../../../../../lib/session';
 
 type Outcome = 'unavailable' | 'failed' | 'inactive';
 const unknownTarget = '00000000-0000-0000-0000-000000000000';
@@ -65,11 +66,7 @@ export async function GET(request: Request): Promise<Response> {
       return response;
     }
     const session = await startSession(result.personId);
-    const sessions = sessionService(database);
-    const mustChange = await sessions.pendingPasswordChange(session.token);
-    // A person with several roles picks one before anything else, as after a password sign-in.
-    const roleChoice = !mustChange && (await sessions.resolve(session.token))?.roleSelectionRequired === true;
-    const response = NextResponse.redirect(publicUrl(mustChange ? '/change-password' : roleChoice ? '/choose-role' : '/dashboard', request, config.redirectUri), 303);
+    const response = NextResponse.redirect(publicUrl(await afterSignInPath(database, session.token), request, config.redirectUri), 303);
     response.cookies.set(providerFlowCookie, '', { ...providerCookieOptions(providerFlowPath), maxAge: 0 });
     response.cookies.set(sessionCookieName, session.token, sessionCookieOptions(session.maxAgeSeconds));
     return response;
