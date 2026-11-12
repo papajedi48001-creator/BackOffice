@@ -762,7 +762,10 @@ h2.chat-window-title { cursor: default; }
   /* One window at a time on a phone: the newest. */
   .chat-dock > .chat-window:not(:last-child) { display: none; }
 }
-@media (prefers-reduced-motion: reduce) { .chat-launcher { transition: none; } .chat-launcher:hover { transform: none; } }
+/* Unread chat: a soft ring pulses around the launcher until it is read. */
+.chat-launcher.has-unread { animation: chat-pulse 1.8s ease-out infinite; }
+@keyframes chat-pulse { 0% { box-shadow: var(--shadow-md), 0 0 0 0 color-mix(in srgb, var(--alert-count) 45%, transparent); } 70% { box-shadow: var(--shadow-md), 0 0 0 14px transparent; } 100% { box-shadow: var(--shadow-md), 0 0 0 0 transparent; } }
+@media (prefers-reduced-motion: reduce) { .chat-launcher { transition: none; } .chat-launcher:hover { transform: none; } .chat-launcher.has-unread { animation: none; } }
 
 /* เชื่อมต่อ LINE: the code is read off the screen and typed on a phone. */
 .line-link-code strong { display: inline-block; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1.75rem; letter-spacing: 0.12em; padding: 0.35rem 0.75rem; border: 1px dashed var(--line); border-radius: 8px; }

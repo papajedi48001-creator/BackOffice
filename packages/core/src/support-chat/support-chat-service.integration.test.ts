@@ -107,6 +107,20 @@ describeWithDatabase('SupportChatService against MariaDB', () => {
     await expect(opener(person(bob))).resolves.toBe(false);
   });
 
+  it('reports the live state the stream watches: counts, newest time and the waiting conversation, never text', async () => {
+    const [conversation] = await database.query<{ id: string }>('SELECT id FROM support_conversation WHERE person_id = ?', [alice]);
+    const before = await service.liveState(person(alice));
+    expect(before).toMatchObject({ unread: 0, conversationId: conversation!.id });
+    await service.sendAsAdmin(admin(adminId), conversation!.id, { body: 'ตอบอีกครั้ง' });
+    const after = await service.liveState(person(alice));
+    expect(after.unread).toBe(1);
+    expect(after.lastMessageAt! > before.lastMessageAt!).toBe(true);
+    expect(JSON.stringify(after)).not.toContain('ตอบอีกครั้ง');
+    await service.sendAsPerson(person(alice), { body: 'ขอบคุณครับ' });
+    expect((await service.liveState(admin(adminId))).conversationId).toBe(conversation!.id);
+    await expect(service.liveState(person(bob))).resolves.toEqual({ unread: 0, lastMessageAt: null, conversationId: null });
+  });
+
   it('gives a person with no conversation an empty chat', async () => {
     await expect(service.myMessages(person(bob))).resolves.toEqual([]);
     await expect(service.unreadCount(person(bob))).resolves.toBe(0);

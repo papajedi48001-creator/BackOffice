@@ -8,7 +8,8 @@ import { formatBangkokDateTime } from '../lib/bangkok-time';
 /** Where one chat window reads, sends and marks read: the person's own chat or, for ผู้ดูแลระบบ, one conversation. */
 export interface ChatEndpoints { load: string; send: string; read: string; }
 
-const POLL_MS = 5000;
+// Fallback while the live stream is down; with it, the window reloads on each stream change instead.
+const POLL_MS = 15_000;
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
@@ -20,9 +21,10 @@ function imageError(file: File): string | null {
 
 /**
  * One docked chat window (not a modal): it closes or folds only from its own × and – buttons, never on Esc or a click
- * elsewhere. While unfolded it fetches new messages every 5 seconds and marks them read.
+ * elsewhere. While unfolded it reloads whenever the live stream says the chat changed (`refreshKey`), or every 15 seconds
+ * while the stream is down, and marks what it shows read. A new message for us (`alertKey`) unfolds it.
  */
-export function SupportChatWindow({ title, endpoints, images, onClose, onRead }: { title: string; endpoints: ChatEndpoints; images: boolean; onClose(): void; onRead?(): void }) {
+export function SupportChatWindow({ title, endpoints, images, live = false, refreshKey = 0, alertKey = 0, onClose, onRead }: { title: string; endpoints: ChatEndpoints; images: boolean; live?: boolean; refreshKey?: number; alertKey?: number; onClose(): void; onRead?(): void }) {
   const [messages, setMessages] = useState<SupportMessage[] | null>(null);
   const [folded, setFolded] = useState(false);
   const [text, setText] = useState('');
@@ -51,10 +53,16 @@ export function SupportChatWindow({ title, endpoints, images, onClose, onRead }:
   useEffect(() => {
     if (folded) return;
     void load();
+  }, [folded, load, refreshKey]);
+
+  useEffect(() => {
+    if (folded || live) return;
     // A hidden tab skips its turn; the next visible one catches up.
     const timer = setInterval(() => { if (!document.hidden) void load(); }, POLL_MS);
     return () => clearInterval(timer);
-  }, [folded, load]);
+  }, [folded, live, load]);
+
+  useEffect(() => { if (alertKey > 0) setFolded(false); }, [alertKey]);
 
   useEffect(() => { if (list.current) list.current.scrollTop = list.current.scrollHeight; }, [messages?.length]);
   useEffect(() => () => { if (image) URL.revokeObjectURL(image.url); }, [image]);

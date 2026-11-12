@@ -1,6 +1,8 @@
 {$PUBLIC_HOSTNAME} {
   tls internal
-  encode zstd gzip
+  # The live chat stream (Server-Sent Events) must not be compressed: compression holds events in a buffer.
+  @compressible not path /api/support-chat/stream
+  encode @compressible zstd gzip
 
   header {
     Strict-Transport-Security "max-age=31536000; includeSubDomains"

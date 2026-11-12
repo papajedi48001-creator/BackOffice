@@ -3,14 +3,16 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   readSession: vi.fn(), getSharedDatabase: vi.fn(), enabled: vi.fn(), upload: vi.fn(), open: vi.fn(),
+  notify: vi.fn(), liveState: vi.fn(),
   sendAsPerson: vi.fn(), sendAsAdmin: vi.fn(), myMessages: vi.fn(), adminMessages: vi.fn(), adminInbox: vi.fn(), markReadByPerson: vi.fn(), markReadByAdmin: vi.fn(), unreadCount: vi.fn()
 }));
 vi.mock('../../../lib/session', () => ({ readSession: mocks.readSession }));
 vi.mock('../../../lib/database', () => ({ getSharedDatabase: mocks.getSharedDatabase }));
 vi.mock('../../../lib/attachments', async (importOriginal) => ({ ...await importOriginal<typeof import('../../../lib/attachments')>(), attachmentsEnabled: mocks.enabled, attachmentService: () => ({ uploadAttachment: mocks.upload, openAttachment: mocks.open }) }));
+vi.mock('../../../lib/chat-stream', async (importOriginal) => ({ ...await importOriginal<typeof import('../../../lib/chat-stream')>(), notifyChatChanged: mocks.notify }));
 vi.mock('@backoffice/core', async (importOriginal) => ({
   ...await importOriginal<typeof import('@backoffice/core')>(),
-  SupportChatService: class { sendAsPerson = mocks.sendAsPerson; sendAsAdmin = mocks.sendAsAdmin; myMessages = mocks.myMessages; adminMessages = mocks.adminMessages; adminInbox = mocks.adminInbox; markReadByPerson = mocks.markReadByPerson; markReadByAdmin = mocks.markReadByAdmin; unreadCount = mocks.unreadCount; }
+  SupportChatService: class { sendAsPerson = mocks.sendAsPerson; sendAsAdmin = mocks.sendAsAdmin; myMessages = mocks.myMessages; adminMessages = mocks.adminMessages; adminInbox = mocks.adminInbox; markReadByPerson = mocks.markReadByPerson; markReadByAdmin = mocks.markReadByAdmin; unreadCount = mocks.unreadCount; liveState = mocks.liveState; }
 }));
 
 import { GET as SUMMARY } from './summary/route';
@@ -22,6 +24,7 @@ import { GET as CONVERSATION } from './conversations/[conversationId]/route';
 import { POST as SEND_ADMIN } from './conversations/[conversationId]/messages/route';
 import { POST as UPLOAD } from './images/route';
 import { GET as IMAGE } from './images/[attachmentId]/route';
+import { GET as STREAM } from './stream/route';
 
 const staff = { authenticated: true, personId: 'person-a', roles: [], dataOwnerModules: [] };
 const admin = { authenticated: true, personId: 'person-admin', roles: [{ name: 'admin', organizationId: null }], dataOwnerModules: [] };
@@ -110,5 +113,36 @@ describe('support chat API', () => {
     expect(mocks.open).toHaveBeenCalledWith({ attachmentId: conversationId, actorPersonId: 'person-a' }, expect.anything(), { recordDownload: false });
     mocks.open.mockRejectedValue(new Error('NOT_FOUND'));
     expect((await IMAGE(get(), params({ attachmentId: conversationId }))).status).toBe(404);
+  });
+
+  it('wakes open live streams after a message is sent, and not after a refused one', async () => {
+    ready();
+    mocks.sendAsPerson.mockResolvedValueOnce({ ok: true, id: 'm1', conversationId }).mockResolvedValueOnce({ ok: false, code: 'INVALID_ATTACHMENT' });
+    await SEND_MINE(json({ body: 'hi' }));
+    expect(mocks.notify).toHaveBeenCalledTimes(1);
+    await SEND_MINE(json({ attachmentId: conversationId }));
+    expect(mocks.notify).toHaveBeenCalledTimes(1);
+    ready(admin);
+    mocks.sendAsAdmin.mockResolvedValue({ ok: true, id: 'm2', conversationId });
+    await SEND_ADMIN(json({ body: 'ok' }), params({ conversationId }));
+    expect(mocks.notify).toHaveBeenCalledTimes(2);
+  });
+
+  it('streams the live chat state as Server-Sent Events that proxies do not buffer', async () => {
+    mocks.readSession.mockResolvedValue(null);
+    expect((await STREAM(get())).status).toBe(401);
+    ready();
+    mocks.liveState.mockResolvedValue({ unread: 1, lastMessageAt: '2026-11-12T14:00:00.000000Z', conversationId });
+    const controller = new AbortController();
+    const response = await STREAM(new Request('http://localhost/api/support-chat/stream', { signal: controller.signal }));
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('text/event-stream; charset=utf-8');
+    expect(response.headers.get('cache-control')).toBe('no-cache, no-transform');
+    expect(response.headers.get('x-accel-buffering')).toBe('no');
+    const reader = response.body!.getReader();
+    const { value } = await reader.read();
+    expect(new TextDecoder().decode(value)).toContain('"unread":1');
+    expect(mocks.liveState).toHaveBeenCalledWith(staff);
+    await reader.cancel();
   });
 });
