@@ -99,6 +99,9 @@ PROVIDER_SSO_ISSUER=https://aut-waritch-hosp.moph.go.th
 ทันทีโดยไม่ตรวจบัญชี เพื่อไม่ให้ถูกเดารหัสผ่านจากอินเทอร์เน็ต (spec `2026-11-12-thaid-sign-in-design.md` ข้อ 4)
 ผู้ที่เข้าระบบอยู่แล้วยังเปลี่ยนรหัสผ่านได้ที่ `/change-password`
 
+ถ้ามีค่า Client ID, Redirect URI หรือ secret ของ Provider ID อยู่แต่ใช้ไม่ได้ (เช่น อ่านไฟล์ secret ไม่ได้) ช่องรหัสผ่านยังปิดอยู่ ไม่เปิดเอง
+และ log เว็บมีบรรทัด `password sign-in closed: Provider ID settings are present but incomplete` ให้แก้ค่าหรือใช้การเปิดชั่วคราวด้านล่าง
+
 ### เปิดรหัสผ่านชั่วคราว (ฉุกเฉิน)
 
 ใช้เมื่อ MOPH ID หรือ Provider ID ล่มและต้องมีคนเข้าระบบ เจ้าของเครื่องเพิ่ม `PASSWORD_SIGN_IN=on` ในไฟล์ env ที่ใช้กับ

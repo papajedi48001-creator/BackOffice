@@ -6,8 +6,11 @@ import { t } from '@backoffice/i18n';
 import { BrandLogo } from '../../components/brand-logo';
 import { getSharedDatabase } from '../../lib/database';
 import { mciKindLabel, mciText } from '../../lib/mci-labels';
+import { isPasswordSignInOpen } from '../../lib/password-sign-in';
+import { providerSsoEnabled } from '../../lib/provider-sso';
 import { readSession } from '../../lib/session';
 import { LocalSignInForm } from '../local-sign-in-form';
+import { ProviderSignIn } from '../provider-sign-in';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,7 +31,7 @@ export default async function MciLandingPage() {
         <span>{mciKindLabel(incident.kind)}: {incident.title}</span>
         <span>เข้าสู่ระบบแล้วกด “{mciText.checkIn}”</span>
       </div> : <p className="mci-incident-banner mci-incident-none" role="status">{mciText.noIncident}</p>}
-      <LocalSignInForm next="/mci/ops" />
+      {isPasswordSignInOpen() ? <LocalSignInForm next="/mci/ops" /> : <ProviderSignIn enabled={providerSsoEnabled()} outcome={undefined} passwordOpen={false} />}
       <p><Link href="/mci/board">{mciText.boardLink}</Link></p>
     </div>
   </main>;
