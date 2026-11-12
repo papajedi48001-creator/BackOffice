@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 export default async function AdminProviderLinksPage() {
   const context = await adminPage();
   if (!context.ok) return <AdminMessage titleKey="adminProviderTitle" reason={context.reason} />;
-  const config = providerSsoConfig();
+  const config = await providerSsoConfig();
   if (!config) return <section className="admin-page"><h2>{t('adminProviderTitle')}</h2><p className="admin-note">{t('adminProviderNotConfigured')}</p></section>;
   const repository = new DatabaseExternalIdentityRepository(context.database);
   const [pending, links] = await Promise.all([repository.listPending(), repository.listLinks(config.apiUrl)]);

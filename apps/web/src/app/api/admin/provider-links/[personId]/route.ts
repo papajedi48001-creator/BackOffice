@@ -6,7 +6,7 @@ import { adminResult, readInput, withAdmin } from '../../admin-route';
 /** ยกเลิกการผูกบัญชี Provider ID: ผู้ดูแลระบบ only, with a reason; the person's sessions end too. */
 export async function DELETE(request: Request, { params }: { params: Promise<{ personId: string }> }): Promise<Response> {
   return withAdmin(request, async (session, database) => {
-    const config = providerSsoConfig();
+    const config = await providerSsoConfig();
     if (!config) return NextResponse.json({ error: 'NOT_FOUND' }, { status: 404 });
     const { personId } = await params;
     const input = await readInput(request, providerUnlinkInputSchema);

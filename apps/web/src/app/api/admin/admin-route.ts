@@ -26,7 +26,7 @@ export { forbidden };
 export const adminService = (database: Database) => new AdminService(database);
 export const adminQueries = (database: Database) => new AdminQueries(database);
 
-const statusByCode: Record<string, number> = { NOT_FOUND: 404, LAST_ADMIN: 409, MODULE_LOCKED: 409, PERSON_NOT_ACTIVE: 409, ALREADY_LINKED: 409 };
+const statusByCode: Record<string, number> = { NOT_FOUND: 404, LAST_ADMIN: 409, MODULE_LOCKED: 409, PERSON_NOT_ACTIVE: 409, ALREADY_LINKED: 409, LAST_SIGN_IN_ROUTE: 409 };
 
 export function adminResult(result: { ok: true } | { ok: false; code: string }, okStatus = 200): Response {
   if (result.ok) return NextResponse.json(result, { status: okStatus });

@@ -11,6 +11,9 @@ import { providerSsoEnabled } from '../../lib/provider-sso';
 import { readSession } from '../../lib/session';
 import { LocalSignInForm } from '../local-sign-in-form';
 import { ProviderSignIn } from '../provider-sign-in';
+import { ThaidSignIn } from '../thaid-sign-in';
+import { getNationalIdProtector } from '../../lib/national-id';
+import { thaidConfig } from '../../lib/thaid';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +23,8 @@ export default async function MciLandingPage() {
   if (session?.authenticated) redirect('/mci/ops');
   const database = getSharedDatabase();
   const incident = database ? await new MciQueries(database).openIncident() : null;
+  const passwordOpen = await isPasswordSignInOpen();
+  const thaidEnabled = !passwordOpen && (await thaidConfig()) !== null && getNationalIdProtector() !== null;
   return <main className="welcome-shell mci-landing" data-module="mass-casualty">
     <div className="mci-landing-card">
       <header className="mci-landing-header">
@@ -31,7 +36,10 @@ export default async function MciLandingPage() {
         <span>{mciKindLabel(incident.kind)}: {incident.title}</span>
         <span>เข้าสู่ระบบแล้วกด “{mciText.checkIn}”</span>
       </div> : <p className="mci-incident-banner mci-incident-none" role="status">{mciText.noIncident}</p>}
-      {isPasswordSignInOpen() ? <LocalSignInForm next="/mci/ops" /> : <ProviderSignIn enabled={providerSsoEnabled()} outcome={undefined} passwordOpen={false} />}
+      {passwordOpen ? <LocalSignInForm next="/mci/ops" /> : <>
+        <ThaidSignIn enabled={thaidEnabled} outcome={undefined} />
+        <ProviderSignIn enabled={await providerSsoEnabled()} outcome={undefined} passwordOpen={false} divider={thaidEnabled} />
+      </>}
       <p><Link href="/mci/board">{mciText.boardLink}</Link></p>
     </div>
   </main>;

@@ -5,13 +5,13 @@ const messages: Record<string, string> = {
 };
 
 /** The second way in: a link (not a form) because the start route redirects the browser to the portal. */
-export function ProviderSignIn({ enabled, outcome, passwordOpen = true }: { enabled: boolean; outcome: string | undefined; passwordOpen?: boolean }) {
+export function ProviderSignIn({ enabled, outcome, passwordOpen = true, divider = passwordOpen }: { enabled: boolean; outcome: string | undefined; passwordOpen?: boolean; divider?: boolean }) {
   if (!enabled) return null;
   const message = outcome === 'unavailable' && !passwordOpen ? 'ระบบ Provider ID ไม่พร้อมใช้งาน กรุณาลองใหม่ภายหลัง'
     : outcome && Object.hasOwn(messages, outcome) ? messages[outcome] : null;
   return (
     <div className="provider-sign-in">
-      {passwordOpen ? <p className="provider-sign-in-divider"><span>หรือ</span></p> : null}
+      {divider ? <p className="provider-sign-in-divider"><span>หรือ</span></p> : null}
       {message && <p className="form-error" role="alert">{message}</p>}
       <a className="provider-sign-in-button" href="/api/auth/provider/start">
         {/* The ministry's own Provider ID mark, as on its sign-in buttons; the text below names the link. */}

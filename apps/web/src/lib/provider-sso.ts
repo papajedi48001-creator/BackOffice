@@ -3,17 +3,12 @@ import { AuditService, DatabaseAuditRepository, DatabaseExternalIdentityReposito
 import type { Database } from '@backoffice/db';
 import { getNationalIdProtector } from './national-id';
 import { readRuntimeValue } from './runtime-env';
+import { signInRoutes } from './sign-in-settings';
 
 export const providerFlowCookie = 'backoffice_provider_flow';
 export const providerTicketCookie = 'backoffice_provider_ticket';
 export const providerFlowPath = '/api/auth/provider';
 export const providerCookieSeconds = 600;
-
-/** MOPH ID and Provider ID base URLs per environment, as in the radius-server portal. */
-const environments: Record<string, { healthUrl: string; apiUrl: string }> = {
-  prd: { healthUrl: 'https://moph.id.th', apiUrl: 'https://provider.id.th' },
-  uat: { healthUrl: 'https://uat-moph.id.th', apiUrl: 'https://uat-provider.id.th' }
-};
 
 function absoluteUrl(value: string | undefined): string | null {
   if (!value) return null;
@@ -23,26 +18,12 @@ function absoluteUrl(value: string | undefined): string | null {
   } catch { return null; }
 }
 
-/** เข้าสู่ระบบด้วย Provider ID is on only when both clients, both secrets and the redirect URI are set. */
-export function providerSsoConfig(): ProviderIdConfig | null {
-  let healthClientSecret: string | undefined;
-  let providerSecretKey: string | undefined;
-  try {
-    healthClientSecret = readRuntimeValue('PROVIDER_ID_HEALTH_CLIENT_SECRET');
-    providerSecretKey = readRuntimeValue('PROVIDER_ID_SECRET_KEY');
-  } catch { return null; }
-  const environment = environments[readRuntimeValue('PROVIDER_ID_ENV') || 'prd'];
-  if (!environment) return null;
-  const healthUrl = readRuntimeValue('PROVIDER_ID_HEALTH_URL') ? absoluteUrl(readRuntimeValue('PROVIDER_ID_HEALTH_URL')) : environment.healthUrl;
-  const apiUrl = readRuntimeValue('PROVIDER_ID_API_URL') ? absoluteUrl(readRuntimeValue('PROVIDER_ID_API_URL')) : environment.apiUrl;
-  const redirectUri = absoluteUrl(readRuntimeValue('PROVIDER_ID_REDIRECT_URI'));
-  const healthClientId = readRuntimeValue('PROVIDER_ID_HEALTH_CLIENT_ID');
-  const providerClientId = readRuntimeValue('PROVIDER_ID_CLIENT_ID');
-  if (!healthUrl || !apiUrl || !redirectUri || !healthClientId || !providerClientId || !healthClientSecret || !providerSecretKey) return null;
-  return { healthUrl, apiUrl, healthClientId, healthClientSecret, providerClientId, providerSecretKey, redirectUri };
+/** เข้าสู่ระบบด้วย Provider ID: from ผู้ดูแลระบบ > การเข้าสู่ระบบ, else the PROVIDER_ID_* environment; null until both clients, both secrets and the redirect URI are set. */
+export async function providerSsoConfig(): Promise<ProviderIdConfig | null> {
+  return (await signInRoutes()).providerId;
 }
 
-export const providerSsoEnabled = (): boolean => providerSsoConfig() !== null;
+export const providerSsoEnabled = async (): Promise<boolean> => (await providerSsoConfig()) !== null;
 
 export const providerIdClient = (config: ProviderIdConfig): ProviderIdClient => new ProviderIdClient(config);
 

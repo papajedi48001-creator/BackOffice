@@ -103,6 +103,25 @@ describe('ExternalLoginService', () => {
     await expect(service.adminLink('admin-1', 'pending-1', 'person-2')).resolves.toEqual({ ok: false, code: 'PERSON_NOT_ACTIVE' });
   });
 
+  it('linkPendingToPerson links the pending Provider ID login behind a live ticket to the person ThaID confirmed', async () => {
+    const { repository, service } = await setup();
+    const result = await service.resolve(identity);
+    const ticket = (result as { ticket: string }).ticket;
+    await expect(service.linkPendingToPerson(ticket, 'person-1')).resolves.toEqual({ ok: true });
+    expect(repository.links).toEqual([expect.objectContaining({ personId: 'person-1', subject: identity.subject, linkedByPersonId: null })]);
+    expect(repository.audits).toContainEqual(expect.objectContaining({ action: 'identity.provider_link', actorPersonId: 'person-1', targetId: 'person-1', metadata: { method: 'thaid' } }));
+    await expect(service.resolve(identity)).resolves.toEqual({ kind: 'linked', personId: 'person-1' });
+  });
+
+  it('linkPendingToPerson refuses an unknown ticket, an inactive person and a person linked to another account', async () => {
+    const { repository, service } = await setup({ active: ['person-1'] });
+    const ticket = ((await service.resolve(identity)) as { ticket: string }).ticket;
+    await expect(service.linkPendingToPerson('no-such-ticket', 'person-1')).resolves.toEqual({ ok: false, code: 'NOT_FOUND' });
+    await expect(service.linkPendingToPerson(ticket, 'person-2')).resolves.toEqual({ ok: false, code: 'PERSON_NOT_ACTIVE' });
+    await repository.link({ personId: 'person-1', issuer, subject: 'member-other', displayName: null, linkedByPersonId: null, audit: {} as AuditInput });
+    await expect(service.linkPendingToPerson(ticket, 'person-1')).resolves.toEqual({ ok: false, code: 'ALREADY_LINKED' });
+  });
+
   it('adminUnlink keeps the reason out of audit metadata', async () => {
     const { repository, service } = await setup();
     await repository.link({ personId: 'person-1', issuer, subject: 'member-1', displayName: null, linkedByPersonId: null, audit: {} as AuditInput });

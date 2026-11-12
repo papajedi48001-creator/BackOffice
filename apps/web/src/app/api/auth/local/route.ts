@@ -10,7 +10,7 @@ function failureCode(error: unknown): string {
 
 export async function POST(request: Request): Promise<Response> {
   // Closed before the body or the account is read, so no lockout counter moves and nothing about the account leaks.
-  if (!isPasswordSignInOpen()) return NextResponse.json({ error: 'password_sign_in_off' }, { status: 403 });
+  if (!(await isPasswordSignInOpen())) return NextResponse.json({ error: 'password_sign_in_off' }, { status: 403 });
   const database = getSharedDatabase();
   if (!database) return NextResponse.json({ error: 'service_unavailable' }, { status: 503 });
   try {
