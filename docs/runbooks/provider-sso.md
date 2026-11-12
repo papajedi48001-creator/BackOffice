@@ -93,9 +93,22 @@ PROVIDER_SSO_ISSUER=https://aut-waritch-hosp.moph.go.th
 - การผูกบัญชีเก็บแยกตามสภาพแวดล้อม เปลี่ยน `PROVIDER_ID_ENV` จาก `uat` เป็น `prd` แล้วต้องผูกใหม่ การผูกที่เคยทำผ่าน portal ของ radius-server ใช้ไม่ได้แล้ว
 - เครื่องใช้ร่วม: ถ้า MOPH ID ยังมี session ค้างอยู่ คนถัดไปที่กดปุ่มอาจเข้าเป็นเจ้าของ session นั้น ให้ออกจากระบบ MOPH ID ทุกครั้งบนเครื่องใช้ร่วม
 
-## ปิดทันที
+## การเข้าด้วยชื่อผู้ใช้และรหัสผ่านถูกปิด
 
-ลบค่า `PROVIDER_ID_*` หรือเอา `-f infra/compose/docker-compose.provider-sso.yml` ออก แล้วเปิดเว็บใหม่ ปุ่มหาย ทุกคนใช้ชื่อผู้ใช้และรหัสผ่านตามเดิม การผูกบัญชีที่มีอยู่ยังเก็บไว้
+เมื่อ Provider ID พร้อมใช้ (ตั้งค่าครบ) หน้าเข้าสู่ระบบไม่มีช่องชื่อผู้ใช้และรหัสผ่าน และ `POST /api/auth/local` ตอบ 403 `password_sign_in_off`
+ทันทีโดยไม่ตรวจบัญชี เพื่อไม่ให้ถูกเดารหัสผ่านจากอินเทอร์เน็ต (spec `2026-11-12-thaid-sign-in-design.md` ข้อ 4)
+ผู้ที่เข้าระบบอยู่แล้วยังเปลี่ยนรหัสผ่านได้ที่ `/change-password`
+
+### เปิดรหัสผ่านชั่วคราว (ฉุกเฉิน)
+
+ใช้เมื่อ MOPH ID หรือ Provider ID ล่มและต้องมีคนเข้าระบบ เจ้าของเครื่องเพิ่ม `PASSWORD_SIGN_IN=on` ในไฟล์ env ที่ใช้กับ
+`docker-compose.provider-sso.yml` แล้ว deploy ใหม่ตาม `deploy.md` เมื่อบริการกลับมา ให้ลบบรรทัดนั้นแล้ว deploy อีกครั้ง
+ค่าอื่นนอกจาก `on` (เช่น `1` หรือ `true`) ไม่เปิด
+
+## ปิด Provider ID ทันที
+
+ลบค่า `PROVIDER_ID_*` หรือเอา `-f infra/compose/docker-compose.provider-sso.yml` ออก แล้วเปิดเว็บใหม่ ปุ่มหาย และช่องชื่อผู้ใช้กับรหัสผ่านกลับมา
+การผูกบัญชีที่มีอยู่ยังเก็บไว้
 
 ## ปัญหาที่พบบ่อย
 
@@ -103,5 +116,6 @@ PROVIDER_SSO_ISSUER=https://aut-waritch-hosp.moph.go.th
 |---|---|
 | ไม่มีปุ่ม Provider ID | ตั้งค่าไม่ครบ อ่านไฟล์ secret ไม่ได้ หรือ `PROVIDER_ID_ENV` ไม่ใช่ `prd`/`uat` |
 | MOPH ID ตอบว่า redirect_uri ไม่ถูกต้อง | ยังไม่ได้ลงทะเบียน callback ในข้อ 1 หรือ `PROVIDER_ID_REDIRECT_URI` ไม่ตรง |
+| ไม่มีช่องรหัสผ่านที่หน้าเข้าสู่ระบบ | ตั้งใจปิดไว้เมื่อ Provider ID พร้อมใช้ ดูหัวข้อเปิดรหัสผ่านชั่วคราว |
 | "ระบบ Provider ID ไม่พร้อมใช้งาน" | container เรียก `moph.id.th` หรือ `provider.id.th` ไม่ถึง หรือบริการของกระทรวงขัดข้อง ดู log เว็บบรรทัด `provider sign-in failed` |
 | "เข้าสู่ระบบด้วย Provider ID ไม่สำเร็จ" | ใช้เกิน 10 นาที เปิดสองแท็บพร้อมกัน code ถูกใช้แล้ว secret ไม่ตรง หรือบัญชีไม่มี Provider ID ให้กดปุ่มใหม่ ดู audit `identity.provider_login` ช่อง `stage` |
