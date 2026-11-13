@@ -23,7 +23,7 @@ export function DentalDashboard({ start, end, group, period, presets, showConnec
   return <section className="money-dental">
     <h2>Dashboard ลูกหนี้ทันตกรรม</h2>
     <div className="money-filter">
-      <DentalDateFilter start={start} end={end} group={group} period={period} />
+      <DentalDateFilter key={`${start}|${end}`} start={start} end={end} group={group} period={period} />
       <nav className="money-presets" aria-label="ช่วงวันที่ด่วน">{presets.map((preset) => <Link key={preset.label} className={`money-chip-link${preset.start === start && preset.end === end ? ' is-active' : ''}`} aria-current={preset.start === start && preset.end === end ? 'true' : undefined} href={link({ start: preset.start, end: preset.end })}>{preset.label}</Link>)}</nav>
       {outcome.kind === 'data' && outcome.rows.length > 0 && <a className="button-secondary money-export" href={`/api/money/dental/export?${new URLSearchParams({ start, end }).toString()}`}>ดาวน์โหลด CSV</a>}
     </div>

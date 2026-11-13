@@ -22,6 +22,10 @@ describe('dentalRange', () => {
     expect(dentalRange({ start: '2026-02-30', end: '2026-03-01' }, today)).toMatchObject({ ok: false, code: 'INVALID_DATE' });
     expect(dentalRange({ start: '13/11/2569', end: '2026-11-30' }, today)).toMatchObject({ ok: false, code: 'INVALID_DATE' });
   });
+  it('refuses a Buddhist-era year typed into the URL instead of querying year 3112', () => {
+    expect(dentalRange({ start: '2569-01-01', end: '2569-01-31' }, today)).toMatchObject({ ok: false, code: 'INVALID_DATE' });
+    expect(dentalRange({ start: '2026-01-01', end: '2569-01-31' }, today)).toMatchObject({ ok: false, code: 'INVALID_DATE' });
+  });
   it('fills a missing side with the current month', () => {
     expect(dentalRange({ start: '2026-11-05' }, today)).toEqual({ ok: true, start: '2026-11-05', end: '2026-11-30' });
   });

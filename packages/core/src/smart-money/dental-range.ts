@@ -7,8 +7,8 @@ const DAY = 86_400_000;
 const iso = /^\d{4}-\d{2}-\d{2}$/;
 const toTime = (date: string) => Date.parse(`${date}T00:00:00Z`);
 const format = (time: number) => new Date(time).toISOString().slice(0, 10);
-/** A real calendar date in `YYYY-MM-DD`. */
-const isDate = (value: string) => iso.test(value) && !Number.isNaN(toTime(value)) && format(toTime(value)) === value;
+/** A real Gregorian calendar date in `YYYY-MM-DD`; a Buddhist-era year (2400 or later, e.g. 2569) is refused, since HOSxP stores ค.ศ. */
+const isDate = (value: string) => iso.test(value) && Number(value.slice(0, 4)) < 2400 && !Number.isNaN(toTime(value)) && format(toTime(value)) === value;
 
 const monthStart = (year: number, month: number) => format(Date.UTC(year, month, 1));
 const monthEnd = (year: number, month: number) => format(Date.UTC(year, month + 1, 0));

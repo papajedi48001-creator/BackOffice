@@ -39,6 +39,12 @@ describe('DentalDashboard', () => {
     expect(screen.getByRole('link', { name: 'ดาวน์โหลด CSV' })).toHaveAttribute('href', '/api/money/dental/export?start=2026-10-01&end=2026-11-30');
   });
 
+  it('shows the new dates in the date boxes after a preset changes the range', () => {
+    const { rerender } = render(<DentalDashboard {...base} />);
+    rerender(<DentalDashboard {...base} start="2026-09-01" end="2026-09-30" />);
+    expect(screen.getByLabelText('ตั้งแต่วันที่')).toHaveValue('1 ก.ย. 2569');
+    expect(screen.getByLabelText('ถึงวันที่')).toHaveValue('30 ก.ย. 2569');
+  });
   it('explains a range that is too long without data', () => {
     render(<DentalDashboard {...base} outcome={{ kind: 'range', code: 'RANGE_TOO_LONG' }} />);
     expect(screen.getByRole('alert')).toHaveTextContent('ช่วงวันที่ยาวเกิน 366 วัน');
