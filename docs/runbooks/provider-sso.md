@@ -81,7 +81,7 @@ PROVIDER_SSO_ISSUER=https://aut-waritch-hosp.moph.go.th
 # PROVIDER_SSO_PORTAL_IP=192.168.1.10        # IP ของ portal ใน LAN
 ```
 
-ไม่ต้องมี client secret หรือ redirect URI ของ portal เครื่อง portal ต้องเรียกโฮสต์ Back Office ทาง https ได้ และ web ต้องเรียก `/oidc/jwks` ของ portal ได้
+ไม่ต้องมี client secret หรือ redirect URI ของ portal เครื่อง portal ต้องเรียกโฮสต์ Back Office ทาง https ได้ และ web ต้องเรียก `/.well-known/jwks.json` (หรือ `/oidc/jwks` ของ portal รุ่นเก่า) ของ portal ได้ภายใน 1 วินาที
 ถ้าเรียกไม่ได้ dashboard แสดงรูปการ์ตูนเดิม
 
 ตรวจจากเครื่อง portal: `curl -s -o /dev/null -w '%{http_code}\n' https://<โฮสต์ Back Office>/api/portal/photo` ต้องได้ `401` (ไม่มี token)
