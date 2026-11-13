@@ -137,3 +137,6 @@ export * from './attendance/attendance-settings-service';
 export * from './attendance/device-signature';
 export * from './attendance/device-queries';
 export * from './attendance/device-service';
+export * from './smart-money/money-access';
+export * from './smart-money/money-member-service';
+export * from './smart-money/money-queries';

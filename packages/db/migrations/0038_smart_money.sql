@@ -1,0 +1,2 @@
+CREATE TABLE IF NOT EXISTS money_member (person_id CHAR(36) PRIMARY KEY, created_at DATETIME NOT NULL, created_by CHAR(36) NOT NULL, CONSTRAINT money_member_person_fk FOREIGN KEY (person_id) REFERENCES person(id)) DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS money_member_page (person_id CHAR(36) NOT NULL, page VARCHAR(16) NOT NULL, PRIMARY KEY (person_id, page), CONSTRAINT money_member_page_member_fk FOREIGN KEY (person_id) REFERENCES money_member(person_id) ON DELETE CASCADE) DEFAULT CHARSET=utf8mb4
