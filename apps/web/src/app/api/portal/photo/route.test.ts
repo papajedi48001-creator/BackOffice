@@ -106,4 +106,29 @@ describe('GET /api/portal/photo', () => {
     expect(mocks.photoAttachmentOf).toHaveBeenCalledWith('person-1');
     expect(mocks.open).toHaveBeenCalledWith({ attachmentId: 'att-1', actorPersonId: 'person-1' }, expect.anything(), { recordDownload: false });
   });
+
+  it('answers 404 rather than send a photo over 2 MB or of a type the portal does not take', async () => {
+    ready();
+    mocks.photoAttachmentOf.mockResolvedValue('att-1');
+    mocks.open.mockResolvedValueOnce({ attachment: { id: 'att-1', contentType: 'image/png' }, bytes: new Uint8Array(2 * 1024 * 1024 + 1) });
+    expect((await get()).status).toBe(404);
+    mocks.open.mockResolvedValueOnce({ attachment: { id: 'att-1', contentType: 'application/pdf' }, bytes: new Uint8Array([1]) });
+    expect((await get()).status).toBe(404);
+    mocks.open.mockResolvedValueOnce({ attachment: { id: 'att-1', contentType: 'image/webp' }, bytes: new Uint8Array(2 * 1024 * 1024) });
+    const exact = await get();
+    expect(exact.status).toBe(200);
+    expect(exact.headers.get('content-type')).toBe('image/webp');
+  });
+
+  it('answers 503 within three seconds when the work behind it stalls', async () => {
+    vi.useFakeTimers();
+    try {
+      ready();
+      mocks.verify.mockReturnValue(new Promise(() => undefined));
+      const pending = get();
+      await vi.advanceTimersByTimeAsync(2_500);
+      const response = await pending;
+      expect(response.status).toBe(503);
+    } finally { vi.useRealTimers(); }
+  });
 });

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { MAX_PROFILE_PHOTO_BYTES, profilePhotoContentTypeSchema } from '@backoffice/contracts';
 import { DatabaseExternalIdentityRepository, HrProfileService, OidcError, type PortalRequest } from '@backoffice/core';
 import { attachmentService, attachmentsEnabled } from '../../../../lib/attachments';
 import { getSharedDatabase } from '../../../../lib/database';
@@ -6,6 +7,9 @@ import { portalOidcClient, portalSsoConfig, providerSsoConfig } from '../../../.
 
 /** The JWT `typ` the portal puts on a photo request; an ID token (`typ: JWT`) is never accepted here. */
 const photoRequestType = 'backoffice-photo-request+jwt';
+
+/** The portal waits three seconds before it shows its own picture; answer before that, with 503 if the work behind it stalls. */
+const portalPhotoDeadlineMs = 2_500;
 
 const answer = (error: string, status: number) => NextResponse.json({ error }, { status, headers: { 'cache-control': 'no-store' } });
 
@@ -17,6 +21,14 @@ const answer = (error: string, status: number) => NextResponse.json({ error }, {
  * portal before sign-in went straight to MOPH ID). No browser session is used.
  */
 export async function GET(request: Request): Promise<Response> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<Response>((resolve) => { timer = setTimeout(() => resolve(answer('service_unavailable', 503)), portalPhotoDeadlineMs); });
+  try {
+    return await Promise.race([photoFor(request), deadline]);
+  } finally { clearTimeout(timer); }
+}
+
+async function photoFor(request: Request): Promise<Response> {
   const config = portalSsoConfig();
   if (!config) return answer('not_found', 404);
   const [scheme, token] = (request.headers.get('authorization') ?? '').split(' ');
@@ -41,6 +53,8 @@ export async function GET(request: Request): Promise<Response> {
   try {
     // Not audited per view, like the photo inside Back Office: it loads with every portal dashboard.
     const { attachment, bytes } = await attachmentService(database).openAttachment({ attachmentId: photoId, actorPersonId: link.personId }, { canDownload: async (_input, file) => file.id === photoId }, { recordDownload: false });
+    // Checked again here, not only on upload: the contract promises the portal an image of these types and at most 2 MB.
+    if (!profilePhotoContentTypeSchema.safeParse(attachment.contentType).success || bytes.byteLength > MAX_PROFILE_PHOTO_BYTES) return answer('not_found', 404);
     return new Response(new Blob([new Uint8Array(bytes)]), { status: 200, headers: { 'content-type': attachment.contentType, 'content-length': String(bytes.byteLength), 'x-content-type-options': 'nosniff', 'cache-control': 'no-store' } });
   } catch (error) {
     if (error instanceof Error && error.message === 'NOT_FOUND') return answer('not_found', 404);
