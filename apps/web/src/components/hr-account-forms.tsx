@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { ThaiDateInput } from './thai-date-input';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { genderForPrefix, type Gender } from '@backoffice/contracts';
@@ -103,7 +104,7 @@ export function NewPersonForm({ employmentTypes, units, positions }: { employmen
         {(Object.keys(genderLabelKeys) as Gender[]).map((gender) => <option key={gender} value={gender}>{t(genderLabelKeys[gender])}</option>)}
       </select>
     </label>
-    {text('birthDate', 'hrFieldBirthDate', 10, { type: 'date' })}
+    <label>{t('hrFieldBirthDate')}<ThaiDateInput value={form.birthDate} onChange={(iso) => setForm((current) => ({ ...current, birthDate: iso }))} /></label>
     {text('phone', 'hrFieldPhone', 32, { type: 'tel' })}
     <label>{t('hrFieldEmploymentType')}
       <select value={form.employmentTypeId} onChange={set('employmentTypeId')}>
@@ -111,7 +112,7 @@ export function NewPersonForm({ employmentTypes, units, positions }: { employmen
         {employmentTypes.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}
       </select>
     </label>
-    {text('appointedOn', 'hrFieldAppointedOn', 10, { type: 'date' })}
+    <label>{t('hrFieldAppointedOn')}<ThaiDateInput value={form.appointedOn} onChange={(iso) => setForm((current) => ({ ...current, appointedOn: iso }))} /></label>
     <label>{t('hrFieldPositionTitle')}<input list="new-person-positions" value={form.positionTitle} maxLength={255} onChange={changePosition} /></label>
     <datalist id="new-person-positions">{positions.map((position) => <option key={position.name} value={position.name} />)}</datalist>
     {text('positionLevel', 'hrFieldPositionLevel', 120, { list: 'new-person-levels' })}

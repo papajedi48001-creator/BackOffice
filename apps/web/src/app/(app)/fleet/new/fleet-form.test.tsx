@@ -15,7 +15,7 @@ describe('FleetForm', () => {
   it('moves the return day to the departure day when the departure is picked after it, keeping the return time', () => {
     render(<FleetForm initial={initial} />);
     fireEvent.change(screen.getByLabelText('เวลาออก'), { target: { value: '2026-11-20' } });
-    expect(screen.getByLabelText('เวลากลับ')).toHaveValue('20/11/2569');
+    expect(screen.getByLabelText('เวลากลับ')).toHaveValue('20 พ.ย. 2569');
     expect(screen.getByLabelText('เวลา เวลากลับ')).toHaveValue('12:00');
   });
 

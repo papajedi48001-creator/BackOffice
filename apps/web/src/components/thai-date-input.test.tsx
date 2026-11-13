@@ -9,16 +9,20 @@ function Controlled(props: Partial<Parameters<typeof ThaiDateInput>[0]> & { init
 }
 
 describe('ThaiDateInput', () => {
-  it('shows วัน/เดือน/ปี พ.ศ. and the full Thai date, and gives back ISO', () => {
+  it('shows 9 พ.ย. 2569 and the full Thai date, and gives back ISO', () => {
     const spy = vi.fn();
     render(<Controlled initial="2026-11-09" spy={spy} />);
     const input = screen.getByLabelText('วันที่') as HTMLInputElement;
-    expect(input.value).toBe('09/11/2569');
+    expect(input.value).toBe('9 พ.ย. 2569');
     expect(input.title).toBe('จันทร์ 9 พ.ย. 2569');
     expect(document.getElementById(input.getAttribute('aria-describedby')!)?.dataset.hint).toBe('จันทร์ 9 พ.ย. 2569');
     fireEvent.change(input, { target: { value: '10/11/2569' } });
     expect(spy).toHaveBeenLastCalledWith('2026-11-10');
     expect(screen.getByTestId('iso').textContent).toBe('2026-11-10');
+    // Typed digits stay while typing; leaving the field shows the date the one Thai way.
+    expect(input.value).toBe('10/11/2569');
+    fireEvent.blur(input);
+    expect(input.value).toBe('10 พ.ย. 2569');
   });
   it('opens a calendar with full Thai weekday and month names, greys holidays with their name and refuses them when blocked', () => {
     const spy = vi.fn();
@@ -73,7 +77,7 @@ describe('ThaiDateTimeInput', () => {
     const spy = vi.fn();
     function Host() { const [value, setValue] = useState('2026-11-10T08:00'); return <><label htmlFor="dt">ออกเดินทาง</label><ThaiDateTimeInput id="dt" label="ออกเดินทาง" value={value} onChange={(next) => { setValue(next); spy(next); }} /></>; }
     render(<Host />);
-    expect((screen.getByLabelText('ออกเดินทาง') as HTMLInputElement).value).toBe('10/11/2569');
+    expect((screen.getByLabelText('ออกเดินทาง') as HTMLInputElement).value).toBe('10 พ.ย. 2569');
     fireEvent.change(screen.getByLabelText('เวลา ออกเดินทาง'), { target: { value: '09:15' } });
     expect(spy).toHaveBeenLastCalledWith('2026-11-10T09:15');
     fireEvent.change(screen.getByLabelText('ออกเดินทาง'), { target: { value: '11/11/2569' } });
