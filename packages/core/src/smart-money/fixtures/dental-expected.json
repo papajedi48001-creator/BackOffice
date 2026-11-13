@@ -1,0 +1,620 @@
+{
+    "pttype:day": {
+        "rows": 15,
+        "visits": 10,
+        "patients": 7,
+        "total": 7251.0,
+        "paid": 775.25,
+        "claim": 6475.75,
+        "byPeriod": [
+            {
+                "key": "2026-10-02",
+                "visits": 2,
+                "patients": 2,
+                "total": 2000.5,
+                "paid": 0.0,
+                "claim": 2000.5
+            },
+            {
+                "key": "2026-10-15",
+                "visits": 1,
+                "patients": 1,
+                "total": 350.0,
+                "paid": 0.0,
+                "claim": 350.0
+            },
+            {
+                "key": "2026-10-31",
+                "visits": 1,
+                "patients": 1,
+                "total": 800.0,
+                "paid": 0.0,
+                "claim": 800.0
+            },
+            {
+                "key": "2026-11-01",
+                "visits": 1,
+                "patients": 1,
+                "total": 1500.0,
+                "paid": 0.0,
+                "claim": 1500.0
+            },
+            {
+                "key": "2026-11-03",
+                "visits": 2,
+                "patients": 2,
+                "total": 1550.5,
+                "paid": 600.25,
+                "claim": 950.25
+            },
+            {
+                "key": "2026-11-12",
+                "visits": 1,
+                "patients": 1,
+                "total": 350.0,
+                "paid": 0.0,
+                "claim": 350.0
+            },
+            {
+                "key": "2026-11-20",
+                "visits": 1,
+                "patients": 1,
+                "total": 350.0,
+                "paid": 175.0,
+                "claim": 175.0
+            },
+            {
+                "key": "2026-11-29",
+                "visits": 1,
+                "patients": 1,
+                "total": 350.0,
+                "paid": 0.0,
+                "claim": 350.0
+            }
+        ],
+        "byGroup": [
+            {
+                "code": "89",
+                "name": "บัตรทอง ในเขต",
+                "visits": 2,
+                "patients": 2,
+                "total": 2401.0,
+                "paid": 600.25,
+                "claim": 1800.75
+            },
+            {
+                "code": "A8",
+                "name": "ประกันสังคม",
+                "visits": 2,
+                "patients": 2,
+                "total": 1850.0,
+                "paid": 0.0,
+                "claim": 1850.0
+            },
+            {
+                "code": "10",
+                "name": "ชำระเงินเอง",
+                "visits": 2,
+                "patients": 2,
+                "total": 1150.0,
+                "paid": 0.0,
+                "claim": 1150.0
+            },
+            {
+                "code": "A7",
+                "name": "ประกันสังคม",
+                "visits": 2,
+                "patients": 2,
+                "total": 1150.0,
+                "paid": 175.0,
+                "claim": 975.0
+            },
+            {
+                "code": "34",
+                "name": "ข้าราชการ (เบิกจ่ายตรง)",
+                "visits": 2,
+                "patients": 2,
+                "total": 700.0,
+                "paid": 0.0,
+                "claim": 700.0
+            }
+        ],
+        "byDiag": [
+            {
+                "code": "K020",
+                "name": "ฟันผุที่เคลือบฟัน",
+                "count": 2
+            },
+            {
+                "code": "K021",
+                "name": "ฟันผุที่เนื้อฟัน",
+                "count": 2
+            },
+            {
+                "code": "K029",
+                "name": "ฟันผุ ไม่ระบุ",
+                "count": 2
+            },
+            {
+                "code": "K040",
+                "name": "เนื้อเยื่อในฟันอักเสบ",
+                "count": 1
+            },
+            {
+                "code": "K050",
+                "name": "เหงือกอักเสบเฉียบพลัน",
+                "count": 1
+            },
+            {
+                "code": "K051",
+                "name": "เหงือกอักเสบเรื้อรัง",
+                "count": 1
+            },
+            {
+                "code": "K053",
+                "name": "ปริทันต์อักเสบเรื้อรัง",
+                "count": 1
+            },
+            {
+                "code": "K080",
+                "name": "ฟันหลุดจากสาเหตุทั่วร่างกาย",
+                "count": 1
+            },
+            {
+                "code": "K081",
+                "name": "ฟันหลุดจากอุบัติเหตุ",
+                "count": 1
+            },
+            {
+                "code": "K011",
+                "name": "ฟันคุด",
+                "count": 1
+            },
+            {
+                "code": "K003",
+                "name": "ฟันตกกระ",
+                "count": 1
+            },
+            {
+                "code": "K102",
+                "name": "ภาวะอักเสบของขากรรไกร",
+                "count": 1
+            }
+        ]
+    },
+    "pttype:month": {
+        "rows": 15,
+        "visits": 10,
+        "patients": 7,
+        "total": 7251.0,
+        "paid": 775.25,
+        "claim": 6475.75,
+        "byPeriod": [
+            {
+                "key": "2026-10",
+                "visits": 4,
+                "patients": 4,
+                "total": 3150.5,
+                "paid": 0.0,
+                "claim": 3150.5
+            },
+            {
+                "key": "2026-11",
+                "visits": 6,
+                "patients": 6,
+                "total": 4100.5,
+                "paid": 775.25,
+                "claim": 3325.25
+            }
+        ],
+        "byGroup": [
+            {
+                "code": "89",
+                "name": "บัตรทอง ในเขต",
+                "visits": 2,
+                "patients": 2,
+                "total": 2401.0,
+                "paid": 600.25,
+                "claim": 1800.75
+            },
+            {
+                "code": "A8",
+                "name": "ประกันสังคม",
+                "visits": 2,
+                "patients": 2,
+                "total": 1850.0,
+                "paid": 0.0,
+                "claim": 1850.0
+            },
+            {
+                "code": "10",
+                "name": "ชำระเงินเอง",
+                "visits": 2,
+                "patients": 2,
+                "total": 1150.0,
+                "paid": 0.0,
+                "claim": 1150.0
+            },
+            {
+                "code": "A7",
+                "name": "ประกันสังคม",
+                "visits": 2,
+                "patients": 2,
+                "total": 1150.0,
+                "paid": 175.0,
+                "claim": 975.0
+            },
+            {
+                "code": "34",
+                "name": "ข้าราชการ (เบิกจ่ายตรง)",
+                "visits": 2,
+                "patients": 2,
+                "total": 700.0,
+                "paid": 0.0,
+                "claim": 700.0
+            }
+        ],
+        "byDiag": [
+            {
+                "code": "K020",
+                "name": "ฟันผุที่เคลือบฟัน",
+                "count": 2
+            },
+            {
+                "code": "K021",
+                "name": "ฟันผุที่เนื้อฟัน",
+                "count": 2
+            },
+            {
+                "code": "K029",
+                "name": "ฟันผุ ไม่ระบุ",
+                "count": 2
+            },
+            {
+                "code": "K040",
+                "name": "เนื้อเยื่อในฟันอักเสบ",
+                "count": 1
+            },
+            {
+                "code": "K050",
+                "name": "เหงือกอักเสบเฉียบพลัน",
+                "count": 1
+            },
+            {
+                "code": "K051",
+                "name": "เหงือกอักเสบเรื้อรัง",
+                "count": 1
+            },
+            {
+                "code": "K053",
+                "name": "ปริทันต์อักเสบเรื้อรัง",
+                "count": 1
+            },
+            {
+                "code": "K080",
+                "name": "ฟันหลุดจากสาเหตุทั่วร่างกาย",
+                "count": 1
+            },
+            {
+                "code": "K081",
+                "name": "ฟันหลุดจากอุบัติเหตุ",
+                "count": 1
+            },
+            {
+                "code": "K011",
+                "name": "ฟันคุด",
+                "count": 1
+            },
+            {
+                "code": "K003",
+                "name": "ฟันตกกระ",
+                "count": 1
+            },
+            {
+                "code": "K102",
+                "name": "ภาวะอักเสบของขากรรไกร",
+                "count": 1
+            }
+        ]
+    },
+    "paccount:day": {
+        "rows": 15,
+        "visits": 10,
+        "patients": 7,
+        "total": 7251.0,
+        "paid": 775.25,
+        "claim": 6475.75,
+        "byPeriod": [
+            {
+                "key": "2026-10-02",
+                "visits": 2,
+                "patients": 2,
+                "total": 2000.5,
+                "paid": 0.0,
+                "claim": 2000.5
+            },
+            {
+                "key": "2026-10-15",
+                "visits": 1,
+                "patients": 1,
+                "total": 350.0,
+                "paid": 0.0,
+                "claim": 350.0
+            },
+            {
+                "key": "2026-10-31",
+                "visits": 1,
+                "patients": 1,
+                "total": 800.0,
+                "paid": 0.0,
+                "claim": 800.0
+            },
+            {
+                "key": "2026-11-01",
+                "visits": 1,
+                "patients": 1,
+                "total": 1500.0,
+                "paid": 0.0,
+                "claim": 1500.0
+            },
+            {
+                "key": "2026-11-03",
+                "visits": 2,
+                "patients": 2,
+                "total": 1550.5,
+                "paid": 600.25,
+                "claim": 950.25
+            },
+            {
+                "key": "2026-11-12",
+                "visits": 1,
+                "patients": 1,
+                "total": 350.0,
+                "paid": 0.0,
+                "claim": 350.0
+            },
+            {
+                "key": "2026-11-20",
+                "visits": 1,
+                "patients": 1,
+                "total": 350.0,
+                "paid": 175.0,
+                "claim": 175.0
+            },
+            {
+                "key": "2026-11-29",
+                "visits": 1,
+                "patients": 1,
+                "total": 350.0,
+                "paid": 0.0,
+                "claim": 350.0
+            }
+        ],
+        "byGroup": [
+            {
+                "code": "",
+                "name": "(ไม่ระบุผังบัญชี)",
+                "visits": 4,
+                "patients": 4,
+                "total": 3000.0,
+                "paid": 175.0,
+                "claim": 2825.0
+            },
+            {
+                "code": "",
+                "name": "ลูกหนี้ค่ารักษา UC-OP ใน CUP",
+                "visits": 2,
+                "patients": 2,
+                "total": 2401.0,
+                "paid": 600.25,
+                "claim": 1800.75
+            },
+            {
+                "code": "",
+                "name": "ลูกหนี้ค่ารักษา-ชำระเงิน",
+                "visits": 2,
+                "patients": 2,
+                "total": 1150.0,
+                "paid": 0.0,
+                "claim": 1150.0
+            },
+            {
+                "code": "",
+                "name": "ลูกหนี้ค่ารักษา เบิกจ่ายตรง กรมบัญชีกลาง OP",
+                "visits": 2,
+                "patients": 2,
+                "total": 700.0,
+                "paid": 0.0,
+                "claim": 700.0
+            }
+        ],
+        "byDiag": [
+            {
+                "code": "K020",
+                "name": "ฟันผุที่เคลือบฟัน",
+                "count": 2
+            },
+            {
+                "code": "K021",
+                "name": "ฟันผุที่เนื้อฟัน",
+                "count": 2
+            },
+            {
+                "code": "K029",
+                "name": "ฟันผุ ไม่ระบุ",
+                "count": 2
+            },
+            {
+                "code": "K040",
+                "name": "เนื้อเยื่อในฟันอักเสบ",
+                "count": 1
+            },
+            {
+                "code": "K050",
+                "name": "เหงือกอักเสบเฉียบพลัน",
+                "count": 1
+            },
+            {
+                "code": "K051",
+                "name": "เหงือกอักเสบเรื้อรัง",
+                "count": 1
+            },
+            {
+                "code": "K053",
+                "name": "ปริทันต์อักเสบเรื้อรัง",
+                "count": 1
+            },
+            {
+                "code": "K080",
+                "name": "ฟันหลุดจากสาเหตุทั่วร่างกาย",
+                "count": 1
+            },
+            {
+                "code": "K081",
+                "name": "ฟันหลุดจากอุบัติเหตุ",
+                "count": 1
+            },
+            {
+                "code": "K011",
+                "name": "ฟันคุด",
+                "count": 1
+            },
+            {
+                "code": "K003",
+                "name": "ฟันตกกระ",
+                "count": 1
+            },
+            {
+                "code": "K102",
+                "name": "ภาวะอักเสบของขากรรไกร",
+                "count": 1
+            }
+        ]
+    },
+    "paccount:month": {
+        "rows": 15,
+        "visits": 10,
+        "patients": 7,
+        "total": 7251.0,
+        "paid": 775.25,
+        "claim": 6475.75,
+        "byPeriod": [
+            {
+                "key": "2026-10",
+                "visits": 4,
+                "patients": 4,
+                "total": 3150.5,
+                "paid": 0.0,
+                "claim": 3150.5
+            },
+            {
+                "key": "2026-11",
+                "visits": 6,
+                "patients": 6,
+                "total": 4100.5,
+                "paid": 775.25,
+                "claim": 3325.25
+            }
+        ],
+        "byGroup": [
+            {
+                "code": "",
+                "name": "(ไม่ระบุผังบัญชี)",
+                "visits": 4,
+                "patients": 4,
+                "total": 3000.0,
+                "paid": 175.0,
+                "claim": 2825.0
+            },
+            {
+                "code": "",
+                "name": "ลูกหนี้ค่ารักษา UC-OP ใน CUP",
+                "visits": 2,
+                "patients": 2,
+                "total": 2401.0,
+                "paid": 600.25,
+                "claim": 1800.75
+            },
+            {
+                "code": "",
+                "name": "ลูกหนี้ค่ารักษา-ชำระเงิน",
+                "visits": 2,
+                "patients": 2,
+                "total": 1150.0,
+                "paid": 0.0,
+                "claim": 1150.0
+            },
+            {
+                "code": "",
+                "name": "ลูกหนี้ค่ารักษา เบิกจ่ายตรง กรมบัญชีกลาง OP",
+                "visits": 2,
+                "patients": 2,
+                "total": 700.0,
+                "paid": 0.0,
+                "claim": 700.0
+            }
+        ],
+        "byDiag": [
+            {
+                "code": "K020",
+                "name": "ฟันผุที่เคลือบฟัน",
+                "count": 2
+            },
+            {
+                "code": "K021",
+                "name": "ฟันผุที่เนื้อฟัน",
+                "count": 2
+            },
+            {
+                "code": "K029",
+                "name": "ฟันผุ ไม่ระบุ",
+                "count": 2
+            },
+            {
+                "code": "K040",
+                "name": "เนื้อเยื่อในฟันอักเสบ",
+                "count": 1
+            },
+            {
+                "code": "K050",
+                "name": "เหงือกอักเสบเฉียบพลัน",
+                "count": 1
+            },
+            {
+                "code": "K051",
+                "name": "เหงือกอักเสบเรื้อรัง",
+                "count": 1
+            },
+            {
+                "code": "K053",
+                "name": "ปริทันต์อักเสบเรื้อรัง",
+                "count": 1
+            },
+            {
+                "code": "K080",
+                "name": "ฟันหลุดจากสาเหตุทั่วร่างกาย",
+                "count": 1
+            },
+            {
+                "code": "K081",
+                "name": "ฟันหลุดจากอุบัติเหตุ",
+                "count": 1
+            },
+            {
+                "code": "K011",
+                "name": "ฟันคุด",
+                "count": 1
+            },
+            {
+                "code": "K003",
+                "name": "ฟันตกกระ",
+                "count": 1
+            },
+            {
+                "code": "K102",
+                "name": "ภาวะอักเสบของขากรรไกร",
+                "count": 1
+            }
+        ]
+    }
+}
