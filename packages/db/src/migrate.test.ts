@@ -30,7 +30,7 @@ describe('runMigrations', () => {
     await runMigrations(database);
 
     expect(queried.some((sql) => sql.includes('CREATE TABLE IF NOT EXISTS schema_migration'))).toBe(false);
-    expect(queried.filter((sql) => sql.includes('SELECT version FROM schema_migration'))).toHaveLength(39);
+    expect(queried.filter((sql) => sql.includes('SELECT version FROM schema_migration'))).toHaveLength(40);
     expect(executed.some((sql) => sql.startsWith('ALTER TABLE notification'))).toBe(true);
     expect(executed.some((sql) => sql.includes('IF NOT EXISTS'))).toBe(true);
     expect(executed.some((sql) => sql.startsWith('INSERT IGNORE INTO schema_migration') && sql.endsWith('|["0001_in_app_notifications.sql"]'))).toBe(true);
@@ -106,7 +106,7 @@ describe('runMigrations', () => {
     expect(executed.some((sql) => sql.startsWith('CREATE TABLE IF NOT EXISTS sign_in_setting (') && sql.includes('secret_ciphertext'))).toBe(true);
     expect(executed.some((sql) => sql.startsWith('INSERT IGNORE INTO schema_migration') && sql.endsWith('|["0037_sign_in_setting.sql"]'))).toBe(true);
     expect(executed.some((sql) => sql.startsWith('CREATE TABLE IF NOT EXISTS money_member_page ('))).toBe(true);
-    expect(executed.some((sql) => sql.startsWith('INSERT IGNORE INTO schema_migration') && sql.endsWith('|["0038_smart_money.sql"]'))).toBe(true);
+    expect(executed.some((sql) => sql.startsWith('INSERT IGNORE INTO schema_migration') && sql.endsWith('|["0039_travel_invitation_funding.sql"]'))).toBe(true);
     expect(executed.some((sql) => sql.includes('CREATE TABLE IF NOT EXISTS organization'))).toBe(false);
   });
 

@@ -129,6 +129,14 @@ describeWithDatabase('FleetRequestService against MariaDB', () => {
     expect((await service.submit(leader, draft({ officialTravelId: travelId }))).ok).toBe(true);
   });
 
+  it('files from an approved ไปราชการ by รถราชการ + เครื่องบิน, but not by รถส่วนตัว + เครื่องบิน', async () => {
+    const leader = await createLeavePerson(database, org.section);
+    const byGovernmentCar = await approvedTrip(leader, [], 'GOVERNMENT_CAR_AIRPLANE');
+    expect((await service.submit(leader, draft({ officialTravelId: byGovernmentCar }))).ok).toBe(true);
+    const byPrivateCar = await approvedTrip(leader, [], 'PRIVATE_CAR_AIRPLANE', '2026-11-12', '2026-11-12');
+    expect(await service.submit(leader, draft({ officialTravelId: byPrivateCar }))).toEqual({ ok: false, code: 'TRAVEL_NOT_ELIGIBLE' });
+  });
+
   describe('fileFromTravelDecision', () => {
     const memberRequest = async (travelId: string, personId: string) => (await database.query<{ requestId: string }>('SELECT request_id AS requestId FROM official_travel_member WHERE travel_id = ? AND person_id = ?', [travelId, personId]))[0]!.requestId;
     const setStatus = (travelId: string, personId: string, status: string) => database.execute('UPDATE request r JOIN official_travel_member m ON m.request_id = r.id SET r.status = ? WHERE m.travel_id = ? AND m.person_id = ?', [status, travelId, personId]);

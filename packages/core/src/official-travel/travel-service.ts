@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { officialTravelInputSchema, type OfficialTravelErrorCode, type OfficialTravelInput } from '@backoffice/contracts';
+import { officialTravelInputSchema, summarizeTravelFunding, type OfficialTravelErrorCode, type OfficialTravelInput } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { AuditService } from '../audit/audit-service';
 import { DatabaseAuditRepository } from '../audit/database-audit-repository';
@@ -24,6 +24,20 @@ class PersonFailure extends Error {
   constructor(readonly code: OfficialTravelErrorCode, readonly personId: string) { super(code); }
 }
 
+type ParsedTravel = ReturnType<typeof officialTravelInputSchema.parse>;
+const extraColumns = ['invitation_number', 'invitation_date', 'invitation_issuer', 'funding_allowance', 'funding_lodging', 'funding_transport', 'funding_registration'];
+/** Each cost item's source; a request from before per-item sources gives every item its single source. */
+function costFundingOf(input: ParsedTravel) {
+  const single = input.fundingSource ?? 'NONE';
+  return input.costFunding ?? { allowance: single, lodging: single, transport: single, registration: single };
+}
+const fundingOf = (input: ParsedTravel) => (input.costFunding ? summarizeTravelFunding(input, input.costFunding) : input.fundingSource ?? 'NONE');
+function extraValues(input: ParsedTravel): (string | null)[] {
+  const funding = costFundingOf(input);
+  const blank = (value: string | null | undefined) => (value && value.trim() !== '' ? value.trim() : null);
+  return [blank(input.invitationNumber), input.invitationDate ?? null, blank(input.invitationIssuer), funding.allowance, funding.lodging, funding.transport, funding.registration];
+}
+
 /** Files a คำขอไปราชการ as one คำขอ per ผู้ร่วมเดินทาง; only the หัวหน้าคณะ edits, resubmits or cancels it. */
 export class OfficialTravelService {
   constructor(private readonly database: Database, private readonly approvers: ApproverResolver, private readonly createId: () => string = randomUUID) {}
@@ -37,8 +51,9 @@ export class OfficialTravelService {
       if (input.attachmentId && !await ownsAttachment(database, input.attachmentId, leaderPersonId)) return { ok: false as const, code: 'INVALID_ATTACHMENT' as const };
       const travelId = this.createId();
       await database.execute(
-        'INSERT INTO official_travel (id, leader_person_id, subject, organiser, place, province, travel_type, vehicle, start_date, end_date, start_half, end_half, days, funding_source, cost_allowance, cost_lodging, cost_transport, cost_registration, attachment_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())',
-        [travelId, leaderPersonId, input.subject, input.organiser, input.place, input.province, input.travelType, input.vehicle, input.startDate, input.endDate, input.startHalf, input.endHalf, checked.days, input.fundingSource, input.costAllowance, input.costLodging, input.costTransport, input.costRegistration, input.attachmentId ?? null]
+        `INSERT INTO official_travel (id, leader_person_id, subject, organiser, place, province, travel_type, vehicle, start_date, end_date, start_half, end_half, days, funding_source, cost_allowance, cost_lodging, cost_transport, cost_registration, attachment_id, created_at, updated_at, ${extraColumns.join(', ')})
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP(), ${extraColumns.map(() => '?').join(', ')})`,
+        [travelId, leaderPersonId, input.subject, input.organiser, input.place, input.province, input.travelType, input.vehicle, input.startDate, input.endDate, input.startHalf, input.endHalf, checked.days, fundingOf(input), input.costAllowance, input.costLodging, input.costTransport, input.costRegistration, input.attachmentId ?? null, ...extraValues(input)]
       );
       const requests = new RequestService(new DatabaseWorkflowRepository(database), this.approvers, this.createId);
       for (const personId of people) {
@@ -65,8 +80,8 @@ export class OfficialTravelService {
       // Left out keeps the file; null removes it.
       if (input.attachmentId !== undefined) await database.execute('UPDATE official_travel SET attachment_id = ? WHERE id = ?', [input.attachmentId, travelId]);
       await database.execute(
-        'UPDATE official_travel SET subject = ?, organiser = ?, place = ?, province = ?, travel_type = ?, vehicle = ?, start_date = ?, end_date = ?, start_half = ?, end_half = ?, days = ?, funding_source = ?, cost_allowance = ?, cost_lodging = ?, cost_transport = ?, cost_registration = ?, updated_at = UTC_TIMESTAMP() WHERE id = ?',
-        [input.subject, input.organiser, input.place, input.province, input.travelType, input.vehicle, input.startDate, input.endDate, input.startHalf, input.endHalf, checked.days, input.fundingSource, input.costAllowance, input.costLodging, input.costTransport, input.costRegistration, travelId]
+        `UPDATE official_travel SET subject = ?, organiser = ?, place = ?, province = ?, travel_type = ?, vehicle = ?, start_date = ?, end_date = ?, start_half = ?, end_half = ?, days = ?, funding_source = ?, cost_allowance = ?, cost_lodging = ?, cost_transport = ?, cost_registration = ?, ${extraColumns.map((column) => `${column} = ?`).join(', ')}, updated_at = UTC_TIMESTAMP() WHERE id = ?`,
+        [input.subject, input.organiser, input.place, input.province, input.travelType, input.vehicle, input.startDate, input.endDate, input.startHalf, input.endHalf, checked.days, fundingOf(input), input.costAllowance, input.costLodging, input.costTransport, input.costRegistration, ...extraValues(input), travelId]
       );
       const requests = new RequestService(new DatabaseWorkflowRepository(database), this.approvers, this.createId);
       // The trip itself changed, so anyone already approved goes back up with the returned people; their approver sees the new details.

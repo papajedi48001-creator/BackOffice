@@ -1,5 +1,5 @@
 import { canDecideOwnRequest } from '../access/active-role';
-import type { AccessSubject, LeaveEndHalf, LeaveStartHalf, RequestStatus, TravelFunding, TravelTypeCode, TravelVehicle } from '@backoffice/contracts';
+import type { AccessSubject, LeaveEndHalf, LeaveStartHalf, RequestStatus, TravelCostFunding, TravelFunding, TravelFundingSummary, TravelTypeCode, TravelVehicle } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { linkedAttachment, type LinkedAttachment } from '../files/attachment-link';
 import type { LeaveStepView } from '../leave/leave-queries';
@@ -15,18 +15,19 @@ export interface TravelListItem { travelId: string; subject: string; place: stri
 export type TravelReportStatus = 'SUBMITTED' | 'MISSING' | 'NOT_DUE' | 'NONE';
 export interface TravelReportView { summary: string; application: string; submittedAt: string; updatedAt: string }
 export interface TravelMemberView { requestId: string; personId: string; displayName: string | null; organizationName: string | null; status: RequestStatus; steps: LeaveStepView[]; canDecide: boolean; /** The viewer is this member, deciding their own คำขอ (admin/manager tier). */ ownRequest?: boolean }
-export interface TravelDetail extends TravelListItem { organiser: string; vehicle: TravelVehicle; fundingSource: TravelFunding; costs: { allowance: number; lodging: number; transport: number; registration: number; total: number }; leaderPersonId: string; members: TravelMemberView[]; canEdit: boolean; canCancel: boolean; report: TravelReportView | null; canReport: boolean; filedAt: string; attachment: LinkedAttachment | null }
+export interface TravelInvitation { number: string | null; date: string | null; issuer: string | null }
+export interface TravelDetail extends TravelListItem { organiser: string; vehicle: TravelVehicle; fundingSource: TravelFundingSummary; costFunding: TravelCostFunding; invitation: TravelInvitation | null; costs: { allowance: number; lodging: number; transport: number; registration: number; total: number }; leaderPersonId: string; members: TravelMemberView[]; canEdit: boolean; canCancel: boolean; report: TravelReportView | null; canReport: boolean; filedAt: string; attachment: LinkedAttachment | null }
 export interface TravelPendingItem { requestId: string; travelId: string; personId: string; personDisplayName: string | null; organizationName: string | null; subject: string; place: string; travelType: TravelTypeCode; startDate: string; endDate: string; startHalf: LeaveStartHalf; endHalf: LeaveEndHalf; days: number; submittedAt: string | null; /** The viewer is this member (admin/manager deciding their own คำขอ). */ ownRequest?: boolean }
 export interface TravelFilter { from?: string; to?: string; travelType?: TravelTypeCode; status?: TripStatus; reportMissing?: boolean }
 
 type Reader = Pick<Database, 'query'>;
-interface TripRow { travelId: string; subject: string; place: string; province: string; travelType: TravelTypeCode; startDate: string; endDate: string; startHalf: LeaveStartHalf; endHalf: LeaveEndHalf; days: string; leaderPersonId: string; leaderDisplayName: string | null; organiser: string; vehicle: TravelVehicle; fundingSource: TravelFunding; costAllowance: string; costLodging: string; costTransport: string; costRegistration: string; hasReport: number | string; filedAt: string }
+interface TripRow { travelId: string; subject: string; place: string; province: string; travelType: TravelTypeCode; startDate: string; endDate: string; startHalf: LeaveStartHalf; endHalf: LeaveEndHalf; days: string; leaderPersonId: string; leaderDisplayName: string | null; organiser: string; vehicle: TravelVehicle; fundingSource: TravelFundingSummary; invitationNumber: string | null; invitationDate: string | null; invitationIssuer: string | null; fundingAllowance: TravelFunding | null; fundingLodging: TravelFunding | null; fundingTransport: TravelFunding | null; fundingRegistration: TravelFunding | null; costAllowance: string; costLodging: string; costTransport: string; costRegistration: string; hasReport: number | string; filedAt: string }
 interface MemberRow { travelId: string; requestId: string; personId: string; displayName: string | null; organizationName: string | null; status: RequestStatus }
 
 const date = (column: string) => `DATE_FORMAT(${column}, '%Y-%m-%d')`;
 const instant = (column: string) => `DATE_FORMAT(${column}, '%Y-%m-%dT%H:%i:%sZ')`;
 const TRIPS = `SELECT t.id AS travelId, t.subject, t.place, t.province, t.travel_type AS travelType, ${date('t.start_date')} AS startDate, ${date('t.end_date')} AS endDate, t.start_half AS startHalf, t.end_half AS endHalf, CAST(t.days AS CHAR) AS days,
-  t.leader_person_id AS leaderPersonId, lp.display_name AS leaderDisplayName, t.organiser, t.vehicle, t.funding_source AS fundingSource,
+  t.leader_person_id AS leaderPersonId, lp.display_name AS leaderDisplayName, t.organiser, t.vehicle, t.funding_source AS fundingSource, t.invitation_number AS invitationNumber, DATE_FORMAT(t.invitation_date, '%Y-%m-%d') AS invitationDate, t.invitation_issuer AS invitationIssuer, t.funding_allowance AS fundingAllowance, t.funding_lodging AS fundingLodging, t.funding_transport AS fundingTransport, t.funding_registration AS fundingRegistration,
   CAST(t.cost_allowance AS CHAR) AS costAllowance, CAST(t.cost_lodging AS CHAR) AS costLodging, CAST(t.cost_transport AS CHAR) AS costTransport, CAST(t.cost_registration AS CHAR) AS costRegistration, rp.travel_id IS NOT NULL AS hasReport, ${instant('t.created_at')} AS filedAt
   FROM official_travel t JOIN person lp ON lp.id = t.leader_person_id LEFT JOIN official_travel_report rp ON rp.travel_id = t.id`;
 // tripStatus in SQL, so HR's status filter runs before the list cap.
@@ -66,7 +67,9 @@ export class OfficialTravelQueries {
     return {
       ...item,
       filedAt: trip.filedAt,
-      organiser: trip.organiser, vehicle: trip.vehicle, fundingSource: trip.fundingSource, leaderPersonId: trip.leaderPersonId,
+      organiser: trip.organiser, vehicle: trip.vehicle, fundingSource: trip.fundingSource,
+      costFunding: costFundingOf(trip),
+      invitation: trip.invitationNumber || trip.invitationDate || trip.invitationIssuer ? { number: trip.invitationNumber, date: trip.invitationDate, issuer: trip.invitationIssuer } : null, leaderPersonId: trip.leaderPersonId,
       costs: { ...costs, total: Math.round((costs.allowance + costs.lodging + costs.transport + costs.registration) * 100) / 100 },
       members: members.map((member) => {
         const current = currentOf(member);
@@ -183,4 +186,10 @@ function toItem(trip: TripRow, members: MemberRow[], today: string, viewerPerson
   const status = tripStatus(members.map((member) => member.status));
   const reportStatus: TravelReportStatus = Number(trip.hasReport) ? 'SUBMITTED' : status !== 'APPROVED' ? 'NONE' : trip.endDate >= today ? 'NOT_DUE' : viewerPersonId === undefined || viewerPersonId === trip.leaderPersonId ? 'MISSING' : 'NONE';
   return { travelId: trip.travelId, subject: trip.subject, place: trip.place, province: trip.province, travelType: trip.travelType, startDate: trip.startDate, endDate: trip.endDate, startHalf: trip.startHalf, endHalf: trip.endHalf, days: Number(trip.days), status, leaderDisplayName: trip.leaderDisplayName, memberCount: members.length, reportStatus };
+}
+
+/** A trip filed before per-item sources gives every item its single source. */
+function costFundingOf(trip: TripRow): TravelCostFunding {
+  const single: TravelFunding = trip.fundingSource === 'MIXED' ? 'NONE' : trip.fundingSource;
+  return { allowance: trip.fundingAllowance ?? single, lodging: trip.fundingLodging ?? single, transport: trip.fundingTransport ?? single, registration: trip.fundingRegistration ?? single };
 }

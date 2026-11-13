@@ -4,19 +4,20 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { t } from '@backoffice/i18n';
 import { AttachmentField, type AttachedFile } from '../../../../components/attachment-field';
-import { TRAVEL_FUNDING, TRAVEL_TYPES, TRAVEL_VEHICLES, formatBaht, travelErrorMessage, travelFundingLabel, travelTypeLabel, travelVehicleLabel } from '../../../../lib/travel-labels';
+import { TRAVEL_COST_ITEMS, TRAVEL_FUNDING, TRAVEL_TYPES, TRAVEL_VEHICLES, costItemName, formatBaht, travelErrorMessage, travelFundingLabel, travelTypeLabel, travelVehicleLabel, type TravelCostItem } from '../../../../lib/travel-labels';
 import { ThaiDateInput } from '../../../../components/thai-date-input';
 import { endFollowingStart } from '../../../../lib/date-range';
 
 export interface TravelPerson { personId: string; displayName: string | null; organizationName: string | null }
 export interface TravelFormValues {
-  subject: string; organiser: string; place: string; province: string; travelType: string; vehicle: string; fundingSource: string;
+  subject: string; organiser: string; place: string; province: string; travelType: string; vehicle: string;
+  invitationNumber: string; invitationDate: string; invitationIssuer: string; costFunding: Record<TravelCostItem, string>;
   startDate: string; endDate: string; startHalf: 'FULL' | 'AFTERNOON'; endHalf: 'FULL' | 'MORNING';
   costAllowance: string; costLodging: string; costTransport: string; costRegistration: string;
 }
 
-const empty: TravelFormValues = { subject: '', organiser: '', place: '', province: '', travelType: 'IN_PROVINCE', vehicle: 'GOVERNMENT_CAR', fundingSource: 'HOSPITAL_FUND', startDate: '', endDate: '', startHalf: 'FULL', endHalf: 'FULL', costAllowance: '', costLodging: '', costTransport: '', costRegistration: '' };
-const costFields = [['costAllowance', 'travelCostAllowance'], ['costLodging', 'travelCostLodging'], ['costTransport', 'travelCostTransport'], ['costRegistration', 'travelCostRegistration']] as const;
+const empty: TravelFormValues = { subject: '', organiser: '', place: '', province: '', travelType: 'IN_PROVINCE', vehicle: 'GOVERNMENT_CAR', invitationNumber: '', invitationDate: '', invitationIssuer: '', costFunding: { allowance: 'HOSPITAL_FUND', lodging: 'HOSPITAL_FUND', transport: 'HOSPITAL_FUND', registration: 'HOSPITAL_FUND' }, startDate: '', endDate: '', startHalf: 'FULL', endHalf: 'FULL', costAllowance: '', costLodging: '', costTransport: '', costRegistration: '' };
+const costFields = TRAVEL_COST_ITEMS.map(([item, key]) => [`cost${item[0]!.toUpperCase()}${item.slice(1)}` as 'costAllowance' | 'costLodging' | 'costTransport' | 'costRegistration', key, item] as const);
 const amount = (value: string) => { const number = Number(value); return Number.isFinite(number) && number > 0 ? number : 0; };
 const label = (person: TravelPerson) => person.displayName ?? '—';
 
@@ -53,7 +54,8 @@ export function TravelForm({ leader, travelId, initial, fixedMembers, attachment
     setError(null);
     setBusy(true);
     const body = {
-      subject: form.subject.trim(), organiser: form.organiser.trim(), place: form.place.trim(), province: form.province.trim(), travelType: form.travelType, vehicle: form.vehicle, fundingSource: form.fundingSource,
+      subject: form.subject.trim(), organiser: form.organiser.trim(), place: form.place.trim(), province: form.province.trim(), travelType: form.travelType, vehicle: form.vehicle,
+      invitationNumber: form.invitationNumber.trim() || null, invitationDate: form.invitationDate || null, invitationIssuer: form.invitationIssuer.trim() || null, costFunding: form.costFunding,
       startDate: form.startDate, endDate: form.endDate, startHalf: form.startHalf, endHalf: form.endHalf,
       ...Object.fromEntries(costFields.map(([field]) => [field, amount(form[field])])),
       memberPersonIds: travelId ? [] : others.map((person) => person.personId),
@@ -75,6 +77,14 @@ export function TravelForm({ leader, travelId, initial, fixedMembers, attachment
   return <form aria-label={travelId ? t('travelEditReturned') : t('travelNew')} className="leave-form travel-form" onSubmit={submit}>
     <div className="form-field"><label htmlFor="travel-subject">{t('travelSubject')}</label><input id="travel-subject" value={form.subject} maxLength={300} required onChange={(event) => set({ subject: event.target.value })} /></div>
     <div className="form-field"><label htmlFor="travel-organiser">{t('travelOrganiser')}</label><input id="travel-organiser" value={form.organiser} maxLength={300} required onChange={(event) => set({ organiser: event.target.value })} /></div>
+    <fieldset className="travel-invitation">
+      <legend>{t('travelInvitation')}</legend>
+      <div className="form-row">
+        <div className="form-field"><label htmlFor="travel-invitation-number">{t('travelInvitationNumber')}</label><input id="travel-invitation-number" value={form.invitationNumber} maxLength={100} onChange={(event) => set({ invitationNumber: event.target.value })} /></div>
+        <div className="form-field"><label htmlFor="travel-invitation-date">{t('travelInvitationDate')}</label><ThaiDateInput id="travel-invitation-date" value={form.invitationDate} onChange={(value) => set({ invitationDate: value })} /></div>
+      </div>
+      <div className="form-field"><label htmlFor="travel-invitation-issuer">{t('travelInvitationIssuer')}</label><input id="travel-invitation-issuer" value={form.invitationIssuer} maxLength={300} onChange={(event) => set({ invitationIssuer: event.target.value })} /></div>
+    </fieldset>
     <div className="form-row">
       <div className="form-field"><label htmlFor="travel-place">{t('travelPlace')}</label><input id="travel-place" value={form.place} maxLength={300} required onChange={(event) => set({ place: event.target.value })} /></div>
       <div className="form-field"><label htmlFor="travel-province">{t('travelProvince')}</label><input id="travel-province" value={form.province} maxLength={100} required onChange={(event) => set({ province: event.target.value })} /></div>
@@ -101,10 +111,12 @@ export function TravelForm({ leader, travelId, initial, fixedMembers, attachment
     </div>
     <fieldset className="travel-costs">
       <legend>{t('travelCosts')}</legend>
-      <div className="form-field"><label htmlFor="travel-funding">{t('travelFunding')}</label>
-        <select id="travel-funding" value={form.fundingSource} onChange={(event) => set({ fundingSource: event.target.value })}>{TRAVEL_FUNDING.map((code) => <option key={code} value={code}>{travelFundingLabel(code)}</option>)}</select></div>
       <div className="travel-cost-grid">
-        {costFields.map(([field, key]) => <div key={field} className="form-field"><label htmlFor={`travel-${field}`}>{t(key)}</label><input id={`travel-${field}`} type="number" inputMode="decimal" min="0" step="0.01" value={form[field]} onChange={(event) => set({ [field]: event.target.value })} /></div>)}
+        {costFields.map(([field, key, item]) => <div key={field} className="form-row travel-cost-item">
+          <div className="form-field"><label htmlFor={`travel-${field}`}>{t(key)}</label><input id={`travel-${field}`} type="number" inputMode="decimal" min="0" step="0.01" value={form[field]} onChange={(event) => set({ [field]: event.target.value })} /></div>
+          <div className="form-field"><label htmlFor={`travel-funding-${item}`}>{`${t('travelCostFunding')} ${costItemName(key)}`}</label>
+            <select id={`travel-funding-${item}`} value={form.costFunding[item]} onChange={(event) => set({ costFunding: { ...form.costFunding, [item]: event.target.value } })}>{TRAVEL_FUNDING.map((code) => <option key={code} value={code}>{travelFundingLabel(code)}</option>)}</select></div>
+        </div>)}
       </div>
       <p className="travel-cost-total"><strong>{t('travelCostTotal')} {formatBaht(total)} {t('travelBaht')}</strong></p>
     </fieldset>
