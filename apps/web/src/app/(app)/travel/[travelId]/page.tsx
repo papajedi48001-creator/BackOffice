@@ -1,20 +1,19 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { canManageFleet, FleetQueries, OfficialTravelQueries } from '@backoffice/core';
-import { t, type MessageKey } from '@backoffice/i18n';
+import { usesGovernmentCar } from '@backoffice/contracts';
+import { t } from '@backoffice/i18n';
 import { bangkokToday, formatBangkokDate, formatBangkokTime } from '../../../../lib/bangkok-time';
 import { attachmentsEnabled } from '../../../../lib/attachments';
 import { getSharedDatabase } from '../../../../lib/database';
 import { formatLeaveRange, leaveStepLabel } from '../../../../lib/leave-labels';
-import { formatBaht, travelFundingLabel, travelTypeLabel, travelVehicleLabel } from '../../../../lib/travel-labels';
+import { formatBaht, formatCostItems, formatInvitation, travelFundingLabel, travelTypeLabel, travelVehicleLabel } from '../../../../lib/travel-labels';
 import { LeaveStatus } from '../../leave/leave-list';
 import { TravelForm } from '../new/travel-form';
 import { travelSession } from '../travel-page';
 import { MemberDecision, TravelCancel, TravelReportForm } from './travel-actions';
 
 const instant = (value: string | null) => (value ? `${formatBangkokDate(value.slice(0, 10))} ${formatBangkokTime(value)}` : '');
-const costRows: Array<[keyof Omit<NonNullable<Awaited<ReturnType<OfficialTravelQueries['detail']>>>['costs'], 'total'>, MessageKey]> = [['allowance', 'travelCostAllowance'], ['lodging', 'travelCostLodging'], ['transport', 'travelCostTransport'], ['registration', 'travelCostRegistration']];
-const withoutUnit = (text: string) => text.replace(/ \(บาท\)$/, '');
 
 export default async function TravelPage({ params }: { params: Promise<{ travelId: string }> }) {
   const session = await travelSession();
@@ -27,7 +26,7 @@ export default async function TravelPage({ params }: { params: Promise<{ travelI
   if (!view) { notFound(); return null; }
   const leader = view.members.find((member) => member.personId === view.leaderPersonId);
   // ขอใช้รถ (fleet rule 2): an approved person going on an approved trip by รถราชการ. A ใบ already filed for the trip is linked instead; the fleet route checks again on submit.
-  const going = view.members.find((member) => member.personId === session.personId)?.status === 'APPROVED' && view.status === 'APPROVED' && view.vehicle === 'GOVERNMENT_CAR';
+  const going = view.members.find((member) => member.personId === session.personId)?.status === 'APPROVED' && view.status === 'APPROVED' && usesGovernmentCar(view.vehicle);
   const carRequest = going ? await new FleetQueries(database).activeRequestForTravel(view.travelId) : null;
   // Only its requester and the หัวหน้าหมวด may open the ใบ; other people going just learn it exists.
   const opensCarRequest = carRequest !== null && (carRequest.requesterPersonId === session.personId || canManageFleet(session));
@@ -36,13 +35,14 @@ export default async function TravelPage({ params }: { params: Promise<{ travelI
     <div className="page-heading"><h2>{t('travelRequest')}: {view.subject}</h2><LeaveStatus status={view.status} /></div>
     <div className="detail-list">
       <div><strong>{t('travelOrganiser')}</strong><span>{view.organiser}</span></div>
+      <div><strong>{t('travelInvitation')}</strong><span>{formatInvitation(view.invitation)}</span></div>
       <div><strong>{t('travelPlace')}</strong><span>{view.place} · {view.province}</span></div>
       <div><strong>{t('travelType')}</strong><span>{travelTypeLabel(view.travelType)}</span></div>
       <div><strong>{t('travelDates')}</strong><span>{formatLeaveRange(view)}</span></div>
       <div><strong>{t('travelDays')}</strong><span>{view.days}</span></div>
       <div><strong>{t('travelVehicle')}</strong><span>{travelVehicleLabel(view.vehicle)}</span></div>
       <div><strong>{t('travelFunding')}</strong><span>{travelFundingLabel(view.fundingSource)}</span></div>
-      <div><strong>{t('travelCosts')}</strong><span>{costRows.filter(([key]) => view.costs[key] > 0).map(([key, label]) => `${withoutUnit(t(label))} ${formatBaht(view.costs[key])}`).join(' · ') || '—'}</span></div>
+      <div><strong>{t('travelCosts')}</strong><span>{formatCostItems(view.costs, view.costFunding)}</span></div>
       <div><strong>{t('travelCostTotal')}</strong><span>{formatBaht(view.costs.total)} {t('travelBaht')}</span></div>
       {view.attachment && <div><strong>{t('attachmentFile')}</strong><span><a href={`/api/attachments/${encodeURIComponent(view.attachment.attachmentId)}/download`}>{view.attachment.filename ?? t('attachmentFile')}</a></span></div>}
     </div>
@@ -73,7 +73,7 @@ export default async function TravelPage({ params }: { params: Promise<{ travelI
       fixedMembers={view.members}
       attachments={attachmentsEnabled()}
       initialAttachment={view.attachment}
-      initial={{ subject: view.subject, organiser: view.organiser, place: view.place, province: view.province, travelType: view.travelType, vehicle: view.vehicle, fundingSource: view.fundingSource, startDate: view.startDate, endDate: view.endDate, startHalf: view.startHalf, endHalf: view.endHalf, costAllowance: String(view.costs.allowance || ''), costLodging: String(view.costs.lodging || ''), costTransport: String(view.costs.transport || ''), costRegistration: String(view.costs.registration || '') }}
+      initial={{ subject: view.subject, organiser: view.organiser, place: view.place, province: view.province, travelType: view.travelType, vehicle: view.vehicle, invitationNumber: view.invitation?.number ?? '', invitationDate: view.invitation?.date ?? '', invitationIssuer: view.invitation?.issuer ?? '', costFunding: view.costFunding, startDate: view.startDate, endDate: view.endDate, startHalf: view.startHalf, endHalf: view.endHalf, costAllowance: String(view.costs.allowance || ''), costLodging: String(view.costs.lodging || ''), costTransport: String(view.costs.transport || ''), costRegistration: String(view.costs.registration || '') }}
     /></>}
     <p className="travel-detail-links"><a href={`/travel/${view.travelId}/print`}>{t('travelPrint')}</a> · <a href="/travel/mine">{t('travelBack')}</a></p>
   </section>;

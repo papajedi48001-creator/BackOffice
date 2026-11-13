@@ -4,7 +4,7 @@ import { t } from '@backoffice/i18n';
 import { bangkokToday, formatBangkokDate } from '../../../../../lib/bangkok-time';
 import { getSharedDatabase } from '../../../../../lib/database';
 import { formatLeaveRange, leaveStepLabel } from '../../../../../lib/leave-labels';
-import { formatBaht, travelFundingLabel, travelTypeLabel, travelVehicleLabel } from '../../../../../lib/travel-labels';
+import { formatCostItems, formatInvitation, formatBaht, travelFundingLabel, travelTypeLabel, travelVehicleLabel } from '../../../../../lib/travel-labels';
 import { travelSession } from '../../travel-page';
 import { PrintButton } from './print-button';
 
@@ -33,11 +33,13 @@ export default async function TravelPrintPage({ params }: { params: Promise<{ tr
     <dl className="travel-print-list">
       <div><dt>{t('travelSubject')}</dt><dd>{view.subject}</dd></div>
       <div><dt>{t('travelOrganiser')}</dt><dd>{view.organiser}</dd></div>
+      <div><dt>{t('travelInvitation')}</dt><dd>{formatInvitation(view.invitation)}</dd></div>
       <div><dt>{t('travelPlace')}</dt><dd>{view.place} · {view.province}</dd></div>
       <div><dt>{t('travelType')}</dt><dd>{travelTypeLabel(view.travelType)}</dd></div>
       <div><dt>{t('travelDates')}</dt><dd>{formatLeaveRange(view)} ({view.days} {t('leaveDayUnit')})</dd></div>
       <div><dt>{t('travelVehicle')}</dt><dd>{travelVehicleLabel(view.vehicle)}</dd></div>
       <div><dt>{t('travelFunding')}</dt><dd>{travelFundingLabel(view.fundingSource)}</dd></div>
+      <div><dt>{t('travelCosts')}</dt><dd>{formatCostItems(view.costs, view.costFunding)}</dd></div>
       <div><dt>{t('travelPrintCostPerPerson')}</dt><dd>{formatBaht(view.costs.total)} {t('travelBaht')}</dd></div>
       <div><dt>{t('travelPrintCostAll')}</dt><dd>{formatBaht(Math.round(view.costs.total * travellers.length * 100) / 100)} {t('travelBaht')}</dd></div>
     </dl>

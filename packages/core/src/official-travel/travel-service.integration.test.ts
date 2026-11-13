@@ -55,7 +55,8 @@ describeWithDatabase('OfficialTravelService against MariaDB', () => {
 
   it('keeps the หนังสือเชิญ details and a source for each cost item, summarizing mixed sources', async () => {
     const leader = await createLeavePerson(database, org.section);
-    const { fundingSource: _old, ...base } = trip('2027-04-05', '2027-04-05');
+    const base: Partial<ReturnType<typeof trip>> = trip('2027-04-05', '2027-04-05');
+    delete base.fundingSource;
     const result = await service.submit(leader, { ...base, vehicle: 'GOVERNMENT_CAR_AIRPLANE', costRegistration: 1500, invitationNumber: 'มค 0033/ว 123', invitationDate: '2027-03-20', invitationIssuer: 'สสจ.มหาสารคาม', costFunding: { allowance: 'HOSPITAL_FUND', lodging: 'NONE', transport: 'NONE', registration: 'ORGANISER' } });
     expect(result.ok).toBe(true);
     if (!result.ok) return;

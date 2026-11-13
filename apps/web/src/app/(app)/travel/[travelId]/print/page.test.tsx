@@ -13,7 +13,7 @@ import TravelPrintPage from './page';
 const member = (requestId: string, personId: string, displayName: string, status: string, stepStatus: string) => ({ requestId, personId, displayName, organizationName: 'งานผู้ป่วยใน', status, steps: [{ sequence: 1, assigneeDisplayName: 'หัวหน้างาน', status: stepStatus, decidedAt: '2026-11-02T03:00:00Z', decisionReason: 'ลายมือชื่อไม่ครบ' }], canDecide: false });
 const detail = {
   travelId: 'travel-1', subject: 'ประชุมวิชาการการพยาบาล', place: 'โรงแรมตักสิลา', province: 'มหาสารคาม', travelType: 'IN_PROVINCE', startDate: '2026-11-10', endDate: '2026-11-11', startHalf: 'FULL', endHalf: 'FULL', days: 2, status: 'APPROVED', leaderDisplayName: 'นางพรทิพย์ ใจดี', memberCount: 3, reportStatus: 'NOT_DUE',
-  organiser: 'สสจ.มหาสารคาม', vehicle: 'GOVERNMENT_CAR', fundingSource: 'HOSPITAL_FUND', costs: { allowance: 240, lodging: 0, transport: 0, registration: 1000, total: 1240 }, leaderPersonId: 'person-a',
+  organiser: 'สสจ.มหาสารคาม', vehicle: 'GOVERNMENT_CAR', fundingSource: 'MIXED', costFunding: { allowance: 'HOSPITAL_FUND', lodging: 'HOSPITAL_FUND', transport: 'HOSPITAL_FUND', registration: 'ORGANISER' }, invitation: { number: 'มค 0033/ว 123', date: '2026-10-30', issuer: 'สสจ.มหาสารคาม' }, costs: { allowance: 240, lodging: 0, transport: 0, registration: 1000, total: 1240 }, leaderPersonId: 'person-a',
   members: [member('r-a', 'person-a', 'นางพรทิพย์ ใจดี', 'APPROVED', 'APPROVED'), member('r-b', 'person-b', 'นายสมชาย ดีมาก', 'APPROVED', 'APPROVED'), member('r-c', 'person-c', 'นางสาวมาลี สุขใจ', 'REJECTED', 'REJECTED')],
   canEdit: false, canCancel: false, report: null, canReport: false, filedAt: '2026-11-01T02:00:00Z'
 };
@@ -40,6 +40,8 @@ describe('TravelPrintPage', () => {
     expect(screen.getByText('1,240.00 บาท')).toBeInTheDocument();
     // Two people going × 1,240.
     expect(screen.getByText('2,480.00 บาท')).toBeInTheDocument();
+    expect(screen.getByText('มค 0033/ว 123 ลงวันที่ 30 ต.ค. 2569 · สสจ.มหาสารคาม')).toBeInTheDocument();
+    expect(screen.getByText('เบี้ยเลี้ยง 240.00 (เงินบำรุง) · ค่าลงทะเบียน 1,000.00 (งบผู้จัด)')).toBeInTheDocument();
     expect(screen.getByText(/^ลงชื่อ/)).toHaveTextContent('นางพรทิพย์ ใจดี');
     expect(screen.queryByText(/ลายมือชื่อไม่ครบ/)).toBeNull();
     expect(screen.getByText('วันที่ อาทิตย์ 1 พ.ย. 2569')).toBeInTheDocument();

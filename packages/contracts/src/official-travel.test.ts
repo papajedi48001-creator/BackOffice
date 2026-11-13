@@ -49,7 +49,8 @@ describe('invitation letter, combined vehicles and funding per item', () => {
   });
 
   it('takes a source for each cost item without the old single source', () => {
-    const { fundingSource: _unused, ...withoutSource } = valid;
+    const withoutSource: Partial<typeof valid> = { ...valid };
+    delete withoutSource.fundingSource;
     const parsed = officialTravelInputSchema.parse({ ...withoutSource, costAllowance: 240, costRegistration: 1500, costFunding: { allowance: 'HOSPITAL_FUND', lodging: 'NONE', transport: 'NONE', registration: 'ORGANISER' } });
     expect(parsed.costFunding).toEqual({ allowance: 'HOSPITAL_FUND', lodging: 'NONE', transport: 'NONE', registration: 'ORGANISER' });
   });

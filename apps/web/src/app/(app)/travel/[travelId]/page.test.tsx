@@ -13,7 +13,7 @@ import TravelPage from './page';
 const step = (status: string) => ({ sequence: 1, assigneeDisplayName: 'หัวหน้างาน', status, decidedAt: null, decisionReason: null });
 const detail = {
   travelId: 'travel-1', subject: 'ประชุมวิชาการการพยาบาล', place: 'โรงแรมตักสิลา', province: 'มหาสารคาม', travelType: 'IN_PROVINCE', startDate: '2026-11-10', endDate: '2026-11-11', startHalf: 'FULL', endHalf: 'FULL', days: 2, status: 'IN_REVIEW', leaderDisplayName: 'นางพรทิพย์ ใจดี', memberCount: 2,
-  organiser: 'สสจ.มหาสารคาม', vehicle: 'GOVERNMENT_CAR', fundingSource: 'HOSPITAL_FUND', costs: { allowance: 240, lodging: 0, transport: 0, registration: 1000, total: 1240 }, leaderPersonId: 'person-a',
+  organiser: 'สสจ.มหาสารคาม', vehicle: 'GOVERNMENT_CAR', fundingSource: 'MIXED', costFunding: { allowance: 'HOSPITAL_FUND', lodging: 'HOSPITAL_FUND', transport: 'HOSPITAL_FUND', registration: 'ORGANISER' }, invitation: { number: 'มค 0033/ว 123', date: '2026-10-30', issuer: 'สสจ.มหาสารคาม' }, costs: { allowance: 240, lodging: 0, transport: 0, registration: 1000, total: 1240 }, leaderPersonId: 'person-a',
   members: [
     { requestId: 'r-a', personId: 'person-a', displayName: 'นางพรทิพย์ ใจดี', organizationName: 'งานผู้ป่วยใน', status: 'IN_REVIEW', steps: [step('PENDING')], canDecide: false },
     { requestId: 'r-b', personId: 'person-b', displayName: 'นายสมชาย ดีมาก', organizationName: 'งานผู้ป่วยใน', status: 'IN_REVIEW', steps: [step('PENDING')], canDecide: true }
@@ -39,6 +39,9 @@ describe('TravelPage', () => {
     expect(screen.getByRole('heading', { name: /ประชุมวิชาการการพยาบาล/ })).toBeInTheDocument();
     expect(screen.getByText('1,240.00 บาท')).toBeInTheDocument();
     expect(screen.getByText('รถราชการ')).toBeInTheDocument();
+    expect(screen.getByText('มค 0033/ว 123 ลงวันที่ 30 ต.ค. 2569 · สสจ.มหาสารคาม')).toBeInTheDocument();
+    expect(screen.getByText('หลายแหล่ง')).toBeInTheDocument();
+    expect(screen.getByText('เบี้ยเลี้ยง 240.00 (เงินบำรุง) · ค่าลงทะเบียน 1,000.00 (งบผู้จัด)')).toBeInTheDocument();
     const first = screen.getByRole('row', { name: /นางพรทิพย์ ใจดี/ });
     expect(within(first).getByText('หัวหน้าคณะ')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'อนุมัติ นางพรทิพย์ ใจดี' })).toBeNull();

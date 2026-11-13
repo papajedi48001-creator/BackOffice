@@ -39,7 +39,29 @@ describe('TravelForm', () => {
     await waitFor(() => expect(mocks.push).toHaveBeenCalledWith('/travel/travel-1'));
     const [url, init] = fetchMock.mock.calls.at(-1)! as unknown as [string, RequestInit];
     expect(url).toBe('/api/travel');
-    expect(JSON.parse(init.body as string)).toMatchObject({ subject: 'ประชุมวิชาการ', travelType: 'IN_PROVINCE', vehicle: 'GOVERNMENT_CAR', fundingSource: 'HOSPITAL_FUND', costLodging: 1500.5, costRegistration: 2000, costAllowance: 0, memberPersonIds: ['person-b'], startDate: '2026-11-10', endDate: '2026-11-11' });
+    expect(JSON.parse(init.body as string)).toMatchObject({ subject: 'ประชุมวิชาการ', travelType: 'IN_PROVINCE', vehicle: 'GOVERNMENT_CAR', costLodging: 1500.5, costRegistration: 2000, costAllowance: 0, memberPersonIds: ['person-b'], startDate: '2026-11-10', endDate: '2026-11-11' });
+  });
+
+  it('sends the หนังสือเชิญ, a combined vehicle and a source for each cost item', async () => {
+    const fetchMock = vi.fn(async () => json({ ok: true, travelId: 'travel-2' }, 201));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<TravelForm leader={leader} />);
+    fillTrip();
+    expect(screen.queryByLabelText('แหล่งงบประมาณ')).toBeNull();
+    fireEvent.change(screen.getByLabelText('เลขที่หนังสือเชิญ'), { target: { value: 'มค 0033/ว 123' } });
+    fireEvent.change(screen.getByLabelText('ลงวันที่'), { target: { value: '2026-10-30' } });
+    fireEvent.change(screen.getByLabelText('หน่วยงานที่ออกหนังสือ'), { target: { value: 'สสจ.มหาสารคาม' } });
+    fireEvent.change(screen.getByLabelText('พาหนะ'), { target: { value: 'GOVERNMENT_CAR_AIRPLANE' } });
+    expect(screen.getByRole('option', { name: 'รถส่วนตัว + เครื่องบิน' })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('ค่าที่พัก (บาท)'), { target: { value: '1500' } });
+    fireEvent.change(screen.getByLabelText('แหล่งงบ ค่าที่พัก'), { target: { value: 'ORGANISER' } });
+    fireEvent.change(screen.getByLabelText('ค่าลงทะเบียน (บาท)'), { target: { value: '2000' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ส่งขออนุมัติ' }));
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith('/travel/travel-2'));
+    const [, init] = fetchMock.mock.calls.at(-1)! as unknown as [string, RequestInit];
+    const body = JSON.parse(init.body as string);
+    expect(body).toMatchObject({ vehicle: 'GOVERNMENT_CAR_AIRPLANE', invitationNumber: 'มค 0033/ว 123', invitationDate: '2026-10-30', invitationIssuer: 'สสจ.มหาสารคาม', costFunding: { allowance: 'HOSPITAL_FUND', lodging: 'ORGANISER', transport: 'HOSPITAL_FUND', registration: 'HOSPITAL_FUND' } });
+    expect(body).not.toHaveProperty('fundingSource');
   });
 
   it('names the person a rule failed for', async () => {
