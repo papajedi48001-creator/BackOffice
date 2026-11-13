@@ -14,7 +14,7 @@ describe('module registry', () => {
   });
 
   it('shows one entry per module and only their own profile under HR to a user without roles', () => {
-    expect(hrefs(subject())).toEqual(['/dashboard', '/requests', '/notifications', '/hr', '/access', '/rooms', '/leave', '/travel', '/fleet', '/mci', '/lab']);
+    expect(hrefs(subject())).toEqual(['/dashboard', '/requests', '/notifications', '/hr', '/access', '/rooms', '/leave', '/travel', '/fleet', '/mci', '/lab', '/money']);
     expect(sectionHrefs('access', subject())).toEqual(['/access/audit']);
     expect(sectionHrefs('hr', subject())).toEqual(['/hr/me']);
   });
@@ -368,6 +368,34 @@ describe('Lab stock module', () => {
   it('shows a lab-manager every section without membership', async () => {
     const manager = subject({ roles: [{ name: 'lab-manager', organizationId: null }] });
     expect(await shown(fakeDb([]), manager)).toEqual(['/lab/usage', '/lab/requisitions', '/lab/receipts', '/lab/stock', '/lab/opening', '/lab/settings']);
+  });
+});
+
+describe('Smart Money module', () => {
+  const money = () => moduleRegistry.find((entry) => entry.code === 'smart-money')!;
+  const fakeDb = (pages: string[] | null) => ({ query: vi.fn(async (sql: string) => (sql.includes('money_member') ? (pages === null ? [] : pages.length ? pages.map((page) => ({ page })) : [{ page: null }]) : [])) }) as unknown as Database;
+  const shown = async (db: Database, value: AccessSubject) => (await availableSections(moduleSections('smart-money', value), db, value)).map((section) => section.href);
+
+  it('registers smart-money at /money as a live services module', () => {
+    expect(money()).toMatchObject({ href: '/money', status: 'live', group: 'services', labelKey: 'moduleSmartMoney', descriptionKey: 'moduleSmartMoneyDescription', icon: 'coins' });
+    expect(moduleCodeForPath('/money/dental')).toBe('smart-money');
+  });
+
+  it('hides the module from a non-member and from a member with no page', async () => {
+    expect(await availableModules([money()], fakeDb(null), subject())).toEqual([]);
+    expect(await availableModules([money()], fakeDb([]), subject())).toEqual([]);
+    expect(await shown(fakeDb(null), subject())).toEqual([]);
+  });
+
+  it('shows a member their pages but not settings', async () => {
+    expect(await availableModules([money()], fakeDb(['dental']), subject())).toHaveLength(1);
+    expect(await shown(fakeDb(['dental']), subject())).toEqual(['/money/dental']);
+  });
+
+  it('shows a money-manager every section without membership', async () => {
+    const manager = subject({ roles: [{ name: 'money-manager', organizationId: null }] });
+    expect(await shown(fakeDb(null), manager)).toEqual(['/money/dental', '/money/settings']);
+    expect(await availableModules([money()], fakeDb(null), manager)).toHaveLength(1);
   });
 });
 

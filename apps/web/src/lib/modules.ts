@@ -1,5 +1,5 @@
-import type { AccessSubject, ModuleMode } from '@backoffice/contracts';
-import { canManageLab, labCan, loadLabMember, LabQueries, type LabAction, canManageAttendance, canManageAttendanceDevices, canReadAttendanceAudit, canCommandMci, loadActor, mciCan, MciQueries, canDecideOwnRequest, AuthorizationService, FleetQueries, canUseModule, isAdmin, LeaveQueries, OfficialTravelQueries, RoomBookingQueries, canManageFleet, canManageLeave, canManageTravel, hasOpenRequestWork, listPendingApprovals } from '@backoffice/core';
+import type { AccessSubject, ModuleMode, MoneyPage } from '@backoffice/contracts';
+import { canManageLab, labCan, loadLabMember, LabQueries, type LabAction, canManageMoney, loadMoneyMember, moneyCan, canManageAttendance, canManageAttendanceDevices, canReadAttendanceAudit, canCommandMci, loadActor, mciCan, MciQueries, canDecideOwnRequest, AuthorizationService, FleetQueries, canUseModule, isAdmin, LeaveQueries, OfficialTravelQueries, RoomBookingQueries, canManageFleet, canManageLeave, canManageTravel, hasOpenRequestWork, listPendingApprovals } from '@backoffice/core';
 import type { Database } from '@backoffice/db';
 import { t, type MessageKey } from '@backoffice/i18n';
 import type { NavigationItem } from '../components/app-shell';
@@ -7,7 +7,7 @@ import { matchModule } from './module-theme';
 import { canInventory } from './inventory-access';
 
 export type ModuleGroup = 'mine' | 'people' | 'services' | 'governance';
-export type ModuleIconName = 'requests' | 'bell' | 'people' | 'org' | 'upload' | 'shield' | 'delegate' | 'audit' | 'wrench' | 'package' | 'room' | 'car' | 'clock' | 'leave' | 'travel' | 'asset' | 'monitor' | 'target' | 'heart' | 'flask' | 'settings';
+export type ModuleIconName = 'requests' | 'bell' | 'people' | 'org' | 'upload' | 'shield' | 'delegate' | 'audit' | 'wrench' | 'package' | 'room' | 'car' | 'clock' | 'leave' | 'travel' | 'asset' | 'monitor' | 'target' | 'heart' | 'flask' | 'coins' | 'settings';
 
 /** One page inside a module, shown in the module's section bar rather than on the main page. */
 export interface ModuleSection {
@@ -85,6 +85,13 @@ const labWaiting = (kind: 'decide' | 'issue') => async (db: Database, subject: A
   const member = !manages && subject.personId ? await loadLabMember(db, subject.personId) : null;
   if (!labCan(member, manages, kind)) return 0;
   return kind === 'decide' ? new LabQueries(db).pendingDecisionCount() : new LabQueries(db).pendingIssueCount();
+};
+/** What the person may open in Smart Money, from money_member or `money.manage`. Hides links only; every page and API checks again. */
+const moneyMay = (page: MoneyPage | 'manage' | 'any') => async (db: Database, subject: AccessSubject) => {
+  if (canManageMoney(subject)) return true;
+  if (!subject.personId || page === 'manage') return false;
+  const member = await loadMoneyMember(db, subject.personId);
+  return page === 'any' ? (member?.pages.length ?? 0) > 0 : moneyCan(member, false, page);
 };
 const labBadge = async (db: Database, subject: AccessSubject) => (await labWaiting('decide')(db, subject)) + (await labWaiting('issue')(db, subject));
 
@@ -189,6 +196,10 @@ export const moduleRegistry: readonly ModuleEntry[] = [
     { href: '/lab/opening', labelKey: 'labOpening', visible: everyone, available: labMay('editOpening', 'certifyOpening') },
     { href: '/lab/settings', labelKey: 'labSettings', visible: everyone, available: labMay('manageSettings') }
   ]), available: labMay('viewStock'), badge: labBadge },
+  { ...withSections({ code: 'smart-money', href: '/money', labelKey: 'moduleSmartMoney', descriptionKey: 'moduleSmartMoneyDescription', icon: 'coins', group: 'services', status: 'live' }, [
+    { href: '/money/dental', labelKey: 'moneyDental', visible: everyone, available: moneyMay('dental') },
+    { href: '/money/settings', labelKey: 'moneySettings', visible: everyone, available: moneyMay('manage') }
+  ]), available: moneyMay('any') },
   // ผู้ดูแลระบบ only. A new admin page is one more section here and one page under app/(app)/admin.
   withSections({ code: 'admin', href: '/admin', labelKey: 'moduleAdmin', descriptionKey: 'moduleAdminDescription', icon: 'settings', group: 'governance', status: 'live' }, [
     { href: '/admin/connections', labelKey: 'adminConnections', visible: isAdmin },

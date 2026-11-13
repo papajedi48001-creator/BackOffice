@@ -49,6 +49,7 @@
 [data-module="fleet"] { --accent: #a63d40; }
 [data-module="mass-casualty"] { --accent: #b91c1c; }
 [data-module="lab-inventory"] { --accent: #0e7490; }
+[data-module="smart-money"] { --accent: #1d4ed8; }
 [data-module="admin"] { --accent: #374151; }
 
 * { box-sizing: border-box; }
