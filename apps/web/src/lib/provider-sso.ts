@@ -32,21 +32,23 @@ export interface PortalRequestConfig { issuer: string; clientId: string }
 
 /**
  * The radius-server portal, kept only for its server-to-server photo requests (/api/portal/photo). Sign-in no longer goes through the
- * portal, so neither the portal client secret nor its redirect URI is needed.
+ * portal, so neither the portal client secret nor its redirect URI is needed. The audience defaults to `backoffice`, as the portal signs it.
  */
 export function portalSsoConfig(): PortalRequestConfig | null {
   const issuer = absoluteUrl(readRuntimeValue('PROVIDER_SSO_ISSUER'));
-  const clientId = readRuntimeValue('PROVIDER_SSO_CLIENT_ID');
-  if (!issuer || !clientId) return null;
-  return { issuer, clientId };
+  if (!issuer) return null;
+  return { issuer, clientId: readRuntimeValue('PROVIDER_SSO_CLIENT_ID') ?? 'backoffice' };
 }
 
 let cachedPortalClient: { key: string; client: PortalOidcClient } | undefined;
 
+/** A portal key fetch may take this long; with the route's own deadline the portal gets its answer within three seconds. */
+export const portalKeyTimeoutMs = 1_000;
+
 /** One client per configuration so its JWKS cache lives across requests. Only `verifyPortalRequest` is used, so no secret is passed. */
 export function portalOidcClient(config: PortalRequestConfig): PortalOidcClient {
   const key = JSON.stringify(config);
-  if (cachedPortalClient?.key !== key) cachedPortalClient = { key, client: new PortalOidcClient({ ...config, clientSecret: '', redirectUri: '' }) };
+  if (cachedPortalClient?.key !== key) cachedPortalClient = { key, client: new PortalOidcClient({ ...config, clientSecret: '', redirectUri: '', timeoutMs: portalKeyTimeoutMs }) };
   return cachedPortalClient.client;
 }
 
