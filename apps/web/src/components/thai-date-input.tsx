@@ -50,7 +50,7 @@ export function ThaiDateInput(props: ThaiDateInputProps) {
     if (props.onDateTime && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(next.trim())) { setProblem(null); props.onDateTime(next.trim()); return; }
     if (next.trim() === '') { setProblem(null); commit(''); return; }
     const iso = parseThaiDateInput(next);
-    if (!iso) { setProblem('กรอกวันที่เป็น วว/ดด/ปปปป (พ.ศ.) เช่น 09/11/2569'); return; }
+    if (!iso) { setProblem('กรอกวันที่ เช่น 13/11/2569 หรือ 13 พ.ย. 2569 (ปี พ.ศ.)'); return; }
     const refused = refusal(iso);
     setProblem(refused);
     if (!refused) commit(iso);

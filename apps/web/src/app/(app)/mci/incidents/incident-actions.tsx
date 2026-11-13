@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { MciIncidentKind } from '@backoffice/contracts';
 import { ActionDialog } from '../../../../components/action-dialog';
 import { FormDialog } from '../../../../components/form-dialog';
+import { ThaiDateTimeInput } from '../../../../components/thai-date-input';
 import { fromBangkokLocal, toBangkokLocal } from '../../../../lib/fleet-labels';
 import { sendMci } from '../../../../lib/mci-labels';
 
@@ -41,7 +42,7 @@ export function OpenIncidentForm({ professions, disabled }: { professions: Reado
       <label htmlFor={`${ids}-location`}>สถานที่เกิดเหตุ</label>
       <input id={`${ids}-location`} value={location} maxLength={300} onChange={(event) => setLocation(event.target.value)} />
       <label htmlFor={`${ids}-at`}>เวลาเกิดเหตุ</label>
-      <input id={`${ids}-at`} type="datetime-local" value={occurredAt} required onChange={(event) => setOccurredAt(event.target.value)} />
+      <ThaiDateTimeInput id={`${ids}-at`} label="เวลาเกิดเหตุ" value={occurredAt} required onChange={setOccurredAt} />
     </div>
     <fieldset>
       <legend>ประเภท</legend>

@@ -33,7 +33,7 @@ describe('OrganizationForms', () => {
     render(<OrganizationForms organizationId="nur" unitType={null} people={people} today="2026-10-22" />);
 
     openHead();
-    expect(screen.getByLabelText('วันที่เริ่มเป็นหัวหน้า')).toHaveValue('22/10/2569');
+    expect(screen.getByLabelText('วันที่เริ่มเป็นหัวหน้า')).toHaveValue('22 ต.ค. 2569');
     fireEvent.change(screen.getByRole('combobox', { name: 'หัวหน้าคนใหม่' }), { target: { value: 'E001 นายสมศักดิ์ รักงาน' } });
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'ตั้งเป็นหัวหน้า' }));
 
