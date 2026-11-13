@@ -9,6 +9,8 @@ describe('module gate', () => {
     expect(moduleForPath('/api/mci/board')).toBe('mass-casualty');
     expect(moduleForPath('/lab/stock')).toBe('lab-inventory');
     expect(moduleForPath('/api/lab/usages')).toBe('lab-inventory');
+    expect(moduleForPath('/money/dental')).toBe('smart-money');
+    expect(moduleForPath('/api/money/members')).toBe('smart-money');
     expect(moduleForPath('/rooms')).toBe('room-booking');
     expect(moduleForPath('/api/rooms/bookings/x')).toBe('room-booking');
     expect(moduleForPath('/api/travel')).toBe('official-travel');
