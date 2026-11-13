@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { fleetRequestInputSchema, reasonInputSchema, type FleetErrorCode, type FleetRequestInput, type RequestStatus } from '@backoffice/contracts';
+import { fleetRequestInputSchema, reasonInputSchema, usesGovernmentCar, type FleetErrorCode, type FleetRequestInput, type RequestStatus } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { lockPerson } from '../leave/leave-service';
 import { loadPersonContext } from '../leave/leave-store';
@@ -131,7 +131,7 @@ export class FleetRequestService {
         "SELECT id, leader_person_id AS leaderPersonId, subject, place, province, vehicle, DATE_FORMAT(start_date, '%Y-%m-%d') AS startDate, DATE_FORMAT(end_date, '%Y-%m-%d') AS endDate, start_half AS startHalf, end_half AS endHalf FROM official_travel WHERE id = ? FOR UPDATE",
         [member.travelId]
       );
-      if (!travel || travel.vehicle !== 'GOVERNMENT_CAR' || travel.endDate < bangkokToday(now)) return none;
+      if (!travel || !usesGovernmentCar(travel.vehicle) || travel.endDate < bangkokToday(now)) return none;
       const members = await database.query<{ personId: string; status: RequestStatus; displayName: string | null }>('SELECT m.person_id AS personId, r.status, p.display_name AS displayName FROM official_travel_member m JOIN request r ON r.id = m.request_id JOIN person p ON p.id = m.person_id WHERE m.travel_id = ? ORDER BY m.person_id', [travel.id]);
       if (tripStatus(members.map((member) => member.status)) !== 'APPROVED' || await this.hasLiveRequest(database, travel.id)) return none;
       const going = members.filter((member) => member.status === 'APPROVED');
@@ -158,7 +158,7 @@ export class FleetRequestService {
   /** Rule 2, with the trip row locked: the requester goes on an approved trip by รถราชการ that has not ended, and the trip has no other live ใบ. */
   private async checkTravel(database: Database, travelId: string, requesterPersonId: string, now: Date): Promise<Failure | null> {
     const [travel] = await database.query<{ vehicle: string; endDate: string }>("SELECT vehicle, DATE_FORMAT(end_date, '%Y-%m-%d') AS endDate FROM official_travel WHERE id = ? FOR UPDATE", [travelId]);
-    if (!travel || travel.vehicle !== 'GOVERNMENT_CAR' || travel.endDate < bangkokToday(now)) return fail('TRAVEL_NOT_ELIGIBLE');
+    if (!travel || !usesGovernmentCar(travel.vehicle) || travel.endDate < bangkokToday(now)) return fail('TRAVEL_NOT_ELIGIBLE');
     const members = await database.query<{ personId: string; status: RequestStatus }>('SELECT m.person_id AS personId, r.status FROM official_travel_member m JOIN request r ON r.id = m.request_id WHERE m.travel_id = ?', [travelId]);
     const own = members.find((member) => member.personId === requesterPersonId);
     if (!own || own.status !== 'APPROVED' || tripStatus(members.map((member) => member.status)) !== 'APPROVED') return fail('TRAVEL_NOT_ELIGIBLE');

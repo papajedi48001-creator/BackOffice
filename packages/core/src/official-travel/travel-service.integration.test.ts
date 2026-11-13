@@ -53,6 +53,21 @@ describeWithDatabase('OfficialTravelService against MariaDB', () => {
     expect(audits[0]!.metadata).not.toContain('240');
   });
 
+  it('keeps the หนังสือเชิญ details and a source for each cost item, summarizing mixed sources', async () => {
+    const leader = await createLeavePerson(database, org.section);
+    const { fundingSource: _old, ...base } = trip('2027-04-05', '2027-04-05');
+    const result = await service.submit(leader, { ...base, vehicle: 'GOVERNMENT_CAR_AIRPLANE', costRegistration: 1500, invitationNumber: 'มค 0033/ว 123', invitationDate: '2027-03-20', invitationIssuer: 'สสจ.มหาสารคาม', costFunding: { allowance: 'HOSPITAL_FUND', lodging: 'NONE', transport: 'NONE', registration: 'ORGANISER' } });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const view = await new OfficialTravelQueries(database).detail(result.travelId, { authenticated: true, personId: leader, roles: [], dataOwnerModules: [] }, '2027-03-25');
+    expect(view).toMatchObject({ vehicle: 'GOVERNMENT_CAR_AIRPLANE', fundingSource: 'MIXED', invitation: { number: 'มค 0033/ว 123', date: '2027-03-20', issuer: 'สสจ.มหาสารคาม' }, costFunding: { allowance: 'HOSPITAL_FUND', lodging: 'NONE', transport: 'NONE', registration: 'ORGANISER' } });
+    const older = await service.submit(leader, trip('2027-04-12', '2027-04-12'));
+    if (!older.ok) throw new Error(older.code);
+    await database.execute('UPDATE official_travel SET funding_allowance = NULL, funding_lodging = NULL, funding_transport = NULL, funding_registration = NULL WHERE id = ?', [older.travelId]);
+    const old = await new OfficialTravelQueries(database).detail(older.travelId, { authenticated: true, personId: leader, roles: [], dataOwnerModules: [] }, '2027-03-25');
+    expect(old).toMatchObject({ fundingSource: 'HOSPITAL_FUND', invitation: null, costFunding: { allowance: 'HOSPITAL_FUND', registration: 'HOSPITAL_FUND' } });
+  });
+
   it('files nothing when one person already has leave on a trip day, and names that person', async () => {
     const leader = await createLeavePerson(database, org.section);
     const onLeave = await createLeavePerson(database, org.section);

@@ -1,0 +1,8 @@
+ALTER TABLE official_travel
+  ADD COLUMN IF NOT EXISTS invitation_number VARCHAR(100) NULL,
+  ADD COLUMN IF NOT EXISTS invitation_date DATE NULL,
+  ADD COLUMN IF NOT EXISTS invitation_issuer VARCHAR(300) NULL,
+  ADD COLUMN IF NOT EXISTS funding_allowance VARCHAR(32) NULL,
+  ADD COLUMN IF NOT EXISTS funding_lodging VARCHAR(32) NULL,
+  ADD COLUMN IF NOT EXISTS funding_transport VARCHAR(32) NULL,
+  ADD COLUMN IF NOT EXISTS funding_registration VARCHAR(32) NULL;
