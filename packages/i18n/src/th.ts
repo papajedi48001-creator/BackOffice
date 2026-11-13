@@ -136,6 +136,8 @@ export const th = {
   mciOps: 'ภาพรวม', mciPatients: 'ผู้ป่วย', mciStaff: 'กำลังคน', mciIncidents: 'เหตุ', mciSettings: 'ตั้งค่า', attendanceSettings: 'ตั้งค่า', attendanceDevices: 'กล่องและจุดลงเวลา', attendanceAudit: 'บันทึกตรวจสอบ',
   moduleMassCasualty: 'อุบัติเหตุหมู่', moduleMassCasualtyDescription: 'รายงานตัว จัดจุด และติดตามผู้ป่วยในเหตุ', adminRoleMciManager: 'ผู้จัดการอุบัติเหตุหมู่', adminRoleAttendanceManager: 'ผู้จัดการระบบลงเวลา', adminRoleAttendanceAuditor: 'ผู้ตรวจสอบระบบลงเวลา', roleDescMciManager: 'ประกาศเปิดและปิดเหตุอุบัติเหตุหมู่ จัดคน และตั้งค่าโมดูล', roleDescAttendanceManager: 'ตั้งค่าเวรและกฎ กล่องลงเวลา ใบหน้าและ PIN อนุมัติคำขอขั้นสุดท้าย และออกรายงานทุกหน่วยงาน', roleDescAttendanceScheduler: 'จัดตารางเวรของหน่วยงานที่ได้รับมอบ', roleDescAttendanceAuditor: 'อ่านบันทึกการตรวจสอบและรายงานของระบบลงเวลา แก้ไขข้อมูลไม่ได้',
   moduleLabInventory: 'รายงานวัสดุคงคลัง Lab', moduleLabInventoryDescription: 'รับเข้า ขอเบิก ตัดใช้ และยอดคงเหลือวัสดุ Lab', adminRoleLabManager: 'ผู้จัดการวัสดุคงคลัง Lab', roleDescLabManager: 'จัดการสมาชิกและตั้งค่าระบบวัสดุคงคลัง Lab และทำได้ทุกอย่างในโมดูล',
+  moduleSmartMoney: 'Smart Money', moduleSmartMoneyDescription: 'ติดตามการเงินและการเรียกเก็บค่ารักษาพยาบาล', adminRoleMoneyManager: 'ผู้จัดการโมดูล Smart Money', roleDescMoneyManager: 'จัดการสมาชิกและข้อมูลของ Smart Money และเห็นทุกหน้าในโมดูล',
+  moneyOverview: 'ภาพรวม', moneyDental: 'ลูกหนี้ทันตกรรม', moneySettings: 'ตั้งค่า',
   labUsage: 'ตัดใช้', labRequisitions: 'ใบขอเบิก', labReceipts: 'รับเข้า', labStock: 'ยอดคงเหลือ', labOpening: 'ยอดยกมา', labSettings: 'ตั้งค่า',
 } as const;
 
