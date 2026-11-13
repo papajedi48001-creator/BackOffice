@@ -73,10 +73,11 @@ portal แสดงรูปโปรไฟล์ Back Office ของบุค
 JWT บอก `account_id` ของ Provider ID ที่ portal ผูกกับสมาชิกไว้ Back Office จึงหาบุคลากรจากการผูกบัญชี Provider ID ในข้อ 3 ได้
 (radius-server ต้องเป็นรุ่นที่ส่ง `provider_iss`/`provider_sub` ถ้ายังเป็นรุ่นเก่า หาได้เฉพาะการผูกที่เคยทำผ่าน portal)
 
-เปิดใช้โดยเพิ่ม `-f infra/compose/docker-compose.portal-photo.yml` ต่อจาก `docker-compose.provider-sso.yml` และตั้งใน `.env`
+เปิดอยู่แล้วในทุก deploy ที่ใช้ `docker-compose.provider-sso.yml` (ไฟล์ `docker-compose.portal-photo.yml` เหลือไว้ให้คำสั่งเดิมไม่พัง แต่ไม่เพิ่มอะไร)
+ค่าเริ่มต้นด้านล่างใช้ได้กับ portal ของโรงพยาบาล ตั้งใน `.env` เฉพาะเมื่อต่างจากนี้
 
 ```bash
-PROVIDER_SSO_ISSUER=https://aut-waritch-hosp.moph.go.th
+# PROVIDER_SSO_ISSUER=https://aut-waritch-hosp.moph.go.th   # ค่าเริ่มต้น
 # PROVIDER_SSO_CLIENT_ID=backoffice          # ค่าเริ่มต้น ต้องตรงกับ client ที่ลงทะเบียนไว้ใน portal
 # PROVIDER_SSO_PORTAL_IP=192.168.1.10        # IP ของ portal ใน LAN
 ```
@@ -84,7 +85,10 @@ PROVIDER_SSO_ISSUER=https://aut-waritch-hosp.moph.go.th
 ไม่ต้องมี client secret หรือ redirect URI ของ portal เครื่อง portal ต้องเรียกโฮสต์ Back Office ทาง https ได้ และ web ต้องเรียก `/.well-known/jwks.json` (หรือ `/oidc/jwks` ของ portal รุ่นเก่า) ของ portal ได้ภายใน 1 วินาที
 ถ้าเรียกไม่ได้ dashboard แสดงรูปการ์ตูนเดิม
 
-ตรวจจากเครื่อง portal: `curl -s -o /dev/null -w '%{http_code}\n' https://<โฮสต์ Back Office>/api/portal/photo` ต้องได้ `401` (ไม่มี token)
+ตรวจหลัง deploy:
+
+- บนเครื่อง Back Office: `docker exec waritch-backoffice-staging-web-1 printenv PROVIDER_SSO_ISSUER` ต้องได้ URL ของ portal
+- จากเครื่อง portal: `curl -s -o /dev/null -w '%{http_code}\n' https://office-waritch-hosp.moph.go.th/api/portal/photo` ต้องได้ `401` (ไม่มี token; ถ้าได้ `404` แปลว่า web ไม่มี `PROVIDER_SSO_ISSUER`)
 
 ## 5. ข้อควรรู้
 

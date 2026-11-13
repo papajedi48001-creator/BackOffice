@@ -142,34 +142,37 @@ for overrides in "" "${root_dir}/infra/compose/docker-compose.staging-shared-ngi
     if (networks.egress.ipam?.config?.[0]?.subnet !== "10.250.255.0/24") fail("the egress network must use BACKOFFICE_EGRESS_SUBNET");
     for (const name of ["backplane", "storage", "scan"]) if (!joined.includes(name)) fail(`web must keep the ${name} network`);
     for (const [name, service] of Object.entries(services)) if (name !== "web" && Object.keys(service.networks ?? {}).includes("egress")) fail(`${name} must not join the egress network`);
-    if ((services.web.extra_hosts ?? []).length) fail("web must resolve the ministry hosts through DNS, not a pinned address");
+    // Only the hospital portal is pinned to its LAN address; the ministry hosts resolve through DNS.
+    if ((services.web.extra_hosts ?? []).some((entry) => /(^|\.)(moph\.id\.th|provider\.id\.th)[:=]/.test(entry))) fail("web must resolve the ministry hosts through DNS, not a pinned address");
   ' <<< "${rendered}"
   if [[ "${env_for_run}" != "${provider_env}" ]]; then rm -f "${env_for_run}"; fi
 done
 echo "the provider-sso override turns on Provider ID sign-in and reaches MOPH ID"
 
-# The portal's photo requests need the portal issuer (for its JWKS) only when the operator also adds docker-compose.portal-photo.yml.
-rendered="$(docker compose --env-file "${provider_env}" -f "${compose_file}" -f "${root_dir}/infra/compose/docker-compose.provider-sso.yml" config --format json)"
-node -e '
-  const { services } = JSON.parse(require("fs").readFileSync(0, "utf8"));
-  if (Object.keys(services.web.environment).some((key) => key.startsWith("PROVIDER_SSO_"))) { console.error("portal photo settings must stay off without the portal-photo override"); process.exit(1); }
-' <<< "${rendered}"
-photo_env="$(mktemp)"
-cat "${provider_env}" > "${photo_env}"
-echo "PROVIDER_SSO_ISSUER=https://aut-waritch-hosp.moph.go.th" >> "${photo_env}"
-rendered="$(docker compose --env-file "${photo_env}" -f "${compose_file}" -f "${root_dir}/infra/compose/docker-compose.provider-sso.yml" -f "${root_dir}/infra/compose/docker-compose.portal-photo.yml" config --format json)"
-node -e '
+# The portal's photo requests (/api/portal/photo) come with every Provider ID deploy: docker-compose.provider-sso.yml carries the portal
+# issuer (default aut-waritch-hosp.moph.go.th), the audience backoffice and the portal's LAN address. The old portal-photo override still stacks.
+check_portal_photo='
   const { services } = JSON.parse(require("fs").readFileSync(0, "utf8"));
   const fail = (message) => { console.error(message); process.exit(1); };
+  const [issuer, address] = process.argv.slice(1);
   const env = services.web.environment;
-  if (env.PROVIDER_SSO_ISSUER !== "https://aut-waritch-hosp.moph.go.th" || env.PROVIDER_SSO_CLIENT_ID !== "backoffice") fail("web must receive the portal issuer and client id");
+  if (env.PROVIDER_SSO_ISSUER !== issuer || env.PROVIDER_SSO_CLIENT_ID !== "backoffice") fail(`web must receive the portal issuer ${issuer} and client id backoffice`);
   if (env.PROVIDER_SSO_CLIENT_SECRET || env.PROVIDER_SSO_CLIENT_SECRET_FILE || env.PROVIDER_SSO_REDIRECT_URI) fail("photo requests must not need a portal secret or redirect URI");
-  if (!(services.web.extra_hosts ?? []).some((entry) => /^aut-waritch-hosp\.moph\.go\.th[:=]192\.168\.1\.10$/.test(entry))) fail("web must reach the portal at its LAN address");
+  if (!(services.web.extra_hosts ?? []).some((entry) => entry === `aut-waritch-hosp.moph.go.th:${address}` || entry === `aut-waritch-hosp.moph.go.th=${address}`)) fail(`web must reach the portal at ${address}`);
   if (!Object.keys(services.web.networks ?? {}).includes("egress")) fail("web must reach the portal over the egress network");
   for (const [name, service] of Object.entries(services)) if (name !== "web" && Object.keys(service.environment ?? {}).some((key) => key.startsWith("PROVIDER_SSO_"))) fail(`${name} must not receive portal settings`);
-' <<< "${rendered}"
+'
+rendered="$(docker compose --env-file "${provider_env}" -f "${compose_file}" -f "${root_dir}/infra/compose/docker-compose.provider-sso.yml" config --format json)"
+node -e "${check_portal_photo}" https://aut-waritch-hosp.moph.go.th 192.168.1.10 <<< "${rendered}"
+photo_env="$(mktemp)"
+cat "${provider_env}" > "${photo_env}"
+printf '%s\n' PROVIDER_SSO_ISSUER=https://portal.example.test PROVIDER_SSO_PORTAL_IP=192.168.1.20 >> "${photo_env}"
+rendered="$(docker compose --env-file "${photo_env}" -f "${compose_file}" -f "${root_dir}/infra/compose/docker-compose.provider-sso.yml" config --format json)"
+node -e "${check_portal_photo}" https://portal.example.test 192.168.1.20 <<< "${rendered}"
+rendered="$(docker compose --env-file "${photo_env}" -f "${compose_file}" -f "${root_dir}/infra/compose/docker-compose.provider-sso.yml" -f "${root_dir}/infra/compose/docker-compose.portal-photo.yml" config --format json)"
+node -e "${check_portal_photo}" https://portal.example.test 192.168.1.20 <<< "${rendered}"
 rm -f "${photo_env}" "${provider_env}"
-echo "the portal-photo override lets web check the portal's photo requests"
+echo "the provider-sso override lets web check the portal's photo requests"
 
 # Secrets typed on the web stay unstorable unless the operator adds docker-compose.sign-in-settings.yml.
 rendered="$(docker compose --env-file "${env_file}" -f "${compose_file}" config --format json)"
