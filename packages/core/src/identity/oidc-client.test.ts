@@ -121,8 +121,9 @@ describe('PortalOidcClient', () => {
     }) as typeof fetch, () => new Date(nowSeconds * 1000));
     // Prime the cache with the old key, then present a token signed by the new one.
     (client as unknown as { jwksCache: unknown }).jwksCache = { keys: [h.primary.jwk], fetchedAt: nowSeconds * 1000 };
+    h.calls.length = 0;
     await expect(client.complete('the-code', second.flow)).resolves.toMatchObject({ subject: 'member-1' });
-    expect(h.calls.filter((url) => url.endsWith('/oidc/jwks')).length).toBe(2);
+    expect(h.calls.filter((url) => !url.endsWith('/oidc/token'))).toEqual([`${config.issuer}/.well-known/jwks.json`]);
   });
 
   it('caches the JWKS for 10 minutes', async () => {
@@ -171,5 +172,49 @@ describe('PortalOidcClient.verifyPortalRequest', () => {
     await expect(check((h) => token(h.primary.privateKey, { ...claims, exp: nowSeconds + 3600 }, header))).rejects.toEqual(new OidcError('INVALID'));
     await expect(check(() => token(keyPair('k1').privateKey, claims, header))).rejects.toEqual(new OidcError('INVALID'));
     await expect(check(() => 'not-a-token')).rejects.toEqual(new OidcError('INVALID'));
+  });
+});
+
+describe('PortalOidcClient JWKS location', () => {
+  const typ = 'backoffice-photo-request+jwt';
+  const header = { alg: 'ES256', kid: 'k1', typ };
+  const claims = { iss: config.issuer, aud: 'backoffice', sub: 'member-1', iat: nowSeconds, exp: nowSeconds + 60 };
+  const client = (answer: (url: string, init?: RequestInit) => Promise<Response>, options: { timeoutMs?: number } = {}) => {
+    const calls: string[] = [];
+    const fetchImpl = (async (input: RequestInfo | URL, init?: RequestInit) => { calls.push(String(input)); return answer(String(input), init); }) as typeof fetch;
+    return { calls, client: new PortalOidcClient({ ...config, ...options }, fetchImpl, () => new Date(nowSeconds * 1000)) };
+  };
+  const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
+
+  it('checks a portal request against <portal>/.well-known/jwks.json', async () => {
+    const key = keyPair('k1');
+    const { calls, client: portal } = client(async (url) => (url === `${config.issuer}/.well-known/jwks.json` ? json({ keys: [key.jwk] }) : json({ error: 'nope' }, 404)));
+    await expect(portal.verifyPortalRequest(token(key.privateKey, claims, header), typ)).resolves.toEqual({ memberId: 'member-1', provider: null });
+    expect(calls).toEqual([`${config.issuer}/.well-known/jwks.json`]);
+  });
+
+  it('falls back to <portal>/oidc/jwks for a portal that does not publish /.well-known/jwks.json, and remembers it', async () => {
+    const key = keyPair('k1');
+    const { calls, client: portal } = client(async (url) => (url === `${config.issuer}/oidc/jwks` ? json({ keys: [key.jwk] }) : new Response('<html>not found</html>', { status: 404 })));
+    await expect(portal.verifyPortalRequest(token(key.privateKey, claims, header), typ)).resolves.toMatchObject({ memberId: 'member-1' });
+    expect(calls).toEqual([`${config.issuer}/.well-known/jwks.json`, `${config.issuer}/oidc/jwks`]);
+    // An unknown kid refetches from the address that worked, not the missing one first.
+    calls.length = 0;
+    await expect(portal.verifyPortalRequest(token(key.privateKey, claims, { ...header, kid: 'k9' }), typ)).rejects.toEqual(new OidcError('INVALID'));
+    expect(calls[0]).toBe(`${config.issuer}/oidc/jwks`);
+  });
+
+  it('is UNAVAILABLE when neither address answers, and never follows a redirect', async () => {
+    const seen: Array<RequestInit | undefined> = [];
+    const { client: portal } = client(async (_url, init) => { seen.push(init); throw new TypeError('fetch failed'); });
+    await expect(portal.verifyPortalRequest(token(keyPair('k1').privateKey, claims, header), typ)).rejects.toEqual(new OidcError('UNAVAILABLE'));
+    expect(seen.map((init) => init?.redirect)).toEqual(['error', 'error']);
+  });
+
+  it('gives each JWKS fetch the configured timeout', async () => {
+    const started = Date.now();
+    const { client: portal } = client((_url, init) => new Promise((_resolve, reject) => init?.signal?.addEventListener('abort', () => reject(new Error('aborted')))), { timeoutMs: 100 });
+    await expect(portal.verifyPortalRequest(token(keyPair('k1').privateKey, claims, header), typ)).rejects.toEqual(new OidcError('UNAVAILABLE'));
+    expect(Date.now() - started).toBeLessThan(1000);
   });
 });

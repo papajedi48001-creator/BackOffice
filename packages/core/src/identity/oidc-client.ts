@@ -1,7 +1,8 @@
 import { createHash, createPublicKey, randomBytes, verify, type JsonWebKey } from 'node:crypto';
 import type { ExternalIdentity } from '@backoffice/contracts';
 
-export interface OidcClientConfig { issuer: string; clientId: string; clientSecret: string; redirectUri: string }
+/** `timeoutMs`: how long one request to the portal may take (default 10 s); the photo route sets it short to answer within 3 s. */
+export interface OidcClientConfig { issuer: string; clientId: string; clientSecret: string; redirectUri: string; timeoutMs?: number }
 export interface OidcFlow { state: string; nonce: string; verifier: string }
 /** A portal-signed request: the portal member, and the Provider ID account the portal has bound to that member, when it has one. */
 export interface PortalRequest { memberId: string; provider: { issuer: string; subject: string } | null }
@@ -34,6 +35,11 @@ const isWebUrl = (value: unknown): value is string => {
 /** The BackOffice side of the portal's OpenID Connect provider: authorization code + PKCE, ES256 ID tokens checked with node:crypto. */
 export class PortalOidcClient {
   private jwksCache: { keys: Jwk[]; fetchedAt: number } | null = null;
+  /**
+   * Where the portal publishes its keys: the contract names `<portal>/.well-known/jwks.json`; portals that only serve
+   * `<portal>/oidc/jwks` keep working. The address that answered last is tried first.
+   */
+  private jwksPaths = ['/.well-known/jwks.json', '/oidc/jwks'];
 
   constructor(private readonly config: OidcClientConfig, private readonly fetchImpl: typeof fetch = fetch, private readonly now: () => Date = () => new Date()) {}
 
@@ -103,17 +109,22 @@ export class PortalOidcClient {
   private async keys(refresh: boolean): Promise<Jwk[]> {
     const nowMs = this.now().getTime();
     if (!refresh && this.jwksCache && nowMs - this.jwksCache.fetchedAt < JWKS_TTL_MS) return this.jwksCache.keys;
-    const body = await this.requestJson(`${this.config.issuer}/oidc/jwks`, { method: 'GET' }, false);
-    if (!Array.isArray(body.keys)) throw new OidcError('UNAVAILABLE');
-    this.jwksCache = { keys: body.keys as Jwk[], fetchedAt: nowMs };
-    return this.jwksCache.keys;
+    for (const path of [...this.jwksPaths]) {
+      let body: Record<string, unknown>;
+      try { body = await this.requestJson(`${this.config.issuer}${path}`, { method: 'GET' }, false); } catch { continue; }
+      if (!Array.isArray(body.keys)) continue;
+      this.jwksPaths = [path, ...this.jwksPaths.filter((other) => other !== path)];
+      this.jwksCache = { keys: body.keys as Jwk[], fetchedAt: nowMs };
+      return this.jwksCache.keys;
+    }
+    throw new OidcError('UNAVAILABLE');
   }
 
   /** `grantErrors`: a 400 invalid_grant is the user's code being refused, not the portal being down. */
   private async requestJson(url: string, init: RequestInit, grantErrors: boolean): Promise<Record<string, unknown>> {
     let response: Response;
     try {
-      response = await this.fetchImpl(url, { ...init, redirect: 'error', signal: AbortSignal.timeout(TIMEOUT_MS) });
+      response = await this.fetchImpl(url, { ...init, redirect: 'error', signal: AbortSignal.timeout(this.config.timeoutMs ?? TIMEOUT_MS) });
     } catch { throw new OidcError('UNAVAILABLE'); }
     let body: Record<string, unknown>;
     try { body = (await response.json()) as Record<string, unknown>; } catch { throw new OidcError('UNAVAILABLE'); }
