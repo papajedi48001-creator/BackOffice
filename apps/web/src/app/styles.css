@@ -1065,6 +1065,7 @@ h2.chat-window-title { cursor: default; }
 .money-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .money-table-wrap { max-width: 100%; overflow-x: auto; }
 .money-table-wrap.is-tall { max-height: 560px; overflow-y: auto; }
+.money-table-wrap.is-tall table { min-width: 920px; }
 .money-table-wrap table { width: 100%; border-collapse: collapse; font-size: .9rem; }
 .money-table-wrap th, .money-table-wrap td { padding: 8px 10px; border-bottom: 1px solid var(--line-soft); text-align: left; vertical-align: top; }
 .money-table-wrap thead th { position: sticky; top: 0; background: var(--page); color: var(--ink-2); font-weight: 700; }
