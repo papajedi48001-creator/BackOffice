@@ -45,8 +45,9 @@ describe('portal photo request configuration', () => {
   it('needs only the portal issuer and the client id the portal signs for, never a portal secret', () => {
     set({});
     expect(portalSsoConfig()).toBeNull();
+    // The contract fixes the audience at `backoffice`, so the issuer alone is enough.
     set({ PROVIDER_SSO_ISSUER: 'https://aut-waritch-hosp.moph.go.th/' });
-    expect(portalSsoConfig()).toBeNull();
+    expect(portalSsoConfig()).toEqual({ issuer: 'https://aut-waritch-hosp.moph.go.th', clientId: 'backoffice' });
     set({ PROVIDER_SSO_ISSUER: 'https://aut-waritch-hosp.moph.go.th/', PROVIDER_SSO_CLIENT_ID: 'backoffice' });
     expect(portalSsoConfig()).toEqual({ issuer: 'https://aut-waritch-hosp.moph.go.th', clientId: 'backoffice' });
     set({ PROVIDER_SSO_ISSUER: 'aut-waritch-hosp', PROVIDER_SSO_CLIENT_ID: 'backoffice' });
