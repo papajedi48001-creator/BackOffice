@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ signInRoutes: vi.fn(async () => ({ thaid: null as object | null, providerId: null as object | null, configured: false, passwordMode: 'AUTO' as string })) }));
+type Routes = { thaid: object | null; providerId: object | null; configured: boolean; passwordMode?: string };
+const mocks = vi.hoisted(() => ({ signInRoutes: vi.fn(async (): Promise<Routes> => ({ thaid: null, providerId: null, configured: false, passwordMode: 'AUTO' })) }));
 vi.mock('./sign-in-settings', () => ({ signInRoutes: mocks.signInRoutes }));
 
 import { isPasswordSignInOpen } from './password-sign-in';

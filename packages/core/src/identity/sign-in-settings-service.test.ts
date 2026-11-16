@@ -145,7 +145,7 @@ describe('SignInSettingsService password sign-in mode', () => {
     const service = new SignInSettingsService(database, box, envOf({}));
     expect(await service.savePasswordMode('ON', 'admin-1')).toEqual({ ok: true });
     expect(transaction).toHaveBeenCalledTimes(1);
-    expect(executed.some((sql) => sql.startsWith('INSERT INTO sign_in_setting') && sql.includes('["PASSWORD",1,"{\\"mode\\":\\"ON\\"}"'))).toBe(true);
+    expect(executed.some((sql) => sql.startsWith('INSERT INTO sign_in_setting') && sql.includes('["PASSWORD",0,"{\\"mode\\":\\"ON\\"}"'))).toBe(true);
     expect(executed.some((sql) => sql.includes('admin.sign_in_setting.update') && sql.includes('\\"fromMode\\":\\"AUTO\\"') && sql.includes('\\"toMode\\":\\"ON\\"') && sql.includes('\\"method\\":\\"PASSWORD\\"'))).toBe(true);
     expect((await service.routes()).passwordMode).toBe('ON');
     expect((await service.view()).password.mode).toBe('ON');
@@ -164,6 +164,13 @@ describe('SignInSettingsService password sign-in mode', () => {
     expect(rows.has('PASSWORD')).toBe(false);
     expect(await new SignInSettingsService(database, box, envOf(providerEnv)).savePasswordMode('OFF', 'admin-1')).toEqual({ ok: true });
     expect((await service.routes()).passwordMode).toBe('OFF');
+  });
+
+  it('refuses OFF when ThaID is complete but cannot sign anyone in (no national-ID keys) and Provider ID is not ready', async () => {
+    const service = new SignInSettingsService(store().database, box, envOf({}));
+    await service.save('THAID', thaidInput('s'), 'admin-1');
+    expect(await service.savePasswordMode('OFF', 'admin-1', false)).toEqual({ ok: false, code: 'LAST_SIGN_IN_ROUTE' });
+    expect(await service.savePasswordMode('OFF', 'admin-1', true)).toEqual({ ok: true });
   });
 
   it('reads an unknown saved mode as AUTO', async () => {

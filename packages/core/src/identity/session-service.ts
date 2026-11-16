@@ -11,7 +11,9 @@ export interface SessionRepository {
   setActiveRole(sessionId: string, role: string): Promise<void>;
 }
 export interface AccessSubjectLoader { load(personId: string): Promise<Pick<AccessSubject, 'roles' | 'dataOwnerModules' | 'hospitalWideDataOwnerModules'>>; }
-export interface SessionServiceOptions { idleTimeoutSeconds?: number; absoluteTimeoutSeconds?: number; touchIntervalSeconds?: number; createId?: () => string; createToken?: () => string; }
+export interface SessionServiceOptions { idleTimeoutSeconds?: number; absoluteTimeoutSeconds?: number; touchIntervalSeconds?: number; createId?: () => string; createToken?: () => string;
+  /** False while password sign-in is closed: a reset password nobody can sign in with no longer holds a ThaID or Provider ID session back. */
+  passwordChangeRequired?: () => Promise<boolean>; }
 
 export class SessionService {
   private readonly idleTimeoutSeconds: number;
@@ -19,6 +21,7 @@ export class SessionService {
   private readonly touchIntervalSeconds: number;
   private readonly createId: () => string;
   private readonly createToken: () => string;
+  private readonly passwordChangeRequired: () => Promise<boolean>;
 
   constructor(private readonly sessions: SessionRepository, private readonly access: AccessSubjectLoader, options: SessionServiceOptions = {}) {
     this.idleTimeoutSeconds = options.idleTimeoutSeconds ?? 30 * 60;
@@ -26,6 +29,11 @@ export class SessionService {
     this.touchIntervalSeconds = options.touchIntervalSeconds ?? 60;
     this.createId = options.createId ?? randomUUID;
     this.createToken = options.createToken ?? (() => randomBytes(32).toString('base64url'));
+    this.passwordChangeRequired = options.passwordChangeRequired ?? (async () => true);
+  }
+
+  private async mustChange(session: ActiveSessionRecord): Promise<boolean> {
+    return Boolean(session.mustChangePassword) && await this.passwordChangeRequired();
   }
 
   async start(personId: string): Promise<{ token: string; maxAgeSeconds: number }> {
@@ -37,7 +45,7 @@ export class SessionService {
   async resolve(token: string): Promise<Session | null> {
     const session = await this.findActive(token);
     // Until the owner replaces a reset password the session opens nothing but the change-password step.
-    if (!session || session.mustChangePassword) return null;
+    if (!session || await this.mustChange(session)) return null;
     if (session.idleSeconds >= this.touchIntervalSeconds) await this.sessions.touch(session.id);
     const access = await this.access.load(session.personId);
     // Only the active role's assignments take effect; while a choice is pending the session holds no role at all.
@@ -48,7 +56,7 @@ export class SessionService {
   /** Saves the role this session works in; refuses a role the person does not hold (`ROLE_NOT_HELD`). Null for no live session. */
   async chooseRole(token: string, role: string): Promise<{ personId: string; role: string; previousRole: string | null } | null> {
     const session = await this.findActive(token);
-    if (!session || session.mustChangePassword) return null;
+    if (!session || await this.mustChange(session)) return null;
     const access = await this.access.load(session.personId);
     if (!canChooseRole(access.roles, role)) throw new Error('ROLE_NOT_HELD');
     const previousRole = session.activeRole ?? null;
@@ -59,7 +67,7 @@ export class SessionService {
   /** The person of a signed-in session that must change its password first, else null. */
   async pendingPasswordChange(token: string): Promise<{ personId: string } | null> {
     const session = await this.findActive(token);
-    return session?.mustChangePassword ? { personId: session.personId } : null;
+    return session && await this.mustChange(session) ? { personId: session.personId } : null;
   }
 
   async revoke(token: string): Promise<string | null> {

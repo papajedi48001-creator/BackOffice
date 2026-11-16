@@ -1,12 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { hashSessionToken } from '@backoffice/core';
 
-const mocks = vi.hoisted(() => ({ getSharedDatabase: vi.fn() }));
+const mocks = vi.hoisted(() => ({ getSharedDatabase: vi.fn(), isPasswordSignInOpen: vi.fn(async () => true) }));
 vi.mock('./database', () => ({ getSharedDatabase: mocks.getSharedDatabase }));
+vi.mock('./password-sign-in', () => ({ isPasswordSignInOpen: mocks.isPasswordSignInOpen }));
 
-import { endSession, readSession, sessionCookieName, startSession } from './session';
+import { endSession, readPendingPasswordChange, readSession, sessionCookieName, startSession } from './session';
 
-type Row = { id: string; tokenHash: string; personId: string; revoked: boolean; activeRole: string | null };
+type Row = { id: string; tokenHash: string; personId: string; revoked: boolean; activeRole: string | null; mustChange?: number };
 
 function fakeDatabase() {
   const sessions: Row[] = [];
@@ -17,7 +18,7 @@ function fakeDatabase() {
       if (sql.startsWith('UPDATE user_session SET revoked_at')) sessions.filter((row) => row.id === parameters[0]).forEach((row) => { row.revoked = true; });
     }),
     query: vi.fn(async (sql: string, parameters: unknown[] = []) => {
-      if (sql.includes('FROM user_session')) return sessions.filter((row) => row.tokenHash === parameters[0]).map((row) => ({ id: row.id, personId: row.personId, idleSeconds: 0, expired: 0, revoked: row.revoked ? 1 : 0, activeRole: row.activeRole }));
+      if (sql.includes('FROM user_session')) return sessions.filter((row) => row.tokenHash === parameters[0]).map((row) => ({ id: row.id, personId: row.personId, idleSeconds: 0, expired: 0, revoked: row.revoked ? 1 : 0, activeRole: row.activeRole, mustChange: row.mustChange ?? 0 }));
       if (sql.includes('FROM role_assignment')) return [{ name: 'hr-reader', organizationId: 'unit-a' }];
       return [];
     })
@@ -31,6 +32,19 @@ function requestWithCookie(token?: string) {
 afterEach(() => vi.clearAllMocks());
 
 describe('server-side session', () => {
+  it('a reset password holds the session back only while password sign-in is open', async () => {
+    const database = fakeDatabase();
+    mocks.getSharedDatabase.mockReturnValue(database);
+    const { token } = await startSession('person-a');
+    database.sessions[0]!.mustChange = 1;
+    expect(await readSession(requestWithCookie(token))).toBeNull();
+    expect(await readPendingPasswordChange(requestWithCookie(token))).toEqual({ personId: 'person-a' });
+    mocks.isPasswordSignInOpen.mockResolvedValue(false);
+    expect(await readSession(requestWithCookie(token))).toMatchObject({ authenticated: true, personId: 'person-a' });
+    expect(await readPendingPasswordChange(requestWithCookie(token))).toBeNull();
+    mocks.isPasswordSignInOpen.mockResolvedValue(true);
+  });
+
   it('starts a session whose cookie value is never stored and resolves roles from the database', async () => {
     const database = fakeDatabase();
     mocks.getSharedDatabase.mockReturnValue(database);

@@ -2,11 +2,13 @@ import type { Session } from '@backoffice/contracts';
 import { DatabaseAccessSubjectLoader, DatabaseSessionRepository, SessionService } from '@backoffice/core';
 import type { Database } from '@backoffice/db';
 import { getSharedDatabase } from './database';
+import { isPasswordSignInOpen } from './password-sign-in';
 
 const cookieName = 'backoffice_session';
 
+/** A reset password only holds a session back while password sign-in is open; closed, nobody can use it, so ThaID and Provider ID get in. */
 export function sessionService(database: Database): SessionService {
-  return new SessionService(new DatabaseSessionRepository(database), new DatabaseAccessSubjectLoader(database));
+  return new SessionService(new DatabaseSessionRepository(database), new DatabaseAccessSubjectLoader(database), { passwordChangeRequired: isPasswordSignInOpen });
 }
 
 export function readSessionToken(request: Request): string | null {

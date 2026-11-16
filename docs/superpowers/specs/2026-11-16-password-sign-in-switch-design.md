@@ -29,6 +29,9 @@
 - `PASSWORD_SIGN_IN=on` บนเซิร์ฟเวอร์ยังเป็นทางเข้าฉุกเฉินและชนะทุกโหมด หน้าเว็บบอกว่า "เปิดอยู่เพราะตั้งค่าบนเซิร์ฟเวอร์"
 - อ่านค่าตั้งไม่ได้ (ฐานข้อมูลล่ม) = ปิด (fail closed) เหมือนเดิม
 - ปิด ThaID/Provider ID ช่องทางสุดท้ายถูกปฏิเสธอยู่แล้ว (`LAST_SIGN_IN_ROUTE`)
+- ThaID นับว่าพร้อมสำหรับการเลือก "ปิด" ก็ต่อเมื่อเซิร์ฟเวอร์มีกุญแจเลขบัตรประชาชนด้วย (ไม่มีกุญแจ ThaID ใช้เข้าระบบไม่ได้)
+- ขณะรหัสผ่านปิดอยู่ ธง "ต้องเปลี่ยนรหัสผ่าน" (หลังรีเซ็ต/สร้างบัญชี) ไม่กันคนที่เข้าด้วย ThaID/Provider ID อีกต่อไป เพราะรหัสนั้นใช้เข้าไม่ได้อยู่แล้ว เมื่อเปิดรหัสผ่านกลับ ธงนี้กลับมาบังคับตามเดิม
+- หน้า /mci (รายงานตัว) แสดง ThaID/Provider ID คู่กับช่องรหัสผ่านเมื่อเลือก "เปิด" ไม่ใช่แทนที่
 
 ## Approaches considered
 
@@ -38,7 +41,7 @@
 
 ## How (builder calls, ของผมเอง)
 
-- เก็บโหมดในตาราง `sign_in_setting` เดิม แถว `method = 'PASSWORD'`, `settings_json = {"mode":"AUTO|ON|OFF"}`, `enabled = 1` เฉพาะ ON — ไม่ต้องมี migration ใหม่; `routes().configured` นับเฉพาะแถว THAID/PROVIDER_ID
+- เก็บโหมดในตาราง `sign_in_setting` เดิม แถว `method = 'PASSWORD'`, `settings_json = {"mode":"AUTO|ON|OFF"}`, `enabled = 0` เสมอ (build เก่านับแถวที่ enabled เป็นช่องทางภายนอก ถ้า rollback จะปิดรหัสผ่านโดยไม่ตั้งใจ) — ไม่ต้องมี migration ใหม่; `routes().configured` นับเฉพาะแถว THAID/PROVIDER_ID
 - `SignInSettingsService.routes()` คืน `passwordMode` ด้วย, `view()` คืน `password: { mode, updatedAt, updatedByName }`, เมธอดใหม่ `savePasswordMode(mode, actor)`
 - `passwordSignInOpen({ externalRouteReady, override, mode })`: override on → เปิด; ON → เปิด; OFF → ปิด; AUTO → `!externalRouteReady`
 - API ใหม่ `PUT /api/admin/sign-in-settings/password` `{ mode }` ผ่าน `withAdmin`; บันทึกแล้วล้าง cache

@@ -189,18 +189,22 @@ export class SignInSettingsService {
       configured: [...rows.values()].some((row) => row.method !== PASSWORD_ROW && Boolean(Number(row.enabled))), passwordMode: this.passwordMode(rows.get(PASSWORD_ROW)) };
   }
 
-  /** OFF is refused (LAST_SIGN_IN_ROUTE) while neither ThaID nor Provider ID is ready, so ผู้ดูแลระบบ cannot lock everyone out. */
-  async savePasswordMode(mode: PasswordSignInMode, actorPersonId: string): Promise<SignInSettingSaveResult> {
+  /**
+   * OFF is refused (LAST_SIGN_IN_ROUTE) while neither ThaID nor Provider ID is ready, so ผู้ดูแลระบบ cannot lock everyone out.
+   * `thaidUsable` is false when ThaID cannot sign anyone in even with its settings complete (no national-ID keys on the web server).
+   * The row's `enabled` stays 0: an older build counts any enabled row as an external route and would close password sign-in.
+   */
+  async savePasswordMode(mode: PasswordSignInMode, actorPersonId: string, thaidUsable = true): Promise<SignInSettingSaveResult> {
     if (!passwordSignInModes.includes(mode)) return { ok: false, code: 'INVALID_INPUT' };
     const rows = await this.rows();
     const from = this.passwordMode(rows.get(PASSWORD_ROW));
-    if (mode === 'OFF' && !this.ready('THAID', this.effective('THAID', rows.get('THAID'))) && !this.ready('PROVIDER_ID', this.effective('PROVIDER_ID', rows.get('PROVIDER_ID')))) {
+    if (mode === 'OFF' && !(thaidUsable && this.ready('THAID', this.effective('THAID', rows.get('THAID')))) && !this.ready('PROVIDER_ID', this.effective('PROVIDER_ID', rows.get('PROVIDER_ID')))) {
       return { ok: false, code: 'LAST_SIGN_IN_ROUTE' };
     }
     await this.database.transaction(async (database) => {
       await database.execute(
         'INSERT INTO sign_in_setting (method, enabled, settings_json, secret_ciphertext, updated_by_person_id, updated_at) VALUES (?, ?, ?, NULL, ?, UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE enabled = VALUES(enabled), settings_json = VALUES(settings_json), updated_by_person_id = VALUES(updated_by_person_id), updated_at = VALUES(updated_at)',
-        [PASSWORD_ROW, mode === 'ON' ? 1 : 0, JSON.stringify({ mode }), actorPersonId]
+        [PASSWORD_ROW, 0, JSON.stringify({ mode }), actorPersonId]
       );
       await new AuditService(new DatabaseAuditRepository(database), this.createId).recordAudit({ actorPersonId, action: 'admin.sign_in_setting.update', targetType: 'sign_in_setting', targetId: PASSWORD_ROW, result: 'SUCCESS', metadata: { method: PASSWORD_ROW, fromMode: from, toMode: mode } });
     });
