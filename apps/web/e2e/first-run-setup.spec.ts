@@ -28,6 +28,8 @@ test('first-run setup creates the first ผู้ดูแลระบบ and th
   await page.getByLabel('ชื่อผู้ใช้', { exact: true }).fill('it001');
   await page.getByRole('textbox', { name: 'รหัสผ่าน' }).fill('long-enough-pw');
   await page.getByRole('button', { name: 'เข้าสู่ระบบ' }).click();
+  await expect(page).toHaveURL(/\/choose-role$/);
+  await page.getByRole('button', { name: /^ผู้ดูแลระบบ/ }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
   await page.goto('/admin/grants');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();

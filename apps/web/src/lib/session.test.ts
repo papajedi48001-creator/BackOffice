@@ -6,18 +6,18 @@ vi.mock('./database', () => ({ getSharedDatabase: mocks.getSharedDatabase }));
 
 import { endSession, readSession, sessionCookieName, startSession } from './session';
 
-type Row = { id: string; tokenHash: string; personId: string; revoked: boolean };
+type Row = { id: string; tokenHash: string; personId: string; revoked: boolean; activeRole: string | null };
 
 function fakeDatabase() {
   const sessions: Row[] = [];
   return {
     sessions,
     execute: vi.fn(async (sql: string, parameters: unknown[] = []) => {
-      if (sql.startsWith('INSERT INTO user_session')) sessions.push({ id: String(parameters[0]), tokenHash: String(parameters[1]), personId: String(parameters[2]), revoked: false });
+      if (sql.startsWith('INSERT INTO user_session')) sessions.push({ id: String(parameters[0]), tokenHash: String(parameters[1]), personId: String(parameters[2]), revoked: false, activeRole: null });
       if (sql.startsWith('UPDATE user_session SET revoked_at')) sessions.filter((row) => row.id === parameters[0]).forEach((row) => { row.revoked = true; });
     }),
     query: vi.fn(async (sql: string, parameters: unknown[] = []) => {
-      if (sql.includes('FROM user_session')) return sessions.filter((row) => row.tokenHash === parameters[0]).map((row) => ({ id: row.id, personId: row.personId, idleSeconds: 0, expired: 0, revoked: row.revoked ? 1 : 0 }));
+      if (sql.includes('FROM user_session')) return sessions.filter((row) => row.tokenHash === parameters[0]).map((row) => ({ id: row.id, personId: row.personId, idleSeconds: 0, expired: 0, revoked: row.revoked ? 1 : 0, activeRole: row.activeRole }));
       if (sql.includes('FROM role_assignment')) return [{ name: 'hr-reader', organizationId: 'unit-a' }];
       return [];
     })
@@ -40,6 +40,9 @@ describe('server-side session', () => {
     expect(maxAgeSeconds).toBe(43_200);
     expect(database.sessions[0]?.tokenHash).toBe(hashSessionToken(token));
     expect(JSON.stringify(database.execute.mock.calls)).not.toContain(token);
+    // One tier still needs a choice, so the person may work as บุคลากรทั่วไป instead.
+    await expect(readSession(requestWithCookie(token))).resolves.toMatchObject({ activeRole: null, roleChoices: ['manager'], roleSelectionRequired: true, roles: [] });
+    database.sessions[0]!.activeRole = 'manager';
     await expect(readSession(requestWithCookie(token))).resolves.toEqual({ authenticated: true, personId: 'person-a', roles: [{ name: 'hr-reader', organizationId: 'unit-a' }], dataOwnerModules: [], hospitalWideDataOwnerModules: [], activeRole: 'manager', roleChoices: ['manager'], roleSelectionRequired: false });
   });
 

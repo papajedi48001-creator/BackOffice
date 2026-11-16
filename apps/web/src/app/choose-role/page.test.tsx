@@ -20,9 +20,17 @@ it('offers only the three choices ผู้ดูแลระบบ, ผู้�
   expect(screen.getByRole('button', { name: /^ผู้จัดการ/ })).toHaveTextContent('โมดูลที่คุณได้รับมอบหมาย');
 });
 
-it('sends a person with one role or none to หน้าหลัก and anyone signed out to sign in', async () => {
+it('offers a person with one tier that tier and บุคลากรทั่วไป', async () => {
   mocks.headers.mockResolvedValue(new Headers());
-  mocks.readSession.mockResolvedValue({ authenticated: true, personId: 'p1', roles: [], dataOwnerModules: [], roleChoices: ['admin'], activeRole: 'admin' });
+  mocks.readSession.mockResolvedValue({ authenticated: true, personId: 'p1', roles: [], dataOwnerModules: [], roleChoices: ['manager'], activeRole: null, roleSelectionRequired: true });
+  render(await ChooseRolePage());
+  expect(screen.getAllByRole('button')).toHaveLength(2);
+  for (const name of ['ผู้จัดการ', 'บุคลากรทั่วไป']) expect(screen.getByRole('button', { name: new RegExp(`^${name}`) })).toBeInTheDocument();
+});
+
+it('sends a person with no role to หน้าหลัก and anyone signed out to sign in', async () => {
+  mocks.headers.mockResolvedValue(new Headers());
+  mocks.readSession.mockResolvedValue({ authenticated: true, personId: 'p1', roles: [], dataOwnerModules: [], roleChoices: [], activeRole: 'employee' });
   await expect(ChooseRolePage()).rejects.toThrow('REDIRECT /dashboard');
   mocks.readSession.mockResolvedValue(null);
   await expect(ChooseRolePage()).rejects.toThrow('REDIRECT /');

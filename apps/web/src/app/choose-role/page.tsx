@@ -5,12 +5,12 @@ import { roleChoiceDescription, roleChoiceName } from '../../lib/role-choice-lab
 import { readSession } from '../../lib/session';
 import { RolePicker } from './role-picker';
 
-/** เลือกบทบาท: shown after sign-in to a person with two or more roles, and again from "เปลี่ยนบทบาท" in the profile menu. */
+/** เลือกบทบาท: shown after sign-in to a person who holds a role (ผู้ดูแลระบบ and/or ผู้จัดการ), and again from "เปลี่ยนบทบาท" in the profile menu. */
 export default async function ChooseRolePage() {
   const session = await readSession(new Request('http://localhost', { headers: await headers() }));
   if (!session?.authenticated) redirect('/');
   const held = session.roleChoices ?? [];
-  if (held.length < 2) redirect('/dashboard');
+  if (held.length === 0) redirect('/dashboard');
   const choices = [...held, 'employee'].map((code) => ({ code, name: roleChoiceName(code), description: roleChoiceDescription(code) }));
   return <main className="welcome-shell">
     <section className="welcome-panel role-picker-panel" aria-labelledby="choose-role-title">

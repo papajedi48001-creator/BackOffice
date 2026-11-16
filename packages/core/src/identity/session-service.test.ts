@@ -36,6 +36,8 @@ describe('SessionService', () => {
     const repository = new MemorySessionRepository();
     const sessions = service(repository);
     const { token } = await sessions.start('person-a');
+    await expect(sessions.resolve(token)).resolves.toMatchObject({ activeRole: null, roleChoices: ['manager'], roleSelectionRequired: true, roles: [] });
+    await sessions.chooseRole(token, 'manager');
 
     await expect(sessions.resolve(token)).resolves.toEqual({ authenticated: true, personId: 'person-a', roles: [{ name: 'hr-reader', organizationId: 'unit-of-person-a' }], dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: [], activeRole: 'manager', roleChoices: ['manager'], roleSelectionRequired: false });
 
