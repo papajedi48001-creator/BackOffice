@@ -233,6 +233,21 @@ describeWithDatabase('HrProfileService writes against MariaDB', () => {
     return attachmentId;
   }
 
+  it('names the current หน่วยงาน and the ones above it, for the portal', async () => {
+    const hospital = await organization();
+    const group = await organization();
+    const unit = await organization();
+    await database.execute('UPDATE organization SET parent_id = ? WHERE id = ?', [hospital, group]);
+    await database.execute('UPDATE organization SET parent_id = ? WHERE id = ?', [group, unit]);
+    const [names] = await Promise.all([database.query<{ id: string; name: string }>('SELECT id, name FROM organization WHERE id IN (?, ?, ?)', [unit, group, hospital])]);
+    const nameOf = (id: string) => names.find((row) => row.id === id)!.name;
+    const id = await person(unit);
+    expect(await service.currentOrganizationNamesOf(id)).toEqual([nameOf(unit), nameOf(group), nameOf(hospital)]);
+    await database.execute('UPDATE employment_assignment SET effective_until = UTC_TIMESTAMP() WHERE person_id = ?', [id]);
+    expect(await service.currentOrganizationNamesOf(id)).toEqual([]);
+    expect(await service.currentOrganizationNamesOf(await person(null))).toEqual([]);
+  });
+
   it('sets and removes a person\'s own photo with an audit event that names the field only', async () => {
     const id = await person(await organization());
     const noProfile = await person(null);

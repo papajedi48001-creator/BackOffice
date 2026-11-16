@@ -311,6 +311,28 @@ export class HrProfileService {
     }, { isolationLevel: 'READ COMMITTED' });
   }
 
+  /**
+   * The หน่วยงาน the person is assigned to now, then each หน่วยงาน above it up to the โรงพยาบาล, by name; empty when there is no open assignment.
+   * The portal matches these names against its own list of หน่วยงาน to preselect one on the membership application.
+   */
+  async currentOrganizationNamesOf(personId: string): Promise<string[]> {
+    const [assignment] = await this.database.query<{ organizationId: string }>(
+      'SELECT organization_id AS organizationId FROM employment_assignment WHERE person_id = ? AND effective_until IS NULL ORDER BY effective_from DESC LIMIT 1', [personId]);
+    const names: string[] = [];
+    const seen = new Set<string>();
+    let next: string | null = assignment?.organizationId ?? null;
+    while (next && !seen.has(next) && names.length < 10) {
+      seen.add(next);
+      const rows: { name: string; parentId: string | null }[] = await this.database.query<{ name: string; parentId: string | null }>(
+        'SELECT name, parent_id AS parentId FROM organization WHERE id = ? AND deleted_at IS NULL', [next]);
+      const unit = rows[0];
+      if (!unit) break;
+      names.push(unit.name);
+      next = unit.parentId;
+    }
+    return names;
+  }
+
   async photoAttachmentOf(personId: string): Promise<string | null> {
     const [row] = await this.database.query<{ photo: string | null }>('SELECT photo_attachment_id AS photo FROM hr_person_profile WHERE person_id = ?', [personId]);
     return row?.photo ?? null;
