@@ -18,7 +18,9 @@ const answer = (body: Record<string, unknown>, status: number) => NextResponse.j
  * the member's Provider ID account and, at registration, Provider ID's hash_cid. The บุคลากร is the one linked to that Provider ID
  * account, or else to the portal member, or else the one ACTIVE บุคลากร whose national ID gives that hash_cid. Nothing is linked,
  * stored or audited here, and the hash_cid is only compared. The answer is the หน่วยงาน name and the names above it, and the person's
- * own phone from their ทะเบียนประวัติ (only to prefill their own application; it is not logged).
+ * own phone from their ทะเบียนประวัติ (only to prefill their own application; it is not logged), plus `departments`: every หน่วยงาน
+ * except the hospital itself, so the portal can sync its department list before anyone applies. The list is given even when
+ * nobody matches.
  */
 export async function GET(request: Request): Promise<Response> {
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -41,19 +43,21 @@ async function organizationFor(request: Request): Promise<Response> {
   } catch (error) {
     return error instanceof OidcError && error.code === 'UNAVAILABLE' ? answer({ error: 'service_unavailable' }, 503) : answer({ error: 'unauthenticated' }, 401);
   }
+  const profiles = new HrProfileService(database);
+  const [person, departments] = await Promise.all([personFor(database, config.issuer, portalRequest), profiles.portalDepartmentNames()]);
+  const [organizations, phone] = person ? await Promise.all([profiles.currentOrganizationNamesOf(person), profiles.phoneOf(person)]) : [[], null];
+  if (organizations.length === 0 && !phone && departments.length === 0) return answer({ error: 'not_found' }, 404);
+  return answer({ organizations, phone, departments }, 200);
+}
+
+async function personFor(database: NonNullable<ReturnType<typeof getSharedDatabase>>, portalIssuer: string, portalRequest: PortalRequest): Promise<string | null> {
   const identities = new DatabaseExternalIdentityRepository(database);
   const providerIssuer = (await providerSsoConfig())?.apiUrl;
   const { provider, hashCid } = portalRequest;
   const link = (provider && provider.issuer === providerIssuer ? await identities.findLink(provider.issuer, provider.subject) : null)
-    ?? await identities.findLink(config.issuer, portalRequest.memberId);
-  let personId = link && (await identities.isActivePerson(link.personId)) ? link.personId : null;
-  if (!personId && hashCid) {
-    const protector = getNationalIdProtector();
-    personId = protector ? await new NationalIdHashMatcher(database, protector).findActivePerson(hashCid) : null;
-  }
-  if (!personId) return answer({ error: 'not_found' }, 404);
-  const profiles = new HrProfileService(database);
-  const [organizations, phone] = await Promise.all([profiles.currentOrganizationNamesOf(personId), profiles.phoneOf(personId)]);
-  if (organizations.length === 0 && !phone) return answer({ error: 'not_found' }, 404);
-  return answer({ organizations, phone }, 200);
+    ?? await identities.findLink(portalIssuer, portalRequest.memberId);
+  if (link && (await identities.isActivePerson(link.personId))) return link.personId;
+  if (!hashCid) return null;
+  const protector = getNationalIdProtector();
+  return protector ? new NationalIdHashMatcher(database, protector).findActivePerson(hashCid) : null;
 }

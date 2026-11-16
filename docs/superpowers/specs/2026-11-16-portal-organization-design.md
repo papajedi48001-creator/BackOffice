@@ -16,3 +16,12 @@
 - `apps/web/src/app/api/portal/organization/route.test.ts`
 - `packages/core/src/identity/oidc-client.test.ts` (hash_cid)
 - `packages/core/src/hr/profile-service.integration.test.ts` (`currentOrganizationNamesOf`)
+
+## Addendum: department list sync (2026-11-16)
+
+The requester chose to sync the portal's whole หน่วยงาน list from Back office before anyone applies, instead of adding only the applicant's own หน่วยงาน.
+
+- The same signed request now also answers `departments`: every หน่วยงาน that is not deleted and is not the hospital itself (ชนิดหน่วยงาน โรงพยาบาล, or a top-level หน่วยงาน that has หน่วยงาน under it), trimmed, de-duplicated and sorted in Thai order, capped at 1000.
+- The list is answered even when no บุคลากร matches the request, so a newcomer without a ทะเบียนประวัติ still sees every หน่วยงาน. 404 is left for a request where there is nothing at all to answer.
+- Names are not personal data; nothing new is logged or audited.
+- The portal adds the missing names as active departments at a draft sign-in and never reopens a department IT closed.

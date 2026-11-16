@@ -333,6 +333,19 @@ export class HrProfileService {
     return names;
   }
 
+  /**
+   * Every หน่วยงาน the portal should offer on its membership application, by name: not deleted, not the hospital itself
+   * (ชนิดหน่วยงาน โรงพยาบาล, or a top-level หน่วยงาน that has หน่วยงาน under it). A top-level หน่วยงาน with nothing under it is kept.
+   */
+  async portalDepartmentNames(): Promise<string[]> {
+    const rows = await this.database.query<{ name: string }>(
+      `SELECT DISTINCT TRIM(o.name) AS name FROM organization o
+       WHERE o.deleted_at IS NULL AND (o.unit_type IS NULL OR o.unit_type <> 'HOSPITAL') AND TRIM(o.name) <> ''
+         AND NOT (o.parent_id IS NULL AND EXISTS (SELECT 1 FROM organization c WHERE c.parent_id = o.id AND c.deleted_at IS NULL))
+       LIMIT 1000`);
+    return rows.map((row) => row.name).sort((a, b) => a.localeCompare(b, 'th'));
+  }
+
   /** The person's own phone from their ทะเบียนประวัติ, for the portal to prefill their membership application; null when none is recorded. */
   async phoneOf(personId: string): Promise<string | null> {
     const [row] = await this.database.query<{ phone: string | null }>('SELECT phone FROM hr_person_profile WHERE person_id = ?', [personId]);
