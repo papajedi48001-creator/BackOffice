@@ -2,9 +2,10 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { t } from '@backoffice/i18n';
 import { ChangePasswordForm } from '../../components/change-password-form';
+import { isPasswordSignInOpen } from '../../lib/password-sign-in';
 import { readPendingPasswordChange, readSession } from '../../lib/session';
 
-/** เปลี่ยนรหัสผ่าน: the forced step after a reset, or a signed-in person changing their own password. */
+/** เปลี่ยนรหัสผ่าน: the forced step after a reset, or a signed-in person changing their own password; closed with password sign-in. */
 export default async function ChangePasswordPage() {
   const request = new Request('http://localhost', { headers: await headers() });
   const session = await readSession(request);
@@ -16,7 +17,7 @@ export default async function ChangePasswordPage() {
   return <main className="welcome-shell">
     <section className="welcome-panel" aria-label={t('passwordChangeTitle')}>
       <p className="eyebrow">โรงพยาบาลวาริชภูมิ</p>
-      <ChangePasswordForm forced={pending !== null} />
+      {await isPasswordSignInOpen() ? <ChangePasswordForm forced={pending !== null} /> : <p role="status">{t('passwordSignInOff')}</p>}
     </section>
   </main>;
 }

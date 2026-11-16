@@ -95,6 +95,15 @@ describe('IdentityForm', () => {
 });
 
 describe('AccountForm', () => {
+  it('hides รีเซ็ตรหัสผ่าน and เปลี่ยนรหัสผ่าน while password sign-in is closed, and says why', () => {
+    const { unmount } = render(<AccountForm personId="p1" username="somjai" passwordOpen={false} />);
+    expect(screen.queryByRole('button', { name: 'รีเซ็ตรหัสผ่าน' })).toBeNull();
+    expect(screen.getByText(/การเข้าสู่ระบบด้วยชื่อผู้ใช้และรหัสผ่านปิดอยู่/)).toBeInTheDocument();
+    unmount();
+    render(<AccountForm personId="p1" username="somjai" self passwordOpen={false} />);
+    expect(screen.queryByRole('link', { name: 'เปลี่ยนรหัสผ่าน' })).toBeNull();
+  });
+
   it('resets the password to the default after a confirmation, sending no password', async () => {
     const fetchMock = respond(200, { ok: true });
     vi.stubGlobal('fetch', fetchMock);

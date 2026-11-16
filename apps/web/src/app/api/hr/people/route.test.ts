@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({ readSession: vi.fn(), getSharedDatabase: vi.fn
 vi.mock('../../../../lib/session', () => ({ readSession: mocks.readSession }));
 vi.mock('../../../../lib/database', () => ({ getSharedDatabase: mocks.getSharedDatabase }));
 vi.mock('../../../../lib/national-id', () => ({ getNationalIdProtector: mocks.getNationalIdProtector }));
+vi.mock('../../../../lib/password-sign-in', () => ({ isPasswordSignInOpen: async () => true }));
 vi.mock('@backoffice/core', async (importOriginal) => ({ ...await importOriginal<typeof import('@backoffice/core')>(), PersonAccountService: class { create = mocks.create; updateIdentity = mocks.updateIdentity; resetPassword = mocks.resetPassword; createAccount = mocks.createAccount; deletePerson = mocks.deletePerson; } }));
 
 import { POST as postPerson } from './route';

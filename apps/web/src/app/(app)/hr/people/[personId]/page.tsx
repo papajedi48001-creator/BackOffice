@@ -7,6 +7,7 @@ import { AccountForm, DeletePersonButton, IdentityForm } from '../../../../../co
 import { HrProfileView } from '../../../../../components/hr-profile-view';
 import { attachmentsEnabled } from '../../../../../lib/attachments';
 import { getSharedDatabase } from '../../../../../lib/database';
+import { isPasswordSignInOpen } from '../../../../../lib/password-sign-in';
 import { profilePhotoUrl } from '../../../../../lib/profile-photo';
 import { readSession } from '../../../../../lib/session';
 
@@ -48,7 +49,7 @@ export default async function PersonProfilePage({ params }: { params: Promise<{ 
     <h2>{view.work.displayName ?? view.work.employeeCode ?? t('notAssigned')}</h2>
     <HrProfileView view={view} contactEndpoint={`/api/hr/people/${personId}/contact`} employmentTypes={employmentTypes} units={units} positions={positions} uploadsEnabled={attachmentsEnabled()} personPhoto={{ url: attachmentsEnabled() && view.work.photoAttachmentId ? profilePhotoUrl(personId, view.work.photoAttachmentId) : null, uploadsEnabled: attachmentsEnabled() }} />
     {managesPeople ? <IdentityForm personId={personId} values={{ employeeCode: view.work.employeeCode, employmentStatus: view.work.employmentStatus }} username={account?.username ?? null} /> : null}
-    {resetsPasswords ? <AccountForm personId={personId} username={account?.username ?? null} self={personId === session.personId} /> : null}
+    {resetsPasswords ? <AccountForm personId={personId} username={account?.username ?? null} self={personId === session.personId} passwordOpen={await isPasswordSignInOpen()} /> : null}
     {resetsPasswords && personId !== session.personId ? <DeletePersonButton personId={personId} name={view.work.displayName ?? view.work.employeeCode ?? t('notAssigned')} /> : null}
   </section>;
 }

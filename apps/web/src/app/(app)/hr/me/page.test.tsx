@@ -1,7 +1,8 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ headers: vi.fn(), redirect: vi.fn(), notFound: vi.fn(), refresh: vi.fn(), readSession: vi.fn(), getSharedDatabase: vi.fn(), get: vi.fn(), enabled: vi.fn(() => false) }));
+const mocks = vi.hoisted(() => ({ headers: vi.fn(), redirect: vi.fn(), notFound: vi.fn(), refresh: vi.fn(), readSession: vi.fn(), getSharedDatabase: vi.fn(), get: vi.fn(), enabled: vi.fn(() => false), isPasswordSignInOpen: vi.fn(async () => true) }));
+vi.mock('../../../../lib/password-sign-in', () => ({ isPasswordSignInOpen: mocks.isPasswordSignInOpen }));
 vi.mock('../../../../lib/attachments', () => ({ attachmentsEnabled: mocks.enabled }));
 vi.mock('next/headers', () => ({ headers: mocks.headers }));
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect, notFound: mocks.notFound, useRouter: () => ({ refresh: mocks.refresh }) }));
@@ -18,6 +19,16 @@ const personal = { namePrefix: 'นาย', firstName: 'สมชาย', lastNa
 afterEach(() => { vi.clearAllMocks(); vi.unstubAllGlobals(); });
 
 describe('MyProfilePage', () => {
+  it('hides เปลี่ยนรหัสผ่าน while password sign-in is closed', async () => {
+    mocks.headers.mockResolvedValue(new Headers());
+    mocks.readSession.mockResolvedValue(staff);
+    mocks.getSharedDatabase.mockReturnValue({ query: vi.fn() });
+    mocks.get.mockResolvedValue({ work, private: personal, access: { viewWork: true, viewPrivate: true, editProfile: false, editContact: true }, history: [] });
+    mocks.isPasswordSignInOpen.mockResolvedValueOnce(false);
+    render(await MyProfilePage());
+    expect(screen.queryByRole('link', { name: 'เปลี่ยนรหัสผ่าน' })).toBeNull();
+  });
+
   it('shows a person without HR roles their own private details and only the contact form', async () => {
     mocks.headers.mockResolvedValue(new Headers());
     mocks.readSession.mockResolvedValue(staff);
