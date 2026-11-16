@@ -248,6 +248,20 @@ describeWithDatabase('HrProfileService writes against MariaDB', () => {
     expect(await service.currentOrganizationNamesOf(await person(null))).toEqual([]);
   });
 
+  it('lists every หน่วยงาน for the portal\'s department list, without the hospital itself or deleted ones', async () => {
+    const [hospital, group, unit, flat, typedHospital, deleted] = await Promise.all([organization(), organization(), organization(), organization(), organization(), organization()]);
+    await database.execute('UPDATE organization SET parent_id = ? WHERE id = ?', [hospital, group]);
+    await database.execute('UPDATE organization SET parent_id = ? WHERE id = ?', [group, unit]);
+    await database.execute("UPDATE organization SET unit_type = 'HOSPITAL' WHERE id = ?", [typedHospital]);
+    await database.execute('UPDATE organization SET deleted_at = UTC_TIMESTAMP() WHERE id = ?', [deleted]);
+    const rows = await database.query<{ id: string; name: string }>('SELECT id, name FROM organization WHERE id IN (?, ?, ?, ?, ?, ?)', [hospital, group, unit, flat, typedHospital, deleted]);
+    const nameOf = (id: string) => rows.find((row) => row.id === id)!.name;
+    const names = await service.portalDepartmentNames();
+    expect(names).toEqual(expect.arrayContaining([nameOf(group), nameOf(unit), nameOf(flat)]));
+    for (const excluded of [hospital, typedHospital, deleted]) expect(names).not.toContain(nameOf(excluded));
+    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, 'th')));
+  });
+
   it('gives the portal the person\'s own phone, or null when none is recorded', async () => {
     const id = await person(await organization());
     await database.execute("INSERT INTO hr_person_profile (person_id, phone, updated_at) VALUES (?, ' 0812345678 ', UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE phone = VALUES(phone)", [id]);
