@@ -17,7 +17,8 @@ const answer = (body: Record<string, unknown>, status: number) => NextResponse.j
  * application, so it can preselect it. The request is a short-lived JWT the portal signs with its OIDC key, naming the portal member,
  * the member's Provider ID account and, at registration, Provider ID's hash_cid. The บุคลากร is the one linked to that Provider ID
  * account, or else to the portal member, or else the one ACTIVE บุคลากร whose national ID gives that hash_cid. Nothing is linked,
- * stored or audited here, and the hash_cid is only compared. The answer is the หน่วยงาน name and the names above it.
+ * stored or audited here, and the hash_cid is only compared. The answer is the หน่วยงาน name and the names above it, and the person's
+ * own phone from their ทะเบียนประวัติ (only to prefill their own application; it is not logged).
  */
 export async function GET(request: Request): Promise<Response> {
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -51,7 +52,8 @@ async function organizationFor(request: Request): Promise<Response> {
     personId = protector ? await new NationalIdHashMatcher(database, protector).findActivePerson(hashCid) : null;
   }
   if (!personId) return answer({ error: 'not_found' }, 404);
-  const organizations = await new HrProfileService(database).currentOrganizationNamesOf(personId);
-  if (organizations.length === 0) return answer({ error: 'not_found' }, 404);
-  return answer({ organizations }, 200);
+  const profiles = new HrProfileService(database);
+  const [organizations, phone] = await Promise.all([profiles.currentOrganizationNamesOf(personId), profiles.phoneOf(personId)]);
+  if (organizations.length === 0 && !phone) return answer({ error: 'not_found' }, 404);
+  return answer({ organizations, phone }, 200);
 }
