@@ -6,6 +6,12 @@ import type { ConnectionSecretBox } from '../holidays/connection-secret-box.ts';
 import type { ProviderIdConfig } from './provider-id-client.ts';
 
 export type SignInMethod = 'THAID' | 'PROVIDER_ID';
+/** การเข้าด้วยชื่อผู้ใช้และรหัสผ่าน: AUTO closes it once ThaID or Provider ID is ready (the old behaviour), ON keeps it open, OFF keeps it closed. */
+export type PasswordSignInMode = 'AUTO' | 'ON' | 'OFF';
+export const passwordSignInModes: readonly PasswordSignInMode[] = ['AUTO', 'ON', 'OFF'];
+/** The password mode's own row in sign_in_setting; it never counts as an external route. */
+const PASSWORD_ROW = 'PASSWORD';
+export interface PasswordSignInView { mode: PasswordSignInMode; updatedAt: string | null; updatedByName: string | null }
 /** What signing in with ThaID (DOPA) needs. Only server code holds the secret. */
 export interface ThaidSettings { clientId: string; clientSecret: string; redirectUri: string; apiUrl: string }
 export interface SignInMethodView {
@@ -19,7 +25,7 @@ export interface SignInMethodView {
   /** Secrets were saved here but cannot be opened (CONNECTION_SECRET_KEY missing or changed): type them again. */
   secretsUnreadable: boolean;
 }
-export interface SignInSettingsView { thaid: SignInMethodView; providerId: SignInMethodView; canStoreSecrets: boolean }
+export interface SignInSettingsView { thaid: SignInMethodView; providerId: SignInMethodView; password: PasswordSignInView; canStoreSecrets: boolean }
 export interface SignInSettingInput { enabled: boolean; values: Record<string, string>; secrets: Record<string, string> }
 export type SignInSettingSaveResult = { ok: true } | { ok: false; code: 'INVALID_INPUT' | 'NO_SECRET_KEY' | 'LAST_SIGN_IN_ROUTE' };
 
@@ -46,7 +52,7 @@ const providerEnvironments: Record<string, { healthUrl: string; apiUrl: string }
 };
 export const THAID_API_URL = 'https://imauth.bora.dopa.go.th';
 
-type Row = { method: string; enabled: number | boolean; settingsJson: string; secretCiphertext: string | null };
+type Row = { method: string; enabled: number | boolean; settingsJson: string; secretCiphertext: string | null; updatedAt?: Date | string | null; updatedByName?: string | null };
 interface Effective { enabled: boolean; source: SignInMethodView['source']; fields: Record<string, string>; stored: { values: Record<string, string>; secrets: Record<string, string> }; secretsUnreadable: boolean }
 
 const clientIdPattern = /^[A-Za-z0-9._~:-]{1,128}$/;
@@ -81,7 +87,7 @@ export class SignInSettingsService {
   }
 
   private async rows(): Promise<Map<string, Row>> {
-    const rows = await this.database.query<Row>('SELECT method, enabled, settings_json AS settingsJson, secret_ciphertext AS secretCiphertext FROM sign_in_setting');
+    const rows = await this.database.query<Row>('SELECT s.method, s.enabled, s.settings_json AS settingsJson, s.secret_ciphertext AS secretCiphertext, s.updated_at AS updatedAt, p.display_name AS updatedByName FROM sign_in_setting s LEFT JOIN person p ON p.id = s.updated_by_person_id');
     return new Map(rows.map((row) => [row.method, row]));
   }
 
@@ -153,11 +159,22 @@ export class SignInSettingsService {
     };
   }
 
+  private passwordMode(row: Row | undefined): PasswordSignInMode {
+    const mode = this.savedValues(row).mode as PasswordSignInMode;
+    return passwordSignInModes.includes(mode) ? mode : 'AUTO';
+  }
+
+  private passwordView(row: Row | undefined): PasswordSignInView {
+    const at = row?.updatedAt ? new Date(row.updatedAt instanceof Date ? row.updatedAt : `${String(row.updatedAt).replace(' ', 'T')}Z`) : null;
+    return { mode: this.passwordMode(row), updatedAt: at && !Number.isNaN(at.getTime()) ? at.toISOString() : null, updatedByName: row?.updatedByName ?? null };
+  }
+
   async view(): Promise<SignInSettingsView> {
     const rows = await this.rows();
     return {
       thaid: this.methodView('THAID', this.effective('THAID', rows.get('THAID'))),
       providerId: this.methodView('PROVIDER_ID', this.effective('PROVIDER_ID', rows.get('PROVIDER_ID'))),
+      password: this.passwordView(rows.get(PASSWORD_ROW)),
       canStoreSecrets: this.box !== null
     };
   }
@@ -166,10 +183,28 @@ export class SignInSettingsService {
    * Both routes from one read, for the sign-in page. `configured` is true when a route is switched on in the saved settings even if it is
    * not usable now (say its secrets cannot be opened), so password sign-in stays closed instead of reopening on the internet.
    */
-  async routes(): Promise<{ thaid: ThaidSettings | null; providerId: ProviderIdConfig | null; configured: boolean }> {
+  async routes(): Promise<{ thaid: ThaidSettings | null; providerId: ProviderIdConfig | null; configured: boolean; passwordMode: PasswordSignInMode }> {
     const rows = await this.rows();
     return { thaid: this.thaidFrom(this.effective('THAID', rows.get('THAID'))), providerId: this.providerFrom(this.effective('PROVIDER_ID', rows.get('PROVIDER_ID'))),
-      configured: [...rows.values()].some((row) => Boolean(Number(row.enabled))) };
+      configured: [...rows.values()].some((row) => row.method !== PASSWORD_ROW && Boolean(Number(row.enabled))), passwordMode: this.passwordMode(rows.get(PASSWORD_ROW)) };
+  }
+
+  /** OFF is refused (LAST_SIGN_IN_ROUTE) while neither ThaID nor Provider ID is ready, so ผู้ดูแลระบบ cannot lock everyone out. */
+  async savePasswordMode(mode: PasswordSignInMode, actorPersonId: string): Promise<SignInSettingSaveResult> {
+    if (!passwordSignInModes.includes(mode)) return { ok: false, code: 'INVALID_INPUT' };
+    const rows = await this.rows();
+    const from = this.passwordMode(rows.get(PASSWORD_ROW));
+    if (mode === 'OFF' && !this.ready('THAID', this.effective('THAID', rows.get('THAID'))) && !this.ready('PROVIDER_ID', this.effective('PROVIDER_ID', rows.get('PROVIDER_ID')))) {
+      return { ok: false, code: 'LAST_SIGN_IN_ROUTE' };
+    }
+    await this.database.transaction(async (database) => {
+      await database.execute(
+        'INSERT INTO sign_in_setting (method, enabled, settings_json, secret_ciphertext, updated_by_person_id, updated_at) VALUES (?, ?, ?, NULL, ?, UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE enabled = VALUES(enabled), settings_json = VALUES(settings_json), updated_by_person_id = VALUES(updated_by_person_id), updated_at = VALUES(updated_at)',
+        [PASSWORD_ROW, mode === 'ON' ? 1 : 0, JSON.stringify({ mode }), actorPersonId]
+      );
+      await new AuditService(new DatabaseAuditRepository(database), this.createId).recordAudit({ actorPersonId, action: 'admin.sign_in_setting.update', targetType: 'sign_in_setting', targetId: PASSWORD_ROW, result: 'SUCCESS', metadata: { method: PASSWORD_ROW, fromMode: from, toMode: mode } });
+    });
+    return { ok: true };
   }
 
   async thaid(): Promise<ThaidSettings | null> {
