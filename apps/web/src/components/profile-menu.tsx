@@ -8,7 +8,7 @@ import { formatBangkokDateTime } from '../lib/bangkok-time';
 import { initialsOf } from '../lib/initials';
 
 export interface BellItem { id: string; moduleLabel: string; module?: string; subject: string; readAt: string | null; createdAt: string; }
-/** The บทบาท this session works in; `canSwitch` when the person holds two or more roles. */
+/** The บทบาท this session works in; `canSwitch` when the person holds a role tier (they may always switch to บุคลากรทั่วไป). */
 export interface ShellRole { name: string; canSwitch: boolean; }
 export interface ShellProfile { displayName: string | null; positionTitle: string | null; photoUrl: string | null; }
 

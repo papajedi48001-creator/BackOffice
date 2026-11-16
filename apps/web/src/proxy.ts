@@ -5,7 +5,7 @@ import type { Session } from '@backoffice/contracts';
 import { readSession, sessionCookieName } from './lib/session';
 import { isSetupMode } from './lib/setup-mode';
 
-/** Paths a signed-in person with several roles may use before choosing one: sign-in, sign-out, password change, the picker, health. */
+/** Paths a signed-in person with a role may use before choosing one: sign-in, sign-out, password change, the picker, health. */
 const openBeforeRoleChoice = (pathname: string) => pathname === '/' || pathname === '/choose-role' || pathname === '/change-password' || pathname.startsWith('/api/auth/') || pathname.startsWith('/api/site/') || pathname === '/api/health';
 
 const openDuringSetup = (pathname: string) => pathname === '/setup' || pathname.startsWith('/api/setup/') || pathname === '/api/health';
@@ -28,7 +28,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   if (!database) return NextResponse.next();
   let session: Promise<Session | null> | undefined;
   const currentSession = () => (session ??= readSession(request));
-  // A person with several roles works in none of them until they choose one at /choose-role (the session holds no role till then).
+  // A person with a role works in none until they choose one at /choose-role (the session holds no role till then).
   if (!openBeforeRoleChoice(pathname) && request.cookies.has(sessionCookieName) && (await currentSession())?.roleSelectionRequired) {
     if (pathname.startsWith('/api/')) return NextResponse.json({ error: 'role_selection_required' }, { status: 403 });
     return NextResponse.redirect(new URL('/choose-role', request.url));
