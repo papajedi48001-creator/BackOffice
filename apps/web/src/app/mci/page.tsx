@@ -24,7 +24,7 @@ export default async function MciLandingPage() {
   const database = getSharedDatabase();
   const incident = database ? await new MciQueries(database).openIncident() : null;
   const passwordOpen = await isPasswordSignInOpen();
-  const thaidEnabled = !passwordOpen && (await thaidConfig()) !== null && getNationalIdProtector() !== null;
+  const thaidEnabled = (await thaidConfig()) !== null && getNationalIdProtector() !== null;
   return <main className="welcome-shell mci-landing" data-module="mass-casualty">
     <div className="mci-landing-card">
       <header className="mci-landing-header">
@@ -36,10 +36,10 @@ export default async function MciLandingPage() {
         <span>{mciKindLabel(incident.kind)}: {incident.title}</span>
         <span>เข้าสู่ระบบแล้วกด “{mciText.checkIn}”</span>
       </div> : <p className="mci-incident-banner mci-incident-none" role="status">{mciText.noIncident}</p>}
-      {passwordOpen ? <LocalSignInForm next="/mci/ops" /> : <>
-        <ThaidSignIn enabled={thaidEnabled} outcome={undefined} />
-        <ProviderSignIn enabled={await providerSsoEnabled()} outcome={undefined} passwordOpen={false} divider={thaidEnabled} />
-      </>}
+      {/* ผู้ดูแลระบบ may keep password sign-in เปิด with ThaID or Provider ID ready, so the external routes stay beside the password box. */}
+      {passwordOpen ? <LocalSignInForm next="/mci/ops" /> : null}
+      <ThaidSignIn enabled={thaidEnabled} outcome={undefined} divider={passwordOpen} />
+      <ProviderSignIn enabled={await providerSsoEnabled()} outcome={undefined} passwordOpen={passwordOpen} divider={passwordOpen || thaidEnabled} />
       <p><Link href="/mci/board">{mciText.boardLink}</Link></p>
     </div>
   </main>;

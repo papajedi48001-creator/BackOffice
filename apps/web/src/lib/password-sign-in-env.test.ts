@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ signInRoutes: vi.fn(async () => ({ thaid: null as object | null, providerId: null as object | null, configured: false })) }));
+type Routes = { thaid: object | null; providerId: object | null; configured: boolean; passwordMode?: string };
+const mocks = vi.hoisted(() => ({ signInRoutes: vi.fn(async (): Promise<Routes> => ({ thaid: null, providerId: null, configured: false, passwordMode: 'AUTO' })) }));
 vi.mock('./sign-in-settings', () => ({ signInRoutes: mocks.signInRoutes }));
 
 import { isPasswordSignInOpen } from './password-sign-in';
@@ -41,6 +42,17 @@ describe('isPasswordSignInOpen', () => {
     mocks.signInRoutes.mockResolvedValueOnce({ thaid: {}, providerId: null, configured: true });
     delete process.env.PASSWORD_SIGN_IN;
     process.env.PASSWORD_SIGN_IN_FILE = '/nonexistent/password-sign-in';
+    expect(await isPasswordSignInOpen()).toBe(false);
+  });
+});
+
+describe('isPasswordSignInOpen with a saved mode', () => {
+  it('ON opens it although ThaID is ready, OFF closes it on a fresh install', async () => {
+    for (const key of Object.keys(process.env)) if (key.startsWith('PROVIDER_ID_') || key.startsWith('THAID_')) delete process.env[key];
+    delete process.env.PASSWORD_SIGN_IN;
+    mocks.signInRoutes.mockResolvedValueOnce({ thaid: { clientId: 'c' }, providerId: null, configured: true, passwordMode: 'ON' });
+    expect(await isPasswordSignInOpen()).toBe(true);
+    mocks.signInRoutes.mockResolvedValueOnce({ thaid: null, providerId: null, configured: false, passwordMode: 'OFF' });
     expect(await isPasswordSignInOpen()).toBe(false);
   });
 });

@@ -167,8 +167,11 @@ export function IdentityForm({ personId, values, username }: { personId: string;
   </form>;
 }
 
-/** บัญชีผู้ใช้ on a person's page: HR or a ผู้ดูแลระบบ resets the password (never sets one), or adds an account for a person who has none. */
-export function AccountForm({ personId, username, self = false }: { personId: string; username: string | null; self?: boolean }) {
+/**
+ * บัญชีผู้ใช้ on a person's page: HR or a ผู้ดูแลระบบ resets the password (never sets one), or adds an account for a person who has none.
+ * While password sign-in is closed, รีเซ็ตรหัสผ่าน and เปลี่ยนรหัสผ่าน are hidden; adding an account stays, ready for when it reopens.
+ */
+export function AccountForm({ personId, username, self = false, passwordOpen = true }: { personId: string; username: string | null; self?: boolean; passwordOpen?: boolean }) {
   const router = useRouter();
   const [newUsername, setNewUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -198,7 +201,7 @@ export function AccountForm({ personId, username, self = false }: { personId: st
   if (username) return <section aria-label={t('hrAccountTitle')} className="profile-form">
     <h4>{t('hrAccountTitle')}</h4>
     {feedbackOf(message)}
-    {self
+    {!passwordOpen ? <p className="form-hint">{t('passwordSignInOff')}</p> : self
       ? <><p className="form-hint">{t('passwordOwnOnly')}</p><Link className="button-link" href="/change-password">{t('passwordChangeTitle')}</Link></>
       : <FormDialog triggerLabel={t('passwordResetButton')} triggerClassName="button-secondary" title={t('passwordResetButton')} submitLabel={t('passwordResetButton')} tone="danger" onSubmit={reset}>
           <p>{t('passwordResetConfirm')}</p>

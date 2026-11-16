@@ -100,6 +100,15 @@ describe('SessionService', () => {
     await expect(sessions.pendingPasswordChange('unknown')).resolves.toBeNull();
   });
 
+  it('ignores a pending password change while password sign-in is closed, so ThaID and Provider ID still get in', async () => {
+    const repository = new MemorySessionRepository();
+    const sessions = new SessionService(repository, { load: async () => ({ roles: [], dataOwnerModules: [] }) }, { passwordChangeRequired: async () => false });
+    const { token } = await sessions.start('person-a');
+    for (const row of repository.rows.values()) row.mustChangePassword = true;
+    await expect(sessions.resolve(token)).resolves.toMatchObject({ authenticated: true, personId: 'person-a' });
+    await expect(sessions.pendingPasswordChange(token)).resolves.toBeNull();
+  });
+
   it('withholds every role until a person with several roles chooses one, then keeps only that role', async () => {
     const repository = new MemorySessionRepository();
     const many = { load: async () => ({ roles: [{ name: 'admin', organizationId: null }, { name: 'leave-manager', organizationId: null }], dataOwnerModules: [] }) };

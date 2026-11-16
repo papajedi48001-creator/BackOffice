@@ -29,6 +29,14 @@ describe('MciLandingPage', () => {
     expect(screen.getByRole('link', { name: 'เข้าสู่ระบบด้วย ThaID' })).toHaveAttribute('href', '/api/auth/thaid/start');
   });
 
+  it('keeps ThaID and Provider ID beside the password box when ผู้ดูแลระบบ chose เปิด', async () => {
+    mocks.thaid.mockResolvedValueOnce({ clientId: 'c' });
+    render(await MciLandingPage());
+    expect(screen.getByLabelText('รหัสผ่าน')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'เข้าสู่ระบบด้วย ThaID' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'เข้าสู่ระบบด้วย Provider ID' })).toBeInTheDocument();
+  });
+
   it('keeps the password box while password sign-in is open', async () => {
     render(await MciLandingPage());
     expect(screen.getByLabelText('รหัสผ่าน')).toBeInTheDocument();

@@ -2,10 +2,12 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import type { SignInMethodView, SignInSettingsView } from '@backoffice/core';
+import type { PasswordSignInMode, SignInMethodView, SignInSettingsView } from '@backoffice/core';
 import { t, type MessageKey } from '@backoffice/i18n';
 import { ActionDialog } from '../../../../components/action-dialog';
 import { FormDialog } from '../../../../components/form-dialog';
+import { formatBangkokDateTime } from '../../../../lib/bangkok-time';
+import type { PasswordSignInState } from '../../../../lib/password-sign-in';
 
 type Method = 'THAID' | 'PROVIDER_ID';
 interface Field { name: string; label: string; secret?: boolean; options?: string[] }
@@ -108,9 +110,49 @@ function RouteCard({ method, view, canStoreSecrets, defaultRedirectUri }: { meth
   </section>;
 }
 
-/** ผู้ดูแลระบบ > การเข้าสู่ระบบ: ThaID and Provider ID, each edited in a FormDialog; switching one off is confirmed in an ActionDialog. */
-export function SignInSettings({ view, defaultThaidRedirectUri }: { view: SignInSettingsView; defaultThaidRedirectUri: string }) {
+const passwordModes: PasswordSignInMode[] = ['AUTO', 'ON', 'OFF'];
+const modeLabel = (mode: PasswordSignInMode) => t(`passwordSignInMode${mode}` as MessageKey);
+
+/** ชื่อผู้ใช้และรหัสผ่าน: อัตโนมัติ · เปิด · ปิด, each change confirmed in an ActionDialog that shows old → new. */
+function PasswordCard({ view, state }: { view: SignInSettingsView['password']; state: PasswordSignInState }) {
+  const router = useRouter();
+  const [next, setNext] = useState<PasswordSignInMode | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save(mode: PasswordSignInMode): Promise<void> {
+    setSaving(true); setError(null);
+    try {
+      const response = await fetch('/api/admin/sign-in-settings/password', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ mode }) });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({})) as { error?: string };
+        setError(t(body.error === 'LAST_SIGN_IN_ROUTE' ? 'passwordSignInErrorLAST' : 'signInErrorFailed'));
+        return;
+      }
+      setNext(null);
+      router.refresh();
+    } catch { setError(t('signInErrorFailed')); } finally { setSaving(false); }
+  }
+
+  return <section className="admin-hosxp" aria-labelledby="sign-in-password-title">
+    <h3 id="sign-in-password-title">{t('passwordSignInTitle')}</h3>
+    <div className="mode-switch" role="group" aria-label={t('passwordSignInModeGroup')}>{passwordModes.map((mode) =>
+      <button key={mode} type="button" data-mode={mode} aria-pressed={view.mode === mode} disabled={view.mode === mode || saving} onClick={() => { setError(null); setNext(mode); }}>{modeLabel(mode)}</button>)}</div>
+    <dl className="admin-line-facts">
+      <div><dt>{t('passwordSignInNow')}</dt><dd><span className={`status status-${state.open ? 'approved' : 'cancelled'}`}>{t(state.open ? 'passwordSignInOpenNow' : 'passwordSignInClosedNow')}</span> {t(`passwordSignInReason${state.reason}` as MessageKey)}</dd></div>
+      {view.updatedAt ? <div><dt>{t('passwordSignInLastChange')}</dt><dd>{formatBangkokDateTime(view.updatedAt)}{view.updatedByName ? ` · ${view.updatedByName}` : ''}</dd></div> : null}
+    </dl>
+    <p className="admin-note">{t('passwordSignInHelp')}</p>
+    {next ? <ActionDialog title={t('passwordSignInConfirmTitle')} message={`${modeLabel(view.mode)} → ${modeLabel(next)} — ${t(`passwordSignInConfirm${next}` as MessageKey)}`}
+      confirmLabel={t('passwordSignInConfirm')} tone={next === 'OFF' ? 'danger' : 'primary'} isSubmitting={saving} error={error}
+      onConfirm={() => void save(next)} onClose={() => { setNext(null); setError(null); }} /> : null}
+  </section>;
+}
+
+/** ผู้ดูแลระบบ > การเข้าสู่ระบบ: password sign-in first, then ThaID and Provider ID, each edited in a FormDialog; switching one off is confirmed in an ActionDialog. */
+export function SignInSettings({ view, defaultThaidRedirectUri, passwordState }: { view: SignInSettingsView; defaultThaidRedirectUri: string; passwordState: PasswordSignInState }) {
   return <>
+    <PasswordCard view={view.password} state={passwordState} />
     {view.canStoreSecrets ? null : <p className="admin-note" role="note">{t('signInNoSecretKey')}</p>}
     <RouteCard method="THAID" view={view.thaid} canStoreSecrets={view.canStoreSecrets} defaultRedirectUri={defaultThaidRedirectUri} />
     <RouteCard method="PROVIDER_ID" view={view.providerId} canStoreSecrets={view.canStoreSecrets} defaultRedirectUri={defaultThaidRedirectUri.replace('/api/auth/thaid/callback', '/api/auth/provider/callback')} />

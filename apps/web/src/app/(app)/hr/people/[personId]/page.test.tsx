@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({ headers: vi.fn(), redirect: vi.fn(), notFound:
 vi.mock('next/headers', () => ({ headers: mocks.headers }));
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect, notFound: mocks.notFound, useRouter: () => ({ refresh: mocks.refresh }) }));
 vi.mock('../../../../../lib/session', () => ({ readSession: mocks.readSession }));
+vi.mock('../../../../../lib/password-sign-in', () => ({ isPasswordSignInOpen: async () => true }));
 vi.mock('../../../../../lib/database', () => ({ getSharedDatabase: mocks.getSharedDatabase }));
 vi.mock('@backoffice/core', async (importOriginal) => ({
   ...await importOriginal<typeof import('@backoffice/core')>(),

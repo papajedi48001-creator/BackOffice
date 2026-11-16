@@ -57,3 +57,5 @@ export const signInSettingInputSchema = z.object({
   secrets: settingFields
 });
 export type SignInSettingInputBody = z.infer<typeof signInSettingInputSchema>;
+/** การเข้าด้วยชื่อผู้ใช้และรหัสผ่าน: อัตโนมัติ · เปิด · ปิด. */
+export const passwordSignInModeInputSchema = z.object({ mode: z.enum(['AUTO', 'ON', 'OFF']) });

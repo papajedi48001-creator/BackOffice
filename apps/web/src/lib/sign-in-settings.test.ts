@@ -40,6 +40,6 @@ describe('signInRoutes', () => {
   it('a database error falls back to the environment instead of failing the sign-in page', async () => {
     mocks.getSharedDatabase.mockReturnValue({ query: vi.fn(async () => { throw new Error('down'); }), execute: vi.fn(), transaction: vi.fn(), close: vi.fn() });
     for (const key of Object.keys(process.env)) if (key.startsWith('THAID_') || key.startsWith('PROVIDER_ID_')) delete process.env[key];
-    expect(await signInRoutes()).toEqual({ thaid: null, providerId: null, configured: true });
+    expect(await signInRoutes()).toEqual({ thaid: null, providerId: null, configured: true, passwordMode: 'AUTO' });
   });
 });

@@ -131,3 +131,51 @@ describe('SignInSettingsService when saved secrets cannot be opened', () => {
     await expect(new SignInSettingsService(database, box, envOf({})).view()).resolves.toMatchObject({ thaid: { source: 'SETTINGS', ready: false } });
   });
 });
+
+describe('SignInSettingsService password sign-in mode', () => {
+  it('is AUTO with nothing saved', async () => {
+    const service = new SignInSettingsService(store().database, box, envOf({}));
+    expect((await service.routes()).passwordMode).toBe('AUTO');
+    expect((await service.view()).password).toEqual({ mode: 'AUTO', updatedAt: null, updatedByName: null });
+  });
+
+  it('saves ON and audits from and to in the same transaction', async () => {
+    const { database, executed } = store();
+    const transaction = vi.spyOn(database, 'transaction');
+    const service = new SignInSettingsService(database, box, envOf({}));
+    expect(await service.savePasswordMode('ON', 'admin-1')).toEqual({ ok: true });
+    expect(transaction).toHaveBeenCalledTimes(1);
+    expect(executed.some((sql) => sql.startsWith('INSERT INTO sign_in_setting') && sql.includes('["PASSWORD",0,"{\\"mode\\":\\"ON\\"}"'))).toBe(true);
+    expect(executed.some((sql) => sql.includes('admin.sign_in_setting.update') && sql.includes('\\"fromMode\\":\\"AUTO\\"') && sql.includes('\\"toMode\\":\\"ON\\"') && sql.includes('\\"method\\":\\"PASSWORD\\"'))).toBe(true);
+    expect((await service.routes()).passwordMode).toBe('ON');
+    expect((await service.view()).password.mode).toBe('ON');
+  });
+
+  it('a password row switched ON does not count as an external route being configured', async () => {
+    const service = new SignInSettingsService(store().database, box, envOf({}));
+    await service.savePasswordMode('ON', 'admin-1');
+    expect((await service.routes()).configured).toBe(false);
+  });
+
+  it('refuses OFF while neither ThaID nor Provider ID is ready, so nobody is locked out', async () => {
+    const { database, rows } = store();
+    const service = new SignInSettingsService(database, box, envOf({}));
+    expect(await service.savePasswordMode('OFF', 'admin-1')).toEqual({ ok: false, code: 'LAST_SIGN_IN_ROUTE' });
+    expect(rows.has('PASSWORD')).toBe(false);
+    expect(await new SignInSettingsService(database, box, envOf(providerEnv)).savePasswordMode('OFF', 'admin-1')).toEqual({ ok: true });
+    expect((await service.routes()).passwordMode).toBe('OFF');
+  });
+
+  it('refuses OFF when ThaID is complete but cannot sign anyone in (no national-ID keys) and Provider ID is not ready', async () => {
+    const service = new SignInSettingsService(store().database, box, envOf({}));
+    await service.save('THAID', thaidInput('s'), 'admin-1');
+    expect(await service.savePasswordMode('OFF', 'admin-1', false)).toEqual({ ok: false, code: 'LAST_SIGN_IN_ROUTE' });
+    expect(await service.savePasswordMode('OFF', 'admin-1', true)).toEqual({ ok: true });
+  });
+
+  it('reads an unknown saved mode as AUTO', async () => {
+    const { database, rows } = store();
+    rows.set('PASSWORD', { method: 'PASSWORD', enabled: 0, settingsJson: '{"mode":"MAYBE"}', secretCiphertext: null });
+    expect((await new SignInSettingsService(database, box, envOf({})).routes()).passwordMode).toBe('AUTO');
+  });
+});

@@ -1,7 +1,8 @@
 // @vitest-environment node
 import { afterEach, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ readSession: vi.fn(), readPendingPasswordChange: vi.fn(), getSharedDatabase: vi.fn(), changeOwnPassword: vi.fn() }));
+const mocks = vi.hoisted(() => ({ readSession: vi.fn(), readPendingPasswordChange: vi.fn(), getSharedDatabase: vi.fn(), changeOwnPassword: vi.fn(), isPasswordSignInOpen: vi.fn(async () => true) }));
+vi.mock('../../../../lib/password-sign-in', () => ({ isPasswordSignInOpen: mocks.isPasswordSignInOpen }));
 vi.mock('../../../../lib/session', async (importOriginal) => ({ ...await importOriginal<typeof import('../../../../lib/session')>(), readSession: mocks.readSession, readPendingPasswordChange: mocks.readPendingPasswordChange }));
 vi.mock('../../../../lib/database', () => ({ getSharedDatabase: mocks.getSharedDatabase }));
 vi.mock('@backoffice/core', async (importOriginal) => ({ ...await importOriginal<typeof import('@backoffice/core')>(), PersonAccountService: class { changeOwnPassword = mocks.changeOwnPassword; } }));
@@ -33,4 +34,14 @@ it('maps a wrong current password and a reused password, and refuses without a s
   mocks.readSession.mockResolvedValue(null);
   expect((await post({ newPassword: 'brand-new-pass' })).status).toBe(401);
   expect((await post({ newPassword: 'short' })).status).toBe(401);
+});
+
+it('refuses with password_sign_in_off while password sign-in is closed, before reading the body', async () => {
+  mocks.getSharedDatabase.mockReturnValue({});
+  mocks.readSession.mockResolvedValue({ personId: 'p1' });
+  mocks.isPasswordSignInOpen.mockResolvedValueOnce(false);
+  const response = await post({ newPassword: 'brand-new-pass' });
+  expect(response.status).toBe(403);
+  expect(await response.json()).toEqual({ error: 'password_sign_in_off' });
+  expect(mocks.changeOwnPassword).not.toHaveBeenCalled();
 });

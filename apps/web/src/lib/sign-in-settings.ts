@@ -1,10 +1,10 @@
-import { connectionSecretBoxFrom, SignInSettingsService, type ProviderIdConfig, type ThaidSettings } from '@backoffice/core';
+import { connectionSecretBoxFrom, SignInSettingsService, type PasswordSignInMode, type ProviderIdConfig, type ThaidSettings } from '@backoffice/core';
 import type { Database } from '@backoffice/db';
 import { getSharedDatabase } from './database';
 import { readRuntimeValue } from './runtime-env';
 
 /** `configured`: a route is switched on in the saved settings, usable or not; it keeps password sign-in closed. */
-export interface SignInRoutes { thaid: ThaidSettings | null; providerId: ProviderIdConfig | null; configured: boolean }
+export interface SignInRoutes { thaid: ThaidSettings | null; providerId: ProviderIdConfig | null; configured: boolean; passwordMode: PasswordSignInMode }
 
 const CACHE_MS = 30_000;
 /** A database error is retried sooner, so web-only settings come back within seconds. */
