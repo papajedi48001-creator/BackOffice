@@ -248,6 +248,15 @@ describeWithDatabase('HrProfileService writes against MariaDB', () => {
     expect(await service.currentOrganizationNamesOf(await person(null))).toEqual([]);
   });
 
+  it('gives the portal the person\'s own phone, or null when none is recorded', async () => {
+    const id = await person(await organization());
+    await database.execute("INSERT INTO hr_person_profile (person_id, phone, updated_at) VALUES (?, ' 0812345678 ', UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE phone = VALUES(phone)", [id]);
+    expect(await service.phoneOf(id)).toBe('0812345678');
+    await database.execute("UPDATE hr_person_profile SET phone = NULL WHERE person_id = ?", [id]);
+    expect(await service.phoneOf(id)).toBeNull();
+    expect(await service.phoneOf(randomUUID())).toBeNull();
+  });
+
   it('sets and removes a person\'s own photo with an audit event that names the field only', async () => {
     const id = await person(await organization());
     const noProfile = await person(null);

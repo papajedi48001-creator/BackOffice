@@ -333,6 +333,13 @@ export class HrProfileService {
     return names;
   }
 
+  /** The person's own phone from their ทะเบียนประวัติ, for the portal to prefill their membership application; null when none is recorded. */
+  async phoneOf(personId: string): Promise<string | null> {
+    const [row] = await this.database.query<{ phone: string | null }>('SELECT phone FROM hr_person_profile WHERE person_id = ?', [personId]);
+    const phone = row?.phone?.trim();
+    return phone ? phone : null;
+  }
+
   async photoAttachmentOf(personId: string): Promise<string | null> {
     const [row] = await this.database.query<{ photo: string | null }>('SELECT photo_attachment_id AS photo FROM hr_person_profile WHERE person_id = ?', [personId]);
     return row?.photo ?? null;

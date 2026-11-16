@@ -2,13 +2,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { OidcError } from '@backoffice/core';
 
-const mocks = vi.hoisted(() => ({ config: vi.fn(), providerConfig: vi.fn(), getSharedDatabase: vi.fn(), verify: vi.fn(), findLink: vi.fn(), isActivePerson: vi.fn(), namesOf: vi.fn(), protector: vi.fn(), match: vi.fn() }));
+const mocks = vi.hoisted(() => ({ config: vi.fn(), providerConfig: vi.fn(), getSharedDatabase: vi.fn(), verify: vi.fn(), findLink: vi.fn(), isActivePerson: vi.fn(), namesOf: vi.fn(), phoneOf: vi.fn(), protector: vi.fn(), match: vi.fn() }));
 vi.mock('../../../../lib/provider-sso', () => ({ portalSsoConfig: mocks.config, providerSsoConfig: mocks.providerConfig, portalOidcClient: () => ({ verifyPortalRequest: mocks.verify }) }));
 vi.mock('../../../../lib/database', () => ({ getSharedDatabase: mocks.getSharedDatabase }));
 vi.mock('../../../../lib/national-id', () => ({ getNationalIdProtector: mocks.protector }));
 vi.mock('@backoffice/core', async (importOriginal) => ({
   ...await importOriginal<typeof import('@backoffice/core')>(),
-  HrProfileService: class { currentOrganizationNamesOf = mocks.namesOf; },
+  HrProfileService: class { currentOrganizationNamesOf = mocks.namesOf; phoneOf = mocks.phoneOf; },
   NationalIdHashMatcher: class { findActivePerson = mocks.match; },
   DatabaseExternalIdentityRepository: class { findLink = mocks.findLink; isActivePerson = mocks.isActivePerson; }
 }));
@@ -24,6 +24,7 @@ const ready = () => {
   mocks.providerConfig.mockReturnValue({ apiUrl: 'https://provider.id.th' });
   mocks.findLink.mockResolvedValue({ personId: 'person-1' }); mocks.isActivePerson.mockResolvedValue(true);
   mocks.namesOf.mockResolvedValue(['งานผู้ป่วยใน', 'กลุ่มงานการพยาบาล', 'โรงพยาบาลวาริชภูมิ']);
+  mocks.phoneOf.mockResolvedValue('0812345678');
 };
 
 afterEach(() => vi.clearAllMocks());
@@ -50,7 +51,7 @@ describe('GET /api/portal/organization', () => {
     const response = await get();
     expect(response.status).toBe(200);
     expect(response.headers.get('cache-control')).toBe('no-store');
-    expect(await response.json()).toEqual({ organizations: ['งานผู้ป่วยใน', 'กลุ่มงานการพยาบาล', 'โรงพยาบาลวาริชภูมิ'] });
+    expect(await response.json()).toEqual({ organizations: ['งานผู้ป่วยใน', 'กลุ่มงานการพยาบาล', 'โรงพยาบาลวาริชภูมิ'], phone: '0812345678' });
     expect(mocks.findLink).toHaveBeenCalledWith('https://provider.id.th', 'acc-1');
     expect(mocks.namesOf).toHaveBeenCalledWith('person-1');
     expect(mocks.match).not.toHaveBeenCalled();
@@ -81,7 +82,16 @@ describe('GET /api/portal/organization', () => {
     mocks.match.mockResolvedValueOnce(null);
     expect((await get()).status).toBe(404);
     mocks.namesOf.mockResolvedValueOnce([]);
+    mocks.phoneOf.mockResolvedValueOnce(null);
     expect((await get()).status).toBe(404);
+  });
+
+  it('answers the phone alone when the person has no หน่วยงาน, and no phone when none is recorded', async () => {
+    ready();
+    mocks.namesOf.mockResolvedValueOnce([]);
+    expect(await (await get()).json()).toEqual({ organizations: [], phone: '0812345678' });
+    mocks.phoneOf.mockResolvedValueOnce(null);
+    expect(await (await get()).json()).toEqual({ organizations: ['งานผู้ป่วยใน', 'กลุ่มงานการพยาบาล', 'โรงพยาบาลวาริชภูมิ'], phone: null });
   });
 
   it('ignores a Provider ID account from another environment', async () => {
