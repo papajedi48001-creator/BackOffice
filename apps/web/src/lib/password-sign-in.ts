@@ -1,13 +1,24 @@
+import type { PasswordSignInMode } from '@backoffice/core';
 import { readRuntimeValue } from './runtime-env';
 import { signInRoutes } from './sign-in-settings';
 
+export type PasswordSignInReason = 'OVERRIDE' | 'MODE_ON' | 'MODE_OFF' | 'AUTO_ROUTE_READY' | 'AUTO_NO_ROUTE';
+export interface PasswordSignInState { open: boolean; reason: PasswordSignInReason }
+
 /**
- * Username-and-password sign-in is closed once ThaID or Provider ID is ready, so it cannot be brute-forced from the internet.
- * It stays open while no external route is ready (a fresh install), and PASSWORD_SIGN_IN=on reopens it as a break-glass.
+ * ผู้ดูแลระบบ > การเข้าสู่ระบบ picks the mode. AUTO (the default) closes username-and-password sign-in once ThaID or Provider ID is ready,
+ * so it cannot be brute-forced from the internet, and keeps it open while no external route is ready (a fresh install). ON and OFF hold it.
+ * PASSWORD_SIGN_IN=on on the server reopens it whatever the mode, as the break-glass.
  */
-export function passwordSignInOpen(input: { externalRouteReady: boolean; override: string | undefined }): boolean {
-  if (input.override?.trim().toLowerCase() === 'on') return true;
-  return !input.externalRouteReady;
+export function passwordSignInState(input: { externalRouteReady: boolean; override: string | undefined; mode?: PasswordSignInMode }): PasswordSignInState {
+  if (input.override?.trim().toLowerCase() === 'on') return { open: true, reason: 'OVERRIDE' };
+  if (input.mode === 'ON') return { open: true, reason: 'MODE_ON' };
+  if (input.mode === 'OFF') return { open: false, reason: 'MODE_OFF' };
+  return input.externalRouteReady ? { open: false, reason: 'AUTO_ROUTE_READY' } : { open: true, reason: 'AUTO_NO_ROUTE' };
+}
+
+export function passwordSignInOpen(input: { externalRouteReady: boolean; override: string | undefined; mode?: PasswordSignInMode }): boolean {
+  return passwordSignInState(input).open;
 }
 
 let warnedIncomplete = false;
@@ -24,8 +35,8 @@ function override(): string | undefined {
   try { return readRuntimeValue('PASSWORD_SIGN_IN'); } catch { return undefined; }
 }
 
-/** Saved settings for ThaID or Provider ID also count once they are ready (ผู้ดูแลระบบ > การเข้าสู่ระบบ). */
-export async function isPasswordSignInOpen(): Promise<boolean> {
+/** Saved settings for ThaID or Provider ID also count once they are ready (ผู้ดูแลระบบ > การเข้าสู่ระบบ), and so does the saved mode. */
+export async function currentPasswordSignInState(): Promise<PasswordSignInState> {
   const routes = await signInRoutes();
   const ready = routes.providerId !== null || routes.thaid !== null;
   const intended = !ready && (routes.configured || externalRouteIntended());
@@ -33,5 +44,10 @@ export async function isPasswordSignInOpen(): Promise<boolean> {
     warnedIncomplete = true;
     console.warn('password sign-in closed: ThaID or Provider ID settings are present but incomplete');
   }
-  return passwordSignInOpen({ externalRouteReady: ready || intended, override: override() });
+  return passwordSignInState({ externalRouteReady: ready || intended, override: override(), mode: routes.passwordMode });
+}
+
+/** Sign-in, the รายงานตัว page, เปลี่ยนรหัสผ่าน and รีเซ็ตรหัสผ่าน all follow this one answer. */
+export async function isPasswordSignInOpen(): Promise<boolean> {
+  return (await currentPasswordSignInState()).open;
 }
