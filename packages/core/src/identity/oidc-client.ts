@@ -4,8 +4,11 @@ import type { ExternalIdentity } from '@backoffice/contracts';
 /** `timeoutMs`: how long one request to the portal may take (default 10 s); the photo route sets it short to answer within 3 s. */
 export interface OidcClientConfig { issuer: string; clientId: string; clientSecret: string; redirectUri: string; timeoutMs?: number }
 export interface OidcFlow { state: string; nonce: string; verifier: string }
-/** A portal-signed request: the portal member, and the Provider ID account the portal has bound to that member, when it has one. */
-export interface PortalRequest { memberId: string; provider: { issuer: string; subject: string } | null }
+/**
+ * A portal-signed request: the portal member, and the Provider ID account the portal has bound to that member, when it has one.
+ * `hashCid`: Provider ID's hash_cid, sent only by the portal's หน่วยงาน lookup while a member registers; compare it, never store or log it.
+ */
+export interface PortalRequest { memberId: string; provider: { issuer: string; subject: string } | null; hashCid?: string }
 
 /** UNAVAILABLE: the portal could not be reached or answered nonsense. INVALID: the answer was refused (bad code, token or signature). */
 export class OidcError extends Error {
@@ -82,9 +85,11 @@ export class PortalOidcClient {
     if (header.typ !== typ || claims.iss !== this.config.issuer || !audience.includes(this.config.clientId)) throw new OidcError('INVALID');
     if (typeof claims.exp !== 'number' || typeof claims.iat !== 'number' || claims.exp + SKEW_SECONDS < seconds || claims.iat - SKEW_SECONDS > seconds || claims.exp - claims.iat > PORTAL_REQUEST_MAX_SECONDS) throw new OidcError('INVALID');
     if (!isSubject(claims.sub)) throw new OidcError('INVALID');
-    if (claims.provider_iss === undefined && claims.provider_sub === undefined) return { memberId: claims.sub, provider: null };
+    if (claims.hash_cid !== undefined && (typeof claims.hash_cid !== 'string' || !/^[0-9a-f]{64}$/.test(claims.hash_cid))) throw new OidcError('INVALID');
+    const hashCid = typeof claims.hash_cid === 'string' ? { hashCid: claims.hash_cid } : {};
+    if (claims.provider_iss === undefined && claims.provider_sub === undefined) return { memberId: claims.sub, provider: null, ...hashCid };
     if (!isSubject(claims.provider_sub) || !isWebUrl(claims.provider_iss)) throw new OidcError('INVALID');
-    return { memberId: claims.sub, provider: { issuer: claims.provider_iss, subject: claims.provider_sub } };
+    return { memberId: claims.sub, provider: { issuer: claims.provider_iss, subject: claims.provider_sub }, ...hashCid };
   }
 
   private async verifySigned(idToken: string): Promise<{ header: Record<string, unknown>; claims: Record<string, unknown> }> {

@@ -31,7 +31,7 @@ export const providerIdClient = (config: ProviderIdConfig): ProviderIdClient => 
 export interface PortalRequestConfig { issuer: string; clientId: string }
 
 /**
- * The radius-server portal, kept only for its server-to-server photo requests (/api/portal/photo). Sign-in no longer goes through the
+ * The radius-server portal, kept only for its server-to-server requests (/api/portal/photo, /api/portal/organization). Sign-in no longer goes through the
  * portal, so neither the portal client secret nor its redirect URI is needed. The audience defaults to `backoffice`, as the portal signs it.
  */
 export function portalSsoConfig(): PortalRequestConfig | null {

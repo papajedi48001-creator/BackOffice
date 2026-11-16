@@ -160,6 +160,14 @@ describe('PortalOidcClient.verifyPortalRequest', () => {
     }
   });
 
+  it('returns the hash_cid a portal request carries and refuses a malformed one', async () => {
+    const hash = 'a'.repeat(64);
+    await expect(check((h) => token(h.primary.privateKey, { ...claims, hash_cid: hash }, header))).resolves.toEqual({ memberId: 'member-1', provider: null, hashCid: hash });
+    for (const bad of ['A'.repeat(64), 'a'.repeat(63), 7, '']) {
+      await expect(check((h) => token(h.primary.privateKey, { ...claims, hash_cid: bad }, header))).rejects.toEqual(new OidcError('INVALID'));
+    }
+  });
+
   it('refuses an ID token, another type, issuer or audience', async () => {
     await expect(check((h) => token(h.primary.privateKey, { ...claims, nonce: 'n' }))).rejects.toEqual(new OidcError('INVALID'));
     await expect(check((h) => token(h.primary.privateKey, claims, { ...header, typ: 'other+jwt' }))).rejects.toEqual(new OidcError('INVALID'));
