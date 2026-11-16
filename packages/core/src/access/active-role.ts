@@ -34,14 +34,14 @@ function rolesOfTier(roles: readonly Role[], tier: string): Role[] {
 }
 
 /**
- * Applies the session's stored choice. No roles: บุคลากรทั่วไป. One tier: selected automatically. Both tiers: the stored
- * tier when still held (or `employee`), else no role at all until the person picks again — a choice saved before the
- * tiers existed (a role name) counts as stale.
+ * Applies the session's stored choice. No roles: บุคลากรทั่วไป. One or both tiers: the stored tier when still held (or
+ * `employee`), else no role at all until the person picks — so a single-tier person can also work as บุคลากรทั่วไป.
+ * A choice saved before the tiers existed (a role name) counts as stale.
  */
 export function resolveActiveRole(roles: readonly Role[], stored: string | null | undefined): ActiveRoleResolution {
   const choices = roleChoices(roles);
   if (choices.length === 0) return { activeRole: EMPLOYEE_ROLE, roleChoices: choices, roleSelectionRequired: false, roles: [] };
-  const activeRole = choices.length === 1 && stored !== EMPLOYEE_ROLE ? choices[0]! : stored === EMPLOYEE_ROLE || (stored && choices.includes(stored)) ? stored : null;
+  const activeRole = stored === EMPLOYEE_ROLE || (stored && choices.includes(stored)) ? stored : null;
   if (!activeRole) return { activeRole: null, roleChoices: choices, roleSelectionRequired: true, roles: [] };
   return { activeRole, roleChoices: choices, roleSelectionRequired: false, roles: rolesOfTier(roles, activeRole) };
 }

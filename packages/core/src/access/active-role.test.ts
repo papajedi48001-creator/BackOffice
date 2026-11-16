@@ -28,10 +28,19 @@ describe('active role', () => {
     expect(resolveActiveRole(roles, EMPLOYEE_ROLE)).toMatchObject({ activeRole: EMPLOYEE_ROLE, roleSelectionRequired: false, roles: [] });
   });
 
-  it('sends a choice saved before the tiers back to the picker, and auto-selects a single tier', () => {
+  it('sends a choice saved before the tiers back to the picker, and needs no choice without roles', () => {
     expect(resolveActiveRole(roles, 'leave-manager')).toMatchObject({ activeRole: null, roleSelectionRequired: true, roles: [] });
-    expect(resolveActiveRole([{ name: 'fleet-manager', organizationId: null }, { name: 'hr-manager', organizationId: null }], null)).toMatchObject({ activeRole: MANAGER_TIER, roleSelectionRequired: false, roles: [{ name: 'fleet-manager', organizationId: null }, { name: 'hr-manager', organizationId: null }] });
     expect(resolveActiveRole([], 'admin')).toEqual({ activeRole: EMPLOYEE_ROLE, roleChoices: [], roleSelectionRequired: false, roles: [] });
+  });
+
+  it('needs a choice for a single tier too, so a ผู้จัดการ can work as บุคลากรทั่วไป', () => {
+    const managerOnly = [{ name: 'fleet-manager', organizationId: null }, { name: 'hr-manager', organizationId: null }];
+    expect(resolveActiveRole(managerOnly, null)).toEqual({ activeRole: null, roleChoices: [MANAGER_TIER], roleSelectionRequired: true, roles: [] });
+    expect(resolveActiveRole(managerOnly, 'fleet-manager')).toMatchObject({ activeRole: null, roleSelectionRequired: true });
+    expect(resolveActiveRole(managerOnly, ADMIN_TIER)).toMatchObject({ activeRole: null, roleSelectionRequired: true });
+    expect(resolveActiveRole(managerOnly, MANAGER_TIER)).toMatchObject({ activeRole: MANAGER_TIER, roleSelectionRequired: false, roles: managerOnly });
+    expect(resolveActiveRole(managerOnly, EMPLOYEE_ROLE)).toMatchObject({ activeRole: EMPLOYEE_ROLE, roleSelectionRequired: false, roles: [] });
+    expect(resolveActiveRole([{ name: 'admin', organizationId: null }], null)).toMatchObject({ activeRole: null, roleChoices: [ADMIN_TIER], roleSelectionRequired: true });
   });
 
   it('authorizes with the tier chosen: ผู้จัดการ keeps module rights but not ผู้ดูแลระบบ', async () => {
