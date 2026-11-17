@@ -88,6 +88,24 @@ describeWithDatabase('AdminService against MariaDB', () => {
     await expect(service.setModuleMode(actor, 'admin', 'DEVELOPMENT')).resolves.toEqual({ ok: false, code: 'MODULE_LOCKED' });
   });
 
+  it('sets a module\'s colour and icon with the change audited, resets them to the default, and drops stored values it does not know', async () => {
+    await database.execute("DELETE FROM admin_module_setting WHERE module_code = 'fleet'");
+    await expect(service.setModuleAppearance(actor, 'fleet', { color: '#be185d', icon: 'target' })).resolves.toEqual({ ok: true, changed: true });
+    expect((await queries.moduleAppearance()).fleet).toEqual({ color: '#be185d', icon: 'target' });
+    expect((await queries.moduleModes()).fleet ?? 'ON').toBe('ON');
+    await expect(service.setModuleAppearance(actor, 'fleet', { color: '#be185d', icon: 'target' })).resolves.toEqual({ ok: true, changed: false });
+    await service.setModuleMode(actor, 'fleet', 'DEVELOPMENT');
+    await expect(service.setModuleAppearance(actor, 'fleet', { color: null, icon: 'target' })).resolves.toEqual({ ok: true, changed: true });
+    expect((await queries.moduleAppearance()).fleet).toEqual({ color: null, icon: 'target' });
+    expect((await queries.moduleModes()).fleet).toBe('DEVELOPMENT');
+    await expect(service.setModuleAppearance(actor, 'admin', { color: '#475569', icon: null })).resolves.toEqual({ ok: true, changed: true });
+    await database.execute("UPDATE admin_module_setting SET accent_color = 'red;}', icon = 'rocket' WHERE module_code = 'fleet'");
+    expect((await queries.moduleAppearance()).fleet).toEqual({ color: null, icon: null });
+    const audits = (await auditsFor('admin.module.appearance_changed', 'fleet')).map((audit) => JSON.parse(audit.metadata) as unknown);
+    expect(audits).toEqual(expect.arrayContaining([{ moduleCode: 'fleet', fromColor: null, toColor: '#be185d', fromIcon: null, toIcon: 'target' }, { moduleCode: 'fleet', fromColor: '#be185d', toColor: null, fromIcon: 'target', toIcon: 'target' }]));
+    await database.execute("DELETE FROM admin_module_setting WHERE module_code IN ('fleet', 'admin')");
+  });
+
   it('grants a tester role alongside a manager role to the same person', async () => {
     await expect(service.setPersonRoles(actor, retired, [])).resolves.toMatchObject({ ok: true });
     await expect(service.grantRole(actor, person, 'fleet-tester')).resolves.toEqual({ ok: true, changed: true });

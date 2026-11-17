@@ -5,13 +5,15 @@ import type { NavigationItem } from '../components/app-shell';
 import type { BellItem, ShellProfile } from '../components/profile-menu';
 import { attachmentsEnabled } from './attachments';
 import { collectBadges } from './dashboard-badges';
+import { appearanceCss, readModuleAppearance, withAppearance } from './module-appearance';
 import { readModuleModes } from './module-gate';
 import { availableModules, moduleLabel, navigationFrom, usableModules, visibleModules } from './modules';
 import { profilePhotoUrl } from './profile-photo';
 
 /** แชตกับผู้ดูแลระบบ button: whether this person answers the shared inbox, whether pictures can be kept, and what waits. */
 export interface ShellChat { admin: boolean; images: boolean; unread: number; }
-export interface ShellData { navigation: NavigationItem[]; profile: ShellProfile; bell: { unread: number; items: BellItem[] }; chat: ShellChat; }
+/** `accentCss`: the module colours chosen on ตั้งค่าโปรแกรม, as palette-only CSS for the layout (see `appearanceCss`). */
+export interface ShellData { navigation: NavigationItem[]; profile: ShellProfile; bell: { unread: number; items: BellItem[] }; chat: ShellChat; accentCss?: string; }
 export const noChat = (subject: AccessSubject): ShellChat => ({ admin: isAdmin(subject), images: attachmentsEnabled(), unread: 0 });
 
 async function chatUnread(db: Database, subject: AccessSubject): Promise<number> {
@@ -52,8 +54,8 @@ async function signedInProfile(db: Database, personId: string): Promise<ShellPro
 
 /** Sidebar items with their counts, the signed-in person's chip and their newest unread notices; anything that fails to load is left out so the page still renders. */
 export async function loadShellData(db: Database, subject: AccessSubject): Promise<ShellData> {
-  const modes = await readModuleModes(db);
-  const modules = await availableModules(usableModules(visibleModules(subject), modes, subject), db, subject);
+  const [modes, appearance] = await Promise.all([readModuleModes(db), readModuleAppearance(db)]);
+  const modules = withAppearance(await availableModules(usableModules(visibleModules(subject), modes, subject), db, subject), appearance);
   const [badges, items, profile, chat] = await Promise.all([collectBadges(modules, db, subject), subject.personId ? recentNotices(db, subject.personId) : Promise.resolve([]), subject.personId ? signedInProfile(db, subject.personId) : Promise.resolve(emptyProfile), chatUnread(db, subject)]);
-  return { navigation: navigationFrom(modules, badges, modes), profile, bell: { unread: badges.notifications ?? 0, items }, chat: { ...noChat(subject), unread: chat } };
+  return { navigation: navigationFrom(modules, badges, modes), profile, bell: { unread: badges.notifications ?? 0, items }, chat: { ...noChat(subject), unread: chat }, accentCss: appearanceCss(appearance) };
 }

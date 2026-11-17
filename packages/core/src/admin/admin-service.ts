@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { grantableRoleSchema, moduleModeSchema, type GrantableRole, type ModuleMode } from '@backoffice/contracts';
+import { adminModuleAppearanceInputSchema, grantableRoleSchema, moduleModeSchema, type GrantableRole, type ModuleAppearance, type ModuleMode } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { ADMIN_ROLE } from '../access/authorization-service';
 import { AuditService } from '../audit/audit-service';
@@ -26,6 +26,23 @@ export class AdminService {
       if (fromMode === toMode) return { ok: true as const, changed: false };
       await tx.execute('INSERT INTO admin_module_setting (module_code, enabled, mode, updated_by_person_id, updated_at) VALUES (?, ?, ?, ?, UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE enabled = VALUES(enabled), mode = VALUES(mode), updated_by_person_id = VALUES(updated_by_person_id), updated_at = VALUES(updated_at)', [moduleCode, toMode === 'OFF' ? 0 : 1, toMode, actorPersonId]);
       await this.audit(tx, actorPersonId, 'admin.module.mode_changed', 'module', moduleCode, { moduleCode, fromMode, toMode });
+      return { ok: true as const, changed: true };
+    });
+  }
+
+  /**
+   * สีและไอคอน of a module (null = its default). Any live module, the admin module too: only its mode is locked.
+   * A row created here keeps mode ON, the same as having no row.
+   */
+  async setModuleAppearance(actorPersonId: string, moduleCode: string, appearance: ModuleAppearance): Promise<{ ok: true; changed: boolean }> {
+    const { color: toColor, icon: toIcon } = adminModuleAppearanceInputSchema.parse(appearance);
+    return this.database.transaction(async (tx) => {
+      const [current] = await tx.query<{ color: string | null; icon: string | null }>('SELECT accent_color AS color, icon FROM admin_module_setting WHERE module_code = ? FOR UPDATE', [moduleCode]);
+      const fromColor = current?.color ?? null;
+      const fromIcon = current?.icon ?? null;
+      if (fromColor === toColor && fromIcon === toIcon) return { ok: true as const, changed: false };
+      await tx.execute("INSERT INTO admin_module_setting (module_code, enabled, mode, accent_color, icon, updated_by_person_id, updated_at) VALUES (?, 1, 'ON', ?, ?, ?, UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE accent_color = VALUES(accent_color), icon = VALUES(icon), updated_by_person_id = VALUES(updated_by_person_id), updated_at = VALUES(updated_at)", [moduleCode, toColor, toIcon, actorPersonId]);
+      await this.audit(tx, actorPersonId, 'admin.module.appearance_changed', 'module', moduleCode, { moduleCode, fromColor, toColor, fromIcon, toIcon });
       return { ok: true as const, changed: true };
     });
   }

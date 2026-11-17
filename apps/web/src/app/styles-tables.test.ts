@@ -26,3 +26,15 @@ describe('ตั้งค่าโปรแกรม: ชื่อโมดู�
     expect(css).toMatch(/\.admin-module-table tr:hover \.module-headcount[^{]*\{[^}]*opacity: 1/);
   });
 });
+
+describe('ตั้งค่าโปรแกรม: สีและไอคอน', () => {
+  it('draws the palette button as a small outlined square, not a filled button', () => {
+    expect(css).toMatch(/\.app-main button\.module-paint, \.app-main button\.module-paint:hover:not\(:disabled\) \{[^}]*background: var\(--surface\)/);
+  });
+  it('marks the chosen swatch and icon, and hides the radio inside without making it unfocusable', () => {
+    expect(css).toMatch(/\.appearance-swatch:has\(input:checked\) \{[^}]*box-shadow/);
+    expect(css).toMatch(/\.appearance-icon:has\(input:checked\) \{[^}]*background: var\(--accent\)/);
+    expect(css).toMatch(/\.appearance-swatch input, \.appearance-icon input \{[^}]*opacity: 0/);
+    expect(css).toMatch(/:has\(input:focus-visible\)[^{]*\{[^}]*outline: 3px solid/);
+  });
+});

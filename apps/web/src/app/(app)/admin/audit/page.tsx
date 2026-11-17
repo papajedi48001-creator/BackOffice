@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 const modeKeys: Record<string, MessageKey> = { ON: 'adminModeOn', DEVELOPMENT: 'adminModeDevelopment', OFF: 'adminModeOff' };
 const modeName = (mode: string) => (modeKeys[mode] ? t(modeKeys[mode]) : mode);
-const actionKeys = { 'admin.module.enabled': 'auditAdminModuleEnabled', 'admin.module.disabled': 'auditAdminModuleDisabled', 'admin.module.mode_changed': 'auditAdminModuleModeChanged', 'admin.role.granted': 'auditAdminRoleGranted', 'admin.role.revoked': 'auditAdminRoleRevoked' } as const;
+const actionKeys = { 'admin.module.enabled': 'auditAdminModuleEnabled', 'admin.module.disabled': 'auditAdminModuleDisabled', 'admin.module.mode_changed': 'auditAdminModuleModeChanged', 'admin.module.appearance_changed': 'auditAdminModuleAppearanceChanged', 'admin.role.granted': 'auditAdminRoleGranted', 'admin.role.revoked': 'auditAdminRoleRevoked' } as const;
 
 /** บันทึกของผู้ดูแล: every admin.* audit event by anyone, newest first, shown in Bangkok time. */
 export default async function AdminAuditPage() {

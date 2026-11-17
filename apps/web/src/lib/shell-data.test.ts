@@ -66,4 +66,11 @@ describe('loadShellData', () => {
     vi.unstubAllEnvs();
     expect(shell.profile.photoUrl).toBe('/api/hr/people/director/photo?v=att-1');
   });
+
+  it('shows the colour and icon chosen on ตั้งค่าโปรแกรม in the sidebar', async () => {
+    const query = vi.fn(async (sql: string) => sql.includes('accent_color AS color') ? [{ code: 'leave', color: '#be185d', icon: 'heart' }] : []);
+    const shell = await loadShellData({ query } as unknown as Database, session);
+    expect(shell.navigation.find((item) => item.href === '/leave')?.icon).toBe('heart');
+    expect(shell.accentCss).toBe('[data-module="leave"]:not([data-default-accent]){--accent:#be185d}');
+  });
 });

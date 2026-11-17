@@ -1,4 +1,4 @@
-import type { AccessSubject, ModuleMode, MoneyPage } from '@backoffice/contracts';
+import type { AccessSubject, ModuleIconName, ModuleMode, MoneyPage } from '@backoffice/contracts';
 import { canManageLab, labCan, loadLabMember, LabQueries, type LabAction, canManageMoney, loadMoneyMember, moneyCan, canManageAttendance, canManageAttendanceDevices, canReadAttendanceAudit, canCommandMci, loadActor, mciCan, MciQueries, canDecideOwnRequest, AuthorizationService, FleetQueries, canUseModule, isAdmin, LeaveQueries, OfficialTravelQueries, RoomBookingQueries, canManageFleet, canManageLeave, canManageTravel, hasOpenRequestWork, listPendingApprovals } from '@backoffice/core';
 import type { Database } from '@backoffice/db';
 import { t, type MessageKey } from '@backoffice/i18n';
@@ -7,7 +7,8 @@ import { matchModule } from './module-theme';
 import { canInventory } from './inventory-access';
 
 export type ModuleGroup = 'mine' | 'people' | 'services' | 'governance';
-export type ModuleIconName = 'home' | 'requests' | 'bell' | 'people' | 'org' | 'upload' | 'shield' | 'delegate' | 'audit' | 'wrench' | 'package' | 'room' | 'car' | 'clock' | 'leave' | 'travel' | 'asset' | 'monitor' | 'target' | 'heart' | 'flask' | 'coins' | 'settings';
+/** The icon list lives in contracts so ตั้งค่าโปรแกรม can validate a chosen icon on the server. */
+export type { ModuleIconName } from '@backoffice/contracts';
 
 /** One page inside a module, shown in the module's section bar rather than on the main page. */
 export interface ModuleSection {

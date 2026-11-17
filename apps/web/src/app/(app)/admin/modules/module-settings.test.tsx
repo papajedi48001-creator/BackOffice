@@ -7,10 +7,10 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh }) }));
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
 const rows: ModuleSettingRow[] = [
-  { code: 'fleet', label: 'ยานพาหนะ', description: 'ขอใช้รถ', icon: 'car', mode: 'ON', locked: false, managerRole: 'fleet-manager', managers: [{ personId: 'p-adm', displayName: 'นางมาลัย ข้อมูลจำลอง', employeeCode: 'ADM003', ownsHrData: false, active: true }], testerRole: 'fleet-tester', testers: [{ personId: 'p-nur', displayName: 'นางสาวทดสอบ ระบบจำลอง', employeeCode: 'NUR014', ownsHrData: false, active: true }] },
-  { code: 'leave', label: 'การลา', description: 'ใบลา', icon: 'leave', mode: 'OFF', locked: false, managerRole: 'leave-manager', managers: [], testerRole: 'leave-tester', testers: [] },
-  { code: 'access', label: 'สิทธิ์และการตรวจสอบ', description: 'บทบาท', icon: 'shield', mode: 'DEVELOPMENT', locked: false, managerRole: null, managers: [], testerRole: 'access-tester', testers: [] },
-  { code: 'admin', label: 'ผู้ดูแลระบบ', description: 'ตั้งค่า', icon: 'settings', mode: 'ON', locked: true, managerRole: null, managers: [], testerRole: null, testers: [] }
+  { code: 'fleet', label: 'ยานพาหนะ', description: 'ขอใช้รถ', icon: 'car', defaultIcon: 'car', appearance: { color: null, icon: null }, mode: 'ON', locked: false, managerRole: 'fleet-manager', managers: [{ personId: 'p-adm', displayName: 'นางมาลัย ข้อมูลจำลอง', employeeCode: 'ADM003', ownsHrData: false, active: true }], testerRole: 'fleet-tester', testers: [{ personId: 'p-nur', displayName: 'นางสาวทดสอบ ระบบจำลอง', employeeCode: 'NUR014', ownsHrData: false, active: true }] },
+  { code: 'leave', label: 'การลา', description: 'ใบลา', icon: 'heart', defaultIcon: 'leave', appearance: { color: '#be185d', icon: 'heart' }, mode: 'OFF', locked: false, managerRole: 'leave-manager', managers: [], testerRole: 'leave-tester', testers: [] },
+  { code: 'access', label: 'สิทธิ์และการตรวจสอบ', description: 'บทบาท', icon: 'shield', defaultIcon: 'shield', appearance: { color: null, icon: null }, mode: 'DEVELOPMENT', locked: false, managerRole: null, managers: [], testerRole: 'access-tester', testers: [] },
+  { code: 'admin', label: 'ผู้ดูแลระบบ', description: 'ตั้งค่า', icon: 'settings', defaultIcon: 'settings', appearance: { color: null, icon: null }, mode: 'ON', locked: true, managerRole: null, managers: [], testerRole: null, testers: [] }
 ];
 const admins = [{ personId: 'p-it', displayName: 'นายจีระศักดิ์ หอกคำ', employeeCode: 'IT001', ownsHrData: false, active: true }];
 
@@ -27,6 +27,33 @@ describe('ModuleSettings', () => {
     expect(screen.getByRole('button', { name: 'สิทธิ์และการตรวจสอบ' })).toHaveAccessibleDescription('ผู้ทดสอบ 0');
     expect(screen.getByRole('button', { name: 'ผู้ดูแลระบบ' })).not.toHaveAttribute('aria-describedby');
     expect(container.querySelector('.admin-link-button')).toBeNull();
+  });
+
+  it('opens สีและไอคอน from the row, starting on the current choice, and saves the colour and icon picked', async () => {
+    const fetchMock = vi.fn(async () => json({ ok: true, changed: true }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<ModuleSettings rows={rows} admins={admins} />);
+    fireEvent.click(screen.getByRole('button', { name: 'สีและไอคอน การลา' }));
+    const dialog = screen.getByRole('dialog', { name: 'สีและไอคอน: การลา' });
+    expect(within(dialog).getByRole('radio', { name: 'สี #be185d' })).toBeChecked();
+    expect(within(dialog).getByRole('radio', { name: 'ไอคอน หัวใจ' })).toBeChecked();
+    fireEvent.click(within(dialog).getByRole('radio', { name: 'สี #0f766e' }));
+    fireEvent.click(within(dialog).getByRole('radio', { name: 'ไอคอนเดิม' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'บันทึก' }));
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+    const [url, init] = fetchMock.mock.calls[0]! as unknown as [string, RequestInit];
+    expect(url).toBe('/api/admin/modules/leave/appearance');
+    expect(init.method).toBe('PUT');
+    expect(JSON.parse(init.body as string)).toEqual({ color: '#0f766e', icon: null });
+  });
+
+  it('offers สีและไอคอน for the admin module too, whose mode is locked', () => {
+    render(<ModuleSettings rows={rows} admins={admins} />);
+    expect(screen.getByRole('button', { name: 'สีและไอคอน ผู้ดูแลระบบ' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'สีและไอคอน ยานพาหนะ' }));
+    const dialog = screen.getByRole('dialog', { name: 'สีและไอคอน: ยานพาหนะ' });
+    expect(within(dialog).getByRole('radio', { name: 'สีเดิม' })).toBeChecked();
+    expect(within(dialog).getByRole('radio', { name: 'ไอคอนเดิม' })).toBeChecked();
   });
 
   it('shows a three-way เปิด/พัฒนา/ปิด control per module, and none for the admin module', () => {

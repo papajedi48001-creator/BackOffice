@@ -3,17 +3,18 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   readSession: vi.fn(), getSharedDatabase: vi.fn(),
-  setModuleMode: vi.fn(), grantRole: vi.fn(), revokeRole: vi.fn(), setPersonRoles: vi.fn(), people: vi.fn()
+  setModuleMode: vi.fn(), setModuleAppearance: vi.fn(), grantRole: vi.fn(), revokeRole: vi.fn(), setPersonRoles: vi.fn(), people: vi.fn()
 }));
 vi.mock('../../../lib/session', () => ({ readSession: mocks.readSession }));
 vi.mock('../../../lib/database', () => ({ getSharedDatabase: mocks.getSharedDatabase }));
 vi.mock('@backoffice/core', async (importOriginal) => ({
   ...await importOriginal<typeof import('@backoffice/core')>(),
-  AdminService: class { setModuleMode = mocks.setModuleMode; grantRole = mocks.grantRole; revokeRole = mocks.revokeRole; setPersonRoles = mocks.setPersonRoles; },
+  AdminService: class { setModuleMode = mocks.setModuleMode; setModuleAppearance = mocks.setModuleAppearance; grantRole = mocks.grantRole; revokeRole = mocks.revokeRole; setPersonRoles = mocks.setPersonRoles; },
   AdminQueries: class { people = mocks.people; }
 }));
 
 import { PUT as TOGGLE } from './modules/[code]/route';
+import { PUT as APPEARANCE } from './modules/[code]/appearance/route';
 import { POST as GRANT, PUT as SET_ROLES } from './people/[personId]/roles/route';
 import { DELETE as REVOKE } from './people/[personId]/roles/[roleName]/route';
 import { GET as PEOPLE } from './people/route';
@@ -83,6 +84,23 @@ describe('ตั้งค่าโปรแกรม', () => {
     const locked = await TOGGLE(json('PUT', { mode: 'OFF' }), params({ code: 'admin' }));
     expect(locked.status).toBe(409);
     await expect(locked.json()).resolves.toEqual({ error: 'MODULE_LOCKED' });
+  });
+});
+
+describe('สีและไอคอนของโมดูล', () => {
+  it('lets only ผู้ดูแลระบบ set a live module\'s colour and icon from the palette, the admin module included', async () => {
+    ready(hrManager);
+    expect((await APPEARANCE(json('PUT', { color: '#0f766e', icon: 'people' }), params({ code: 'hr' }))).status).toBe(403);
+    expect(mocks.setModuleAppearance).not.toHaveBeenCalled();
+    ready();
+    mocks.setModuleAppearance.mockResolvedValue({ ok: true, changed: true });
+    expect((await APPEARANCE(json('PUT', { color: '#0f766e', icon: 'people' }), params({ code: 'hr' }))).status).toBe(200);
+    expect(mocks.setModuleAppearance).toHaveBeenCalledWith('person-admin', 'hr', { color: '#0f766e', icon: 'people' });
+    expect((await APPEARANCE(json('PUT', { color: null, icon: null }), params({ code: 'admin' }))).status).toBe(200);
+    expect((await APPEARANCE(json('PUT', { color: '#123456', icon: null }), params({ code: 'hr' }))).status).toBe(400);
+    expect((await APPEARANCE(json('PUT', { color: null, icon: 'rocket' }), params({ code: 'hr' }))).status).toBe(400);
+    expect((await APPEARANCE(json('PUT', { color: null, icon: null }), params({ code: 'maintenance' }))).status).toBe(404);
+    expect(mocks.setModuleAppearance).toHaveBeenCalledTimes(2);
   });
 });
 

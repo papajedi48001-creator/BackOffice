@@ -16,5 +16,9 @@ export default async function ProtectedLayout({ children }: { children: React.Re
   const role = shellRole(session);
   const database = getSharedDatabase();
   const shell: ShellData = database && session.personId ? await loadShellData(database, session) : { navigation: navigationFor(session), profile: emptyProfile, bell: { unread: 0, items: [] }, chat: noChat(session) };
-  return <AppShell navigation={shell.navigation} profile={shell.profile} bell={shell.bell} chat={shell.chat} role={role}>{children}</AppShell>;
+  // Module colours chosen on ตั้งค่าโปรแกรม: palette-only CSS (appearanceCss), placed after the stylesheet so it wins.
+  return <>
+    {shell.accentCss ? <style>{shell.accentCss}</style> : null}
+    <AppShell navigation={shell.navigation} profile={shell.profile} bell={shell.bell} chat={shell.chat} role={role}>{children}</AppShell>
+  </>;
 }
