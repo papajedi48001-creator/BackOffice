@@ -29,7 +29,8 @@ export type ModuleMode = z.infer<typeof moduleModeSchema>;
 export const adminModuleModeInputSchema = z.object({ mode: moduleModeSchema }).strict();
 
 /** Icons a module can show (sidebar, หน้าหลัก tile, ตั้งค่าโปรแกรม). The web app draws each one in `components/module-icon.tsx`. */
-export const moduleIconNames = ['home', 'requests', 'bell', 'people', 'org', 'upload', 'shield', 'delegate', 'audit', 'wrench', 'package', 'room', 'car', 'clock', 'leave', 'travel', 'asset', 'monitor', 'target', 'heart', 'flask', 'coins', 'settings'] as const;
+export const moduleIconNames = ['home', 'requests', 'bell', 'people', 'org', 'upload', 'shield', 'delegate', 'audit', 'wrench', 'package', 'room', 'car', 'clock', 'leave', 'travel', 'asset', 'monitor', 'target', 'heart', 'flask', 'coins', 'settings',
+  'hospital', 'ambulance', 'stethoscope', 'pill', 'syringe', 'tooth', 'bed', 'pulse', 'file', 'folder', 'book', 'news', 'graduation', 'idcard', 'user', 'banknote', 'cart', 'utensils', 'building', 'mappin', 'chart', 'scan', 'database', 'server', 'cloud', 'wifi', 'devices', 'printer', 'download', 'video', 'image', 'lock', 'key', 'mail', 'phone', 'chat', 'megaphone', 'calendar', 'star', 'help', 'grid', 'globe', 'link'] as const;
 export const moduleIconSchema = z.enum(moduleIconNames);
 export type ModuleIconName = z.infer<typeof moduleIconSchema>;
 

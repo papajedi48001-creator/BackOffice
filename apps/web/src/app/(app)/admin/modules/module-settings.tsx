@@ -6,7 +6,7 @@ import { moduleAccentPalette, moduleIconNames, type ModuleAppearance, type Modul
 import { t, type MessageKey } from '@backoffice/i18n';
 import { ActionDialog } from '../../../../components/action-dialog';
 import { FormDialog } from '../../../../components/form-dialog';
-import { ModuleIcon } from '../../../../components/module-icon';
+import { ModuleIcon, moduleIconLabel } from '../../../../components/module-icon';
 import { roleLabel, sendAdmin } from '../../../../lib/admin-labels';
 import type { ModuleIconName } from '../../../../lib/modules';
 import { PersonPicker, type PickedPerson } from '../person-picker';
@@ -76,7 +76,6 @@ function PaletteIcon() {
   return <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><circle cx="13.5" cy="6.5" r="1.5" /><circle cx="17.5" cy="10.5" r="1.5" /><circle cx="8.5" cy="7.5" r="1.5" /><circle cx="6.5" cy="12.5" r="1.5" /><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.93 0 1.65-.75 1.65-1.69 0-.44-.18-.84-.44-1.13-.29-.29-.44-.65-.44-1.13a1.64 1.64 0 0 1 1.67-1.67h2c3.05 0 5.56-2.5 5.56-5.56C22 6 17.5 2 12 2" /></svg>;
 }
 
-const iconKey = (name: ModuleIconName) => `moduleIcon${name[0]!.toUpperCase()}${name.slice(1)}` as MessageKey;
 
 /**
  * สีและไอคอน of one module: palette swatches and icons as radio groups, each with "เดิม" (the default) first, and a live preview of
@@ -114,7 +113,7 @@ function AppearanceDialog({ row, onClose }: { row: ModuleSettingRow; onClose: ()
     <fieldset className="appearance-choices appearance-icons">
       <legend>{t('adminAppearanceIcon')}</legend>
       <label className="appearance-icon is-default" title={t('adminAppearanceIconDefault')}><input type="radio" name="appearance-icon" aria-label={t('adminAppearanceIconDefault')} checked={icon === null} onChange={() => setIcon(null)} /><ModuleIcon name={row.defaultIcon} /><span>{t('adminAppearanceDefault')}</span></label>
-      {moduleIconNames.map((name) => <label key={name} className="appearance-icon" title={t(iconKey(name))}><input type="radio" name="appearance-icon" aria-label={`${t('adminAppearanceIcon')} ${t(iconKey(name))}`} checked={icon === name} onChange={() => setIcon(name)} /><ModuleIcon name={name} /></label>)}
+      {moduleIconNames.map((name) => <label key={name} className="appearance-icon" title={moduleIconLabel(name)}><input type="radio" name="appearance-icon" aria-label={`${t('adminAppearanceIcon')} ${moduleIconLabel(name)}`} checked={icon === name} onChange={() => setIcon(name)} /><ModuleIcon name={name} /></label>)}
     </fieldset>
     </div>
   </FormDialog>;
