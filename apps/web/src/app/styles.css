@@ -1187,7 +1187,7 @@ h2.chat-window-title { cursor: default; }
 .form-field.form-check input { width: 20px; height: 20px; min-height: 0; margin: 0; }
 .search-card-input { position: relative; display: block; }
 .search-card-input svg { position: absolute; top: 50%; left: 12px; color: var(--muted); pointer-events: none; transform: translateY(-50%); }
-.search-card .search-card-input input { padding-left: 42px; }
+.search-card .search-card-input input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]) { padding-left: 42px; }
 .search-card-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; min-height: 40px; margin-top: 14px; border-top: 1px solid var(--line-soft); padding-top: 8px; }
 .search-card-foot .filter-count { margin: 0; }
 .app-main .search-card button.link-button { border: 0; background: none; box-shadow: none; color: var(--accent); font-weight: 700; padding: 6px 4px; text-decoration: underline; text-underline-offset: 3px; }

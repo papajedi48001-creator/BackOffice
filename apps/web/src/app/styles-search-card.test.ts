@@ -23,3 +23,9 @@ describe('button rows', () => {
     expect(css).toMatch(/\.lab-actions > \.request-actions \{[^}]*display: contents/);
   });
 });
+
+describe('magnifier', () => {
+  it('keeps the text clear of the magnifier: the padding rule outranks the general search-card input rule', () => {
+    expect(css).toMatch(/\.search-card \.search-card-input input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\):not\(\[type="hidden"\]\) \{[^}]*padding-left: 42px/);
+  });
+});
