@@ -105,6 +105,11 @@ describe('requests and notifications', () => {
     expect(items[0]).toEqual({ href: '/dashboard', label: 'dashboard', module: 'home', icon: 'home' });
   });
 
+  it('opens อุบัติเหตุหมู่ at /mci/ops, so the menu never passes through the public /mci sign-in page (which re-mounted the whole app and made it flash)', () => {
+    const item = navigationFrom(moduleRegistry.filter((entry) => entry.code === 'mass-casualty'))[1];
+    expect(item).toMatchObject({ href: '/mci', openHref: '/mci/ops', module: 'mass-casualty' });
+  });
+
   it('gives each menu item its module icon', () => {
     const items = navigationFrom(visibleModules(subject()));
     expect(items.find((item) => item.href === '/leave')?.icon).toBe('leave');

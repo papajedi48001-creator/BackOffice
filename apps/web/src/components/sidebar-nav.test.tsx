@@ -47,3 +47,10 @@ it('keeps the solid pill on the current page until a click, while a faint pill f
   fireEvent.click(screen.getByRole('link', { name: 'การลา' }));
   expect(pill).toHaveAttribute('data-at', '/leave');
 });
+
+it('links to openHref but stays current anywhere under href', () => {
+  render(<SidebarNav items={[{ href: '/hr', label: 'moduleHr', openHref: '/hr/people' }]} />);
+  const link = screen.getByRole('link', { name: 'งานบุคคล' });
+  expect(link).toHaveAttribute('href', '/hr/people');
+  expect(link).toHaveAttribute('aria-current', 'page');
+});

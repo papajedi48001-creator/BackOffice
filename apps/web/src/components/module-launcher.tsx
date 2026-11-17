@@ -31,7 +31,7 @@ function Tile({ entry, count, development }: { entry: ModuleEntry; count: number
   const body = <><span className="module-watermark" data-group={entry.status === 'planned' ? 'planned' : entry.group} aria-hidden="true"><ModuleIcon name={entry.icon} /></span><span className="module-text"><strong>{t(entry.labelKey)}</strong><span>{t(entry.descriptionKey)}</span></span></>;
   if (entry.status === 'planned') return <div className="module-tile is-planned" aria-disabled="true">{body}<span className="soon-tag">{t('launcherComingSoon')}</span></div>;
   // A module in development (ตั้งค่าโปรแกรม) carries a text ribbon as well as the amber striped border, so it never relies on colour.
-  return <Link className={`module-tile${development ? ' is-development' : ''}`} data-module={entry.code} href={entry.href}>{body}{development ? <span className="dev-ribbon">{t('moduleInDevelopment')}</span> : null}{count ? <Badge count={count} /> : <span className="module-go" aria-hidden="true">→</span>}</Link>;
+  return <Link className={`module-tile${development ? ' is-development' : ''}`} data-module={entry.code} href={entry.openHref ?? entry.href}>{body}{development ? <span className="dev-ribbon">{t('moduleInDevelopment')}</span> : null}{count ? <Badge count={count} /> : <span className="module-go" aria-hidden="true">→</span>}</Link>;
 }
 
 export function ModuleLauncher({ modules, modes = {}, badges, summary, today }: { modules: ModuleEntry[]; modes?: Readonly<Record<string, ModuleMode>>; badges: Record<string, number | undefined>; summary: LauncherSummary; today: Date }) {
