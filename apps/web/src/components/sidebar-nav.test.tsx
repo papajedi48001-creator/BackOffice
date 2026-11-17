@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import { SidebarNav } from './sidebar-nav';
 
@@ -24,4 +24,26 @@ it('marks a module in development with a text label', () => {
   expect(fleet).toHaveClass('is-development');
   expect(fleet).toHaveTextContent('พัฒนา');
   expect(screen.getByRole('link', { name: 'การลา' })).not.toHaveClass('is-development');
+});
+
+it('shows the module icon in a coloured box beside each name', () => {
+  render(<SidebarNav items={[{ href: '/leave', label: 'moduleLeave', module: 'leave', icon: 'leave' }]} />);
+  const link = screen.getByRole('link', { name: 'การลา' });
+  expect(link.querySelector('.nav-icon svg')).not.toBeNull();
+  expect(link.querySelector('.nav-icon')).toHaveAttribute('aria-hidden', 'true');
+});
+
+it('keeps the solid pill on the current page until a click, while a faint pill follows the pointer', () => {
+  const { container } = render(<SidebarNav items={[{ href: '/dashboard', label: 'dashboard', icon: 'home' }, { href: '/hr/people', label: 'people', icon: 'people' }, { href: '/leave', label: 'moduleLeave', icon: 'leave' }]} />);
+  const pill = container.querySelector('.nav-pill')!;
+  const ghost = container.querySelector('.nav-ghost')!;
+  expect(pill).toHaveAttribute('aria-hidden', 'true');
+  expect(ghost).toHaveAttribute('aria-hidden', 'true');
+  expect(container.querySelector('.nav-track')).toHaveClass('is-ready');
+  expect(pill).toHaveAttribute('data-at', '/hr/people');
+  fireEvent.pointerEnter(screen.getByRole('link', { name: 'การลา' }));
+  expect(ghost).toHaveAttribute('data-at', '/leave');
+  expect(pill).toHaveAttribute('data-at', '/hr/people');
+  fireEvent.click(screen.getByRole('link', { name: 'การลา' }));
+  expect(pill).toHaveAttribute('data-at', '/leave');
 });
