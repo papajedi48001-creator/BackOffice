@@ -62,4 +62,18 @@ describe('PeoplePage', () => {
     render(await PeoplePage());
     expect(screen.queryByRole('link', { name: 'เพิ่มบุคลากร' })).toBeNull();
   });
+
+  it('offers ส่งออกข้อมูล only to a hospital-wide HR exporter', async () => {
+    mocks.headers.mockResolvedValue(new Headers());
+    mocks.getSharedDatabase.mockReturnValue({ query: vi.fn() });
+    mocks.listPeople.mockResolvedValue([person]);
+    mocks.readSession.mockResolvedValue({ authenticated: true, personId: 'manager', roles: [{ name: 'hr-manager', organizationId: null }], dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: ['hr'] });
+    const { unmount } = render(await PeoplePage());
+    expect(screen.getByRole('button', { name: 'ส่งออกข้อมูล' })).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { name: 'ทะเบียนบุคลากร' })).toHaveLength(1);
+    unmount();
+    mocks.readSession.mockResolvedValue({ authenticated: true, personId: 'reader', roles: [{ name: 'hr-reader', organizationId: null }], dataOwnerModules: [] });
+    render(await PeoplePage());
+    expect(screen.queryByRole('button', { name: 'ส่งออกข้อมูล' })).toBeNull();
+  });
 });

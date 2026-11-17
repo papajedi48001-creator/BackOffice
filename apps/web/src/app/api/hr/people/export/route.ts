@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { peopleExportCriteriaSchema } from '@backoffice/contracts';
 import { AuthorizationService, HrDirectory, exportPeople } from '@backoffice/core';
 import { bangkokToday } from '../../../../../lib/bangkok-time';
