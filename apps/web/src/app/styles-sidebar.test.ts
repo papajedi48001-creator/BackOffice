@@ -19,6 +19,13 @@ describe('เมนูด้านซ้าย (DESIGN.md, แบบผสม 10
     expect(css).toMatch(/\.sidebar a:hover \.nav-icon[^{]*\{[^}]*transform:[^}]*scale/);
     expect(css).toMatch(/\.sidebar a\.is-active \.nav-icon \{[^}]*background: var\(--accent\)/);
   });
+  it('gives every icon a very faint glow, a clear one on hover, and a slow breathing glow on the current page (G2 · แสงบางมาก)', () => {
+    expect(css).toMatch(/\.nav-icon \{[^}]*box-shadow: 0 0 6px 0 color-mix\(in srgb, var\(--nav-glow\) 35%, transparent\)/);
+    expect(css).toMatch(/\.sidebar a:hover \.nav-icon, \.sidebar a:focus-visible \.nav-icon \{[^}]*box-shadow: 0 0 0 3px[^}]*0 0 20px 6px/);
+    expect(css).toMatch(/\.sidebar a\.is-active \.nav-icon \{[^}]*animation: nav-breathe 2\.6s ease-in-out infinite/);
+    expect(css).toMatch(/@keyframes nav-breathe/);
+    expect(css).toMatch(/prefers-reduced-motion: reduce\) \{[^@]*\.sidebar a\.is-active \.nav-icon[^{]*\{ animation: none/);
+  });
   it('lays a faint paper grain over the original deep blue (texture 4)', () => {
     const sidebar = css.match(/\n\.sidebar \{([^}]*)\}/)?.[1] ?? '';
     expect(sidebar).toMatch(/background: url\("data:image\/svg\+xml,[^"]*feTurbulence[^"]*"\)[^;]*var\(--brand-deep\)/);
