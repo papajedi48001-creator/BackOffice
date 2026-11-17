@@ -165,7 +165,7 @@ h1 { margin: 0; font-size: clamp(2rem, 6vw, 3.25rem); line-height: 1.15; letter-
 .summary-grid article { display: grid; gap: 6px; padding: 20px; }
 .summary-grid strong { color: var(--accent); font-size: 2rem; }
 table { width: 100%; border-collapse: separate; border-spacing: 0; overflow: hidden; }
-th, td { border-bottom: 1px solid var(--line-soft); padding: 14px; text-align: left; }
+th, td { border-bottom: 1px solid var(--line-soft); padding: 9px 14px; text-align: left; }
 th { background: var(--accent-soft); color: var(--accent-strong); font-size: .92rem; }
 tbody tr:hover td { background: color-mix(in srgb, var(--accent) 3%, white); }
 tr:last-child td { border-bottom: 0; }
@@ -329,6 +329,9 @@ a.module-tile:hover .module-watermark, a.module-tile:focus-visible .module-water
 .profile-photo-field .button-secondary { background: #fff; color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
 .profile-form .form-hint { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: .9rem; font-weight: 400; }
 .request-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 0 0 20px; }
+/* On a table row the actions stay a real cell (a flex <td> leaves the table grid and its buttons drift out of the row). */
+td.request-actions { display: table-cell; margin: 0; vertical-align: middle; }
+td.request-actions > * { margin: 2px 8px 2px 0; vertical-align: middle; }
 .app-main .request-actions .button-secondary, .app-main .reason-form .button-secondary { border: 1px solid var(--line-strong); background: #fff; color: var(--ink); }
 .app-main .request-actions .button-danger { border: 1px solid #c2410c; background: #fff; color: #9a3412; }
 .app-main button:disabled { cursor: not-allowed; opacity: .7; }
@@ -650,7 +653,7 @@ video.inventory-camera { display: block; flex-basis: 100%; width: 100%; max-widt
 .app-sidebar a.is-development, nav a.is-development { outline: 1px dashed var(--dev-amber); outline-offset: -3px; }
 .nav-dev-tag { display: inline-block; margin-left: 6px; border: 1px solid var(--dev-amber); border-radius: 6px; background: var(--dev-amber-soft); color: var(--dev-amber-ink); font-size: .75rem; font-weight: 700; padding: 0 6px; }
 .mode-switch { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
-.mode-switch button { border: 0; border-radius: 0; background: var(--surface); color: var(--ink); padding: 6px 12px; min-height: 36px; }
+.mode-switch button { border: 0; border-radius: 0; background: var(--surface); color: var(--ink); padding: 4px 12px; min-height: 32px; }
 .mode-switch button + button { border-left: 1px solid var(--line); }
 .mode-switch button[aria-pressed="true"] { background: var(--brand-deep); color: #fff; font-weight: 700; }
 .mode-switch button[aria-pressed="true"][data-mode="DEVELOPMENT"] { background: var(--dev-amber); }
