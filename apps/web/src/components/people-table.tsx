@@ -4,9 +4,9 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import type { DirectoryPerson } from '@backoffice/core';
 import { t, type MessageKey } from '@backoffice/i18n';
+import { NO_VALUE, filterPeople, type PeopleFilterField } from '../lib/people-filter';
 
-const NONE = '__none__';
-type FilterField = 'positionTitle' | 'employmentTypeName' | 'organizationName';
+type FilterField = PeopleFilterField;
 const filters: [FilterField, MessageKey][] = [['positionTitle', 'positionTitle'], ['employmentTypeName', 'hrFieldEmploymentType'], ['organizationName', 'organization']];
 
 /** ทะเบียนบุคลากร with a name search and filters. It filters the list the server already limited to the viewer's scope. */
@@ -14,10 +14,7 @@ export function PeopleTable({ people }: { people: DirectoryPerson[] }) {
   const [query, setQuery] = useState('');
   const [chosen, setChosen] = useState<Record<FilterField, string>>({ positionTitle: '', employmentTypeName: '', organizationName: '' });
   const options = useMemo(() => Object.fromEntries(filters.map(([field]) => [field, [...new Set(people.map((person) => person[field]).filter((value): value is string => value !== null))].sort((a, b) => a.localeCompare(b, 'th'))])) as Record<FilterField, string[]>, [people]);
-  const needle = query.trim().toLocaleLowerCase('th');
-  const shown = people.filter((person) =>
-    (needle === '' || [person.displayName, person.employeeCode].some((value) => value?.toLocaleLowerCase('th').includes(needle)))
-    && filters.every(([field]) => chosen[field] === '' || (chosen[field] === NONE ? person[field] === null : person[field] === chosen[field])));
+  const shown = filterPeople(people, { query, ...chosen });
   return <>
     <div className="filter-bar" role="search">
       <label>{t('peopleSearch')}<input type="search" value={query} placeholder={t('peopleSearchPlaceholder')} onChange={(event) => setQuery(event.target.value)} /></label>
@@ -25,7 +22,7 @@ export function PeopleTable({ people }: { people: DirectoryPerson[] }) {
         <select value={chosen[field]} onChange={(event) => setChosen((current) => ({ ...current, [field]: event.target.value }))}>
           <option value="">{t('filterAll')}</option>
           {options[field].map((value) => <option key={value} value={value}>{value}</option>)}
-          {people.some((person) => person[field] === null) ? <option value={NONE}>{t('notAssigned')}</option> : null}
+          {people.some((person) => person[field] === null) ? <option value={NO_VALUE}>{t('notAssigned')}</option> : null}
         </select>
       </label>)}
     </div>
