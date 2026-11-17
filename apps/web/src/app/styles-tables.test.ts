@@ -15,3 +15,14 @@ describe('ตาราง: ปุ่มจัดการท้ายแถว',
     expect(css).toMatch(/\nth, td \{[^}]*padding: 9px 14px/);
   });
 });
+
+describe('ตั้งค่าโปรแกรม: ชื่อโมดูล (L5)', () => {
+  it('bounces the module chip and lights it in the module colour when the row is pointed at', () => {
+    expect(css).toMatch(/\.admin-module-table tr:hover \.module-chip[^{]*\{[^}]*transform:[^}]*scale[^}]*box-shadow/);
+  });
+  it('turns the name the module colour on hover without a filled background, and shows the head count', () => {
+    expect(css).toMatch(/\.app-main button\.module-name-link:hover:not\(:disabled\)[^{]*\{[^}]*background: none[^}]*color: var\(--accent\)/);
+    expect(css).toMatch(/\.module-headcount \{[^}]*opacity: 0/);
+    expect(css).toMatch(/\.admin-module-table tr:hover \.module-headcount[^{]*\{[^}]*opacity: 1/);
+  });
+});

@@ -633,7 +633,16 @@ video.inventory-camera { display: block; flex-basis: 100%; width: 100%; max-widt
 .admin-page .admin-note { max-width: 72ch; color: var(--muted); }
 .admin-muted { display: block; color: var(--muted); font-size: 0.875rem; }
 .admin-variables { font-size: 0.8125rem; color: var(--muted); word-break: break-word; }
-.app-main button.admin-link-button { padding: 0; border: 0; background: none; box-shadow: none; color: var(--accent); font-weight: 600; text-align: left; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.app-main button.module-name-link, .app-main button.module-name-link:hover:not(:disabled) { padding: 0; border: 0; background: none; box-shadow: none; color: var(--ink); font-weight: 700; text-align: left; cursor: pointer; transition: color .2s; }
+.app-main button.module-name-link:hover:not(:disabled), .app-main button.module-name-link:focus-visible { background: none; color: var(--accent); }
+/* ตั้งค่าโปรแกรม (L5): each row in its module colour; pointing at a row bounces its icon and shows "ผู้จัดการ n · ผู้ทดสอบ n" beside the name. */
+.module-name-cell { display: flex; align-items: center; gap: 10px; }
+.module-chip { display: grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 9px; background: var(--accent); color: #fff; transition: transform .35s cubic-bezier(.34, 1.56, .64, 1), box-shadow .3s; }
+.module-chip svg { width: 18px; height: 18px; }
+.admin-module-table tr:hover .module-chip, .admin-module-table tr:focus-within .module-chip { transform: translateY(-2px) rotate(-6deg) scale(1.08); box-shadow: 0 6px 14px color-mix(in srgb, var(--accent) 45%, transparent); }
+.module-headcount { margin-left: 8px; color: var(--muted); font-size: .8rem; opacity: 0; transition: opacity .2s; }
+.admin-module-table tr:hover .module-headcount, .admin-module-table tr:focus-within .module-headcount { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .module-chip, .module-headcount { transition: none; } .admin-module-table tr:hover .module-chip, .admin-module-table tr:focus-within .module-chip { transform: none; } }
 .admin-role-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .admin-role-chips li { padding: 2px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--accent-tint); color: var(--ink); font-size: 0.875rem; }
 .admin-role-chips li.is-admin { border-color: var(--accent); background: var(--accent-soft); font-weight: 600; }

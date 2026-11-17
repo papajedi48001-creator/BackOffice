@@ -6,11 +6,13 @@ import type { ModuleMode } from '@backoffice/contracts';
 import { t, type MessageKey } from '@backoffice/i18n';
 import { ActionDialog } from '../../../../components/action-dialog';
 import { FormDialog } from '../../../../components/form-dialog';
+import { ModuleIcon } from '../../../../components/module-icon';
 import { roleLabel, sendAdmin } from '../../../../lib/admin-labels';
+import type { ModuleIconName } from '../../../../lib/modules';
 import { PersonPicker, type PickedPerson } from '../person-picker';
 
 export interface ModuleManager { personId: string; displayName: string | null; employeeCode: string | null; ownsHrData: boolean; active: boolean }
-export interface ModuleSettingRow { code: string; label: string; description: string; mode: ModuleMode; locked: boolean; managerRole: string | null; managers: ModuleManager[]; testerRole: string | null; testers: ModuleManager[] }
+export interface ModuleSettingRow { code: string; label: string; description: string; icon: ModuleIconName; mode: ModuleMode; locked: boolean; managerRole: string | null; managers: ModuleManager[]; testerRole: string | null; testers: ModuleManager[] }
 
 /** The three modes in the order the control shows them. */
 const modes: Array<{ mode: ModuleMode; labelKey: MessageKey; statusClass: string }> = [
@@ -19,6 +21,11 @@ const modes: Array<{ mode: ModuleMode; labelKey: MessageKey; statusClass: string
   { mode: 'OFF', labelKey: 'adminModeOff', statusClass: 'cancelled' }
 ];
 const modeLabel = (mode: ModuleMode) => t(modes.find((entry) => entry.mode === mode)!.labelKey);
+/** "ผู้จัดการ n · ผู้ทดสอบ n", leaving out a role the module does not have; null when it has neither. */
+function headcount(row: ModuleSettingRow): string | null {
+  const parts = [row.managerRole ? `${t('adminKindManager')} ${row.managers.length}` : null, row.testerRole ? `${t('adminRoleTester')} ${row.testers.length}` : null].filter(Boolean);
+  return parts.length ? parts.join(' · ') : null;
+}
 const confirmKeys: Record<ModuleMode, MessageKey> = { ON: 'adminConfirmModeOnMessage', DEVELOPMENT: 'adminConfirmModeDevelopmentMessage', OFF: 'adminConfirmModeOffMessage' };
 
 /** The module list: a three-way เปิด/พัฒนา/ปิด control per module (confirmed in a popup) and, on the module's name, a popup of its ผู้จัดการ and ผู้ทดสอบ. */
@@ -43,14 +50,17 @@ export function ModuleSettings({ rows, admins }: { rows: ModuleSettingRow[]; adm
   return <>
     <div className="leave-table-scroll"><table className="admin-module-table">
       <thead><tr><th>{t('adminModule')}</th><th>{t('adminModuleManagers')}</th><th>{t('status')}</th><th></th></tr></thead>
-      <tbody>{rows.map((row) => <tr key={row.code}>
-        <td><button type="button" className="admin-link-button" onClick={() => setOpened(row.code)}>{row.label}</button><small className="admin-muted">{row.description}</small></td>
+      <tbody>{rows.map((row) => { const count = headcount(row); const countId = `module-headcount-${row.code}`; return <tr key={row.code} data-module={row.code}>
+        <td><div className="module-name-cell"><span className="module-chip" aria-hidden="true"><ModuleIcon name={row.icon} /></span><span>
+          <button type="button" className="module-name-link" aria-describedby={count ? countId : undefined} onClick={() => setOpened(row.code)}>{row.label}</button>
+          {count ? <span id={countId} className="module-headcount">{count}</span> : null}
+          <small className="admin-muted">{row.description}</small></span></div></td>
         <td>{row.managerRole ? (row.managers.length === 0 ? <span className="admin-muted">{t('adminNoManagers')}</span> : row.managers.map((manager) => manager.displayName ?? '—').join(', ')) : <span className="admin-muted">{t('adminRoleAdmin')}</span>}</td>
         <td><span className={`status status-${modes.find((entry) => entry.mode === row.mode)!.statusClass}`}>{modeLabel(row.mode)}</span></td>
         <td className="request-actions">{row.locked
           ? <span className="admin-muted">{t('adminModuleLocked')}</span>
           : <div className="mode-switch" role="group" aria-label={`${t('adminModeOf')} ${row.label}`}>{modes.map((entry) => <button key={entry.mode} type="button" data-mode={entry.mode} aria-pressed={row.mode === entry.mode} disabled={row.mode === entry.mode} onClick={() => { setError(null); setToggling({ row, mode: entry.mode }); }}>{t(entry.labelKey)}</button>)}</div>}</td>
-      </tr>)}</tbody>
+      </tr>; })}</tbody>
     </table></div>
     {toggling && <ActionDialog title={`${t('adminConfirmModeTitle')}: ${toggling.row.label}`} message={`${modeLabel(toggling.row.mode)} → ${modeLabel(toggling.mode)} — ${t(confirmKeys[toggling.mode])}`}
       confirmLabel={`${t('adminChangeModeTo')}${modeLabel(toggling.mode)}`} tone={toggling.mode === 'OFF' ? 'danger' : 'primary'} isSubmitting={busy} error={error} onConfirm={() => void toggle()} onClose={() => setToggling(null)} />}

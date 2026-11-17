@@ -17,7 +17,7 @@ export default async function AdminModulesPage() {
     const managerRole = moduleManagerRoles[entry.code] ?? null;
     const testerRole = moduleTesterRoles[entry.code] ?? null;
     const locked = lockedModules.includes(entry.code);
-    return { code: entry.code, label: t(entry.labelKey), description: t(entry.descriptionKey), mode: locked ? 'ON' : modes[entry.code] ?? 'ON', locked, managerRole, managers: managerRole ? holders(managerRole) : [], testerRole, testers: testerRole ? holders(testerRole) : [] };
+    return { code: entry.code, label: t(entry.labelKey), description: t(entry.descriptionKey), icon: entry.icon, mode: locked ? 'ON' : modes[entry.code] ?? 'ON', locked, managerRole, managers: managerRole ? holders(managerRole) : [], testerRole, testers: testerRole ? holders(testerRole) : [] };
   });
   return <section className="admin-page">
     <h2>{t('adminModulesTitle')}</h2>
