@@ -19,4 +19,8 @@ describe('เมนูด้านซ้าย (DESIGN.md, แบบผสม 10
     expect(css).toMatch(/\.sidebar a:hover \.nav-icon[^{]*\{[^}]*transform:[^}]*scale/);
     expect(css).toMatch(/\.sidebar a\.is-active \.nav-icon \{[^}]*background: var\(--accent\)/);
   });
+  it('lays a faint paper grain over the original deep blue (texture 4)', () => {
+    const sidebar = css.match(/\n\.sidebar \{([^}]*)\}/)?.[1] ?? '';
+    expect(sidebar).toMatch(/background: url\("data:image\/svg\+xml,[^"]*feTurbulence[^"]*"\)[^;]*var\(--brand-deep\)/);
+  });
 });

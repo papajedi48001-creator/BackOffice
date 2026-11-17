@@ -33,7 +33,9 @@ export function SidebarNav({ items }: { items: NavigationItem[] }) {
     if (!element) return;
     element.style.opacity = link ? '' : '0';
     if (!link) return;
-    element.style.transform = `translateY(${link.offsetTop}px)`;
+    // On phones the menu is two columns, so the pill moves across as well as down.
+    element.style.transform = `translate(${link.offsetLeft}px, ${link.offsetTop}px)`;
+    element.style.width = `${link.offsetWidth}px`;
     element.style.height = `${link.offsetHeight}px`;
   }, []);
 

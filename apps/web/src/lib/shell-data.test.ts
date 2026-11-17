@@ -53,7 +53,7 @@ describe('loadShellData', () => {
   it('still gives a menu and an empty bell when the database is down', async () => {
     const query = vi.fn().mockRejectedValue(new Error('ECONNREFUSED'));
     const shell = await loadShellData({ query } as unknown as Database, session);
-    expect(shell.navigation[0]).toEqual({ href: '/dashboard', label: 'dashboard', module: 'home' });
+    expect(shell.navigation[0]).toEqual({ href: '/dashboard', label: 'dashboard', module: 'home', icon: 'home' });
     expect(shell.navigation.some((item) => item.badge)).toBe(false);
     expect(shell.bell).toEqual({ unread: 0, items: [] });
     expect(shell.profile).toEqual({ displayName: null, positionTitle: null, photoUrl: null });
