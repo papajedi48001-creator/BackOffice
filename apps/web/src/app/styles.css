@@ -146,11 +146,14 @@ h1 { margin: 0; font-size: clamp(2rem, 6vw, 3.25rem); line-height: 1.15; letter-
 .nav-track.is-ready a[aria-current="page"] { color: #dbe6ff; font-weight: 400; }
 .nav-track.is-ready a:hover { color: #fff; }
 .nav-track.is-ready a.is-active, .nav-track:not(.is-ready) a[aria-current="page"] { color: var(--brand-deep); font-weight: 600; }
-.nav-icon { display: grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: 8px; background: color-mix(in srgb, var(--accent) 45%, var(--brand-deep)); color: #fff; transition: transform .35s cubic-bezier(.34, 1.56, .64, 1), background .3s; }
+.nav-icon { --nav-glow: color-mix(in srgb, var(--accent) 25%, #dbe6ff); display: grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: 8px; background: color-mix(in srgb, var(--accent) 45%, var(--brand-deep)); color: #fff; box-shadow: 0 0 6px 0 color-mix(in srgb, var(--nav-glow) 35%, transparent); transition: transform .35s cubic-bezier(.34, 1.56, .64, 1), background .3s, box-shadow .3s; }
 .nav-icon svg { width: 17px; height: 17px; stroke-width: 2; }
-.sidebar a:hover .nav-icon, .sidebar a:focus-visible .nav-icon { transform: translateY(-2px) rotate(-8deg) scale(1.12); }
-.sidebar a.is-active .nav-icon { background: var(--accent); }
+.sidebar a:hover .nav-icon, .sidebar a:focus-visible .nav-icon { transform: translateY(-2px) rotate(-8deg) scale(1.12); box-shadow: 0 0 0 3px color-mix(in srgb, var(--nav-glow) 30%, transparent), 0 0 20px 6px color-mix(in srgb, var(--nav-glow) 90%, transparent); }
+.sidebar a.is-active .nav-icon { background: var(--accent); animation: nav-breathe 2.6s ease-in-out infinite; }
 .nav-track:not(.is-ready) a[aria-current="page"] .nav-icon { background: var(--accent); }
+/* Icon glow ("G2 · แสงบางมาก"): very faint at rest, clear on hover or focus, and the current page's icon breathes slowly. */
+@keyframes nav-breathe { 0%, 100% { box-shadow: 0 0 6px 1px color-mix(in srgb, var(--accent) 40%, transparent); } 50% { box-shadow: 0 0 18px 5px color-mix(in srgb, var(--accent) 70%, #dbe6ff); } }
+@media (prefers-reduced-motion: reduce) { .sidebar a.is-active .nav-icon { animation: none; } }
 .sign-out-button { width: 100%; border: 1px solid rgba(255, 255, 255, .28); border-radius: 10px; background: transparent; color: #e7f3ec; cursor: pointer; font-weight: 700; padding: 10px 12px; }
 .sign-out-button:hover:not(:disabled) { background: rgba(255, 255, 255, .08); }
 .sign-out-button:disabled { cursor: not-allowed; opacity: .7; }
