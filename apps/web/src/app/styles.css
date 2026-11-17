@@ -626,8 +626,6 @@ video.inventory-camera { display: block; flex-basis: 100%; width: 100%; max-widt
 /* ผู้ดูแลระบบ: tokens only; the accent comes from [data-module="admin"]. */
 .admin-page .admin-note { max-width: 72ch; color: var(--muted); }
 .admin-muted { display: block; color: var(--muted); font-size: 0.875rem; }
-.admin-warning { display: block; color: var(--alert-count); font-size: 0.875rem; }
-.admin-warning-mark { color: var(--alert-count); font-weight: 600; }
 .admin-variables { font-size: 0.8125rem; color: var(--muted); word-break: break-word; }
 .app-main button.admin-link-button { padding: 0; border: 0; background: none; box-shadow: none; color: var(--accent); font-weight: 600; text-align: left; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .admin-role-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }

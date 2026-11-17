@@ -6,7 +6,7 @@ import type { ModuleMode } from '@backoffice/contracts';
 import { t, type MessageKey } from '@backoffice/i18n';
 import { ActionDialog } from '../../../../components/action-dialog';
 import { FormDialog } from '../../../../components/form-dialog';
-import { roleLabel, roleNeedsHrDataOwner, sendAdmin } from '../../../../lib/admin-labels';
+import { roleLabel, sendAdmin } from '../../../../lib/admin-labels';
 import { PersonPicker, type PickedPerson } from '../person-picker';
 
 export interface ModuleManager { personId: string; displayName: string | null; employeeCode: string | null; ownsHrData: boolean; active: boolean }
@@ -93,8 +93,7 @@ function ManagersDialog({ row, admins, onClose }: { row: ModuleSettingRow; admin
   const holders = (roleName: string, people: ModuleManager[], emptyKey: MessageKey) => <>
     <h3 className="admin-subheading">{roleLabel(roleName)}</h3>
     {people.length === 0 ? <p className="admin-muted">{t(emptyKey)}</p> : <ul className="admin-person-list">{people.map((holder) => <li key={holder.personId}>
-      <span>{holder.displayName ?? '—'}{holder.employeeCode ? <small> · {holder.employeeCode}</small> : null}{!holder.active ? <small> · {t('adminPersonInactive')}</small> : null}
-        {roleNeedsHrDataOwner(roleName) && !holder.ownsHrData ? <small className="admin-warning">{t('adminNeedsHrDataOwner')}</small> : null}</span>
+      <span>{holder.displayName ?? '—'}{holder.employeeCode ? <small> · {holder.employeeCode}</small> : null}{!holder.active ? <small> · {t('adminPersonInactive')}</small> : null}</span>
       <button type="button" className="button-secondary" aria-label={`${t('adminRemove')} ${holder.displayName ?? ''}`} onClick={() => { setError(null); setRemoving({ person: holder, role: roleName }); }}>{t('adminRemove')}</button>
     </li>)}</ul>}
   </>;

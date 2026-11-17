@@ -81,3 +81,8 @@ it('draws each module icon as a watermark behind the tile, not as a box above th
   expect(tile.querySelector('.module-watermark')).toHaveAttribute('aria-hidden', 'true');
   expect(container.querySelector('.module-icon')).toBeNull();
 });
+
+it('opens อุบัติเหตุหมู่ on its ภาพรวม page rather than the public /mci sign-in page', () => {
+  render(<ModuleLauncher modules={byCode('mass-casualty')} badges={{}} summary={summary} today={today} />);
+  expect(screen.getByRole('link', { name: /อุบัติเหตุหมู่/ })).toHaveAttribute('href', '/mci/ops');
+});

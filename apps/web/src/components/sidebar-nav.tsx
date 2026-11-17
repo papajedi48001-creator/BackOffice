@@ -45,7 +45,7 @@ export function SidebarNav({ items }: { items: NavigationItem[] }) {
   return <nav aria-label={t('appName')}><div ref={track} className={`nav-track${ready ? ' is-ready' : ''}`} onPointerLeave={() => setHovered(active)}>
     <span ref={ghost} className="nav-ghost" aria-hidden="true" data-at={hovered ?? undefined} />
     <span ref={pill} className="nav-pill" aria-hidden="true" data-at={active ?? undefined} />
-    <ul>{items.map((item) => <li key={item.href}><Link href={item.href} data-href={item.href} data-module={item.module}
+    <ul>{items.map((item) => <li key={item.href}><Link href={item.openHref ?? item.href} data-href={item.href} data-module={item.module}
       className={[active === item.href ? 'is-active' : '', item.development ? 'is-development' : ''].filter(Boolean).join(' ') || undefined}
       aria-current={isCurrent(item.href) ? 'page' : undefined}
       onPointerEnter={() => setHovered(item.href)} onFocus={() => setHovered(item.href)} onClick={() => setActive(item.href)}>

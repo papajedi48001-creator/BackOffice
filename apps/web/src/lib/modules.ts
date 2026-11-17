@@ -30,6 +30,8 @@ export interface ModuleEntry {
   icon: ModuleIconName;
   group: ModuleGroup;
   status: 'live' | 'planned';
+  /** Where the tile and menu item link to when not href itself, e.g. when href is a page outside the app shell. href still decides which pages belong to the module. */
+  openHref?: string;
   /** Hides the tile and menu item only; pages and APIs still check access themselves. */
   visible(subject: AccessSubject): boolean;
   /** Work waiting for this person, shown on the tile and the menu item. */
@@ -180,7 +182,7 @@ export const moduleRegistry: readonly ModuleEntry[] = [
     badge: async (db, subject) => (await fleetWaiting(db, subject)) + (await fleetDriverToday(db, subject))
   },
   // อุบัติเหตุหมู่: /mci itself is the public รายงานตัว page (app/mci), which sends a signed-in person on to ภาพรวม.
-  withSections({ code: 'mass-casualty', href: '/mci', labelKey: 'moduleMassCasualty', descriptionKey: 'moduleMassCasualtyDescription', icon: 'heart', group: 'services', status: 'live' }, [
+  withSections({ code: 'mass-casualty', href: '/mci', openHref: '/mci/ops', labelKey: 'moduleMassCasualty', descriptionKey: 'moduleMassCasualtyDescription', icon: 'heart', group: 'services', status: 'live' }, [
     { href: '/mci/ops', labelKey: 'mciOps', visible: everyone },
     { href: '/mci/patients', labelKey: 'mciPatients', visible: everyone, available: mciMay('viewPatients') },
     { href: '/mci/staff', labelKey: 'mciStaff', visible: everyone, available: mciMay('manageResponder') },
@@ -258,7 +260,7 @@ export async function availableModules(modules: ModuleEntry[], db: Database, sub
 }
 
 export function navigationFrom(modules: ModuleEntry[], badges: Record<string, number | undefined> = {}, modes: Readonly<Record<string, ModuleMode>> = {}): NavigationItem[] {
-  return [{ href: '/dashboard', label: 'dashboard', module: 'home', icon: 'home' }, ...modules.filter((entry) => entry.status === 'live').map((entry) => ({ href: entry.href, label: entry.labelKey, module: entry.code, icon: entry.icon, ...(badges[entry.code] === undefined ? {} : { badge: badges[entry.code] }), ...(inDevelopment(entry.code, modes) ? { development: true } : {}), ...(entry.submitAction ? { submitAction: entry.submitAction } : {}) }))];
+  return [{ href: '/dashboard', label: 'dashboard', module: 'home', icon: 'home' }, ...modules.filter((entry) => entry.status === 'live').map((entry) => ({ href: entry.href, label: entry.labelKey, module: entry.code, icon: entry.icon, ...(entry.openHref ? { openHref: entry.openHref } : {}), ...(badges[entry.code] === undefined ? {} : { badge: badges[entry.code] }), ...(inDevelopment(entry.code, modes) ? { development: true } : {}), ...(entry.submitAction ? { submitAction: entry.submitAction } : {}) }))];
 }
 
 export function navigationFor(subject: AccessSubject): NavigationItem[] {
