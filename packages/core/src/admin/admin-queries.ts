@@ -1,4 +1,4 @@
-import { grantableRoleSchema, moduleModeSchema, type GrantableRole, type ModuleMode } from '@backoffice/contracts';
+import { grantableRoleSchema, moduleAccentSchema, moduleIconSchema, moduleModeSchema, type GrantableRole, type ModuleAppearance, type ModuleMode } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 
 export interface AdminGrantRow {
@@ -31,6 +31,12 @@ export class AdminQueries {
   async moduleModes(): Promise<Record<string, ModuleMode>> {
     const rows = await this.database.query<{ code: string; mode: string }>('SELECT module_code AS code, mode FROM admin_module_setting ORDER BY module_code');
     return Object.fromEntries(rows.map((row) => [row.code, moduleModeSchema.safeParse(row.mode).data ?? 'OFF']));
+  }
+
+  /** สีและไอคอน each module was given; a module missing here, or a stored value outside the palette or icon list, shows its default. */
+  async moduleAppearance(): Promise<Record<string, ModuleAppearance>> {
+    const rows = await this.database.query<{ code: string; color: string | null; icon: string | null }>('SELECT module_code AS code, accent_color AS color, icon FROM admin_module_setting WHERE accent_color IS NOT NULL OR icon IS NOT NULL ORDER BY module_code');
+    return Object.fromEntries(rows.map((row) => [row.code, { color: moduleAccentSchema.safeParse(row.color).data ?? null, icon: moduleIconSchema.safeParse(row.icon).data ?? null }]));
   }
 
   /** Every hospital-wide admin and manager grant, one row per person, sorted by name. */

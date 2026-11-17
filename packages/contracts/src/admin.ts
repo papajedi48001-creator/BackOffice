@@ -28,6 +28,21 @@ export type ModuleMode = z.infer<typeof moduleModeSchema>;
 
 export const adminModuleModeInputSchema = z.object({ mode: moduleModeSchema }).strict();
 
+/** Icons a module can show (sidebar, หน้าหลัก tile, ตั้งค่าโปรแกรม). The web app draws each one in `components/module-icon.tsx`. */
+export const moduleIconNames = ['home', 'requests', 'bell', 'people', 'org', 'upload', 'shield', 'delegate', 'audit', 'wrench', 'package', 'room', 'car', 'clock', 'leave', 'travel', 'asset', 'monitor', 'target', 'heart', 'flask', 'coins', 'settings'] as const;
+export const moduleIconSchema = z.enum(moduleIconNames);
+export type ModuleIconName = z.infer<typeof moduleIconSchema>;
+
+/**
+ * สีประจำโมดูล a ผู้ดูแลระบบ may pick. A fixed list, so white text stays readable (4.5:1 or more) and nothing typed reaches CSS.
+ */
+export const moduleAccentPalette = ['#1d4ed8', '#1e3a5f', '#1d4e89', '#0e7490', '#0f766e', '#1d7a46', '#4d7c0f', '#8a4f12', '#b45309', '#c2410c', '#a63d40', '#b91c1c', '#be185d', '#7e22ce', '#5b3e96', '#475569'] as const;
+export const moduleAccentSchema = z.enum(moduleAccentPalette);
+
+/** สีและไอคอน of one module; null puts back the default. */
+export const adminModuleAppearanceInputSchema = z.object({ color: moduleAccentSchema.nullable(), icon: moduleIconSchema.nullable() }).strict();
+export type ModuleAppearance = z.infer<typeof adminModuleAppearanceInputSchema>;
+
 export const moduleCodeSchema = z.string().regex(/^[a-z][a-z-]{1,63}$/);
 
 const sqlIdentifier = z.string().trim().regex(/^[A-Za-z_][A-Za-z0-9_]{0,63}$/);

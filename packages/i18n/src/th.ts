@@ -152,6 +152,9 @@ export const th = {
   moduleSmartMoney: 'Smart Money', moduleSmartMoneyDescription: 'ติดตามการเงินและการเรียกเก็บค่ารักษาพยาบาล', adminRoleMoneyManager: 'ผู้จัดการโมดูล Smart Money', roleDescMoneyManager: 'จัดการสมาชิกและข้อมูลของ Smart Money และเห็นทุกหน้าในโมดูล',
   moneyDental: 'ลูกหนี้ทันตกรรม', moneySettings: 'ตั้งค่า',
   labUsage: 'ตัดใช้', labRequisitions: 'ใบขอเบิก', labReceipts: 'รับเข้า', labStock: 'ยอดคงเหลือ', labOpening: 'ยอดยกมา', labSettings: 'ตั้งค่า',
+  adminModuleAppearance: 'สีและไอคอน', adminAppearanceColor: 'สีประจำโมดูล', adminAppearanceIcon: 'ไอคอน', adminAppearanceColorOne: 'สี', adminAppearanceColorDefault: 'สีเดิม', adminAppearanceIconDefault: 'ไอคอนเดิม', adminAppearanceDefault: 'เดิม', adminAppearancePreview: 'ตัวอย่าง',
+  auditAdminModuleAppearanceChanged: 'เปลี่ยนสีหรือไอคอนโมดูล',
+  moduleIconHome: 'บ้าน', moduleIconRequests: 'เอกสาร', moduleIconBell: 'กระดิ่ง', moduleIconPeople: 'คน', moduleIconOrg: 'ผังองค์กร', moduleIconUpload: 'อัปโหลด', moduleIconShield: 'โล่', moduleIconDelegate: 'มอบหมาย', moduleIconAudit: 'คลิปบอร์ด', moduleIconWrench: 'ประแจ', moduleIconPackage: 'กล่อง', moduleIconRoom: 'ปฏิทินจอง', moduleIconCar: 'รถ', moduleIconClock: 'นาฬิกา', moduleIconLeave: 'ปฏิทิน', moduleIconTravel: 'กระเป๋า', moduleIconAsset: 'ป้ายราคา', moduleIconMonitor: 'จอภาพ', moduleIconTarget: 'เป้า', moduleIconHeart: 'หัวใจ', moduleIconFlask: 'ขวดทดลอง', moduleIconCoins: 'เหรียญ', moduleIconSettings: 'เฟือง',
 } as const;
 
 export type MessageKey = keyof typeof th;

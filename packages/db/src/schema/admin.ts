@@ -1,7 +1,7 @@
 import { char, customType, datetime, mysqlTable, tinyint, varchar } from 'drizzle-orm/mysql-core';
 
-/** ตั้งค่าโปรแกรม: a module switched off by a ผู้ดูแลระบบ. No row means the module is on. */
-export const adminModuleSettings = mysqlTable('admin_module_setting', { moduleCode: varchar('module_code', { length: 64 }).primaryKey(), enabled: tinyint('enabled').notNull().default(1), mode: varchar('mode', { length: 16 }).notNull().default('ON'), updatedByPersonId: varchar('updated_by_person_id', { length: 36 }), updatedAt: datetime('updated_at', { mode: 'date' }).notNull() });
+/** ตั้งค่าโปรแกรม: a module's mode and its chosen colour and icon (NULL keeps the default). No row means the module is on with its defaults. */
+export const adminModuleSettings = mysqlTable('admin_module_setting', { moduleCode: varchar('module_code', { length: 64 }).primaryKey(), enabled: tinyint('enabled').notNull().default(1), mode: varchar('mode', { length: 16 }).notNull().default('ON'), accentColor: varchar('accent_color', { length: 7 }), icon: varchar('icon', { length: 32 }), updatedByPersonId: varchar('updated_by_person_id', { length: 36 }), updatedAt: datetime('updated_at', { mode: 'date' }).notNull() });
 
 /** MariaDB MEDIUMBLOB (up to 16 MB) read and written as a Buffer. */
 const mediumBlob = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => 'mediumblob' });

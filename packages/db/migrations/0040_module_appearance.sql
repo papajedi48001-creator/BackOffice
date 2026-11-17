@@ -1,0 +1,2 @@
+ALTER TABLE admin_module_setting ADD COLUMN IF NOT EXISTS accent_color VARCHAR(7) NULL;
+ALTER TABLE admin_module_setting ADD COLUMN IF NOT EXISTS icon VARCHAR(32) NULL
