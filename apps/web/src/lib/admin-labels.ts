@@ -29,11 +29,6 @@ export function roleLabel(role: string): string {
   return role in roleKeys ? t(roleKeys[role as ManagerRole]) : role;
 }
 
-/** HR, leave and travel manager roles only take effect for a hospital-wide HR เจ้าของข้อมูล. Mirrors `needsHrDataOwner` in core. */
-export function roleNeedsHrDataOwner(role: string): boolean {
-  return role === 'hr-manager' || role === 'leave-manager' || role === 'travel-manager';
-}
-
 const errorKeys: Record<string, MessageKey> = { LAST_ADMIN: 'adminErrorLAST_ADMIN', MODULE_LOCKED: 'adminErrorMODULE_LOCKED', PERSON_NOT_ACTIVE: 'adminErrorPERSON_NOT_ACTIVE', NOT_FOUND: 'adminErrorNOT_FOUND', forbidden: 'adminErrorFORBIDDEN', LINE_REFUSED: 'adminErrorLINE_REFUSED', LINE_NOT_CONFIGURED: 'adminErrorLINE_NOT_CONFIGURED', invalid_input: 'adminErrorINVALID_INPUT', ALREADY_LINKED: 'adminErrorALREADY_LINKED' };
 
 export function adminErrorMessage(code: string | null): string {

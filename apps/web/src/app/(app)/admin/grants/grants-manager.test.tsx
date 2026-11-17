@@ -14,13 +14,15 @@ const grants = [
 afterEach(() => { vi.clearAllMocks(); vi.unstubAllGlobals(); });
 
 describe('GrantsManager', () => {
-  it('lists every person once with all of their roles, and warns where HR data ownership is missing', () => {
+  it('lists every person once with all of their roles, with no เจ้าของข้อมูล warning (hospital-wide managers act as admin in their module)', () => {
     render(<GrantsManager grants={grants} currentPersonId="p-it" />);
     const rows = screen.getAllByRole('row').slice(1);
     expect(rows).toHaveLength(2);
     expect(rows[0]).toHaveTextContent('นายจีระศักดิ์ หอกคำ (คุณ)');
     expect(rows[0]).toHaveTextContent('ผู้ดูแลระบบ');
-    expect(within(rows[1]!).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['ผู้จัดการยานพาหนะ', 'ผู้จัดการการลา *']);
+    expect(within(rows[1]!).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['ผู้จัดการยานพาหนะ', 'ผู้จัดการการลา']);
+    // A hospital-wide ผู้จัดการโมดูล acts as admin in its module without being เจ้าของข้อมูล, so no warning.
+    expect(screen.queryByText(/ยังไม่ได้เป็นเจ้าของข้อมูล/)).toBeNull();
   });
 
   it('edits a person\'s roles in a popup and saves the whole set', async () => {
