@@ -3,10 +3,11 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { addDays, bangkokToday, formatBangkokDate, weekdayHeaders } from '../lib/bangkok-time';
 import type { HolidayView } from '../lib/holidays';
-import { formatThaiDateInput, monthCells, parseThaiDateInput, shiftMonth, thaiMonthTitle } from '../lib/thai-date-input';
+import { formatThaiDateField, monthCells, parseThaiDateInput, shiftMonth, thaiMonthTitle } from '../lib/thai-date-input';
 
 /**
  * วันที่ทุกช่องในระบบ: typed as วว/ดด/ปปปป (พ.ศ.) or picked from a Thai calendar (full weekday and month names, Monday first).
+ * The box shows the full date, `อาทิตย์ 1 พ.ย. 2569`; no hint is drawn under it.
  * The value given back and posted under `name` is always ISO `YYYY-MM-DD`, so APIs do not change.
  * Holidays are grey and named; with `blockHolidays` they cannot be chosen. The server still checks.
  */
@@ -25,7 +26,7 @@ export function ThaiDateInput(props: ThaiDateInputProps) {
   const controlled = props.value !== undefined;
   const [own, setOwn] = useState(props.defaultValue ?? '');
   const value = controlled ? props.value! : own;
-  const [text, setText] = useState(formatThaiDateInput(value));
+  const [text, setText] = useState(formatThaiDateField(value));
   const [problem, setProblem] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const input = useRef<HTMLInputElement>(null);
@@ -33,7 +34,7 @@ export function ThaiDateInput(props: ThaiDateInputProps) {
   const holidayNames = useMemo(() => new Map(holidays.map((holiday) => [holiday.date, holiday.name])), [holidays]);
 
   // Keep the field in step when the value changes from outside (another field, a reset).
-  useEffect(() => { if (parseThaiDateInput(text) !== value) setText(formatThaiDateInput(value)); }, [value]);
+  useEffect(() => { if (parseThaiDateInput(text) !== value) setText(formatThaiDateField(value)); }, [value]);
   useEffect(() => { input.current?.setCustomValidity(problem ?? ''); }, [problem]);
 
   const refusal = (iso: string): string | null => {
@@ -57,24 +58,25 @@ export function ThaiDateInput(props: ThaiDateInputProps) {
   }
 
   function pick(iso: string) {
-    setText(formatThaiDateInput(iso)); setProblem(null); commit(iso); setOpen(false);
+    setText(formatThaiDateField(iso)); setProblem(null); commit(iso); setOpen(false);
     toggle.current?.focus();
   }
 
   const holidayName = value ? holidayNames.get(value) : undefined;
-  const hintId = `${id}-hint`;
+  const holidayId = `${id}-holiday`;
   return <span className={['thai-date', className].filter(Boolean).join(' ')}>
     <span className="thai-date-field">
-      <input ref={input} id={id} type="text" inputMode="numeric" autoComplete="off" placeholder="วว/ดด/ปปปป" aria-label={props['aria-label']} aria-describedby={hintId} title={value ? `${formatBangkokDate(value)}${holidayName ? ` วันหยุด ${holidayName}` : ''}` : undefined}
+      <input ref={input} id={id} type="text" inputMode="numeric" autoComplete="off" placeholder="วว/ดด/ปปปป" aria-label={props['aria-label']} aria-describedby={holidayName ? holidayId : undefined} title={value ? `${formatBangkokDate(value)}${holidayName ? ` วันหยุด ${holidayName}` : ''}` : undefined}
         value={text} data-min={min} data-max={max} required={required} disabled={disabled} aria-invalid={problem ? true : undefined}
-        onChange={(event) => typed(event.target.value)} onBlur={() => { const iso = parseThaiDateInput(text); if (iso && iso === value) setText(formatThaiDateInput(iso)); }} />
+        onFocus={(event) => event.currentTarget.select()}
+        onChange={(event) => typed(event.target.value)} onBlur={() => { const iso = parseThaiDateInput(text); if (iso && iso === value) setText(formatThaiDateField(iso)); }} />
       <button ref={toggle} type="button" className="thai-date-toggle" aria-label="เลือกวันที่จากปฏิทิน" aria-haspopup="dialog" aria-expanded={open} disabled={disabled} onClick={() => setOpen((current) => !current)}>
         <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></svg>
       </button>
     </span>
     {name && <input type="hidden" name={name} value={value} />}
-    {/* The hint is drawn from data-hint by CSS so a <label> that wraps this field keeps its own text as its name. */}
-    <span id={hintId} className="thai-date-hint" data-hint={`${value ? formatBangkokDate(value) : 'วว/ดด/ปปปป (พ.ศ.)'}${holidayName ? ` · วันหยุด ${holidayName}` : ''}`} />
+    {/* The full date is in the box itself; only a holiday name is added, for screen readers (sighted people get the tooltip and the calendar). */}
+    {holidayName && <span id={holidayId} className="visually-hidden">วันหยุด {holidayName}</span>}
     {problem && <small role="alert" className="form-error">{problem}</small>}
     {open && <ThaiCalendarPopup selected={value} holidays={holidayNames} isDisabled={(iso) => refusal(iso) !== null} onPick={pick} onClose={() => { setOpen(false); toggle.current?.focus(); }} />}
   </span>;

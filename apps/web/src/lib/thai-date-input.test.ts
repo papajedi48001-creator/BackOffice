@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatThaiDateInput, monthCells, parseThaiDateInput, thaiMonthTitle } from './thai-date-input';
+import { formatThaiDateField, formatThaiDateInput, monthCells, parseThaiDateInput, thaiMonthTitle } from './thai-date-input';
 
 describe('Thai date entry', () => {
   it('shows an ISO date as วัน เดือนย่อ ปี พ.ศ. (13 พ.ย. 2569), the one way dates appear in every field', () => {
@@ -7,6 +7,16 @@ describe('Thai date entry', () => {
     expect(formatThaiDateInput('2026-11-13')).toBe('13 พ.ย. 2569');
     expect(formatThaiDateInput('2027-01-01')).toBe('1 ม.ค. 2570');
     expect(formatThaiDateInput('')).toBe('');
+  });
+  it('shows the full date with the weekday inside every date field (จันทร์ 9 พ.ย. 2569)', () => {
+    expect(formatThaiDateField('2026-11-09')).toBe('จันทร์ 9 พ.ย. 2569');
+    expect(formatThaiDateField('2026-11-01')).toBe('อาทิตย์ 1 พ.ย. 2569');
+    expect(formatThaiDateField('')).toBe('');
+  });
+  it('reads back the full date the field shows, weekday and all', () => {
+    expect(parseThaiDateInput('จันทร์ 9 พ.ย. 2569')).toBe('2026-11-09');
+    expect(parseThaiDateInput('วันอาทิตย์ 1 พ.ย. 2569')).toBe('2026-11-01');
+    expect(parseThaiDateInput('อาทิตย์ 1 พฤศจิกายน 2569')).toBe('2026-11-01');
   });
   it('reads day/month/Buddhist year, ISO, and a Christian year typed by habit', () => {
     expect(parseThaiDateInput('9/11/2569')).toBe('2026-11-09');
