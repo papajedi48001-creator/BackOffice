@@ -68,3 +68,28 @@ describe('ProviderLinksManager', () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(`/api/admin/provider-links/${links[0]!.personId}`, expect.objectContaining({ method: 'DELETE', body: JSON.stringify({ reason: 'ผูกผิดคน' }) })));
   });
 });
+
+describe('ProviderLinksManager search', () => {
+  const many = [...links, { personId: 'p2', personName: 'นายวสันต์ มีคุณ', displayName: 'วสันต์ มีคุณ', linkedAt: '2026-11-12T07:57:00.000Z', linkedByAdmin: false }];
+  it('filters both lists by name in a search card, with a count and ล้างตัวกรอง', () => {
+    render(<ProviderLinksManager pending={pending} links={many} />);
+    const card = screen.getByRole('search');
+    expect(card).toHaveClass('search-card');
+    expect(within(card).getByText('แสดง 3 จาก 3 รายการ')).toBeInTheDocument();
+    fireEvent.change(within(card).getByRole('searchbox', { name: 'ค้นหารายชื่อ' }), { target: { value: 'วสันต์' } });
+    expect(screen.queryByText('สมชาย ใจดี')).toBeNull();
+    expect(screen.queryByText('นางมาลัย ข้อมูลจำลอง')).toBeNull();
+    expect(screen.getByText('นายวสันต์ มีคุณ')).toBeInTheDocument();
+    expect(within(card).getByText('แสดง 1 จาก 3 รายการ')).toBeInTheDocument();
+    fireEvent.click(within(card).getByRole('button', { name: 'ล้างตัวกรอง' }));
+    expect(screen.getByText('นางมาลัย ข้อมูลจำลอง')).toBeInTheDocument();
+  });
+
+  it('matches the name from Provider ID too, and says when nothing matches', () => {
+    render(<ProviderLinksManager pending={[]} links={many} />);
+    fireEvent.change(screen.getByRole('searchbox', { name: 'ค้นหารายชื่อ' }), { target: { value: 'มาลัย ข.' } });
+    expect(screen.getByText('นางมาลัย ข้อมูลจำลอง')).toBeInTheDocument();
+    fireEvent.change(screen.getByRole('searchbox', { name: 'ค้นหารายชื่อ' }), { target: { value: 'ไม่มีใคร' } });
+    expect(screen.getByText('ไม่พบรายชื่อที่ตรงกับคำค้น')).toBeInTheDocument();
+  });
+});

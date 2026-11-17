@@ -8,6 +8,7 @@ import { FormDialog } from '../../../../components/form-dialog';
 import { sendAdmin } from '../../../../lib/admin-labels';
 import { formatBangkokDateTime } from '../../../../lib/bangkok-time';
 import { PersonPicker, type PickedPerson } from '../person-picker';
+import { SearchCard } from '../../../../components/search-card';
 
 export interface PendingLoginRow { id: string; displayName: string | null; lastSeenAt: string }
 export interface LinkedPersonRow { personId: string; personName: string | null; displayName: string | null; linkedAt: string; linkedByAdmin: boolean }
@@ -16,20 +17,27 @@ export interface LinkedPersonRow { personId: string; personName: string | null; 
 export function ProviderLinksManager({ pending, links }: { pending: PendingLoginRow[]; links: LinkedPersonRow[] }) {
   const [linking, setLinking] = useState<PendingLoginRow | null>(null);
   const [unlinking, setUnlinking] = useState<LinkedPersonRow | null>(null);
+  const [query, setQuery] = useState('');
+  const needle = query.trim().toLocaleLowerCase('th');
+  const matches = (...names: Array<string | null>) => needle === '' || names.some((name) => name?.toLocaleLowerCase('th').includes(needle));
+  const shownPending = pending.filter((row) => matches(row.displayName));
+  const shownLinks = links.filter((row) => matches(row.personName, row.displayName));
+  const noMatch = needle !== '' ? <p>{t('searchNoMatch')}</p> : null;
   return <>
+    {pending.length + links.length > 0 && <SearchCard query={query} onQuery={setQuery} placeholder={t('adminProviderSearchPlaceholder')} shown={shownPending.length + shownLinks.length} total={pending.length + links.length} unit={t('searchItemsUnit')} onClear={() => setQuery('')} />}
     <h3>{t('adminProviderPending')}</h3>
-    {pending.length === 0 ? <p>{t('adminProviderNoPending')}</p> : <div className="leave-table-scroll"><table className="admin-grant-table">
+    {pending.length === 0 ? <p>{t('adminProviderNoPending')}</p> : shownPending.length === 0 ? noMatch : <div className="leave-table-scroll"><table className="admin-grant-table">
       <thead><tr><th>{t('adminProviderName')}</th><th>{t('adminProviderLastSeen')}</th><th></th></tr></thead>
-      <tbody>{pending.map((row) => <tr key={row.id}>
+      <tbody>{shownPending.map((row) => <tr key={row.id}>
         <td><strong>{row.displayName ?? '—'}</strong></td>
         <td>{formatBangkokDateTime(row.lastSeenAt)}</td>
         <td className="request-actions"><button type="button" aria-label={`${t('adminProviderLinkTo')} ${row.displayName ?? ''}`} onClick={() => setLinking(row)}>{t('adminProviderLinkTo')}</button></td>
       </tr>)}</tbody>
     </table></div>}
     <h3>{t('adminProviderLinked')}</h3>
-    {links.length === 0 ? <p>{t('adminProviderNoLinks')}</p> : <div className="leave-table-scroll"><table className="admin-grant-table">
+    {links.length === 0 ? <p>{t('adminProviderNoLinks')}</p> : shownLinks.length === 0 ? noMatch : <div className="leave-table-scroll"><table className="admin-grant-table">
       <thead><tr><th>{t('adminPerson')}</th><th>{t('adminProviderName')}</th><th>{t('adminProviderLinkedAt')}</th><th></th></tr></thead>
-      <tbody>{links.map((row) => <tr key={row.personId}>
+      <tbody>{shownLinks.map((row) => <tr key={row.personId}>
         <td><strong>{row.personName ?? '—'}</strong></td>
         <td>{row.displayName ?? '—'}</td>
         <td>{formatBangkokDateTime(row.linkedAt)}<small className="admin-muted">{t(row.linkedByAdmin ? 'adminProviderByAdmin' : 'adminProviderBySelf')}</small></td>
