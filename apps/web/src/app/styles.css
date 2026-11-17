@@ -1167,3 +1167,21 @@ h2.chat-window-title { cursor: default; }
 .password-eye:hover { background: var(--line-soft); color: var(--brand); }
 .password-eye[aria-pressed="true"] { color: var(--brand); }
 .password-eye:focus-visible { outline: 3px solid var(--brand); outline-offset: 0; }
+
+/* ทะเบียนบุคลากร: ค้นหารายชื่อ, the three filters, the count and ล้างตัวกรอง sit in one card above the table. */
+.search-card { margin: 16px 0 20px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); box-shadow: 0 6px 18px rgba(15, 30, 58, .05); padding: 18px 20px 12px; }
+.search-card-fields { display: grid; grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr)); gap: 14px; align-items: end; }
+.search-card label { display: grid; gap: 6px; color: var(--ink); font-weight: 600; }
+.search-card input, .search-card select { box-sizing: border-box; width: 100%; min-height: 44px; border: 1px solid var(--line-strong); border-radius: 10px; background: #fff; color: var(--ink); font: inherit; padding: 8px 12px; }
+.search-card input:focus, .search-card select:focus { border-color: var(--accent); outline: 3px solid color-mix(in srgb, var(--accent) 22%, white); outline-offset: 0; }
+.search-card-input { position: relative; display: block; }
+.search-card-input svg { position: absolute; top: 50%; left: 12px; color: var(--muted); pointer-events: none; transform: translateY(-50%); }
+.search-card .search-card-input input { padding-left: 42px; }
+.search-card-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; min-height: 40px; margin-top: 14px; border-top: 1px solid var(--line-soft); padding-top: 8px; }
+.search-card-foot .filter-count { margin: 0; }
+.app-main .search-card button.link-button { border: 0; background: none; box-shadow: none; color: var(--accent); font-weight: 700; padding: 6px 4px; text-decoration: underline; text-underline-offset: 3px; }
+.app-main button.button-with-icon { display: inline-flex; align-items: center; gap: 8px; }
+@media (max-width: 760px) {
+  .search-card-fields { grid-template-columns: 1fr; }
+  .search-card { padding: 14px; }
+}

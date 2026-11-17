@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assignOrganizationHeadInputSchema, createOrganizationUnitInputSchema, updateOrganizationUnitInputSchema, calendarDateSchema, commandChainTargetSchema, employmentTypeInputSchema, genderForPrefix, organizationUnitTypeSchema, setOrganizationUnitTypeInputSchema, updateOwnPersonalInputSchema, updatePersonContactInputSchema, updatePersonProfileInputSchema } from './hr';
+import { assignOrganizationHeadInputSchema, createOrganizationUnitInputSchema, updateOrganizationUnitInputSchema, calendarDateSchema, commandChainTargetSchema, employmentTypeInputSchema, genderForPrefix, organizationUnitTypeSchema, setOrganizationUnitTypeInputSchema, updateOwnPersonalInputSchema, updatePersonContactInputSchema, updatePersonProfileInputSchema, peopleExportCriteriaSchema } from './hr';
 
 describe('organization unit type and command chain contracts', () => {
   it('accepts the three unit types only', () => {
@@ -75,5 +75,14 @@ describe('กลุ่มงาน and งาน contracts', () => {
     expect(createOrganizationUnitInputSchema.safeParse({ name: 'x', unitType: 'HOSPITAL' }).success).toBe(false);
     expect(createOrganizationUnitInputSchema.safeParse({ name: '  ', unitType: 'DIVISION' }).success).toBe(false);
     expect(updateOrganizationUnitInputSchema.safeParse({ name: 'x', unitType: 'DIVISION' }).success).toBe(false);
+  });
+});
+
+describe('peopleExportCriteriaSchema', () => {
+  it('takes optional filter text and nothing else', () => {
+    expect(peopleExportCriteriaSchema.safeParse({}).success).toBe(true);
+    expect(peopleExportCriteriaSchema.safeParse({ query: 'สมชาย', organizationName: '__none__' }).success).toBe(true);
+    expect(peopleExportCriteriaSchema.safeParse({ query: 5 }).success).toBe(false);
+    expect(peopleExportCriteriaSchema.safeParse({ nationalId: 'x' }).success).toBe(false);
   });
 });

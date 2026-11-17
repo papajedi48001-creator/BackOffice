@@ -18,10 +18,11 @@ export default async function PeoplePage() {
   const database = getSharedDatabase();
   if (!database) return <section><h2>{t('peopleTitle')}</h2><p role="alert">{t('hrLoadError')}</p></section>;
   const people = await new HrDirectory(database).listPeople({ organizationIds: scope });
+  const addPerson = canManagePeople(session) ? <Link className="button-link" href="/hr/people/new">{t('hrAddPerson')}</Link> : null;
+  if (people.length === 0) return <section><div className="page-heading"><h2>{t('peopleTitle')}</h2>{addPerson ? <nav className="page-actions">{addPerson}</nav> : null}</div><p>{t('noPeople')}</p></section>;
   return (
     <section>
-      <div className="page-heading"><h2>{t('peopleTitle')}</h2>{canManagePeople(session) ? <nav className="page-actions"><Link className="button-link" href="/hr/people/new">{t('hrAddPerson')}</Link></nav> : null}</div>
-      {people.length === 0 ? <p>{t('noPeople')}</p> : <PeopleTable people={people} />}
+      <PeopleTable people={people} actions={addPerson} canExport={new AuthorizationService().canActHospitalWide(session, 'data.export', 'hr')} />
     </section>
   );
 }

@@ -164,3 +164,6 @@ export type EmploymentTypeInput = z.infer<typeof employmentTypeInputSchema>;
 export interface EmploymentType extends EmploymentTypeInput { id: string; }
 
 export type PersonProfileField = keyof UpdatePersonProfileInput | keyof UpdatePersonContactInput;
+
+/** ส่งออกข้อมูลทะเบียนบุคลากร: the page's search and filters, sent in the body so the search never reaches a URL. */
+export const peopleExportCriteriaSchema = z.object({ query: z.string().max(200), positionTitle: z.string().max(200), employmentTypeName: z.string().max(200), organizationName: z.string().max(200) }).partial().strict();

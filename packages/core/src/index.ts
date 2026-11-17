@@ -7,6 +7,7 @@ export * from './hr/person-service';
 export * from './hr/master-data-validation';
 export * from './hr/master-data-import';
 export * from './hr/hr-directory';
+export * from './hr/people-export';
 export * from './hr/command-chain';
 export * from './hr/command-chain-service';
 export * from './hr/organization-head-service';
