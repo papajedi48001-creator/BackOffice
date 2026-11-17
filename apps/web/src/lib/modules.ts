@@ -7,7 +7,7 @@ import { matchModule } from './module-theme';
 import { canInventory } from './inventory-access';
 
 export type ModuleGroup = 'mine' | 'people' | 'services' | 'governance';
-export type ModuleIconName = 'requests' | 'bell' | 'people' | 'org' | 'upload' | 'shield' | 'delegate' | 'audit' | 'wrench' | 'package' | 'room' | 'car' | 'clock' | 'leave' | 'travel' | 'asset' | 'monitor' | 'target' | 'heart' | 'flask' | 'coins' | 'settings';
+export type ModuleIconName = 'home' | 'requests' | 'bell' | 'people' | 'org' | 'upload' | 'shield' | 'delegate' | 'audit' | 'wrench' | 'package' | 'room' | 'car' | 'clock' | 'leave' | 'travel' | 'asset' | 'monitor' | 'target' | 'heart' | 'flask' | 'coins' | 'settings';
 
 /** One page inside a module, shown in the module's section bar rather than on the main page. */
 export interface ModuleSection {
@@ -258,7 +258,7 @@ export async function availableModules(modules: ModuleEntry[], db: Database, sub
 }
 
 export function navigationFrom(modules: ModuleEntry[], badges: Record<string, number | undefined> = {}, modes: Readonly<Record<string, ModuleMode>> = {}): NavigationItem[] {
-  return [{ href: '/dashboard', label: 'dashboard', module: 'home' }, ...modules.filter((entry) => entry.status === 'live').map((entry) => ({ href: entry.href, label: entry.labelKey, module: entry.code, ...(badges[entry.code] === undefined ? {} : { badge: badges[entry.code] }), ...(inDevelopment(entry.code, modes) ? { development: true } : {}), ...(entry.submitAction ? { submitAction: entry.submitAction } : {}) }))];
+  return [{ href: '/dashboard', label: 'dashboard', module: 'home', icon: 'home' }, ...modules.filter((entry) => entry.status === 'live').map((entry) => ({ href: entry.href, label: entry.labelKey, module: entry.code, icon: entry.icon, ...(badges[entry.code] === undefined ? {} : { badge: badges[entry.code] }), ...(inDevelopment(entry.code, modes) ? { development: true } : {}), ...(entry.submitAction ? { submitAction: entry.submitAction } : {}) }))];
 }
 
 export function navigationFor(subject: AccessSubject): NavigationItem[] {

@@ -102,7 +102,13 @@ describe('requests and notifications', () => {
     const items = navigationFrom(visibleModules(subject()), { leave: 2, requests: 0 });
     expect(items.find((item) => item.href === '/leave')?.badge).toBe(2);
     expect(items.find((item) => item.href === '/requests')?.badge).toBe(0);
-    expect(items[0]).toEqual({ href: '/dashboard', label: 'dashboard', module: 'home' });
+    expect(items[0]).toEqual({ href: '/dashboard', label: 'dashboard', module: 'home', icon: 'home' });
+  });
+
+  it('gives each menu item its module icon', () => {
+    const items = navigationFrom(visibleModules(subject()));
+    expect(items.find((item) => item.href === '/leave')?.icon).toBe('leave');
+    expect(items.every((item) => item.icon)).toBe(true);
   });
 });
 
