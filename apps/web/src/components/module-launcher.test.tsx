@@ -64,3 +64,20 @@ it('greets without a name when none is recorded', () => {
   render(<ModuleLauncher modules={[]} badges={{}} summary={{ ...summary, displayName: null }} today={today} />);
   expect(screen.getByRole('heading', { name: 'สวัสดี' })).toBeInTheDocument();
 });
+
+it('hangs today as a Thai calendar page beside the greeting', () => {
+  const { container } = render(<ModuleLauncher modules={[]} badges={{}} summary={summary} today={new Date('2026-11-17T20:00:00Z')} />);
+  const page = container.querySelector('.hero-calendar');
+  expect(page).toHaveAttribute('aria-hidden', 'true');
+  expect(page?.querySelector('.hero-calendar-month')).toHaveTextContent('พ.ย. 2569');
+  expect(page?.querySelector('.hero-calendar-day')).toHaveTextContent('18');
+  expect(page?.querySelector('.hero-calendar-weekday')).toHaveTextContent('พุธ');
+});
+
+it('draws each module icon as a watermark behind the tile, not as a box above the name', () => {
+  const { container } = render(<ModuleLauncher modules={byCode('hr', ...planned.map((entry) => entry.code))} badges={{}} summary={summary} today={today} />);
+  const tile = screen.getByRole('link', { name: /งานบุคคล/ });
+  expect(tile.querySelector('.module-watermark svg')).not.toBeNull();
+  expect(tile.querySelector('.module-watermark')).toHaveAttribute('aria-hidden', 'true');
+  expect(container.querySelector('.module-icon')).toBeNull();
+});
