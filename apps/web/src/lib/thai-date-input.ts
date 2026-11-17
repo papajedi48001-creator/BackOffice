@@ -1,4 +1,4 @@
-import { addDays, datesBetween, formatBangkokDateOnly, mondayOf } from './bangkok-time';
+import { addDays, datesBetween, formatBangkokDate, formatBangkokDateOnly, mondayOf } from './bangkok-time';
 
 const monthFormatter = new Intl.DateTimeFormat('th-TH', { timeZone: 'UTC', month: 'long', year: 'numeric' });
 
@@ -10,6 +10,16 @@ export function formatThaiDateInput(iso: string): string {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return '';
   return formatBangkokDateOnly(iso);
 }
+
+/**
+ * `2026-11-01` → `อาทิตย์ 1 พ.ย. 2569`: what a ThaiDateInput box shows once a date is set (DESIGN.md, "วันที่และปฏิทิน").
+ * The full date sits inside the box; nothing is repeated under it.
+ */
+export function formatThaiDateField(iso: string): string {
+  return formatThaiDateInput(iso) ? formatBangkokDate(iso) : '';
+}
+
+const thaiWeekday = /^(?:วัน)?(?:จันทร์|อังคาร|พุธ|พฤหัสบดี|พฤหัส|ศุกร์|เสาร์|อาทิตย์)\s+/;
 
 const thaiMonths: ReadonlyArray<readonly string[]> = [
   ['ม.ค.', 'มกราคม'], ['ก.พ.', 'กุมภาพันธ์'], ['มี.ค.', 'มีนาคม'], ['เม.ย.', 'เมษายน'], ['พ.ค.', 'พฤษภาคม'], ['มิ.ย.', 'มิถุนายน'],
@@ -24,9 +34,9 @@ function realDate(year: number, month: number, day: number): string | null {
   return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === iso ? iso : null;
 }
 
-/** What a person types: `13 พ.ย. 2569` (what the field shows), `13 พฤศจิกายน 2569`, `9/11/2569`, `09-11-2569`, `09/11/2026` (ค.ศ. by habit) or ISO `2026-11-09`. Null when it is not a real date. */
+/** What a person types: `อาทิตย์ 13 พ.ย. 2569` (what the field shows; the weekday may be left out), `13 พฤศจิกายน 2569`, `9/11/2569`, `09-11-2569`, `09/11/2026` (ค.ศ. by habit) or ISO `2026-11-09`. Null when it is not a real date. */
 export function parseThaiDateInput(text: string): string | null {
-  const value = text.trim();
+  const value = text.trim().replace(thaiWeekday, '');
   const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (iso) return realDate(Number(iso[1]), Number(iso[2]), Number(iso[3]));
   const named = /^(\d{1,2})\s*([฀-๿.]+)\s*(\d{4})$/.exec(value);

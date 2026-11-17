@@ -9,20 +9,21 @@ function Controlled(props: Partial<Parameters<typeof ThaiDateInput>[0]> & { init
 }
 
 describe('ThaiDateInput', () => {
-  it('shows 9 พ.ย. 2569 and the full Thai date, and gives back ISO', () => {
+  it('shows the full Thai date inside the box, nothing under it, and gives back ISO', () => {
     const spy = vi.fn();
-    render(<Controlled initial="2026-11-09" spy={spy} />);
+    const { container } = render(<Controlled initial="2026-11-09" spy={spy} />);
     const input = screen.getByLabelText('วันที่') as HTMLInputElement;
-    expect(input.value).toBe('9 พ.ย. 2569');
+    expect(input.value).toBe('จันทร์ 9 พ.ย. 2569');
     expect(input.title).toBe('จันทร์ 9 พ.ย. 2569');
-    expect(document.getElementById(input.getAttribute('aria-describedby')!)?.dataset.hint).toBe('จันทร์ 9 พ.ย. 2569');
+    expect(container.querySelector('.thai-date-hint')).toBeNull();
+    expect(input.hasAttribute('aria-describedby')).toBe(false);
     fireEvent.change(input, { target: { value: '10/11/2569' } });
     expect(spy).toHaveBeenLastCalledWith('2026-11-10');
     expect(screen.getByTestId('iso').textContent).toBe('2026-11-10');
     // Typed digits stay while typing; leaving the field shows the date the one Thai way.
     expect(input.value).toBe('10/11/2569');
     fireEvent.blur(input);
-    expect(input.value).toBe('10 พ.ย. 2569');
+    expect(input.value).toBe('อังคาร 10 พ.ย. 2569');
   });
   it('opens a calendar with full Thai weekday and month names, greys holidays with their name and refuses them when blocked', () => {
     const spy = vi.fn();
@@ -64,6 +65,14 @@ describe('ThaiDateInput', () => {
     expect(spy).not.toHaveBeenCalled();
     expect(screen.getByRole('alert').textContent).toContain('วันหยุดชดเชย');
   });
+  it('names a holiday inside the box tooltip and for screen readers, not under the box', () => {
+    const { container } = render(<Controlled initial="2026-12-07" holidays={[{ date: '2026-12-07', name: 'วันหยุดชดเชย' }]} />);
+    const input = screen.getByLabelText('วันที่') as HTMLInputElement;
+    expect(input.value).toBe('จันทร์ 7 ธ.ค. 2569');
+    expect(input.title).toBe('จันทร์ 7 ธ.ค. 2569 วันหยุด วันหยุดชดเชย');
+    expect(screen.getByRole('textbox', { description: 'วันหยุด วันหยุดชดเชย' })).toBe(input);
+    expect(container.querySelector('.visually-hidden')?.textContent).toBe('วันหยุด วันหยุดชดเชย');
+  });
   it('posts the ISO value under its name for plain GET forms', () => {
     const { container } = render(<form><ThaiDateInput id="f" name="from" defaultValue="2026-11-01" aria-label="ตั้งแต่" /></form>);
     expect((container.querySelector('input[type="hidden"][name="from"]') as HTMLInputElement).value).toBe('2026-11-01');
@@ -77,7 +86,7 @@ describe('ThaiDateTimeInput', () => {
     const spy = vi.fn();
     function Host() { const [value, setValue] = useState('2026-11-10T08:00'); return <><label htmlFor="dt">ออกเดินทาง</label><ThaiDateTimeInput id="dt" label="ออกเดินทาง" value={value} onChange={(next) => { setValue(next); spy(next); }} /></>; }
     render(<Host />);
-    expect((screen.getByLabelText('ออกเดินทาง') as HTMLInputElement).value).toBe('10 พ.ย. 2569');
+    expect((screen.getByLabelText('ออกเดินทาง') as HTMLInputElement).value).toBe('อังคาร 10 พ.ย. 2569');
     fireEvent.change(screen.getByLabelText('เวลา ออกเดินทาง'), { target: { value: '09:15' } });
     expect(spy).toHaveBeenLastCalledWith('2026-11-10T09:15');
     fireEvent.change(screen.getByLabelText('ออกเดินทาง'), { target: { value: '11/11/2569' } });

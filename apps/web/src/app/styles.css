@@ -799,10 +799,9 @@ h2.chat-window-title { cursor: default; }
 /* Thai date picker (components/thai-date-input.tsx). */
 .thai-date { position: relative; display: inline-grid; gap: 2px; min-width: 0; }
 .thai-date-field { display: flex; align-items: stretch; gap: 4px; }
-.thai-date-field input { min-width: 0; width: 11ch; flex: 1 1 auto; font-variant-numeric: tabular-nums; }
+.thai-date-field input { min-width: 0; width: 17ch; flex: 1 1 auto; font-variant-numeric: tabular-nums; }
 .app-main .thai-date-toggle, .thai-date-toggle { display: inline-grid; place-items: center; min-width: 44px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); color: var(--accent); padding: 0 8px; }
 .thai-date-toggle:focus-visible, .thai-date-day:focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
-.thai-date-hint::after { content: attr(data-hint); color: var(--muted); font-size: .8rem; }
 .thai-date-popup { position: absolute; top: calc(100% + 4px); left: 0; z-index: 50; width: min(22rem, 92vw); border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-md); padding: 10px; }
 .thai-date-popup-header { display: grid; grid-template-columns: 40px 1fr 40px 40px; align-items: center; gap: 4px; margin-bottom: 6px; text-align: center; }
 .app-main .thai-date-popup-header button, .thai-date-popup-header button { min-height: 40px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font-size: 1.1rem; padding: 0; }
@@ -1187,7 +1186,7 @@ h2.chat-window-title { cursor: default; }
 .form-field.form-check input { width: 20px; height: 20px; min-height: 0; margin: 0; }
 .search-card-input { position: relative; display: block; }
 .search-card-input svg { position: absolute; top: 50%; left: 12px; color: var(--muted); pointer-events: none; transform: translateY(-50%); }
-.search-card .search-card-input input { padding-left: 42px; }
+.search-card .search-card-input input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]) { padding-left: 42px; }
 .search-card-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; min-height: 40px; margin-top: 14px; border-top: 1px solid var(--line-soft); padding-top: 8px; }
 .search-card-foot .filter-count { margin: 0; }
 .app-main .search-card button.link-button { border: 0; background: none; box-shadow: none; color: var(--accent); font-weight: 700; padding: 6px 4px; text-decoration: underline; text-underline-offset: 3px; }
