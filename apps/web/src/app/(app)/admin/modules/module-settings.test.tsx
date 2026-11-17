@@ -7,16 +7,28 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh }) }));
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
 const rows: ModuleSettingRow[] = [
-  { code: 'fleet', label: 'ยานพาหนะ', description: 'ขอใช้รถ', mode: 'ON', locked: false, managerRole: 'fleet-manager', managers: [{ personId: 'p-adm', displayName: 'นางมาลัย ข้อมูลจำลอง', employeeCode: 'ADM003', ownsHrData: false, active: true }], testerRole: 'fleet-tester', testers: [{ personId: 'p-nur', displayName: 'นางสาวทดสอบ ระบบจำลอง', employeeCode: 'NUR014', ownsHrData: false, active: true }] },
-  { code: 'leave', label: 'การลา', description: 'ใบลา', mode: 'OFF', locked: false, managerRole: 'leave-manager', managers: [], testerRole: 'leave-tester', testers: [] },
-  { code: 'access', label: 'สิทธิ์และการตรวจสอบ', description: 'บทบาท', mode: 'DEVELOPMENT', locked: false, managerRole: null, managers: [], testerRole: 'access-tester', testers: [] },
-  { code: 'admin', label: 'ผู้ดูแลระบบ', description: 'ตั้งค่า', mode: 'ON', locked: true, managerRole: null, managers: [], testerRole: null, testers: [] }
+  { code: 'fleet', label: 'ยานพาหนะ', description: 'ขอใช้รถ', icon: 'car', mode: 'ON', locked: false, managerRole: 'fleet-manager', managers: [{ personId: 'p-adm', displayName: 'นางมาลัย ข้อมูลจำลอง', employeeCode: 'ADM003', ownsHrData: false, active: true }], testerRole: 'fleet-tester', testers: [{ personId: 'p-nur', displayName: 'นางสาวทดสอบ ระบบจำลอง', employeeCode: 'NUR014', ownsHrData: false, active: true }] },
+  { code: 'leave', label: 'การลา', description: 'ใบลา', icon: 'leave', mode: 'OFF', locked: false, managerRole: 'leave-manager', managers: [], testerRole: 'leave-tester', testers: [] },
+  { code: 'access', label: 'สิทธิ์และการตรวจสอบ', description: 'บทบาท', icon: 'shield', mode: 'DEVELOPMENT', locked: false, managerRole: null, managers: [], testerRole: 'access-tester', testers: [] },
+  { code: 'admin', label: 'ผู้ดูแลระบบ', description: 'ตั้งค่า', icon: 'settings', mode: 'ON', locked: true, managerRole: null, managers: [], testerRole: null, testers: [] }
 ];
 const admins = [{ personId: 'p-it', displayName: 'นายจีระศักดิ์ หอกคำ', employeeCode: 'IT001', ownsHrData: false, active: true }];
 
 afterEach(() => { vi.clearAllMocks(); vi.unstubAllGlobals(); });
 
 describe('ModuleSettings', () => {
+  it('shows each module in its own colour with its icon, and a head count beside the name (L5)', () => {
+    const { container } = render(<ModuleSettings rows={rows} admins={admins} />);
+    const fleetRow = screen.getByRole('button', { name: 'ยานพาหนะ' }).closest('tr')!;
+    expect(fleetRow).toHaveAttribute('data-module', 'fleet');
+    expect(fleetRow.querySelector('.module-chip svg')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'ยานพาหนะ' })).toHaveAccessibleDescription('ผู้จัดการ 1 · ผู้ทดสอบ 1');
+    expect(screen.getByRole('button', { name: 'การลา' })).toHaveAccessibleDescription('ผู้จัดการ 0 · ผู้ทดสอบ 0');
+    expect(screen.getByRole('button', { name: 'สิทธิ์และการตรวจสอบ' })).toHaveAccessibleDescription('ผู้ทดสอบ 0');
+    expect(screen.getByRole('button', { name: 'ผู้ดูแลระบบ' })).not.toHaveAttribute('aria-describedby');
+    expect(container.querySelector('.admin-link-button')).toBeNull();
+  });
+
   it('shows a three-way เปิด/พัฒนา/ปิด control per module, and none for the admin module', () => {
     render(<ModuleSettings rows={rows} admins={admins} />);
     const fleet = screen.getByRole('group', { name: 'โหมด ยานพาหนะ' });
