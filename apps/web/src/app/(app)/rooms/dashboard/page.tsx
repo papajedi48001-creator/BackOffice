@@ -39,7 +39,7 @@ export default async function RoomDashboardPage({ searchParams }: { searchParams
     <ul className="summary-grid room-dashboard-stats" aria-label={t('roomDashboard')}>
       {counts.map(([label, value]) => <li key={label}><article><span>{label}</span><strong>{value}</strong></article></li>)}
     </ul>
-    <div className="calendar-toolbar room-month-toolbar">
+    <div className="calendar-toolbar room-month-toolbar search-card">
       <h2>{monthFormatter.format(new Date(`${grid.month}-01T00:00:00Z`))}</h2>
       <nav aria-label={t('roomDashboard')}>
         <Link href={monthLink(grid.previous)}>{t('roomPreviousMonth')}</Link>

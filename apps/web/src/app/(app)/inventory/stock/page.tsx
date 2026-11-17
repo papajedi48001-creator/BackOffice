@@ -17,11 +17,11 @@ export default async function InventoryStockPage({ searchParams }: { searchParam
   return <section>
     <h2>{t('inventoryStockTitle')}</h2>
     <StockScan />
-    <form className="inventory-toolbar" method="get">
-      <label htmlFor="stock-search">{t('inventorySearch')}</label>
-      <input id="stock-search" name="search" defaultValue={search ?? ''} />
-      <label htmlFor="stock-category">{t('inventoryCategory')}</label>
-      <select id="stock-category" name="categoryId" defaultValue={params.categoryId ?? ''}><option value="">{t('inventoryAllCategories')}</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select>
+    <form className="inventory-toolbar search-card" method="get">
+      <div className="form-field"><label htmlFor="stock-search">{t('inventorySearch')}</label>
+      <input id="stock-search" name="search" defaultValue={search ?? ''} /></div>
+      <div className="form-field"><label htmlFor="stock-category">{t('inventoryCategory')}</label>
+      <select id="stock-category" name="categoryId" defaultValue={params.categoryId ?? ''}><option value="">{t('inventoryAllCategories')}</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></div>
       <button type="submit">{t('inventorySearchButton')}</button>
     </form>
     <StockTable rows={rows} />

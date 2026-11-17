@@ -28,7 +28,7 @@ export default async function RoomCalendarPage({ searchParams }: { searchParams:
   const pageLink = view.view === 'day' ? dayLink : weekLink;
   return <section>
     <div className="page-heading"><h2>{t('roomCalendarTitle')}</h2></div>
-    <form className="calendar-toolbar" method="get">
+    <form className="calendar-toolbar search-card" method="get">
       {view.view === 'day' ? <><input type="hidden" name="view" value="day" /><input type="hidden" name="date" value={view.anchor} /></> : <input type="hidden" name="week" value={view.anchor} />}
       <label htmlFor="calendar-room">{t('roomField')}</label>
       <select id="calendar-room" name="roomId" defaultValue={selectedRoom ?? ''}><option value="">{t('allRooms')}</option>{rooms.map((room) => <option key={room.id} value={room.id}>{room.name}</option>)}</select>
