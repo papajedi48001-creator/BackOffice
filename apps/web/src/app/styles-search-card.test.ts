@@ -17,3 +17,9 @@ describe('search card (ทะเบียนบุคลากร)', () => {
     expect(css).toMatch(/\.app-main \.search-card button\.link-button \{[^}]*background: none/);
   });
 });
+
+describe('button rows', () => {
+  it('lines ส่งรับรอง up with the other ยอดยกมา buttons instead of sitting on its own margin', () => {
+    expect(css).toMatch(/\.lab-actions > \.request-actions \{[^}]*display: contents/);
+  });
+});

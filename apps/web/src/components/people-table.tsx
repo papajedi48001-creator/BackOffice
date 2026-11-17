@@ -5,6 +5,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import type { DirectoryPerson } from '@backoffice/core';
 import { t, type MessageKey } from '@backoffice/i18n';
 import { NO_VALUE, filterPeople, type PeopleFilterField } from '../lib/people-filter';
+import { SearchCard } from './search-card';
 
 type FilterField = PeopleFilterField;
 const filters: [FilterField, MessageKey][] = [['positionTitle', 'positionTitle'], ['employmentTypeName', 'hrFieldEmploymentType'], ['organizationName', 'organization']];
@@ -63,27 +64,15 @@ export function PeopleTable({ people, canExport = false, actions }: { people: Di
       </nav>
     </div>
     {exportError ? <p className="form-error" role="alert">{t('peopleExportFailed')}</p> : null}
-    <div className="search-card" role="search">
-      <div className="search-card-fields">
-        <label className="search-card-query">{t('peopleSearch')}
-          <span className="search-card-input">
-            <svg viewBox="0 0 24 24" width="20" height="20" {...icon}><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-            <input type="search" value={query} placeholder={t('peopleSearchPlaceholder')} onChange={(event) => setQuery(event.target.value)} />
-          </span>
-        </label>
-        {filters.map(([field, label]) => <label key={field}>{t(label)}
-          <select value={chosen[field]} onChange={(event) => setChosen((current) => ({ ...current, [field]: event.target.value }))}>
-            <option value="">{t('filterAll')}</option>
-            {options[field].map((value) => <option key={value} value={value}>{value}</option>)}
-            {people.some((person) => person[field] === null) ? <option value={NO_VALUE}>{t('notAssigned')}</option> : null}
-          </select>
-        </label>)}
-      </div>
-      <div className="search-card-foot">
-        <p className="filter-count">{`${t('peopleShown')} ${shown.length} ${t('peopleOf')} ${people.length} ${t('peopleUnit')}`}</p>
-        {filtered ? <button type="button" className="link-button" onClick={() => { setQuery(''); setChosen(noFilters); }}>{t('filterClear')}</button> : null}
-      </div>
-    </div>
+    <SearchCard query={query} onQuery={setQuery} placeholder={t('peopleSearchPlaceholder')} shown={shown.length} total={people.length} unit={t('peopleUnit')} filtered={filtered} onClear={() => { setQuery(''); setChosen(noFilters); }}>
+      {filters.map(([field, label]) => <label key={field}>{t(label)}
+        <select value={chosen[field]} onChange={(event) => setChosen((current) => ({ ...current, [field]: event.target.value }))}>
+          <option value="">{t('filterAll')}</option>
+          {options[field].map((value) => <option key={value} value={value}>{value}</option>)}
+          {people.some((person) => person[field] === null) ? <option value={NO_VALUE}>{t('notAssigned')}</option> : null}
+        </select>
+      </label>)}
+    </SearchCard>
     {shown.length === 0 ? <p>{t('peopleNoMatch')}</p> : <table>
       <thead><tr><th>{t('employeeCode')}</th><th>{t('displayName')}</th><th>{t('positionTitle')}</th><th>{t('hrFieldEmploymentType')}</th><th>{t('organization')}</th><th>{t('nationalIdLabel')}</th><th>{t('employmentStatus')}</th></tr></thead>
       <tbody>{shown.map((person) => <tr key={person.id}>

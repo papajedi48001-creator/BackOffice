@@ -22,9 +22,9 @@ export default async function LabStockPage({ searchParams }: { searchParams: Pro
   return <section className="lab-stock">
     <h2>{TITLE}</h2>
     <NotCertifiedBanner certified={certified} />
-    <form className="lab-filter" method="get">
-      <label htmlFor="lab-store">คลัง</label>
-      <select id="lab-store" name="store" defaultValue={store}>{choices.map((choice) => <option key={choice.id} value={choice.id}>{choice.name}</option>)}</select>
+    <form className="lab-filter search-card" method="get">
+      <div className="form-field"><label htmlFor="lab-store">คลัง</label>
+      <select id="lab-store" name="store" defaultValue={store}>{choices.map((choice) => <option key={choice.id} value={choice.id}>{choice.name}</option>)}</select></div>
       <button type="submit">แสดง</button>
     </form>
     {rows.length === 0 ? <p className="lab-empty">ยังไม่มียอดคงเหลือ</p> : <div className="leave-table-scroll"><table>

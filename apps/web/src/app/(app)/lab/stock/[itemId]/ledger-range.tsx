@@ -11,11 +11,11 @@ export function LedgerRange({ path, store, from, to }: { path: string; store: st
   const ids = useId();
   const [start, setStart] = useState(from);
   const [end, setEnd] = useState(to);
-  return <form className="lab-filter" onSubmit={(event) => { event.preventDefault(); router.push(`${path}?${new URLSearchParams({ store, from: start, to: end }).toString()}`); }}>
-    <label htmlFor={`${ids}-from`}>ตั้งแต่</label>
-    <ThaiDateInput id={`${ids}-from`} value={start} required onChange={(value) => { setStart(value); setEnd((current) => endFollowingStart(value, current)); }} />
-    <label htmlFor={`${ids}-to`}>ถึง</label>
-    <ThaiDateInput id={`${ids}-to`} value={end} min={start} required onChange={setEnd} />
+  return <form className="lab-filter search-card" onSubmit={(event) => { event.preventDefault(); router.push(`${path}?${new URLSearchParams({ store, from: start, to: end }).toString()}`); }}>
+    <div className="form-field"><label htmlFor={`${ids}-from`}>ตั้งแต่</label>
+    <ThaiDateInput id={`${ids}-from`} value={start} required onChange={(value) => { setStart(value); setEnd((current) => endFollowingStart(value, current)); }} /></div>
+    <div className="form-field"><label htmlFor={`${ids}-to`}>ถึง</label>
+    <ThaiDateInput id={`${ids}-to`} value={end} min={start} required onChange={setEnd} /></div>
     <button type="submit" disabled={!start || !end || end < start}>แสดง</button>
   </form>;
 }
