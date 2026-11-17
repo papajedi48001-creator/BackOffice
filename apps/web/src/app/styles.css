@@ -205,12 +205,21 @@ section > .organization-tree { padding-left: 0; border-left: 0; }
 .room-manage table { margin-bottom: 8px; }
 @media (max-width: 720px) { .room-slot { grid-template-columns: 1fr auto; } .room-slot-booker, .room-slot-title, .room-slot-room { grid-column: 1 / -1; } .room-slot .status { grid-column: 2; } }
 
-.launcher-hero { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 16px 32px; border-radius: 12px; background: var(--brand); box-shadow: var(--shadow-sm); color: #fff; padding: clamp(18px, 3vw, 28px); }
+.launcher-hero { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 32px; border-radius: 16px; background: linear-gradient(135deg, var(--brand), var(--brand-deep)); background-image: linear-gradient(rgba(255, 255, 255, .06) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, .06) 1px, transparent 1px), linear-gradient(135deg, var(--brand), var(--brand-deep)); background-size: 28px 28px, 28px 28px, auto; box-shadow: var(--shadow-sm); color: #fff; padding: clamp(18px, 3vw, 28px); }
 .launcher-hero .eyebrow { color: #c7ecd6; }
 .launcher-hero .hero-copy { color: #dff2e7; }
 .launcher-hero .eyebrow { margin-bottom: 6px; }
 .launcher-hero h2 { margin: 0; color: #fff; }
 .hero-copy { margin: 6px 0 0; color: var(--muted); }
+/* ท8 ปฏิทินพลิก: today's page flips down beside the greeting, then sways as if hung. */
+.hero-greeting { display: flex; align-items: center; gap: 18px; min-width: 0; }
+.hero-calendar { flex: none; width: 74px; border-radius: 12px; overflow: hidden; background: #fff; color: var(--ink); text-align: center; box-shadow: 0 10px 24px rgba(0, 0, 0, .25); perspective: 400px; transform-origin: top center; animation: calendar-sway 5s ease-in-out 1.4s infinite; }
+.hero-calendar-page { display: grid; transform-origin: top center; backface-visibility: hidden; animation: calendar-flip .9s var(--ease-out) .3s both; }
+.hero-calendar-month { background: #dc2626; color: #fff; font-size: .75rem; font-weight: 700; padding: 3px 0; }
+.hero-calendar-day { font-size: 2rem; font-weight: 700; line-height: 1.25; padding-top: 2px; }
+.hero-calendar-weekday { color: var(--muted); font-size: .7rem; padding-bottom: 6px; }
+@keyframes calendar-flip { from { opacity: 0; transform: rotateX(-100deg); } to { opacity: 1; transform: none; } }
+@keyframes calendar-sway { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-3deg); } }
 .hero-stats { display: flex; flex-wrap: wrap; gap: 12px; }
 .hero-stat { display: grid; min-width: 150px; gap: 2px; border: 1px solid rgba(255, 255, 255, .25); border-radius: 14px; background: rgba(255, 255, 255, .12); color: #fff; padding: 12px 16px; text-decoration: none; backdrop-filter: blur(2px); }
 .hero-stat:hover { background: rgba(255, 255, 255, .2); }
@@ -221,15 +230,22 @@ section > .organization-tree { padding-left: 0; border-left: 0; }
 .module-group { margin-top: 32px; }
 .module-group h3 { margin: 0 0 14px; color: var(--ink-2); font-size: 1rem; letter-spacing: .02em; }
 .module-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; margin: 0; padding: 0; list-style: none; }
-.module-tile { position: relative; display: grid; align-content: start; gap: 14px; height: 100%; min-height: 150px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); box-shadow: var(--shadow-sm); color: var(--ink); padding: 18px; text-decoration: none; transition: border-color .15s, box-shadow .15s, transform .15s; }
-a.module-tile::after { content: ""; position: absolute; inset: auto 18px 0; height: 3px; border-radius: 3px 3px 0 0; background: var(--accent); opacity: 0; transition: opacity .15s; }
-a.module-tile:hover::after { opacity: 1; }
-a.module-tile:hover { border-color: var(--accent-tint); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.module-tile { position: relative; isolation: isolate; overflow: hidden; display: grid; align-content: start; gap: 14px; height: 100%; min-height: 150px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); box-shadow: var(--shadow-sm); color: var(--ink); padding: 18px; text-decoration: none; transition: border-color .35s var(--ease-out), box-shadow .35s var(--ease-out), transform .35s var(--ease-out); }
+/* หน้าหลัก แบบ 1+ (DESIGN.md): a soft wash of the module colour, the icon as a watermark, a flash of light and a colour line on hover. */
+a.module-tile { border-color: var(--accent-tint); background: linear-gradient(150deg, color-mix(in srgb, var(--accent) 16%, white), color-mix(in srgb, var(--accent) 4%, white) 70%); }
+a.module-tile .module-text strong { color: var(--accent-strong); }
+a.module-tile .module-text span { color: color-mix(in srgb, var(--accent) 35%, var(--ink-2)); }
+a.module-tile::before { content: ""; position: absolute; inset: 0; z-index: 1; background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, .75) 50%, transparent 65%); transform: translateX(-120%); pointer-events: none; }
+a.module-tile::after { content: ""; position: absolute; inset: auto 0 0; height: 4px; background: var(--accent); transform: scaleX(0); transform-origin: left; transition: transform .45s var(--ease-out); }
+a.module-tile:hover, a.module-tile:focus-visible { box-shadow: 0 16px 34px color-mix(in srgb, var(--accent) 25%, transparent); transform: translateY(-6px); }
+a.module-tile:hover::before, a.module-tile:focus-visible::before { transform: translateX(120%); transition: transform .9s ease; }
+a.module-tile:hover::after, a.module-tile:focus-visible::after { transform: scaleX(1); }
 a.module-tile:hover .module-go { color: var(--accent); transform: translateX(2px); }
-.module-icon { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 14px; background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent-tint); }
-
-.module-icon[data-group="planned"] { background: #eef2f0; color: #8a9a92; box-shadow: none; }
-.module-text { display: grid; gap: 3px; min-width: 0; }
+.module-watermark { position: absolute; z-index: -1; right: -24px; bottom: -32px; width: 128px; height: 128px; color: var(--accent); opacity: .18; transform: rotate(-12deg); transition: transform .6s var(--ease-out), opacity .4s; pointer-events: none; }
+.module-watermark svg { width: 100%; height: 100%; stroke-width: 1.4; }
+a.module-tile:hover .module-watermark, a.module-tile:focus-visible .module-watermark { transform: rotate(0) scale(1.18) translate(-10px, -8px); opacity: .28; }
+.module-watermark[data-group="planned"] { color: #8a9a92; opacity: .12; }
+.module-text { position: relative; display: grid; gap: 3px; min-width: 0; padding-right: 28px; }
 .module-text strong { font-size: 1.05rem; }
 .module-text span { color: var(--muted); font-size: .9rem; line-height: 1.5; }
 .module-go, .module-badge, .soon-tag { position: absolute; top: 16px; right: 16px; }
@@ -238,8 +254,8 @@ a.module-tile:hover .module-go { color: var(--accent); transform: translateX(2px
 .module-tile.is-planned { border-style: dashed; background: transparent; box-shadow: none; }
 .module-tile.is-planned strong { color: #627d98; }
 .soon-tag { border: 1px solid var(--line); border-radius: 6px; color: #627d98; font-size: .8rem; padding: 2px 8px; white-space: nowrap; }
-@media (prefers-reduced-motion: reduce) { .module-tile, .module-go { transition: none; } a.module-tile:hover { transform: none; } }
-@media (max-width: 720px) { .module-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .module-tile { min-height: 132px; padding: 14px; } .module-text span { display: none; } .module-icon { width: 44px; height: 44px; } .hero-stats { width: 100%; } .hero-stat { flex: 1; min-width: 0; } }
+@media (prefers-reduced-motion: reduce) { .module-tile, .module-go, .module-watermark { transition: none; } a.module-tile:hover, a.module-tile:focus-visible { transform: none; } a.module-tile:hover::before { transform: translateX(-120%); } }
+@media (max-width: 720px) { .module-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .module-tile { min-height: 132px; padding: 14px; } .module-text span { display: none; } .module-watermark { width: 96px; height: 96px; } .hero-calendar { display: none; } .hero-stats { width: 100%; } .hero-stat { flex: 1; min-width: 0; } }
 .nav-badge { display: inline-block; min-width: 22px; height: 22px; margin-left: auto; border-radius: 999px; background: var(--alert-count); color: #fff; font-size: .8rem; font-weight: 700; line-height: 22px; padding: 0 6px; text-align: center; }
 /* Profile chip, top right of every page: photo or initials, name, ตำแหน่งงาน and the unread count. */
 .app-topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 24px; }

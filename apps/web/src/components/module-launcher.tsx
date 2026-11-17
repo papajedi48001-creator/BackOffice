@@ -9,6 +9,17 @@ export interface LauncherSummary extends Pick<DashboardSummary, 'displayName' | 
 
 const registryOrder = (entry: ModuleEntry) => moduleRegistry.findIndex((candidate) => candidate.code === entry.code);
 const thaiDate = new Intl.DateTimeFormat('th-TH-u-ca-buddhist', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Bangkok' });
+const calendarParts = new Intl.DateTimeFormat('th-TH-u-ca-buddhist', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Bangkok' });
+
+/** ท8: today as a hanging Thai calendar page (เดือนย่อ พ.ศ. / วันที่ / ชื่อวัน). The date is already in the eyebrow, so this is decoration. */
+function HeroCalendar({ today }: { today: Date }) {
+  const part = (type: Intl.DateTimeFormatPartTypes) => calendarParts.formatToParts(today).find((entry) => entry.type === type)?.value ?? '';
+  return <span className="hero-calendar" aria-hidden="true"><span className="hero-calendar-page">
+    <span className="hero-calendar-month">{part('month')} {part('year')}</span>
+    <span className="hero-calendar-day">{part('day')}</span>
+    <span className="hero-calendar-weekday">{part('weekday').replace(/^วัน/, '')}</span>
+  </span></span>;
+}
 
 function Badge({ count }: { count: number | null | undefined }) {
   if (!count) return null;
@@ -16,7 +27,8 @@ function Badge({ count }: { count: number | null | undefined }) {
 }
 
 function Tile({ entry, count, development }: { entry: ModuleEntry; count: number | null | undefined; development: boolean }) {
-  const body = <><span className="module-icon" data-group={entry.status === 'planned' ? 'planned' : entry.group}><ModuleIcon name={entry.icon} /></span><span className="module-text"><strong>{t(entry.labelKey)}</strong><span>{t(entry.descriptionKey)}</span></span></>;
+  // แบบ 1+: the icon is a large faint watermark behind the tile; the name leads.
+  const body = <><span className="module-watermark" data-group={entry.status === 'planned' ? 'planned' : entry.group} aria-hidden="true"><ModuleIcon name={entry.icon} /></span><span className="module-text"><strong>{t(entry.labelKey)}</strong><span>{t(entry.descriptionKey)}</span></span></>;
   if (entry.status === 'planned') return <div className="module-tile is-planned" aria-disabled="true">{body}<span className="soon-tag">{t('launcherComingSoon')}</span></div>;
   // A module in development (ตั้งค่าโปรแกรม) carries a text ribbon as well as the amber striped border, so it never relies on colour.
   return <Link className={`module-tile${development ? ' is-development' : ''}`} data-module={entry.code} href={entry.href}>{body}{development ? <span className="dev-ribbon">{t('moduleInDevelopment')}</span> : null}{count ? <Badge count={count} /> : <span className="module-go" aria-hidden="true">→</span>}</Link>;
@@ -32,7 +44,7 @@ export function ModuleLauncher({ modules, modes = {}, badges, summary, today }: 
   const stat = (value: number | null) => value === null ? '–' : String(value);
   return <div className="launcher">
     <section className="launcher-hero">
-      <div><p className="eyebrow">{thaiDate.format(today)}</p><h2>{greeting}</h2><p className="hero-copy">{summary.organizationName ? `${summary.organizationName} · ` : ''}{t('launcherHint')}</p></div>
+      <div className="hero-greeting"><HeroCalendar today={today} /><div><p className="eyebrow">{thaiDate.format(today)}</p><h2>{greeting}</h2><p className="hero-copy">{summary.organizationName ? `${summary.organizationName} · ` : ''}{t('launcherHint')}</p></div></div>
       <div className="hero-stats">
         <Link className={`hero-stat${summary.pendingApprovals ? ' is-alert' : ''}`} href="/requests"><strong>{stat(summary.pendingApprovals)}</strong><span>{t('launcherPendingApprovals')}</span></Link>
         <Link className="hero-stat" href="/notifications"><strong>{stat(summary.unreadNotifications)}</strong><span>{t('launcherUnreadNotifications')}</span></Link>
