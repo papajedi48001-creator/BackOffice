@@ -994,6 +994,8 @@ h2.chat-window-title { cursor: default; }
 .lab-primary { margin: 12px 0 20px; }
 .app-main .lab-primary-action { min-height: 64px; min-width: 220px; font-size: 1.25rem; }
 .lab-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0 14px; }
+/* ส่งรับรอง / รับรอง / ตีกลับ come in their own .request-actions box; let them join this row so every button lines up. */
+.lab-actions > .request-actions { display: contents; }
 .lab-block { margin: 18px 0; }
 .lab-count { display: inline-block; min-width: 1.8em; border-radius: 999px; background: var(--accent-tint); color: var(--accent-strong); padding: 0 8px; font-size: .9rem; text-align: center; }
 .lab-doc-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
