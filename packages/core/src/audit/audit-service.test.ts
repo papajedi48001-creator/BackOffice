@@ -12,6 +12,13 @@ describe('AuditService', () => {
     expect(recorded).toEqual(['{"stage":"token"}', '{"method":"self"}']);
   });
 
+  it('keeps a module\'s from/to colour and icon, the default (null) included', async () => {
+    const recorded: string[] = [];
+    const service = new AuditService({ append: async (event) => { recorded.push(event.metadata); } }, () => 'audit-1');
+    await service.recordAudit({ actorPersonId: 'person-a', action: 'admin.module.appearance_changed', targetType: 'module', targetId: 'fleet', result: 'SUCCESS', metadata: { moduleCode: 'fleet', fromColor: null, toColor: '#be185d', fromIcon: null, toIcon: 'target' } });
+    expect(JSON.parse(recorded[0]!)).toEqual({ moduleCode: 'fleet', fromColor: null, toColor: '#be185d', fromIcon: null, toIcon: 'target' });
+  });
+
   it('keeps organization head identifiers and the unit type but drops a national ID', async () => {
     const recorded: string[] = [];
     const service = new AuditService({ append: async (event) => { recorded.push(event.metadata); } }, () => 'audit-1');
