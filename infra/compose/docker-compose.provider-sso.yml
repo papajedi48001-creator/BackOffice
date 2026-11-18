@@ -15,12 +15,20 @@ services:
       # portal's JWKS. Only the portal issuer and the audience (backoffice) are needed, never a portal secret.
       PROVIDER_SSO_ISSUER: ${PROVIDER_SSO_ISSUER:-https://aut-waritch-hosp.moph.go.th}
       PROVIDER_SSO_CLIENT_ID: ${PROVIDER_SSO_CLIENT_ID:-backoffice}
+      # The key that seals secrets typed on the web (HOSxP password, ThaID, Provider ID). It rides on this file because every
+      # .251 deploy uses it; docker-compose.sign-in-settings.yml alone was dropped by deploys that did not list it.
+      CONNECTION_SECRET_KEY_FILE: /run/secrets/connection_secret_key
     # The portal answers only inside the hospital, so its name is pinned to the LAN address instead of relying on DNS in Docker.
     extra_hosts:
       - "${PROVIDER_SSO_PORTAL_HOST:-aut-waritch-hosp.moph.go.th}:${PROVIDER_SSO_PORTAL_IP:-192.168.1.10}"
-    secrets: [provider_id_health_client_secret, provider_id_secret_key]
+    secrets: [provider_id_health_client_secret, provider_id_secret_key, connection_secret_key]
     # The web container calls moph.id.th and provider.id.th itself; the other networks are internal.
     networks: [egress]
+
+  worker:
+    environment:
+      CONNECTION_SECRET_KEY_FILE: /run/secrets/connection_secret_key
+    secrets: [connection_secret_key]
 
 networks:
   egress:
@@ -34,3 +42,6 @@ secrets:
     file: ${PROVIDER_ID_HEALTH_CLIENT_SECRET_FILE:?set PROVIDER_ID_HEALTH_CLIENT_SECRET_FILE}
   provider_id_secret_key:
     file: ${PROVIDER_ID_SECRET_KEY_FILE:?set PROVIDER_ID_SECRET_KEY_FILE}
+  # Created once by infra/scripts/setup-sign-in-settings.sh; never replace it, or every secret saved on the web becomes unreadable.
+  connection_secret_key:
+    file: ${CONNECTION_SECRET_KEY_FILE:-/etc/backoffice/secrets/connection_secret_key}

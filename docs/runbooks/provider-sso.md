@@ -147,7 +147,8 @@ endpoint ที่ใช้: `https://imauth.bora.dopa.go.th/api/v2/oauth2/auth/
 1. เจ้าของเครื่องรัน `sudo bash infra/scripts/setup-sign-in-settings.sh` ใน release ล่าสุด สคริปต์สร้างกุญแจ
    `/etc/backoffice/secrets/connection_secret_key` (root 0600) และเพิ่ม `CONNECTION_SECRET_KEY_FILE` ใน `/etc/backoffice/staging.env`
    รันซ้ำได้ กุญแจเดิมไม่ถูกเปลี่ยน (ถ้าเปลี่ยน secret ที่บันทึกไว้บนเว็บจะอ่านไม่ได้)
-2. เพิ่ม `-f infra/compose/docker-compose.sign-in-settings.yml` ต่อจาก `docker-compose.provider-sso.yml` ในคำสั่ง deploy
+2. ไม่ต้องเพิ่มไฟล์ compose: `docker-compose.provider-sso.yml` ที่ทุก deploy ของ .251 ใช้อยู่แล้วส่งกุญแจเข้า web และ worker เอง
+   (ค่าเริ่มต้น `/etc/backoffice/secrets/connection_secret_key`) deploy รอบถัดไปก็ได้กุญแจ `docker-compose.sign-in-settings.yml` ยังใช้ได้กับ deploy ที่ไม่มี Provider ID
 3. container web ต้องเรียก `imauth.bora.dopa.go.th` ได้ผ่าน network `egress` (ใช้ network เดียวกับ Provider ID)
 4. ต้องมี `NATIONAL_ID_ENCRYPTION_KEY` และ `NATIONAL_ID_LOOKUP_KEY` อยู่แล้ว ThaID ใช้ค่า lookup ของเลขบัตรหาบุคลากร
 
@@ -170,4 +171,4 @@ endpoint ที่ใช้: `https://imauth.bora.dopa.go.th/api/v2/oauth2/auth/
 | "ไม่พบเลขบัตรประชาชนนี้ในทะเบียนบุคลากร" | เลขบัตรในทะเบียน HR ไม่ตรงหรือยังไม่มีบุคลากรคนนี้ ให้แก้ที่งานบุคคล |
 | "ระบบ ThaID ไม่พร้อมใช้งาน" | container เรียก DOPA ไม่ถึง หรือ DOPA ขัดข้อง ดู log `thaid sign-in failed` |
 | "เข้าสู่ระบบด้วย ThaID ไม่สำเร็จ" | เกิน 10 นาที Client Secret ไม่ตรง หรือ Redirect URI ไม่ได้ลงทะเบียน ดู audit `identity.thaid_login` ช่อง `stage` |
-| หน้าตั้งค่าบอกว่าเก็บ Secret ไม่ได้ | ยังไม่ได้ทำข้อ 2 |
+| หน้าตั้งค่าบอกว่าเก็บ Secret ไม่ได้ | ยังไม่ได้ทำข้อ 1 หรือ deploy ล่าสุดไม่ได้ใช้ `docker-compose.provider-sso.yml` ตรวจด้วย `docker exec <web> sh -c 'echo $CONNECTION_SECRET_KEY_FILE'` |
