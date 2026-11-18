@@ -73,3 +73,6 @@ export class HosxpSettingsService {
     return { ok: true };
   }
 }
+
+/** The driver URL for a HOSxP connection. It holds the password, so it is built in memory only and never logged or returned. */
+export const hosxpConnectionUrl = (connection: HosxpConnection) => `mysql://${encodeURIComponent(connection.user)}:${encodeURIComponent(connection.password)}@${connection.host}:${connection.port}/${encodeURIComponent(connection.database)}?connectTimeout=5000&connectionLimit=1&dateStrings=true`;
