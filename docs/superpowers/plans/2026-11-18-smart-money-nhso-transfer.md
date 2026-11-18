@@ -156,11 +156,13 @@ The service checks `canManageMoney` and the page member. The write and its audit
 ### Task 8: Docs, screenshots, verification
 - [x] Update CONTEXT.md (เงินโอน สปสช., ชุดข้อมูล สปสช.) and the parent spec status.
 - [x] Take screenshots at 1280 and 390 px into `/mnt/project-files/smart-money/screens/`.
-- [ ] Run `pnpm lint && pnpm typecheck && pnpm test`, the integration tests with MariaDB, and `git diff --check`.
-- [ ] Do the whole-branch review, then open the PR.
+- [x] Run `pnpm lint && pnpm typecheck && pnpm test`, the integration tests with MariaDB, and `git diff --check`.
+- [x] Do the whole-branch review, then open the PR.
 
 ## Rulings during execution
 - Audit metadata uses the allowlisted `fiscalYear` key (not `fy`) and a new `datasets` key for ลบทั้งหมด; the spec's intent (ปีงบ and counts only) is kept.
 - `nhso-views.ts` (the numbers of each dashboard section) was written before its tests; the tests' expected values were worked out by hand and the report counts checked against the legacy `nhso-core.js` run in Node.
 - The files page is managers only (as the legacy upload page was admin only); members see the dashboard.
 - Keys with "ไม่สนตัวพิมพ์" on show in lower case (e.g. "hiv"), as on the legacy page.
+- Whole-branch review fixes: POST refuses a non-manager before reading the body and stops reading past 16 MB even without a length; a .zip may be up to 200 MB while each Excel file inside keeps the 10 MB limit (legacy parity); the 12 MB stored-table limit counts UTF-8 bytes; the integration test starts from an empty table.
+- Deferred minors: the `FOR UPDATE` gap lock can deadlock two managers uploading the same new hospital/ปีงบ at once (one gets an error and retries); schema errors (over 20,000 rows) show the generic message; a broken .zip says "อ่านไฟล์ไม่ได้" rather than the legacy zip wording.
