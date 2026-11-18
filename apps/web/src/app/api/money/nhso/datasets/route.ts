@@ -1,27 +1,11 @@
 import { NextResponse } from 'next/server';
 import { nhsoUploadSchema } from '@backoffice/contracts';
 import { canManageMoney, NhsoDatasetService } from '@backoffice/core';
-import { forbidden, moneyResult, withSessionAndDatabase } from '../../money-route';
+import { forbidden, moneyResult, readCapped, withSessionAndDatabase } from '../../money-route';
 
 /** A report of 20,000 rows × 80 short cells fits well under this; anything larger is refused before it is parsed. */
 const MAX_BODY = 16 * 1024 * 1024;
 const tooLarge = () => NextResponse.json({ error: 'TOO_LARGE', message: 'ไฟล์ใหญ่เกินไป' }, { status: 413 });
-
-/** The body as text, or null once it passes `limit` bytes; stops reading there, so a chunked body without a length cannot grow without bound. */
-async function readCapped(request: Request, limit: number): Promise<string | null> {
-  if (!request.body) return '';
-  const reader = request.body.getReader();
-  const parts: Uint8Array[] = [];
-  let size = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    size += value.byteLength;
-    if (size > limit) { await reader.cancel().catch(() => undefined); return null; }
-    parts.push(value);
-  }
-  return Buffer.concat(parts).toString('utf8');
-}
 
 /** ข้อมูลในระบบ: summaries for the files page, or every dataset with its rows (`?rows=1`) for the dashboard. */
 export async function GET(request: Request): Promise<Response> {
