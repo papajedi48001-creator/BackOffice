@@ -22,7 +22,7 @@ and `TtmService` like dental, a server page that summarises and hands the result
 - A service row with no vn → keyed `hn:<hn>:<date>`; items of unknown vn ignored.
 - Money with fractions shown with 2 decimals, whole numbers without.
 - HOSxP down / not configured → Thai message, no stack trace, driver code only in the log.
-- Range: invalid, reversed or > 1,830 days refused before any query.
+- Range: unreadable, B.E., reversed or > 1,830 days fixed the legacy way (today, swap, cut) before any query.
 
 ---
 

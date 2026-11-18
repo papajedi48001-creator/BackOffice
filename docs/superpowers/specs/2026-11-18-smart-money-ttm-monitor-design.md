@@ -20,7 +20,7 @@ page builds it from HOSxP; it is being retired, so BackOffice must give the same
    `TTM_AFTER_HOURS_FROM`, `TTM_KIND_MAP`, `TTM_RIGHT_MAP`) read from the server environment, empty = default, as legacy did.
    Round 6 (herb) reuses the herb list and สิทธิ groups.
 3. **Summary** (`TtmSummary::summarize`) ported exactly; parity checked against the PHP on a generated fixture.
-4. **Dashboard** in legacy order: date filter (ตั้งแต่/ถึง, default today, ≤ 1,830 days) with the 7 preset chips (วันนี้, เมื่อวาน,
+4. **Dashboard** in legacy order: date filter (ตั้งแต่/ถึง, default today; end defaults to start; reversed swapped; cut to 1,830 days; a B.E. year reads as unset) with the 7 preset chips (วันนี้, เมื่อวาน,
    เดือนนี้, เดือนที่แล้ว, ปีงบประมาณนี้, ปีงบที่แล้ว, 3 ปีงบย้อนหลัง), links to ตรวจสอบการจับคู่รหัส and ดาวน์โหลด Excel; banner
    "สรุปผลการดำเนินงาน(ประจำวัน)" with the date (`วันพฤหัสบดี ที่ 5 พฤศจิกายน 2569` for one day, `from – to` otherwise); the report
    table (ผู้รับบริการทั้งหมด, IPD, นอกเวลา rows with people under the money; one row per สิทธิ group, สิทธิอื่น ๆ only when used; OPD
