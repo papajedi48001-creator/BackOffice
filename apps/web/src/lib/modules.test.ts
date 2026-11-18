@@ -410,6 +410,23 @@ describe('Smart Money module', () => {
   });
 });
 
+describe('Mapping สิทธิ module', () => {
+  const mapping = () => moduleRegistry.find((entry) => entry.code === 'pttype-mapping')!;
+
+  it('registers pttype-mapping at /pttype-mapping as a live services module', () => {
+    expect(mapping()).toMatchObject({ href: '/pttype-mapping', status: 'live', group: 'services', labelKey: 'modulePttypeMapping', descriptionKey: 'modulePttypeMappingDescription', icon: 'link' });
+    expect(moduleCodeForPath('/pttype-mapping/history')).toBe('pttype-mapping');
+  });
+
+  it('shows the module and both sections to ผู้ดูแลระบบ and its ผู้จัดการ only', () => {
+    expect(hrefs(subject())).not.toContain('/pttype-mapping');
+    expect(hrefs(subject({ roles: [{ name: 'money-manager', organizationId: null }] }))).not.toContain('/pttype-mapping');
+    expect(hrefs(subject({ roles: [{ name: 'pttype-mapping-manager', organizationId: null }] }))).toContain('/pttype-mapping');
+    expect(sectionHrefs('pttype-mapping', subject({ roles: [{ name: 'admin', organizationId: null }] }))).toEqual(['/pttype-mapping/board', '/pttype-mapping/history']);
+    expect(sectionHrefs('pttype-mapping', subject())).toEqual([]);
+  });
+});
+
 describe('ระบบลงเวลา', () => {
   it('is live with settings, boxes and audit sections for the managers only', () => {
     expect(moduleRegistry.find((entry) => entry.code === 'attendance')).toMatchObject({ status: 'live', href: '/attendance', labelKey: 'moduleAttendance', icon: 'clock' });

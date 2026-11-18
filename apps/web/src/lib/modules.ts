@@ -1,5 +1,5 @@
 import type { AccessSubject, ModuleIconName, ModuleMode, MoneyPage } from '@backoffice/contracts';
-import { canManageLab, labCan, loadLabMember, LabQueries, type LabAction, canManageMoney, loadMoneyMember, moneyCan, canManageAttendance, canManageAttendanceDevices, canReadAttendanceAudit, canCommandMci, loadActor, mciCan, MciQueries, canDecideOwnRequest, AuthorizationService, FleetQueries, canUseModule, isAdmin, LeaveQueries, OfficialTravelQueries, RoomBookingQueries, canManageFleet, canManageLeave, canManageTravel, hasOpenRequestWork, listPendingApprovals } from '@backoffice/core';
+import { canManageLab, labCan, loadLabMember, LabQueries, type LabAction, canManageMoney, loadMoneyMember, moneyCan, canManagePttypeMapping, canManageAttendance, canManageAttendanceDevices, canReadAttendanceAudit, canCommandMci, loadActor, mciCan, MciQueries, canDecideOwnRequest, AuthorizationService, FleetQueries, canUseModule, isAdmin, LeaveQueries, OfficialTravelQueries, RoomBookingQueries, canManageFleet, canManageLeave, canManageTravel, hasOpenRequestWork, listPendingApprovals } from '@backoffice/core';
 import type { Database } from '@backoffice/db';
 import { t, type MessageKey } from '@backoffice/i18n';
 import type { NavigationItem } from '../components/app-shell';
@@ -203,6 +203,11 @@ export const moduleRegistry: readonly ModuleEntry[] = [
     { href: '/money/dental', labelKey: 'moneyDental', visible: everyone, available: moneyMay('dental') },
     { href: '/money/settings', labelKey: 'moneySettings', visible: everyone, available: moneyMay('manage') }
   ]), available: moneyMay('any') },
+  // Mapping สิทธิ: ผู้ดูแลระบบ and ผู้จัดการโมดูล only; every page and API checks canManagePttypeMapping again.
+  withSections({ code: 'pttype-mapping', href: '/pttype-mapping', labelKey: 'modulePttypeMapping', descriptionKey: 'modulePttypeMappingDescription', icon: 'link', group: 'services', status: 'live' }, [
+    { href: '/pttype-mapping/board', labelKey: 'pttypeMappingBoard', visible: canManagePttypeMapping },
+    { href: '/pttype-mapping/history', labelKey: 'pttypeMappingHistory', visible: canManagePttypeMapping }
+  ]),
   // ผู้ดูแลระบบ only. A new admin page is one more section here and one page under app/(app)/admin.
   withSections({ code: 'admin', href: '/admin', labelKey: 'moduleAdmin', descriptionKey: 'moduleAdminDescription', icon: 'settings', group: 'governance', status: 'live' }, [
     { href: '/admin/connections', labelKey: 'adminConnections', visible: isAdmin },

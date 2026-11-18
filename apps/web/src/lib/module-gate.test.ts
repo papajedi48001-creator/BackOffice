@@ -11,6 +11,8 @@ describe('module gate', () => {
     expect(moduleForPath('/api/lab/usages')).toBe('lab-inventory');
     expect(moduleForPath('/money/dental')).toBe('smart-money');
     expect(moduleForPath('/api/money/members')).toBe('smart-money');
+    expect(moduleForPath('/pttype-mapping/history')).toBe('pttype-mapping');
+    expect(moduleForPath('/api/pttype-mapping/89')).toBe('pttype-mapping');
     expect(moduleForPath('/rooms')).toBe('room-booking');
     expect(moduleForPath('/api/rooms/bookings/x')).toBe('room-booking');
     expect(moduleForPath('/api/travel')).toBe('official-travel');
