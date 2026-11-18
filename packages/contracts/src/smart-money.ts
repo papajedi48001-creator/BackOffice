@@ -52,3 +52,34 @@ export type DpUpload = z.infer<typeof dpUploadSchema>;
 /** ลบข้อมูล Point ฟื้นฟูผู้พิการ of one ปีงบ (พ.ศ.). */
 export const dpRemoveSchema = z.object({ fy: z.number().int().min(2500).max(2700) }).strict();
 export type DpRemove = z.infer<typeof dpRemoveSchema>;
+
+// monitor แพทย์แผนไทย labels (here so client components can show them; the rules live in core `ttm-rules`).
+/** กลุ่มสิทธิ in the order of the กลุ่มงาน daily report. */
+export const TTM_RIGHT_GROUPS = {
+  ofc: 'สิทธิข้าราชการ',
+  lgo: 'สิทธิ อปท.ท้องถิ่น',
+  uc: 'บัตรทอง (UC)',
+  cash: 'ชำระเงินเอง',
+  sss: 'ประกันสังคม',
+  receipt: 'เบิกได้ (ออกใบเสร็จ)',
+  other: 'สิทธิอื่น ๆ'
+} as const;
+export type TtmRightGroup = keyof typeof TTM_RIGHT_GROUPS;
+
+/** หมวดค่าใช้จ่าย: the charge lines of a แพทย์แผนไทย visit that count; any other line is not counted. */
+export const TTM_CATEGORIES = { massage: 'ค่านวด/ประคบ/อบ/หัตถการ', herb: 'ค่ายาสมุนไพร', opd_fee: 'ค่าบริการผู้ป่วยนอก' } as const;
+export type TtmCategory = keyof typeof TTM_CATEGORIES;
+
+/** รายบริการ: massage lines split by kind, plus ยาสมุนไพร and the OPD fee. */
+export const TTM_KINDS = {
+  thai_massage: 'นวด',
+  compress: 'ประคบ',
+  steam: 'อบสมุนไพร',
+  knee: 'พอกเข่า/พอกยา',
+  postpartum: 'ดูแลหลังคลอด',
+  other_proc: 'หัตถการอื่น ๆ',
+  herb: 'จ่ายยาสมุนไพร',
+  opd_fee: 'ค่าบริการผู้ป่วยนอก'
+} as const;
+export type TtmKind = keyof typeof TTM_KINDS;
+export type TtmProcedureKind = Exclude<TtmKind, 'herb' | 'opd_fee'>;

@@ -207,6 +207,7 @@ export const moduleRegistry: readonly ModuleEntry[] = [
     { href: '/money/fdh/files', labelKey: 'moneyFdhFiles', visible: everyone, available: moneyMay('manage') },
     { href: '/money/disability', labelKey: 'moneyDisability', visible: everyone, available: moneyMay('disability') },
     { href: '/money/disability/files', labelKey: 'moneyDisabilityFiles', visible: everyone, available: moneyMay('manage') },
+    { href: '/money/ttm', labelKey: 'moneyTtm', visible: everyone, available: moneyMay('ttm') },
     { href: '/money/settings', labelKey: 'moneySettings', visible: everyone, available: moneyMay('manage') }
   ]), available: moneyMay('any') },
   // Mapping สิทธิ: ผู้ดูแลระบบ and ผู้จัดการโมดูล only; every page and API checks canManagePttypeMapping again.
