@@ -209,9 +209,9 @@ export function ttmRules(custom: TtmSettings = {}): TtmRules {
   if (custom.after_hours_from !== undefined && String(custom.after_hours_from).trim() !== '') rules.afterHoursFrom = String(custom.after_hours_from).trim();
   if (custom.auto_detect !== undefined) rules.autoDetect = phpBool(custom.auto_detect) ?? rules.autoDetect;
   const rightMap = custom.right_map === undefined ? {} : pairs(list(custom.right_map));
-  rules.rightMap = Object.fromEntries(Object.entries(rightMap).filter(([, group]) => group in TTM_RIGHT_GROUPS)) as Record<string, TtmRightGroup>;
+  rules.rightMap = Object.fromEntries(Object.entries(rightMap).filter(([, group]) => Object.hasOwn(TTM_RIGHT_GROUPS, group))) as Record<string, TtmRightGroup>;
   const kindMap = { ...defaultKindMap(), ...(custom.kind_map === undefined ? {} : pairs(list(custom.kind_map))) };
-  rules.kindMap = Object.fromEntries(Object.entries(kindMap).filter(([, kind]) => kind in TTM_KINDS)) as Record<string, TtmKind>;
+  rules.kindMap = Object.fromEntries(Object.entries(kindMap).filter(([, kind]) => Object.hasOwn(TTM_KINDS, kind))) as Record<string, TtmKind>;
   return rules;
 }
 
@@ -241,7 +241,7 @@ export function classifyTtmItem(item: Pick<TtmItem, 'icode' | 'income' | 'income
 export function ttmKind(item: Pick<TtmItem, 'icode' | 'itemName'>, category: TtmCategory | null, rules: TtmRules): TtmKind | null {
   if (category === null) return null;
   if (category !== 'massage') return category;
-  const mapped = rules.kindMap[String(item.icode)];
+  const mapped = Object.hasOwn(rules.kindMap, String(item.icode)) ? rules.kindMap[String(item.icode)] : undefined;
   if (mapped && mapped !== 'herb' && mapped !== 'opd_fee') return mapped;
   for (const [kind, words] of KIND_KEYWORDS) if (hasAny(item.itemName ?? '', words)) return kind;
   return 'other_proc';
@@ -255,12 +255,13 @@ const BY_NAME: readonly (readonly [string, TtmRightGroup])[] = [['ข้าร�
 
 /** กลุ่มสิทธิ of a pttype: configured map → name (ใบเสร็จ, ชำระเงิน) → hipdata_code → broader name → other (legacy `rightGroup`). */
 export function ttmRightGroup(pttype: string, name: string, hipdata: string, rules: TtmRules): TtmRightGroup {
-  const mapped = rules.rightMap[pttype];
+  const mapped = Object.hasOwn(rules.rightMap, pttype) ? rules.rightMap[pttype] : undefined;
   if (mapped) return mapped;
   if (pttype === '' && name === '' && hipdata === '') return 'other';
   if (hasAny(name, ['ใบเสร็จ'])) return 'receipt';
   if (hasAny(name, ['ชำระเงิน', 'เงินสด', 'จ่ายเอง', 'ชำระเอง'])) return 'cash';
-  const byHip = BY_HIPDATA[hipdata.trim().toUpperCase()];
+  const hip = hipdata.trim().toUpperCase();
+  const byHip = Object.hasOwn(BY_HIPDATA, hip) ? BY_HIPDATA[hip] : undefined;
   if (byHip) return byHip;
   for (const [word, group] of BY_NAME) if (hasAny(name, [word])) return group;
   return 'other';

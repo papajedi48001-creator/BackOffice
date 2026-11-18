@@ -119,3 +119,13 @@ describe('ttmKind', () => {
     expect(ttmFiscalYear('2026-09-30')).toBe(2569);
   });
 });
+
+describe('settings with names every object has', () => {
+  it('ignores a group or kind that is not one of the legacy keys', () => {
+    const odd = ttmRules({ right_map: '10:constructor,11:toString', kind_map: '3015001:constructor' });
+    expect(odd.rightMap).toEqual({});
+    expect(odd.kindMap['3015001']).toBeUndefined(); // legacy: the bad pair replaces the default, then is filtered out
+    expect(ttmRightGroup('constructor', '', '', rules)).toBe('other');
+    expect(ttmKind(it_({ icode: 'constructor', itemName: 'xx' }), 'massage', rules)).toBe('other_proc');
+  });
+});

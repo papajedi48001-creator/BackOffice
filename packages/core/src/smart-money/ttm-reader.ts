@@ -1,4 +1,4 @@
-import { createDatabase } from '@backoffice/db';
+import { createDatabase, type Database } from '@backoffice/db';
 import { hosxpConnectionUrl } from '../holidays/hosxp-settings-service';
 import type { TtmReader } from './ttm-service';
 import type { TtmItem } from './ttm-rules';
@@ -50,6 +50,20 @@ export function isTtmReadOnlySql(sql: string): boolean {
   return !/\b(INSERT|UPDATE|DELETE|REPLACE|ALTER|DROP|CREATE|TRUNCATE|GRANT|RENAME|LOCK|CALL|INTO\s+OUTFILE)\b/.test(text);
 }
 
+/**
+ * Runs `work` in a READ ONLY transaction. A server too old to parse `SET TRANSACTION READ ONLY` (MySQL < 5.6.5, MariaDB < 10.0, still
+ * common under HOSxP) gets a plain transaction instead, as the legacy page carried on; the SELECT text guard still applies.
+ */
+export async function withReadOnlyFallback<T>(database: Pick<Database, 'transaction'>, work: (tx: Database) => Promise<T>): Promise<T> {
+  try {
+    return await database.transaction(work, { readOnly: true });
+  } catch (error) {
+    if ((error as { code?: unknown } | null)?.code !== 'ER_PARSE_ERROR') throw error;
+    console.error('[smart-money] ttm HOSxP read-only transaction not supported', 'ER_PARSE_ERROR');
+    return database.transaction(work);
+  }
+}
+
 type Raw = Record<string, unknown>;
 const text = (value: unknown) => fixThaiText(value === null || value === undefined ? '' : String(value));
 const plain = (value: unknown) => (value === null || value === undefined ? '' : String(value));
@@ -61,7 +75,7 @@ const plain = (value: unknown) => (value === null || value === undefined ? '' : 
 export const readTtm: TtmReader = async (connection, start, end) => {
   const hosxp = createDatabase(hosxpConnectionUrl(connection));
   try {
-    return await hosxp.transaction(async (tx) => {
+    return await withReadOnlyFallback(hosxp, async (tx) => {
       const select = (sql: string) => {
         if (!isTtmReadOnlySql(sql)) throw new Error('ttm: only SELECT is allowed');
         return tx.query<Raw>(sql, [start, end]);
@@ -79,6 +93,6 @@ export const readTtm: TtmReader = async (connection, start, end) => {
           isDrug: Number(row.is_drug) === 1, qty: Number(row.qty ?? 0), amount: Number(row.amount ?? 0)
         }))
       };
-    }, { readOnly: true });
+    });
   } finally { await hosxp.close(); }
 };

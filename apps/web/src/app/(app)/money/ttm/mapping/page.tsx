@@ -19,7 +19,7 @@ export default async function TtmMappingPage({ searchParams }: { searchParams: P
   const s = outcome.kind === 'data' ? outcome.summary : null;
   return <section className="money-ttm">
     <h2>{TITLE}</h2>
-    <TtmFilter path="/money/ttm/mapping" start={start} end={end} presets={presets}>
+    <TtmFilter key={`${start}|${end}`} path="/money/ttm/mapping" start={start} end={end} presets={presets}>
       <Link className="button-secondary" href={`/money/ttm?${query}`}>← กลับ dashboard</Link>
     </TtmFilter>
     <p className="money-period">หน้านี้แสดงว่าระบบนับรายการไหนเป็นหมวดไหน ใช้เทียบกับรายงานประจำวันของกลุ่มงาน ถ้าไม่ตรงให้ผู้ดูแลระบบตั้งค่า <code>TTM_*</code> ในค่าตั้งของเซิร์ฟเวอร์แล้วเริ่มระบบใหม่ · ระบบอ่านข้อมูลจาก HOSxP อย่างเดียว ไม่แก้ไขฐานข้อมูล</p>

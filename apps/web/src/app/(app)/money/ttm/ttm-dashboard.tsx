@@ -25,7 +25,7 @@ export function TtmDashboard({ start, end, presets, periodText, afterFrom, showC
   const query = new URLSearchParams({ start, end }).toString();
   return <section className="money-ttm">
     <h2 className="visually-hidden">monitor แพทย์แผนไทย</h2>
-    <TtmFilter path="/money/ttm" start={start} end={end} presets={presets}>
+    <TtmFilter key={`${start}|${end}`} path="/money/ttm" start={start} end={end} presets={presets}>
       <Link className="button-secondary" href={`/money/ttm/mapping?${query}`}>ตรวจสอบการจับคู่รหัส</Link>
       {summary && summary.visits > 0 && <button type="button" className="button-secondary" onClick={() => void downloadTtmExport(ttmExport(summary, { start, end, period: periodText, afterFrom, matrixRows: ttmMatrixRows(summary.matrix) }), start, end)}>ดาวน์โหลด Excel</button>}
     </TtmFilter>
@@ -39,7 +39,7 @@ export function TtmDashboard({ start, end, presets, periodText, afterFrom, showC
         : <p className="money-alert" role="alert">ดึงข้อมูลจาก HOSxP ไม่สำเร็จ ลองใหม่อีกครั้ง</p>)
       : summary!.visits === 0
         ? <p className="money-empty">ไม่พบผู้รับบริการแพทย์แผนไทยในช่วงวันที่ที่เลือก</p>
-        : <TtmBody summary={summary!} start={start} end={end} single={single} afterFrom={afterFrom} query={query} />}
+        : <TtmBody key={`${start}|${end}`} summary={summary!} start={start} end={end} single={single} afterFrom={afterFrom} query={query} />}
   </section>;
 }
 

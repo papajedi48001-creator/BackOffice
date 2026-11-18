@@ -80,4 +80,14 @@ describe('TtmDashboard', () => {
     render(<TtmDashboard {...base} outcome={{ kind: 'error', code: 'HOSXP_FAILED' }} />);
     expect(screen.getByRole('alert')).toHaveTextContent('ดึงข้อมูลจาก HOSxP ไม่สำเร็จ');
   });
+
+  it('resets the date boxes, period view and search when the range changes (a preset chip)', () => {
+    const { rerender } = render(<TtmDashboard {...base} />);
+    fireEvent.change(screen.getByLabelText('ค้นหาผู้รับบริการ'), { target: { value: 'แพทย์แผนไทย ข' } });
+    fireEvent.click(screen.getByRole('button', { name: 'รายปีงบ' }));
+    rerender(<TtmDashboard {...base} start="2025-01-01" end="2026-11-06" />);
+    expect(document.querySelector('form.money-date-filter')!.textContent + [...document.querySelectorAll('form.money-date-filter input')].map((i) => (i as HTMLInputElement).value).join('|')).toContain('2568');
+    expect(screen.getByLabelText('ค้นหาผู้รับบริการ')).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'รายเดือน' })).toHaveAttribute('aria-pressed', 'true');
+  });
 });
