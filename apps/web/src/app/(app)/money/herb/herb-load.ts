@@ -8,7 +8,7 @@ import { ttmSettingsFromEnv } from '../../../../lib/money/ttm-config';
 import { readRuntimeValue } from '../../../../lib/runtime-env';
 
 /** REP state for รับจริง: how many REP files there are, or that they cannot be opened without the key. */
-export type HerbRepState = { kind: 'files'; count: number } | { kind: 'not-configured' };
+export type HerbRepState = { kind: 'files'; count: number; unreadable: number } | { kind: 'not-configured' };
 export type HerbOutcome = { kind: 'data'; summary: HerbSummary; rep: HerbRepState } | { kind: 'error'; code: 'NOT_CONFIGURED' | 'HOSXP_FAILED' };
 export type HerbPageData = { start: string; end: string; presets: TtmPreset[]; periodText: string; pointBaht: number | null; outcome: HerbOutcome };
 
@@ -24,7 +24,7 @@ export async function loadHerbPage(database: Database, subject: AccessSubject, p
   if (!loaded.ok) return { ...base, outcome: { kind: 'error', code: loaded.code } };
   const reps = await new FdhDocumentService(database, getNationalIdProtector()).herbRep(subject);
   const docs = reps.ok ? reps.docs : [];
-  const rep: HerbRepState = reps.ok || reps.code === 'FORBIDDEN' ? { kind: 'files', count: docs.length } : { kind: 'not-configured' };
+  const rep: HerbRepState = reps.ok || reps.code === 'FORBIDDEN' ? { kind: 'files', count: docs.length, unreadable: reps.ok ? reps.unreadable : 0 } : { kind: 'not-configured' };
   const summary = summarizeHerb(loaded.rows, rules, docs.length > 0 ? herbReceivedFromRep(docs) : null);
   return { ...base, outcome: { kind: 'data', summary, rep } };
 }

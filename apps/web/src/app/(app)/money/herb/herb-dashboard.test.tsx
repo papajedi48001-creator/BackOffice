@@ -9,7 +9,7 @@ import { HerbDashboard, type HerbDashboardProps } from './herb-dashboard';
 const row = (o: Partial<HerbRow> = {}): HerbRow => ({ rxdate: '2026-11-05', vn: 'v1', an: '', hn: 'h1', icode: '1520003', drugName: 'ฟ้าทะลายโจร 400 mg.', units: 'cap', qty: 10, sumPrice: 20, unitcost: 1.5, stdprice: 2, pttype: '89', pttypeName: 'UC', hipdata: 'UCS', ...o });
 const rows = [row(), row({ vn: 'v2', hn: 'h2', icode: '1560021', drugName: 'เลือดงาม', qty: 42, unitcost: 0.66, stdprice: 1 }), row({ vn: 'v3', hn: 'h3', pttype: '10', pttypeName: 'ข้าราชการ', hipdata: 'OFC', rxdate: '2026-11-06' })];
 const withRep = summarizeHerb(rows, herbRules(), new Map([['v1|1520003', 92]]));
-const base: HerbDashboardProps = { start: '2026-11-05', end: '2026-11-06', presets: ttmPresets('2026-11-18'), periodText: '5 พฤศจิกายน 2569 – 6 พฤศจิกายน 2569', pointBaht: null, canUpload: false, showConnectionLink: false, outcome: { kind: 'data', summary: withRep, rep: { kind: 'files', count: 2 } } };
+const base: HerbDashboardProps = { start: '2026-11-05', end: '2026-11-06', presets: ttmPresets('2026-11-18'), periodText: '5 พฤศจิกายน 2569 – 6 พฤศจิกายน 2569', pointBaht: null, canUpload: false, showConnectionLink: false, outcome: { kind: 'data', summary: withRep, rep: { kind: 'files', count: 2, unreadable: 0 } } };
 
 describe('HerbDashboard', () => {
   it('shows the five cards with รับจริง from REP and the unconverted points', () => {
@@ -39,7 +39,7 @@ describe('HerbDashboard', () => {
   });
 
   it('shows รอ REP before any REP and the upload link to those who may upload', () => {
-    render(<HerbDashboard {...base} canUpload outcome={{ kind: 'data', summary: summarizeHerb(rows, herbRules(), null), rep: { kind: 'files', count: 0 } }} />);
+    render(<HerbDashboard {...base} canUpload outcome={{ kind: 'data', summary: summarizeHerb(rows, herbRules(), null), rep: { kind: 'files', count: 0, unreadable: 0 } }} />);
     expect(screen.getAllByRole('link', { name: 'อัปโหลด REP' })[0]).toHaveAttribute('href', '/money/fdh/files');
     expect(within(screen.getByRole('region', { name: 'สรุป' })).getByText('รับจริง (REP)').parentElement).toHaveTextContent('รอ REPยังไม่มีไฟล์');
     expect(within(screen.getByRole('table', { name: 'สรุปตามสิทธิการรักษา' })).getAllByText('รอ REP').length).toBeGreaterThan(0);
@@ -57,11 +57,23 @@ describe('HerbDashboard', () => {
   });
 
   it('says when nothing was dispensed or HOSxP failed', () => {
-    const { rerender } = render(<HerbDashboard {...base} outcome={{ kind: 'data', summary: summarizeHerb([], herbRules(), null), rep: { kind: 'files', count: 0 } }} />);
+    const { rerender } = render(<HerbDashboard {...base} outcome={{ kind: 'data', summary: summarizeHerb([], herbRules(), null), rep: { kind: 'files', count: 0, unreadable: 0 } }} />);
     expect(screen.getByText('ไม่พบการจ่ายยาสมุนไพรในช่วงวันที่ที่เลือก')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'ดาวน์โหลด Excel' })).toBeNull();
     rerender(<HerbDashboard {...base} outcome={{ kind: 'error', code: 'HOSXP_FAILED' }} />);
     expect(screen.getByRole('alert')).toHaveTextContent('ดึงข้อมูลจาก HOSxP ไม่สำเร็จ');
+  });
+
+  it('warns about REP files it could not open', () => {
+    render(<HerbDashboard {...base} outcome={{ kind: 'data', summary: withRep, rep: { kind: 'files', count: 2, unreadable: 1 } }} />);
+    expect(within(screen.getByRole('region', { name: 'สรุป' })).getByText('1 ไฟล์เปิดไม่ได้ ติดต่อผู้ดูแลระบบ')).toBeInTheDocument();
+  });
+
+  it('renders without duplicate React keys', () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    render(<HerbDashboard {...base} />);
+    expect(errors.mock.calls.some((call) => String(call[0]).includes('same key'))).toBe(false);
+    errors.mockRestore();
   });
 
   it('starts the search again when the range changes', () => {

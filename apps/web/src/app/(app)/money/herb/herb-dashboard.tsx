@@ -23,7 +23,7 @@ export function HerbDashboard({ start, end, presets, periodText, pointBaht, canU
   const summary = outcome.kind === 'data' ? outcome.summary : null;
   const hasData = summary !== null && summary.totals.visits > 0;
   return <section className="money-ttm money-herb">
-    <TtmFilter key={`${start}|${end}`} path="/money/herb" start={start} end={end} presets={presets}>
+    <TtmFilter key={`filter-${start}|${end}`} path="/money/herb" start={start} end={end} presets={presets}>
       {canUpload && <Link className="button-secondary" href={UPLOAD} title="ไฟล์ REP ใช้ร่วมกับหน้าติดตามกองทุนย่อย FDH">อัปโหลด REP</Link>}
       {hasData && <button type="button" className="button-secondary" onClick={() => void downloadHerbExport(herbExport(summary, periodText), start, end)}>ดาวน์โหลด Excel</button>}
     </TtmFilter>
@@ -37,7 +37,7 @@ export function HerbDashboard({ start, end, presets, periodText, pointBaht, canU
         : <p className="money-alert" role="alert">ดึงข้อมูลจาก HOSxP ไม่สำเร็จ ลองใหม่อีกครั้ง</p>)
       : !hasData
         ? <p className="money-empty">ไม่พบการจ่ายยาสมุนไพรในช่วงวันที่ที่เลือก</p>
-        : <HerbBody key={`${start}|${end}`} summary={summary} rep={outcome.rep} pointBaht={pointBaht} canUpload={canUpload} />}
+        : <HerbBody key={`body-${start}|${end}`} summary={summary} rep={outcome.rep} pointBaht={pointBaht} canUpload={canUpload} />}
   </section>;
 }
 
@@ -64,7 +64,8 @@ function HerbBody({ summary: s, rep, pointBaht, canUpload }: { summary: HerbSumm
           ? 'ยังไม่ได้ตั้งค่ากุญแจเข้ารหัสข้อมูลผู้ป่วย เปิดไฟล์ REP ไม่ได้'
           : rep.count > 0
             ? `${herbCount(t.receivedVisits)} ครั้งที่พบใน REP · จาก ${herbCount(rep.count)} ไฟล์`
-            : <>ยังไม่มีไฟล์{canUpload && <> · <Link href={UPLOAD}>อัปโหลด REP</Link></>}</>}</small></div>
+            : <>ยังไม่มีไฟล์{canUpload && <> · <Link href={UPLOAD}>อัปโหลด REP</Link></>}</>}
+          {rep.kind === 'files' && rep.unreadable > 0 && <span className="herb-warn">{`${herbCount(rep.unreadable)} ไฟล์เปิดไม่ได้ ติดต่อผู้ดูแลระบบ`}</span>}</small></div>
       <div className="money-kpi"><span>คาดการณ์ ontop (ชดเชยยาสมุนไพร · UC)</span><strong>{ttmBaht(t.ontop)} <em>บาท</em></strong><small>{points ? `${points} (ยังไม่แปลงเป็นบาท)` : 'เฉพาะสิทธิ UC · ชดเชยต่อครั้ง × จำนวนครั้ง'}</small></div>
     </section>
     <HerbDrugChart drugs={s.drugs} />

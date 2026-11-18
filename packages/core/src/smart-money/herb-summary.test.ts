@@ -90,6 +90,10 @@ describe('summarizeHerb', () => {
     expect(summarizeHerb(pts, rules, null).drugs[0]?.ontopRate?.points).toBe(264.5);
   });
 
+  it('pays UC ontop once for an admission that spans two VNs', () => {
+    expect(summarizeHerb([row({ vn: 'a', an: 'AN1' }), row({ vn: 'b', an: 'AN1', rxdate: '2026-11-06' })], rules, null).totals).toMatchObject({ visits: 1, ontop: 92 });
+  });
+
   it('handles no rows', () => {
     const empty = summarizeHerb([], rules, null);
     expect(empty.totals.visits).toBe(0);

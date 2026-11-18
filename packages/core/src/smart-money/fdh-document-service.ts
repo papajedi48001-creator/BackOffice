@@ -124,7 +124,7 @@ export class FdhDocumentService {
    * การจ่ายยาสมุนไพร: each REP reduced to what its รับจริง reads (TRAN_ID, SEQ, กองทุนย่อย, and Data Drug icode/type/paid); no PID or
    * name leaves the store for that page. Members with the `herb` or `fdh` page and Smart Money managers may read it.
    */
-  async herbRep(subject: AccessSubject): Promise<{ ok: true; docs: HerbRepDoc[] } | Denied | { ok: false; code: 'NOT_CONFIGURED'; message: string }> {
+  async herbRep(subject: AccessSubject): Promise<{ ok: true; docs: HerbRepDoc[]; unreadable: number } | Denied | { ok: false; code: 'NOT_CONFIGURED'; message: string }> {
     if (!subject.personId) return { ok: false, code: 'FORBIDDEN' };
     if (!canManageMoney(subject)) {
       const member = await loadMoneyMember(this.database, subject.personId);
@@ -132,15 +132,23 @@ export class FdhDocumentService {
     }
     const rows = await this.database.query<Row>(`SELECT ${COLUMNS}, document_ciphertext FROM money_fdh_document WHERE kind = 'rep'`);
     if (rows.length && !this.cipher) return { ok: false, code: 'NOT_CONFIGURED', message: MESSAGE_NOT_CONFIGURED };
-    const docs = [...rows].sort((a, b) => byteOrder(a.doc_no, b.doc_no)).map((row): HerbRepDoc => {
-      const rep = JSON.parse(unpackFdhDocument(this.cipher!.decrypt(row.document_ciphertext ?? ''))) as FdhRep;
-      return {
+    const docs: HerbRepDoc[] = [];
+    let unreadable = 0;
+    for (const row of [...rows].sort((a, b) => byteOrder(a.doc_no, b.doc_no))) {
+      let rep: FdhRep;
+      try {
+        rep = JSON.parse(unpackFdhDocument(this.cipher!.decrypt(row.document_ciphertext ?? ''))) as FdhRep;
+      } catch {
+        unreadable += 1; // a damaged row or a changed key: the page still shows HOSxP numbers and says how many files could not be read
+        continue;
+      }
+      docs.push({
         doc_no: rep.doc_no, report_date: rep.report_date,
         cases: (rep.cases ?? []).map((item) => ({ tran_id: item.tran_id, seq: item.seq, sub_fund: item.sub_fund })),
         drugs: (rep.drugs ?? []).map((drug) => ({ tran_id: drug.tran_id, icode: drug.icode, type: drug.type, paid: drug.paid }))
-      };
-    });
-    return { ok: true, docs };
+      });
+    }
+    return { ok: true, docs, unreadable };
   }
 
   async remove(subject: AccessSubject, kind: FdhKind, docNo: string): Promise<{ ok: true } | Denied | { ok: false; code: 'NOT_FOUND' }> {

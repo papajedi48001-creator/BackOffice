@@ -1518,7 +1518,8 @@ h2.chat-window-title { cursor: default; }
 .herb-kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
 .herb-kpis .money-kpi strong { font-size: 1.35rem; }
 .ttm-tag.is-herb { background: #e7f3e2; color: var(--ttm-herb); font-weight: 600; }
-.herb-rights td small, .herb-rights th small, .money-herb td.money-number small { display: block; }
+.herb-rights td.money-number small, .herb-rights th small { display: block; }
+.herb-kpis .herb-warn { display: block; color: #b45309; font-weight: 600; }
 .herb-rights .herb-drug-row td { font-size: .9rem; background: var(--surface-muted, #f8fafc); }
 .herb-rights .herb-drug-row td:first-child { padding-left: 32px; }
 .herb-rights .herb-drug-row td:first-child small { display: inline; color: var(--muted); }

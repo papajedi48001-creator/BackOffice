@@ -67,7 +67,7 @@ describeWithDatabase('FdhDocumentService against MariaDB', () => {
 
   it('gives การจ่ายยาสมุนไพร only what it reads of each REP, never PID or names', async () => {
     const herb = await service.herbRep(subject(herbViewer, null));
-    expect(herb).toEqual({ ok: true, docs: [{ doc_no: REP_NO, report_date: '2026-11-06', drugs: [], cases: [
+    expect(herb).toEqual({ ok: true, unreadable: 0, docs: [{ doc_no: REP_NO, report_date: '2026-11-06', drugs: [], cases: [
       { tran_id: '835483474', seq: '691028070326', sub_fund: 'OPAE,OPAE-DRUG' }, { tran_id: '835476654', seq: '691001000076', sub_fund: '' }
     ] }] });
     expect(JSON.stringify(herb)).not.toContain('1000000000001');
@@ -76,6 +76,14 @@ describeWithDatabase('FdhDocumentService against MariaDB', () => {
     expect(await service.herbRep(subject(outsider, null))).toEqual({ ok: false, code: 'FORBIDDEN' });
     expect(await service.all(subject(herbViewer, null))).toEqual({ ok: false, code: 'FORBIDDEN' });
     expect(await new FdhDocumentService(database, null).herbRep(subject(herbViewer, null))).toMatchObject({ ok: false, code: 'NOT_CONFIGURED' });
+  });
+
+  it('skips a REP it cannot open and counts it, instead of failing the page', async () => {
+    await database.execute("INSERT INTO money_fdh_document (kind, doc_no, hcode, hname, period, report_date, file_name, item_count, money_sum, document_ciphertext, uploaded_at, uploaded_by) VALUES ('rep', 'zz-broken', NULL, '', '', NULL, 'b.xls', 0, 0, 'not-a-ciphertext', UTC_TIMESTAMP(), ?)", [manager]);
+    const herb = await service.herbRep(subject(herbViewer, null));
+    expect(herb.ok && herb.docs.map((doc) => doc.doc_no)).toEqual([REP_NO]);
+    expect(herb.ok && herb.unreadable).toBe(1);
+    await database.execute("DELETE FROM money_fdh_document WHERE doc_no = 'zz-broken'");
   });
 
   it('removes one document, then all of one kind, with audit', async () => {
