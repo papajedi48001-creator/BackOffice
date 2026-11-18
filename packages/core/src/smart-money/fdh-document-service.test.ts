@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { AccessSubject } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
-import { FdhDocumentService, type FdhCipher } from './fdh-document-service';
+import { FdhDocumentService, packFdhDocument, unpackFdhDocument, type FdhCipher } from './fdh-document-service';
 
 const untouched = new Proxy({}, { get: () => { throw new Error('database touched'); } }) as Database;
 const cipher: FdhCipher = { encrypt: (text) => `enc:${text}`, decrypt: (text) => text.slice(4) };
@@ -23,5 +23,22 @@ describe('FdhDocumentService.upload', () => {
 
   it('returns the legacy message for a workbook that is neither REP nor STM, without touching the database', async () => {
     expect(await new FdhDocumentService(untouched, cipher).upload(manager, { fileName: 'a.xls', sheets })).toEqual({ ok: false, code: 'INVALID_REPORT', message: 'ไฟล์นี้ไม่ใช่ REP หรือ STM ของ FDH' });
+  });
+});
+
+describe('packFdhDocument', () => {
+  it('compresses the parsed document so a 30,000-row STM fits the stored size, and unpacks it again', () => {
+    const row = { kind: 'normal', rep_no: '691100011', tran_id: '835483474', hn: '000000001', pid: '1000000000001', name: 'นาย ทดสอบ หนึ่ง', visit_date: '2026-10-28', op: 0, fs: 80, total: 80, seq: '700100' };
+    const json = JSON.stringify({ type: 'stm', rows: Array.from({ length: 30000 }, (_, at) => ({ ...row, seq: String(700100 + at), tran_id: String(835483474 + at) })) });
+    expect(Buffer.byteLength(json, 'utf8')).toBeGreaterThan(10 * 1024 * 1024 / 2);
+    const packed = packFdhDocument(json);
+    expect(packed.startsWith('z1:')).toBe(true);
+    expect(packed.length).toBeLessThan(json.length / 5);
+    expect(packed).not.toContain('1000000000001');
+    expect(unpackFdhDocument(packed)).toBe(json);
+  });
+
+  it('still reads a document stored as plain JSON', () => {
+    expect(unpackFdhDocument('{"type":"rep"}')).toBe('{"type":"rep"}');
   });
 });

@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { deflateRawSync, inflateRawSync } from 'node:zlib';
 import { fdhUploadSchema, type AccessSubject, type FdhKind, type FdhUpload } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { parseFdhDocument, type FdhRep, type FdhStm } from './fdh-report';
@@ -8,8 +9,20 @@ import { moneyAudit } from './money-db';
 /** Encrypts the parsed document (it holds PID and patient names); `NationalIdProtector` in production. */
 export type FdhCipher = { encrypt(text: string): string; decrypt(text: string): string };
 
-/** The parsed JSON is kept so that its ciphertext stays under MariaDB's default 16 MB packet. */
-const MAX_DOCUMENT_JSON = 10 * 1024 * 1024;
+/** The packed document is kept under this so that its ciphertext stays under MariaDB's default 16 MB packet. */
+const MAX_PACKED = 10 * 1024 * 1024;
+const PACKED = 'z1:';
+
+/**
+ * The parsed JSON compressed (raw deflate, base64) before it is encrypted: about ten times smaller, so a REP or STM of
+ * 30,000 rows fits as it did in the legacy page. `z1:` marks the format; plain JSON is still read.
+ */
+export function packFdhDocument(json: string): string {
+  return PACKED + deflateRawSync(Buffer.from(json, 'utf8')).toString('base64');
+}
+export function unpackFdhDocument(text: string): string {
+  return text.startsWith(PACKED) ? inflateRawSync(Buffer.from(text.slice(PACKED.length), 'base64')).toString('utf8') : text;
+}
 
 /** One stored document without its cases/rows: what the files page lists (legacy `FdhStore::summaries`). */
 export type FdhDocumentSummary = {
@@ -60,13 +73,13 @@ export class FdhDocumentService {
     if (!parsed.ok) return { ok: false, code: 'INVALID_REPORT', message: parsed.message };
     const document = parsed.document;
     if (document.doc_no.length > 100) return { ok: false, code: 'INVALID_REPORT', message: 'เลขที่เอกสารไม่ถูกต้อง' };
-    const json = JSON.stringify(document);
-    if (Buffer.byteLength(json, 'utf8') > MAX_DOCUMENT_JSON) return { ok: false, code: 'INVALID_REPORT', message: 'ไฟล์ใหญ่เกินไป' };
+    const packed = packFdhDocument(JSON.stringify(document));
+    if (packed.length > MAX_PACKED) return { ok: false, code: 'INVALID_REPORT', message: 'ไฟล์ใหญ่เกินไป' };
     const kind = document.type;
     const items = kind === 'rep' ? document.cases.length : document.rows.length;
     const sum = round2(kind === 'rep' ? document.cases.reduce((total, item) => total + item.net, 0) : document.rows.reduce((total, row) => total + row.total, 0));
     const period = kind === 'stm' ? document.period : '';
-    const ciphertext = this.cipher.encrypt(json);
+    const ciphertext = this.cipher.encrypt(packed);
     const actor = subject.personId;
     return this.database.transaction(async (database) => {
       const replaced = (await database.query('SELECT doc_no FROM money_fdh_document WHERE kind = ? AND doc_no = ? FOR UPDATE', [kind, document.doc_no])).length > 0;
@@ -97,7 +110,7 @@ export class FdhDocumentService {
     if (!(await this.mayView(subject))) return { ok: false, code: 'FORBIDDEN' };
     const rows = await this.database.query<Row>(`SELECT ${COLUMNS}, document_ciphertext FROM money_fdh_document`);
     if (rows.length && !this.cipher) return { ok: false, code: 'NOT_CONFIGURED', message: MESSAGE_NOT_CONFIGURED };
-    const open = (row: Row) => ({ ...(JSON.parse(this.cipher!.decrypt(row.document_ciphertext ?? '')) as FdhRep | FdhStm), file_name: row.file_name, uploaded_at: instant(row.uploaded_at) });
+    const open = (row: Row) => ({ ...(JSON.parse(unpackFdhDocument(this.cipher!.decrypt(row.document_ciphertext ?? ''))) as FdhRep | FdhStm), file_name: row.file_name, uploaded_at: instant(row.uploaded_at) });
     const sorted = [...rows].sort((a, b) => byteOrder(a.doc_no, b.doc_no));
     return {
       ok: true,

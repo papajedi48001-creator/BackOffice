@@ -1,8 +1,8 @@
 # Smart Money round 3: ติดตามกองทุนย่อย FDH (`/money/fdh`)
 
 Status: approved by the user as part of moving the whole system ("ย้ายระบบทั้งหมด … ฟังก์ชันการทำงานเหมือนเดิมเป๊ะๆ", "ทำเลย",
-2026-11-18). How patient ID (PID) is stored was put to the user as a decision; this spec follows the recommended option
-(encrypted at rest, shown as before) until they answer.
+2026-11-18). How patient ID (PID) is stored was put to the user as a decision; they chose "Encrypt, show all" (encrypted at
+rest, shown on the page as before), 2026-11-18.
 Parent: `2026-11-13-smart-money-design.md` (round 3). Legacy: `modules/fdh_monitor` (FdhRepParser.php, FdhStmParser.php,
 FdhStore.php, fdh-core.js, dashboard.js, upload.php/js) and its tests `tests/fdh/*`. Pattern: round 2 (`/money/nhso`).
 

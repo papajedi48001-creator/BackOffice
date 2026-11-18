@@ -76,7 +76,7 @@ everything in the browser with a TypeScript port of `fdh-core.js`.
 ### Task 8: Registry, docs, screenshots
 - [x] modules.ts sections, money-pages, i18n, money-access tests; CONTEXT.md terms; DESIGN.md note; screens at 1280 and 390.
 - [x] Run `pnpm lint && pnpm typecheck && pnpm test`, the integration tests with MariaDB, and `git diff --check`.
-- [ ] Do the whole-branch review, then open the PR.
+- [x] Do the whole-branch review, then open the PR.
 
 ## Rulings during execution
 - A REP `Detail` row runs to about 120 cells (SEQ NO is column 118), so the per-row limit is 200, not round 2's 80.
@@ -88,3 +88,10 @@ everything in the browser with a TypeScript port of `fdh-core.js`.
 - The searches inside the dashboard tabs are exempt in `search-cards.test.ts` (the filters sit in the page's search-card), as NHSO.
 - The FDH popup has its own frame (`.fdh-dialog`: fixed header with ปิด, scrolling body), because `.action-dialog` does not
   scroll and at 390 px pushed ปิด off screen (found by the screenshot run).
+- Whole-branch review fixes: delete sends `{kind, docNo}` in the body of `DELETE /api/money/fdh/documents` (no
+  เลขที่เอกสาร in URLs; the `[kind]/[docNo]` route is gone); the case search no longer recomputes the summaries, cases are
+  built once per load and people are grouped once per filter; the parsed document is compressed (`z1:` + raw deflate)
+  before it is encrypted, so the 10 MB cap no longer refuses large REP/STM files the legacy page took.
+- Deferred minors from the review: paging does not return to page 1 when a filter changes; integers ≥ 10^15 print
+  rounded; over-long hname/period gives 500; one undecryptable row fails the whole dashboard; `drugs` is sent to the
+  browser; the upload is validated twice; the audit target is an unsalted hash.
