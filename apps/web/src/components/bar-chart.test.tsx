@@ -36,3 +36,20 @@ it('says so when there is nothing to draw', () => {
   render(<BarChart bars={[]} valueFormat={format} ariaLabel="ว่าง" />);
   expect(screen.getByText('ไม่มีข้อมูล')).toBeInTheDocument();
 });
+
+it('marks an alert bar and says so in text, not colour alone', () => {
+  render(<BarChart bars={[{ label: 'UC ใน CUP', value: 500, alert: 'ไม่นับในคาดการณ์รายรับ' }, { label: 'ชำระเงิน', value: 200 }]} valueFormat={format} ariaLabel="กราฟ" />);
+  const items = within(screen.getByRole('figure', { name: 'กราฟ' })).getAllByRole('listitem');
+  expect(items[0]).toHaveClass('is-alert');
+  expect(within(items[0]!).getByText('ไม่นับในคาดการณ์รายรับ')).toBeInTheDocument();
+  expect(items[1]).not.toHaveClass('is-alert');
+});
+
+it('stacks a part of the bar in its own colour, with the total as the value and the part in a legend', () => {
+  render(<BarChart bars={[{ label: 'ก', value: 1000, stack: 250, stackNote: 'ฟันปลอม 250' }]} stackLegend={['ลูกหนี้ (ไม่รวมฟันปลอม)', 'ลูกหนี้งานฟันปลอม']} valueFormat={format} ariaLabel="กราฟ" />);
+  const chart = screen.getByRole('figure', { name: 'กราฟ' });
+  expect(within(chart).getByText('1,000')).toBeInTheDocument();
+  expect(within(chart).getByText('ฟันปลอม 250')).toBeInTheDocument();
+  expect(chart.querySelector<HTMLElement>('.bar-chart-stack')!.style.getPropertyValue('--stack-size')).toBe('25%');
+  expect(chart.querySelector('figcaption')).toHaveTextContent('ลูกหนี้ (ไม่รวมฟันปลอม)ลูกหนี้งานฟันปลอม');
+});

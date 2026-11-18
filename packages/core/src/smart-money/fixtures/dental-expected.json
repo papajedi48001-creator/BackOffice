@@ -1,11 +1,12 @@
 {
     "pttype:day": {
-        "rows": 15,
-        "visits": 10,
-        "patients": 7,
-        "total": 7251.0,
-        "paid": 775.25,
-        "claim": 6475.75,
+        "rows": 18,
+        "visits": 13,
+        "patients": 10,
+        "total": 9651.0,
+        "paid": 1275.25,
+        "claim": 8575.75,
+        "forecast": 6175.0,
         "byPeriod": [
             {
                 "key": "2026-10-02",
@@ -41,11 +42,19 @@
             },
             {
                 "key": "2026-11-03",
-                "visits": 2,
-                "patients": 2,
-                "total": 1550.5,
+                "visits": 4,
+                "patients": 4,
+                "total": 3650.5,
                 "paid": 600.25,
-                "claim": 950.25
+                "claim": 3050.25
+            },
+            {
+                "key": "2026-11-04",
+                "visits": 1,
+                "patients": 1,
+                "total": 300.0,
+                "paid": 500.0,
+                "claim": 0.0
             },
             {
                 "key": "2026-11-12",
@@ -80,7 +89,11 @@
                 "patients": 2,
                 "total": 2401.0,
                 "paid": 600.25,
-                "claim": 1800.75
+                "claim": 1800.75,
+                "red": true,
+                "dentureClaim": 0.0,
+                "dentureVisits": 0,
+                "denturePatients": 0
             },
             {
                 "code": "A8",
@@ -89,16 +102,37 @@
                 "patients": 2,
                 "total": 1850.0,
                 "paid": 0.0,
-                "claim": 1850.0
+                "claim": 1850.0,
+                "red": false,
+                "dentureClaim": 0.0,
+                "dentureVisits": 0,
+                "denturePatients": 0
+            },
+            {
+                "code": "71",
+                "name": "บัตรทอง นอกเขต",
+                "visits": 1,
+                "patients": 1,
+                "total": 1500.0,
+                "paid": 0.0,
+                "claim": 1500.0,
+                "red": false,
+                "dentureClaim": 1500.0,
+                "dentureVisits": 1,
+                "denturePatients": 1
             },
             {
                 "code": "10",
                 "name": "ชำระเงินเอง",
-                "visits": 2,
-                "patients": 2,
-                "total": 1150.0,
-                "paid": 0.0,
-                "claim": 1150.0
+                "visits": 3,
+                "patients": 3,
+                "total": 1450.0,
+                "paid": 500.0,
+                "claim": 1150.0,
+                "red": false,
+                "dentureClaim": 350.0,
+                "dentureVisits": 1,
+                "denturePatients": 1
             },
             {
                 "code": "A7",
@@ -107,7 +141,11 @@
                 "patients": 2,
                 "total": 1150.0,
                 "paid": 175.0,
-                "claim": 975.0
+                "claim": 975.0,
+                "red": false,
+                "dentureClaim": 0.0,
+                "dentureVisits": 0,
+                "denturePatients": 0
             },
             {
                 "code": "34",
@@ -116,23 +154,45 @@
                 "patients": 2,
                 "total": 700.0,
                 "paid": 0.0,
-                "claim": 700.0
+                "claim": 700.0,
+                "red": false,
+                "dentureClaim": 0.0,
+                "dentureVisits": 0,
+                "denturePatients": 0
+            },
+            {
+                "code": "23",
+                "name": "PP (23)",
+                "visits": 1,
+                "patients": 1,
+                "total": 600.0,
+                "paid": 0.0,
+                "claim": 600.0,
+                "red": false,
+                "dentureClaim": 0.0,
+                "dentureVisits": 0,
+                "denturePatients": 0
             }
         ],
         "byDiag": [
+            {
+                "code": "K021",
+                "name": "ฟันผุที่เนื้อฟัน",
+                "count": 3
+            },
             {
                 "code": "K020",
                 "name": "ฟันผุที่เคลือบฟัน",
                 "count": 2
             },
             {
-                "code": "K021",
-                "name": "ฟันผุที่เนื้อฟัน",
+                "code": "K029",
+                "name": "ฟันผุ ไม่ระบุ",
                 "count": 2
             },
             {
-                "code": "K029",
-                "name": "ฟันผุ ไม่ระบุ",
+                "code": "K051",
+                "name": "เหงือกอักเสบเรื้อรัง",
                 "count": 2
             },
             {
@@ -143,11 +203,6 @@
             {
                 "code": "K050",
                 "name": "เหงือกอักเสบเฉียบพลัน",
-                "count": 1
-            },
-            {
-                "code": "K051",
-                "name": "เหงือกอักเสบเรื้อรัง",
                 "count": 1
             },
             {
@@ -178,17 +233,23 @@
             {
                 "code": "K102",
                 "name": "ภาวะอักเสบของขากรรไกร",
+                "count": 1
+            },
+            {
+                "code": "",
+                "name": "",
                 "count": 1
             }
         ]
     },
     "pttype:month": {
-        "rows": 15,
-        "visits": 10,
-        "patients": 7,
-        "total": 7251.0,
-        "paid": 775.25,
-        "claim": 6475.75,
+        "rows": 18,
+        "visits": 13,
+        "patients": 10,
+        "total": 9651.0,
+        "paid": 1275.25,
+        "claim": 8575.75,
+        "forecast": 6175.0,
         "byPeriod": [
             {
                 "key": "2026-10",
@@ -200,11 +261,11 @@
             },
             {
                 "key": "2026-11",
-                "visits": 6,
-                "patients": 6,
-                "total": 4100.5,
-                "paid": 775.25,
-                "claim": 3325.25
+                "visits": 9,
+                "patients": 9,
+                "total": 6500.5,
+                "paid": 1275.25,
+                "claim": 5425.25
             }
         ],
         "byGroup": [
@@ -215,7 +276,11 @@
                 "patients": 2,
                 "total": 2401.0,
                 "paid": 600.25,
-                "claim": 1800.75
+                "claim": 1800.75,
+                "red": true,
+                "dentureClaim": 0.0,
+                "dentureVisits": 0,
+                "denturePatients": 0
             },
             {
                 "code": "A8",
@@ -224,16 +289,37 @@
                 "patients": 2,
                 "total": 1850.0,
                 "paid": 0.0,
-                "claim": 1850.0
+                "claim": 1850.0,
+                "red": false,
+                "dentureClaim": 0.0,
+                "dentureVisits": 0,
+                "denturePatients": 0
+            },
+            {
+                "code": "71",
+                "name": "บัตรทอง นอกเขต",
+                "visits": 1,
+                "patients": 1,
+                "total": 1500.0,
+                "paid": 0.0,
+                "claim": 1500.0,
+                "red": false,
+                "dentureClaim": 1500.0,
+                "dentureVisits": 1,
+                "denturePatients": 1
             },
             {
                 "code": "10",
                 "name": "ชำระเงินเอง",
-                "visits": 2,
-                "patients": 2,
-                "total": 1150.0,
-                "paid": 0.0,
-                "claim": 1150.0
+                "visits": 3,
+                "patients": 3,
+                "total": 1450.0,
+                "paid": 500.0,
+                "claim": 1150.0,
+                "red": false,
+                "dentureClaim": 350.0,
+                "dentureVisits": 1,
+                "denturePatients": 1
             },
             {
                 "code": "A7",
@@ -242,7 +328,11 @@
                 "patients": 2,
                 "total": 1150.0,
                 "paid": 175.0,
-                "claim": 975.0
+                "claim": 975.0,
+                "red": false,
+                "dentureClaim": 0.0,
+                "dentureVisits": 0,
+                "denturePatients": 0
             },
             {
                 "code": "34",
@@ -251,23 +341,45 @@
                 "patients": 2,
                 "total": 700.0,
                 "paid": 0.0,
-                "claim": 700.0
+                "claim": 700.0,
+                "red": false,
+                "dentureClaim": 0.0,
+                "dentureVisits": 0,
+                "denturePatients": 0
+            },
+            {
+                "code": "23",
+                "name": "PP (23)",
+                "visits": 1,
+                "patients": 1,
+                "total": 600.0,
+                "paid": 0.0,
+                "claim": 600.0,
+                "red": false,
+                "dentureClaim": 0.0,
+                "dentureVisits": 0,
+                "denturePatients": 0
             }
         ],
         "byDiag": [
+            {
+                "code": "K021",
+                "name": "ฟันผุที่เนื้อฟัน",
+                "count": 3
+            },
             {
                 "code": "K020",
                 "name": "ฟันผุที่เคลือบฟัน",
                 "count": 2
             },
             {
-                "code": "K021",
-                "name": "ฟันผุที่เนื้อฟัน",
+                "code": "K029",
+                "name": "ฟันผุ ไม่ระบุ",
                 "count": 2
             },
             {
-                "code": "K029",
-                "name": "ฟันผุ ไม่ระบุ",
+                "code": "K051",
+                "name": "เหงือกอักเสบเรื้อรัง",
                 "count": 2
             },
             {
@@ -278,11 +390,6 @@
             {
                 "code": "K050",
                 "name": "เหงือกอักเสบเฉียบพลัน",
-                "count": 1
-            },
-            {
-                "code": "K051",
-                "name": "เหงือกอักเสบเรื้อรัง",
                 "count": 1
             },
             {
@@ -314,16 +421,22 @@
                 "code": "K102",
                 "name": "ภาวะอักเสบของขากรรไกร",
                 "count": 1
+            },
+            {
+                "code": "",
+                "name": "",
+                "count": 1
             }
         ]
     },
     "paccount:day": {
-        "rows": 15,
-        "visits": 10,
-        "patients": 7,
-        "total": 7251.0,
-        "paid": 775.25,
-        "claim": 6475.75,
+        "rows": 18,
+        "visits": 13,
+        "patients": 10,
+        "total": 9651.0,
+        "paid": 1275.25,
+        "claim": 8575.75,
+        "forecast": 6175.0,
         "byPeriod": [
             {
                 "key": "2026-10-02",
@@ -359,11 +472,19 @@
             },
             {
                 "key": "2026-11-03",
-                "visits": 2,
-                "patients": 2,
-                "total": 1550.5,
+                "visits": 4,
+                "patients": 4,
+                "total": 3650.5,
                 "paid": 600.25,
-                "claim": 950.25
+                "claim": 3050.25
+            },
+            {
+                "key": "2026-11-04",
+                "visits": 1,
+                "patients": 1,
+                "total": 300.0,
+                "paid": 500.0,
+                "claim": 0.0
             },
             {
                 "key": "2026-11-12",
@@ -398,7 +519,11 @@
                 "patients": 4,
                 "total": 3000.0,
                 "paid": 175.0,
-                "claim": 2825.0
+                "claim": 2825.0,
+                "red": false,
+                "dentureClaim": 0.0,
+                "dentureVisits": 0,
+                "denturePatients": 0
             },
             {
                 "code": "",
@@ -407,16 +532,37 @@
                 "patients": 2,
                 "total": 2401.0,
                 "paid": 600.25,
-                "claim": 1800.75
+                "claim": 1800.75,
+                "red": true,
+                "dentureClaim": 0.0,
+                "dentureVisits": 0,
+                "denturePatients": 0
+            },
+            {
+                "code": "",
+                "name": "ลูกหนี้ค่ารักษา UC-OP นอก CUP",
+                "visits": 1,
+                "patients": 1,
+                "total": 1500.0,
+                "paid": 0.0,
+                "claim": 1500.0,
+                "red": false,
+                "dentureClaim": 1500.0,
+                "dentureVisits": 1,
+                "denturePatients": 1
             },
             {
                 "code": "",
                 "name": "ลูกหนี้ค่ารักษา-ชำระเงิน",
-                "visits": 2,
-                "patients": 2,
-                "total": 1150.0,
-                "paid": 0.0,
-                "claim": 1150.0
+                "visits": 3,
+                "patients": 3,
+                "total": 1450.0,
+                "paid": 500.0,
+                "claim": 1150.0,
+                "red": false,
+                "dentureClaim": 350.0,
+                "dentureVisits": 1,
+                "denturePatients": 1
             },
             {
                 "code": "",
@@ -425,23 +571,45 @@
                 "patients": 2,
                 "total": 700.0,
                 "paid": 0.0,
-                "claim": 700.0
+                "claim": 700.0,
+                "red": false,
+                "dentureClaim": 0.0,
+                "dentureVisits": 0,
+                "denturePatients": 0
+            },
+            {
+                "code": "",
+                "name": "ลูกหนี้ค่ารักษา PP",
+                "visits": 1,
+                "patients": 1,
+                "total": 600.0,
+                "paid": 0.0,
+                "claim": 600.0,
+                "red": true,
+                "dentureClaim": 0.0,
+                "dentureVisits": 0,
+                "denturePatients": 0
             }
         ],
         "byDiag": [
+            {
+                "code": "K021",
+                "name": "ฟันผุที่เนื้อฟัน",
+                "count": 3
+            },
             {
                 "code": "K020",
                 "name": "ฟันผุที่เคลือบฟัน",
                 "count": 2
             },
             {
-                "code": "K021",
-                "name": "ฟันผุที่เนื้อฟัน",
+                "code": "K029",
+                "name": "ฟันผุ ไม่ระบุ",
                 "count": 2
             },
             {
-                "code": "K029",
-                "name": "ฟันผุ ไม่ระบุ",
+                "code": "K051",
+                "name": "เหงือกอักเสบเรื้อรัง",
                 "count": 2
             },
             {
@@ -452,11 +620,6 @@
             {
                 "code": "K050",
                 "name": "เหงือกอักเสบเฉียบพลัน",
-                "count": 1
-            },
-            {
-                "code": "K051",
-                "name": "เหงือกอักเสบเรื้อรัง",
                 "count": 1
             },
             {
@@ -488,16 +651,22 @@
                 "code": "K102",
                 "name": "ภาวะอักเสบของขากรรไกร",
                 "count": 1
+            },
+            {
+                "code": "",
+                "name": "",
+                "count": 1
             }
         ]
     },
     "paccount:month": {
-        "rows": 15,
-        "visits": 10,
-        "patients": 7,
-        "total": 7251.0,
-        "paid": 775.25,
-        "claim": 6475.75,
+        "rows": 18,
+        "visits": 13,
+        "patients": 10,
+        "total": 9651.0,
+        "paid": 1275.25,
+        "claim": 8575.75,
+        "forecast": 6175.0,
         "byPeriod": [
             {
                 "key": "2026-10",
@@ -509,11 +678,11 @@
             },
             {
                 "key": "2026-11",
-                "visits": 6,
-                "patients": 6,
-                "total": 4100.5,
-                "paid": 775.25,
-                "claim": 3325.25
+                "visits": 9,
+                "patients": 9,
+                "total": 6500.5,
+                "paid": 1275.25,
+                "claim": 5425.25
             }
         ],
         "byGroup": [
@@ -524,7 +693,11 @@
                 "patients": 4,
                 "total": 3000.0,
                 "paid": 175.0,
-                "claim": 2825.0
+                "claim": 2825.0,
+                "red": false,
+                "dentureClaim": 0.0,
+                "dentureVisits": 0,
+                "denturePatients": 0
             },
             {
                 "code": "",
@@ -533,16 +706,37 @@
                 "patients": 2,
                 "total": 2401.0,
                 "paid": 600.25,
-                "claim": 1800.75
+                "claim": 1800.75,
+                "red": true,
+                "dentureClaim": 0.0,
+                "dentureVisits": 0,
+                "denturePatients": 0
+            },
+            {
+                "code": "",
+                "name": "ลูกหนี้ค่ารักษา UC-OP นอก CUP",
+                "visits": 1,
+                "patients": 1,
+                "total": 1500.0,
+                "paid": 0.0,
+                "claim": 1500.0,
+                "red": false,
+                "dentureClaim": 1500.0,
+                "dentureVisits": 1,
+                "denturePatients": 1
             },
             {
                 "code": "",
                 "name": "ลูกหนี้ค่ารักษา-ชำระเงิน",
-                "visits": 2,
-                "patients": 2,
-                "total": 1150.0,
-                "paid": 0.0,
-                "claim": 1150.0
+                "visits": 3,
+                "patients": 3,
+                "total": 1450.0,
+                "paid": 500.0,
+                "claim": 1150.0,
+                "red": false,
+                "dentureClaim": 350.0,
+                "dentureVisits": 1,
+                "denturePatients": 1
             },
             {
                 "code": "",
@@ -551,23 +745,45 @@
                 "patients": 2,
                 "total": 700.0,
                 "paid": 0.0,
-                "claim": 700.0
+                "claim": 700.0,
+                "red": false,
+                "dentureClaim": 0.0,
+                "dentureVisits": 0,
+                "denturePatients": 0
+            },
+            {
+                "code": "",
+                "name": "ลูกหนี้ค่ารักษา PP",
+                "visits": 1,
+                "patients": 1,
+                "total": 600.0,
+                "paid": 0.0,
+                "claim": 600.0,
+                "red": true,
+                "dentureClaim": 0.0,
+                "dentureVisits": 0,
+                "denturePatients": 0
             }
         ],
         "byDiag": [
+            {
+                "code": "K021",
+                "name": "ฟันผุที่เนื้อฟัน",
+                "count": 3
+            },
             {
                 "code": "K020",
                 "name": "ฟันผุที่เคลือบฟัน",
                 "count": 2
             },
             {
-                "code": "K021",
-                "name": "ฟันผุที่เนื้อฟัน",
+                "code": "K029",
+                "name": "ฟันผุ ไม่ระบุ",
                 "count": 2
             },
             {
-                "code": "K029",
-                "name": "ฟันผุ ไม่ระบุ",
+                "code": "K051",
+                "name": "เหงือกอักเสบเรื้อรัง",
                 "count": 2
             },
             {
@@ -578,11 +794,6 @@
             {
                 "code": "K050",
                 "name": "เหงือกอักเสบเฉียบพลัน",
-                "count": 1
-            },
-            {
-                "code": "K051",
-                "name": "เหงือกอักเสบเรื้อรัง",
                 "count": 1
             },
             {
@@ -613,6 +824,11 @@
             {
                 "code": "K102",
                 "name": "ภาวะอักเสบของขากรรไกร",
+                "count": 1
+            },
+            {
+                "code": "",
+                "name": "",
                 "count": 1
             }
         ]
