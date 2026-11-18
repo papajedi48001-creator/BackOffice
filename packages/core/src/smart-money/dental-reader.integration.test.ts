@@ -22,8 +22,9 @@ describeWithAdmin('readDentalClaims against a fake HOSxP schema', () => {
       patients: [['000001', 'นาย', 'สมชาย', 'ใจดี'], ['000002', 'นาง', 'สมศรี', 'มีสุข']],
       icd: [['K021', 'ฟันผุที่เนื้อฟัน'], ['K051', 'เหงือกอักเสบเรื้อรัง'], ['J00', 'หวัด']],
       pttypes: [['10', 'ชำระเงินเอง'], ['89', 'บัตรทอง'], ['34', 'ข้าราชการ']],
-      paccountopd: [['10', 'P10', 2026], ['89', 'P89OLD', 2025], ['89', 'P89NEW', 2027], ['89', 'P89B', 2026], ['89', 'P89A', 2026]],
-      paccounts: [['P10', 2026, 'ลูกหนี้ชำระเงิน'], ['P89OLD', 2025, 'ลูกหนี้ UC เก่า'], ['P89NEW', 2027, 'ลูกหนี้ UC ล่าสุด'], ['P89A', 2026, 'ลูกหนี้ UC ปีนี้ A'], ['P89B', 2026, 'ลูกหนี้ UC ปีนี้ B']],
+      // Mapping สิทธิ stamps last_modify and writes year 2017; the latest stamped row wins whatever its year or the visit's.
+      paccountopd: [['10', 'P10', 2026], ['89', 'P89OLD', 2026, '2020-01-01 08:00:00'], ['89', 'P89NEW', 2017, '2026-11-01 09:00:00'], ['89', 'P89A', 2026]],
+      paccounts: [['P10', 2026, 'ลูกหนี้ชำระเงิน'], ['P89OLD', 2026, 'ลูกหนี้ UC เก่า'], ['P89NEW', 2025, 'ลูกหนี้ UC ชื่อเดิม'], ['P89NEW', 2027, 'ลูกหนี้ UC ล่าสุด'], ['P89A', 2026, 'ลูกหนี้ UC ไม่มีเวลา']],
       visits: [
         { vn: '691103000001', hn: '000001', vstdate: '2026-11-03', pttype: '89', diags: ['K021', 'K051', 'J00'], inc: [500, 300], paid: 0, rcpt: 800 },
         { vn: '691104000002', hn: '000002', vstdate: '2026-11-04', pttype: '10', diags: ['K051'], inc: [1000], paid: 400, rcpt: 0 },
@@ -37,11 +38,11 @@ describeWithAdmin('readDentalClaims against a fake HOSxP schema', () => {
   it('reads K00–K11 debtor visits in the range, one row per diagnosis, with Thai repaired', async () => {
     const rows = await readDentalClaims(connection, '2026-11-01', '2026-11-30');
     expect(rows.map((row) => [row.vn, row.diagCode])).toEqual([['691103000001', 'K021'], ['691103000001', 'K051'], ['691104000002', 'K051']]);
-    expect(rows[0]).toEqual({ vn: '691103000001', vstdate: '2026-11-03', hn: '000001', patientName: 'นายสมชาย ใจดี', diagCode: 'K021', diagName: 'ฟันผุที่เนื้อฟัน', pttypeCode: '89', pttypeName: 'บัตรทอง', paccountName: 'ลูกหนี้ UC ปีนี้ A', totalAmount: 800, paidMoney: 0, claimAmount: 800 });
+    expect(rows[0]).toEqual({ vn: '691103000001', vstdate: '2026-11-03', hn: '000001', patientName: 'นายสมชาย ใจดี', diagCode: 'K021', diagName: 'ฟันผุที่เนื้อฟัน', pttypeCode: '89', pttypeName: 'บัตรทอง', paccountName: 'ลูกหนี้ UC ล่าสุด', totalAmount: 800, paidMoney: 0, claimAmount: 800 });
     expect(rows[2]).toMatchObject({ paccountName: 'ลูกหนี้ชำระเงิน', totalAmount: 1000, paidMoney: 400, claimAmount: 0 });
   });
 
-  it('falls back to the latest ผังบัญชี year and to null when the pttype has none', async () => {
+  it('uses the latest stamped mapping whatever the visit year, and null when the pttype has none', async () => {
     const rows = await readDentalClaims(connection, '2026-12-01', '2026-12-31');
     expect(rows).toHaveLength(1);
     expect(rows[0]!.paccountName).toBeNull();

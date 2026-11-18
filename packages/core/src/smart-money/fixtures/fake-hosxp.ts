@@ -10,7 +10,7 @@ export const FAKE_HOSXP_TABLES = [
   'CREATE TABLE patient (hn VARCHAR(9) PRIMARY KEY, pname VARCHAR(25) NULL, fname VARCHAR(100) NULL, lname VARCHAR(100) NULL) DEFAULT CHARSET=latin1',
   'CREATE TABLE icd101 (code VARCHAR(9) PRIMARY KEY, name VARCHAR(250) NULL) DEFAULT CHARSET=latin1',
   'CREATE TABLE pttype (pttype VARCHAR(2) PRIMARY KEY, name VARCHAR(150) NULL) DEFAULT CHARSET=latin1',
-  'CREATE TABLE paccountopd (pttype VARCHAR(2) NOT NULL, paccount VARCHAR(10) NOT NULL, paccount_year INT NOT NULL) DEFAULT CHARSET=latin1',
+  'CREATE TABLE paccountopd (pttype VARCHAR(2) NOT NULL, paccount VARCHAR(10) NOT NULL, paccount_year INT NOT NULL, last_modify DATETIME NULL) DEFAULT CHARSET=latin1',
   'CREATE TABLE paccount (paccount VARCHAR(10) NOT NULL, paccount_year INT NOT NULL, name VARCHAR(250) NULL) DEFAULT CHARSET=latin1',
   `CREATE TABLE vn_stat (vn VARCHAR(13) PRIMARY KEY, ${Array.from({ length: 16 }, (_, i) => `inc${String(i + 1).padStart(2, '0')} DECIMAL(12,2) NOT NULL DEFAULT 0`).join(', ')}, paid_money DECIMAL(12,2) NOT NULL DEFAULT 0, rcpt_money DECIMAL(12,2) NOT NULL DEFAULT 0)`
 ];
@@ -20,12 +20,12 @@ export const tis = (text: string) => Buffer.from([...text].map((ch) => { const c
 
 export type FakeVisit = { vn: string; hn: string; vstdate: string; pttype: string; diags: string[]; inc: number[]; paid: number; rcpt: number };
 
-export async function seedFakeHosxp(database: Database, data: { patients: [hn: string, pname: string, fname: string, lname: string][]; icd: [code: string, name: string][]; pttypes: [code: string, name: string][]; paccountopd: [pttype: string, paccount: string, year: number][]; paccounts: [paccount: string, year: number, name: string][]; visits: FakeVisit[] }): Promise<void> {
+export async function seedFakeHosxp(database: Database, data: { patients: [hn: string, pname: string, fname: string, lname: string][]; icd: [code: string, name: string][]; pttypes: [code: string, name: string][]; paccountopd: [pttype: string, paccount: string, year: number, lastModify?: string][]; paccounts: [paccount: string, year: number, name: string][]; visits: FakeVisit[] }): Promise<void> {
   for (const sql of FAKE_HOSXP_TABLES) await database.execute(sql);
   for (const [hn, pname, fname, lname] of data.patients) await database.execute('INSERT INTO patient VALUES (?, ?, ?, ?)', [hn, tis(pname), tis(fname), tis(lname)]);
   for (const [code, name] of data.icd) await database.execute('INSERT INTO icd101 VALUES (?, ?)', [code, tis(name)]);
   for (const [code, name] of data.pttypes) await database.execute('INSERT INTO pttype VALUES (?, ?)', [code, tis(name)]);
-  for (const row of data.paccountopd) await database.execute('INSERT INTO paccountopd VALUES (?, ?, ?)', row);
+  for (const [pttype, paccount, year, lastModify] of data.paccountopd) await database.execute('INSERT INTO paccountopd VALUES (?, ?, ?, ?)', [pttype, paccount, year, lastModify ?? null]);
   for (const [paccount, year, name] of data.paccounts) await database.execute('INSERT INTO paccount VALUES (?, ?, ?)', [paccount, year, tis(name)]);
   for (const visit of data.visits) {
     await database.execute('INSERT INTO ovst VALUES (?, ?, ?, ?)', [visit.vn, visit.hn, visit.vstdate, visit.pttype]);
