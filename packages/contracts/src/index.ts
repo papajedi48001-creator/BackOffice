@@ -20,4 +20,5 @@ export * from './setup.ts';
 export * from './mass-casualty.ts';
 export * from './lab-inventory.ts';
 export * from './smart-money.ts';
+export * from './pttype-mapping.ts';
 export * from './attendance.ts';
