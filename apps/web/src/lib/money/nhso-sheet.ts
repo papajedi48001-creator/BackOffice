@@ -3,6 +3,7 @@
  * rows of cells, and every Excel file inside a .zip, as the legacy upload page did.
  */
 import type { NhsoCell } from '@backoffice/contracts';
+import { excelFilesInZip } from './excel-zip';
 import { excelCell, NHSO_MAX_FILE_BYTES } from './nhso-upload';
 
 type Picked = { name: string; arrayBuffer(): Promise<ArrayBuffer> };
@@ -10,20 +11,15 @@ type Picked = { name: string; arrayBuffer(): Promise<ArrayBuffer> };
 export type NhsoSheet = { name: string; aoa: NhsoCell[][]; problem?: string };
 
 const INSIDE_ZIP = /\.(xlsx|xlsm|xls|csv)$/i;
-const SKIPPED = /(^|\/)(~\$|__MACOSX\/|\._)/;
 
 export async function readNhsoFile(file: Picked): Promise<NhsoSheet[]> {
   const XLSX = await import('@e965/xlsx');
   const data = new Uint8Array(await file.arrayBuffer());
   if (/\.zip$/i.test(file.name)) {
-    const zip = XLSX.CFB.read(data, { type: 'array' }) as { FullPaths: string[]; FileIndex: { type: number; content?: ArrayLike<number> }[] };
-    const inner = zip.FullPaths.map((path: string, index: number) => [path, zip.FileIndex[index]!] as const)
-      .filter(([path, entry]) => entry.type === 2 && entry.content && INSIDE_ZIP.test(path) && !SKIPPED.test(path));
     const sheets: NhsoSheet[] = [];
-    for (const [path, entry] of inner) {
-      const name = path.split('/').pop()!;
-      if (entry.content!.length > NHSO_MAX_FILE_BYTES) { sheets.push({ name, aoa: [], problem: 'ไฟล์ใหญ่เกิน 10 MB' }); continue; }
-      sheets.push(...await readNhsoFile({ name, arrayBuffer: async () => new Uint8Array(entry.content as ArrayLike<number>).buffer }));
+    for (const { name, bytes } of await excelFilesInZip(data, INSIDE_ZIP)) {
+      if (bytes.length > NHSO_MAX_FILE_BYTES) { sheets.push({ name, aoa: [], problem: 'ไฟล์ใหญ่เกิน 10 MB' }); continue; }
+      sheets.push(...await readNhsoFile({ name, arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer }));
     }
     return sheets;
   }
