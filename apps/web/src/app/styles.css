@@ -1276,13 +1276,17 @@ h2.chat-window-title { cursor: default; }
 .fdh-progress i { display: block; height: 100%; background: var(--accent); }
 .fdh-prog { white-space: nowrap; }
 .fdh-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 16px; }
-.fdh-chip { display: inline-flex; gap: 6px; align-items: center; padding: 5px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink); font-size: .85rem; font-weight: 400; }
-.fdh-chip.is-on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-strong); font-weight: 700; }
+.app-main .fdh .fdh-chip { display: inline-flex; gap: 6px; align-items: center; padding: 5px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink); font-size: .85rem; font-weight: 400; }
+.app-main .fdh .fdh-chip.is-on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-strong); font-weight: 700; }
 .fdh-badge { display: inline-block; padding: 1px 8px; border-radius: 999px; background: var(--line-soft); font-size: .8rem; white-space: nowrap; }
 .fdh-badge.st-paid { color: var(--chart-up); } .fdh-badge.st-error, .fdh-badge.st-mismatch { color: var(--chart-down); } .fdh-badge.st-pending { color: var(--chart-stack-ink); }
 .fdh-tag { display: inline-block; margin: 1px 4px 1px 0; padding: 1px 8px; border: 1px solid var(--accent-tint); border-radius: 999px; background: var(--accent-soft); color: var(--accent-strong); font-size: .8rem; }
 .fdh-tag.is-dim { opacity: .5; }
 .fdh-tag.is-fixed { border-color: var(--chart-up); background: transparent; color: var(--chart-up); }
+.app-main .fdh button.link-button { padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; color: var(--accent); font-weight: 700; text-align: left; text-decoration: underline; text-underline-offset: 3px; }
+.app-main .fdh button.link-button:hover { background: none; color: var(--accent-strong); }
+.app-main .fdh button.link-button.fdh-tag { padding: 1px 8px; border: 1px solid var(--accent-tint); border-radius: 999px; background: var(--accent-soft); color: var(--accent-strong); font-weight: 400; text-decoration: none; }
+.app-main .fdh button.link-button.money-code { padding: 1px 6px; border-radius: 6px; background: var(--line-soft); color: var(--ink); font-weight: 700; }
 .fdh-muted { color: var(--muted); }
 .fdh-ok { color: var(--chart-up); }
 .fdh-bad { color: var(--chart-down); font-weight: 700; }
@@ -1295,12 +1299,18 @@ h2.chat-window-title { cursor: default; }
 .fdh-tools .fdh-chips { margin: 0; }
 .fdh-pager { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; margin-top: 10px; color: var(--muted); font-size: .85rem; }
 .fdh-fund-chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin: 10px 0 14px; padding: 0; list-style: none; }
-.fdh-fund-chip { display: grid; gap: 2px; width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); text-align: left; font-weight: 400; }
+.app-main .fdh .fdh-fund-chip { display: grid; gap: 2px; width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); text-align: left; font-weight: 400; }
 .fdh-fund-chip span { color: var(--muted); font-size: .8rem; }
 .fdh-fund-chip .fdh-amount { color: var(--chart-up); font-weight: 700; font-variant-numeric: tabular-nums; }
-.fdh-fund-chip.is-on { border-color: var(--accent); background: var(--accent-soft); }
+.app-main .fdh .fdh-fund-chip.is-on { border-color: var(--accent); background: var(--accent-soft); }
 .fdh-fund-title { margin: 0; font-size: .95rem; }
-.fdh-dialog { width: min(1100px, calc(100vw - 32px)); }
+.fdh-dialog { width: min(1100px, calc(100vw - 24px)); max-height: 90dvh; margin: auto; padding: 0; overflow: hidden; border: 0; border-top: 4px solid var(--accent); border-radius: 18px; background: var(--surface); color: var(--ink); box-shadow: 0 24px 60px rgba(15, 30, 70, .22); }
+.fdh-dialog[open] { display: flex; flex-direction: column; }
+.fdh-dialog::backdrop { background: rgba(12, 28, 21, .38); backdrop-filter: blur(3px); }
+.fdh-dialog-head { display: flex; flex: 0 0 auto; gap: 12px; align-items: flex-start; justify-content: space-between; padding: 16px 20px 12px; border-bottom: 1px solid var(--line-soft); }
+.fdh-dialog-head h2 { min-width: 0; margin: 0; font-size: 1.1rem; overflow-wrap: anywhere; }
+.fdh-dialog-head button { flex: 0 0 auto; }
+.fdh-dialog-body { flex: 1 1 auto; min-width: 0; min-height: 0; overflow: auto; padding: 8px 20px 20px; }
 .fdh-dialog-body h3 { margin: 18px 0 8px; font-size: .98rem; }
 .fdh-kv { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px 16px; margin: 0; }
 .fdh-kv div { display: grid; gap: 2px; }

@@ -74,7 +74,7 @@ everything in the browser with a TypeScript port of `fdh-core.js`.
   filters, tabs, dialog and export rows.
 
 ### Task 8: Registry, docs, screenshots
-- [ ] modules.ts sections, money-pages, i18n, money-access tests; CONTEXT.md terms; DESIGN.md note; screens at 1280 and 390.
+- [x] modules.ts sections, money-pages, i18n, money-access tests; CONTEXT.md terms; DESIGN.md note; screens at 1280 and 390.
 - [ ] Run `pnpm lint && pnpm typecheck && pnpm test`, the integration tests with MariaDB, and `git diff --check`.
 - [ ] Do the whole-branch review, then open the PR.
 
@@ -86,3 +86,5 @@ everything in the browser with a TypeScript port of `fdh-core.js`.
 - Dashboard rows open popups from a button in the row (VN, sub-fund, Error Code), not a clickable `<tr>` (DESIGN.md: no clickable div).
   The sub-fund chart is GroupedBarChart, which has no click; the sub-fund table's name button filters instead.
 - The searches inside the dashboard tabs are exempt in `search-cards.test.ts` (the filters sit in the page's search-card), as NHSO.
+- The FDH popup has its own frame (`.fdh-dialog`: fixed header with ปิด, scrolling body), because `.action-dialog` does not
+  scroll and at 390 px pushed ปิด off screen (found by the screenshot run).

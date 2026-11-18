@@ -40,13 +40,11 @@ export function FdhPopup({ title, onClose, children }: { title: ReactNode; onClo
     if (!dialog || dialog.open) return;
     if (typeof dialog.showModal === 'function') dialog.showModal(); else dialog.setAttribute('open', '');
   }, []);
-  return <dialog ref={ref} className="action-dialog fdh-dialog" aria-labelledby={titleId} onCancel={(event) => event.preventDefault()}>
-    <div className="action-dialog-panel">
-      <header className="action-dialog-header">
-        <h2 id={titleId}>{title}</h2>
-        <button type="button" className="button-secondary" onClick={onClose}>ปิด</button>
-      </header>
-      <div className="fdh-dialog-body">{children}</div>
-    </div>
+  return <dialog ref={ref} className="fdh-dialog" aria-labelledby={titleId} onCancel={(event) => event.preventDefault()}>
+    <header className="fdh-dialog-head">
+      <h2 id={titleId}>{title}</h2>
+      <button type="button" className="button-secondary" onClick={onClose}>ปิด</button>
+    </header>
+    <div className="fdh-dialog-body">{children}</div>
   </dialog>;
 }
