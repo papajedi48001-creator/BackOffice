@@ -4,7 +4,7 @@ import { z } from 'zod';
 export const MONEY_MODULE = 'smart-money';
 
 /** หน้า Smart Money a เจ้าหน้าที่ may be given. Rounds 2–4 add `nhso`, `fdh`, `disability`. */
-export const moneyPageSchema = z.enum(['dental', 'nhso', 'fdh']);
+export const moneyPageSchema = z.enum(['dental', 'nhso', 'fdh', 'disability']);
 export type MoneyPage = z.infer<typeof moneyPageSchema>;
 
 /** One เจ้าหน้าที่ Smart Money and the pages they may open (at least one). */
@@ -41,3 +41,14 @@ export const fdhUploadSchema = z.object({
   sheets: z.record(z.string().max(100), z.array(z.array(nhsoCellSchema).max(200)).max(30000)).refine((sheets) => Object.keys(sheets).length <= 6, { message: 'too_many_sheets' })
 }).strict();
 export type FdhUpload = z.infer<typeof fdhUploadSchema>;
+
+/** Point ฟื้นฟูผู้พิการ: one part of a file as the browser read it (the header row and at most 1,500 data rows); one `uploadId` per file. */
+export const dpUploadSchema = z.object({
+  fileName: z.string().trim().min(1).max(255),
+  uploadId: z.string().uuid(),
+  rows: z.array(z.array(nhsoCellSchema).max(80)).max(1501)
+}).strict();
+export type DpUpload = z.infer<typeof dpUploadSchema>;
+/** ลบข้อมูล Point ฟื้นฟูผู้พิการ of one ปีงบ (พ.ศ.). */
+export const dpRemoveSchema = z.object({ fy: z.number().int().min(2500).max(2700) }).strict();
+export type DpRemove = z.infer<typeof dpRemoveSchema>;

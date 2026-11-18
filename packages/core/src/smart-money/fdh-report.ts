@@ -30,7 +30,7 @@ class Refused extends Error {}
 
 /** PHP `trim`: only space, tab, newline, carriage return, NUL and vertical tab (not NBSP, unlike `String.trim`). */
 const PHP_SPACE = new Set([' ', '\t', '\n', '\r', '\0', '\v']);
-function phpTrim(s: string): string {
+export function phpTrim(s: string): string {
   let start = 0;
   let end = s.length;
   while (start < end && PHP_SPACE.has(s[start]!)) start++;
@@ -38,7 +38,7 @@ function phpTrim(s: string): string {
   return s.slice(start, end);
 }
 /** PHP `(string)` of a cell: floats with 14 significant digits, true → "1", false/null → "". */
-function phpString(value: NhsoCell | undefined): string {
+export function phpString(value: NhsoCell | undefined): string {
   if (value === null || value === undefined || value === false) return '';
   if (value === true) return '1';
   if (typeof value === 'number') return Number.isInteger(value) && Math.abs(value) < 1e15 ? String(value) : String(Number(value.toPrecision(14)));
