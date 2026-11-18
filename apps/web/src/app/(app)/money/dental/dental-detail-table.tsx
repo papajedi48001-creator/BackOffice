@@ -1,7 +1,8 @@
 'use client';
 
 import { useId, useMemo, useState } from 'react';
-import { NO_PACCOUNT, type DentalRow } from '@backoffice/core';
+import { NO_PACCOUNT } from '@backoffice/contracts';
+import type { DentalRow } from '@backoffice/core';
 import { formatBangkokDateOnly } from '../../../../lib/bangkok-time';
 import { formatMoney } from './dental-format';
 

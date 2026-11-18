@@ -1,4 +1,4 @@
-import type { DentalGroup, DentalPeriod } from '@backoffice/contracts';
+import { NO_PACCOUNT, type DentalGroup, type DentalPeriod } from '@backoffice/contracts';
 import { isExcludedFromForecast, isUcInCup } from './dental-rules';
 
 /**
@@ -14,7 +14,7 @@ export type DentalGroupRow = { code: string; name: string } & Money & { red: boo
 export type DentalDiagRow = { code: string; name: string; count: number };
 export type DentalSummary = { rows: number; visits: number; patients: number; total: number; paid: number; claim: number; forecast: number; byPeriod: DentalPeriodRow[]; byGroup: DentalGroupRow[]; byDiag: DentalDiagRow[] };
 
-export const NO_PACCOUNT = '(ไม่ระบุผังบัญชี)';
+export { NO_PACCOUNT };
 
 type Bucket = { visits: number; hns: Set<string>; total: number; paid: number; claim: number };
 const bucket = (): Bucket => ({ visits: 0, hns: new Set(), total: 0, paid: 0, claim: 0 });

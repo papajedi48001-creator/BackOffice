@@ -16,3 +16,6 @@ export const dentalGroupSchema = z.enum(['pttype', 'paccount']);
 export type DentalGroup = z.infer<typeof dentalGroupSchema>;
 export const dentalPeriodSchema = z.enum(['day', 'month']);
 export type DentalPeriod = z.infer<typeof dentalPeriodSchema>;
+
+/** Shown for a visit whose สิทธิ has no ผังบัญชี (ลูกหนี้ทันตกรรม); here so client components can use it without `@backoffice/core`. */
+export const NO_PACCOUNT = '(ไม่ระบุผังบัญชี)';

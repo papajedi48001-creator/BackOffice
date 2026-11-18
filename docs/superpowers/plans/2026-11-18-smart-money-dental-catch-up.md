@@ -27,4 +27,4 @@
 - [x] `cd apps/web && npx vitest run src/app/\(app\)/money src/components/bar-chart` → PASS; commit `feat(money): dental dashboard forecast, denture stack and detail filters`.
 
 ### Task 3: verify, review, PR
-- [ ] `pnpm lint && pnpm typecheck && pnpm test`, `pnpm test:integration` with DATABASE_URL; screenshots; review; PR.
+- [x] `pnpm lint && pnpm typecheck && pnpm test`, `pnpm test:integration` with DATABASE_URL; screenshots; review; PR.
