@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { NhsoCell } from '@backoffice/contracts';
-import { fiscalYearOf, parseNhsoReport } from './nhso-report';
+import { nhsoFiscalYear, parseNhsoReport } from './nhso-report';
 
 // Ported from the legacy tests/nhso/NhsoReportTest.php, case by case.
 const HEAD = ['ลำดับ', 'วันที่โอน', 'Batch No.', 'งวด/เลขที่เบิกจ่าย', 'รหัสผังบัญชี สป.สธ.', 'กองทุน', 'กองทุนย่อยเฉพาะด้าน', 'จำนวนเงิน',
@@ -77,9 +77,9 @@ describe('parseNhsoReport', () => {
   });
 });
 
-describe('fiscalYearOf', () => {
+describe('nhsoFiscalYear', () => {
   it('counts ต.ค.–ธ.ค. as the next ปีงบ', () => {
-    expect(fiscalYearOf('2025-09-30')).toBe(2568);
-    expect(fiscalYearOf('2025-10-01')).toBe(2569);
+    expect(nhsoFiscalYear('2025-09-30')).toBe(2568);
+    expect(nhsoFiscalYear('2025-10-01')).toBe(2569);
   });
 });

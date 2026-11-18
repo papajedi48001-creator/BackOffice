@@ -45,7 +45,7 @@ function num(value: NhsoCell | undefined): number {
 }
 
 /** ปีงบประมาณ (พ.ศ.) of a ค.ศ. `YYYY-MM-DD`: ต.ค.–ธ.ค. count as the next ปีงบ. */
-export function fiscalYearOf(isoDateValue: string): number {
+export function nhsoFiscalYear(isoDateValue: string): number {
   const [year, month] = isoDateValue.split('-').map(Number) as [number, number];
   return year + 543 + (month >= 10 ? 1 : 0);
 }
@@ -99,5 +99,5 @@ export function parseNhsoReport(table: readonly (readonly NhsoCell[] | null | un
   if (rowCount === 0) return { ok: false, message: 'ไฟล์นี้ไม่มีรายการโอน' };
   const reference = dateFrom ?? firstDate;
   if (reference === null) return { ok: false, message: 'ไม่พบช่วงวันที่โอนในหัวรายงาน และอ่านวันที่โอนในตารางไม่ได้' };
-  return { ok: true, report: { hcode, name, region, dateFrom, dateTo, fy: fiscalYearOf(reference), rowCount, transferTotal: Math.round(total * 100) / 100, fileName, rows: aoa } };
+  return { ok: true, report: { hcode, name, region, dateFrom, dateTo, fy: nhsoFiscalYear(reference), rowCount, transferTotal: Math.round(total * 100) / 100, fileName, rows: aoa } };
 }
