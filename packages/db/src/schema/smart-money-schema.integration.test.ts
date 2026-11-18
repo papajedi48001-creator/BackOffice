@@ -17,4 +17,9 @@ describeWithDatabase('smart money schema (migration 0038)', () => {
   it('refuses a page row without a member', async () => {
     await expect(db.execute("INSERT INTO money_member_page (person_id, page) VALUES ('00000000-0000-4000-8000-000000000999', 'dental')")).rejects.toThrow();
   });
+
+  it('keeps one NHSO dataset per หน่วยบริการ and ปีงบ (migration 0041)', async () => {
+    const columns = await db.query<{ name: string }>("SELECT column_name AS name FROM information_schema.key_column_usage WHERE table_schema = DATABASE() AND table_name = 'money_nhso_dataset' AND constraint_name = 'PRIMARY' ORDER BY ordinal_position");
+    expect(columns.map((row) => row.name)).toEqual(['hcode', 'fy']);
+  });
 });

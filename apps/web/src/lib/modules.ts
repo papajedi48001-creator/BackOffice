@@ -201,6 +201,8 @@ export const moduleRegistry: readonly ModuleEntry[] = [
   ]), available: labMay('viewStock'), badge: labBadge },
   { ...withSections({ code: 'smart-money', href: '/money', labelKey: 'moduleSmartMoney', descriptionKey: 'moduleSmartMoneyDescription', icon: 'coins', group: 'services', status: 'live' }, [
     { href: '/money/dental', labelKey: 'moneyDental', visible: everyone, available: moneyMay('dental') },
+    { href: '/money/nhso', labelKey: 'moneyNhso', visible: everyone, available: moneyMay('nhso') },
+    { href: '/money/nhso/files', labelKey: 'moneyNhsoFiles', visible: everyone, available: moneyMay('manage') },
     { href: '/money/settings', labelKey: 'moneySettings', visible: everyone, available: moneyMay('manage') }
   ]), available: moneyMay('any') },
   // Mapping สิทธิ: ผู้ดูแลระบบ and ผู้จัดการโมดูล only; every page and API checks canManagePttypeMapping again.

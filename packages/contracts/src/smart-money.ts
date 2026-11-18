@@ -4,7 +4,7 @@ import { z } from 'zod';
 export const MONEY_MODULE = 'smart-money';
 
 /** หน้า Smart Money a เจ้าหน้าที่ may be given. Rounds 2–4 add `nhso`, `fdh`, `disability`. */
-export const moneyPageSchema = z.enum(['dental']);
+export const moneyPageSchema = z.enum(['dental', 'nhso']);
 export type MoneyPage = z.infer<typeof moneyPageSchema>;
 
 /** One เจ้าหน้าที่ Smart Money and the pages they may open (at least one). */
@@ -19,3 +19,11 @@ export type DentalPeriod = z.infer<typeof dentalPeriodSchema>;
 
 /** Shown for a visit whose สิทธิ has no ผังบัญชี (ลูกหนี้ทันตกรรม); here so client components can use it without `@backoffice/core`. */
 export const NO_PACCOUNT = '(ไม่ระบุผังบัญชี)';
+
+/** One cell of a sheet read in the browser: text up to 1,000 characters, a number, true/false, or blank. */
+const nhsoCellSchema = z.union([z.string().max(1000), z.number().finite(), z.boolean(), z.null()]);
+
+/** เงินโอน สปสช.: one report file as the browser read it (first sheet, rows of cells); the server checks it like the legacy parser. */
+export const nhsoUploadSchema = z.object({ fileName: z.string().trim().min(1).max(255), aoa: z.array(z.array(nhsoCellSchema).max(80)).max(20000) }).strict();
+export type NhsoUpload = z.infer<typeof nhsoUploadSchema>;
+export type NhsoCell = z.infer<typeof nhsoCellSchema>;
