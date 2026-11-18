@@ -676,6 +676,8 @@ video.inventory-camera { display: block; flex-basis: 100%; width: 100%; max-widt
 
 /* โหมดพัฒนา (ตั้งค่าโปรแกรม): amber dashed border, diagonal stripes and a text ribbon, so the state never relies on colour alone. */
 :root { --chart-series-2: #f59e0b; --chart-stack-ink: #9a3412; --chart-alert: #dc2626; --chart-alert-ink: #b91c1c; }
+/* Series colours for GroupedBarChart (tone-0 is the module colour), from the legacy Smart Money palette; --chart-up/down mark a rise or fall with ▲/▼ text. */
+:root { --chart-1: #f59e0b; --chart-2: #10b981; --chart-3: #8b5cf6; --chart-4: #06b6d4; --chart-5: #ef4444; --chart-6: #ec4899; --chart-7: #84cc16; --chart-up: #047857; --chart-down: #b91c1c; }
 :root { --dev-amber: #b45309; --dev-amber-soft: #fef3c7; --dev-amber-ink: #78350f; }
 .module-tile.is-development { border: 2px dashed var(--dev-amber); border-top: 2px dashed var(--dev-amber); background: repeating-linear-gradient(135deg, var(--surface) 0 14px, var(--dev-amber-soft) 14px 22px); }
 .module-tile.is-development .module-go, .module-tile.is-development .module-badge { top: 44px; }
@@ -1180,6 +1182,83 @@ h2.chat-window-title { cursor: default; }
 .bar-chart[data-orientation="horizontal"] .bar-chart-bars { display: grid; gap: 3px; }
 .bar-chart[data-orientation="horizontal"] .bar-chart-bar { display: flex; align-items: center; gap: 8px; }
 .bar-chart[data-orientation="horizontal"] .bar-chart-fill { width: calc(var(--bar-size) * .82); min-width: 2px; height: 22px; border-radius: 0 6px 6px 0; }
+/* กราฟแท่งหลายชุด (components/grouped-bar-chart.tsx): one row per group, a bar per series with its value as text. */
+.grouped-chart { margin: 12px 0; }
+.grouped-chart.is-empty p { color: var(--muted); }
+.grouped-chart ul { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.grouped-chart li { display: grid; grid-template-columns: minmax(110px, 26%) minmax(0, 1fr); gap: 10px; align-items: center; }
+.grouped-chart-label { font-size: .82rem; color: var(--ink-2); }
+.grouped-chart-bars { display: grid; gap: 3px; }
+.grouped-chart-bar { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.grouped-chart-fill, .grouped-chart-track { display: block; flex: 0 0 auto; width: var(--bar-size); height: 12px; min-width: 2px; border-radius: 0 4px 4px 0; }
+.grouped-chart-track { display: flex; overflow: hidden; }
+.grouped-chart-track .grouped-chart-fill { border-radius: 0; height: 100%; min-width: 0; }
+.grouped-chart-value { font-size: .76rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.grouped-chart-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-bottom: 10px; color: var(--muted); font-size: .8rem; }
+.grouped-chart-swatch { display: inline-block; width: 11px; height: 11px; margin-right: 5px; border-radius: 3px; vertical-align: -1px; }
+.grouped-chart.is-compact ul { gap: 4px; }
+.grouped-chart.is-compact li { grid-template-columns: minmax(80px, 34%) minmax(0, 1fr); gap: 6px; }
+.grouped-chart.is-compact .grouped-chart-fill { height: 6px; }
+.grouped-chart.is-compact .grouped-chart-label, .grouped-chart.is-compact .grouped-chart-value { font-size: .7rem; }
+.tone-0 { background: var(--accent); } .tone-1 { background: var(--chart-1); } .tone-2 { background: var(--chart-2); } .tone-3 { background: var(--chart-3); }
+.tone-4 { background: var(--chart-4); } .tone-5 { background: var(--chart-5); } .tone-6 { background: var(--chart-6); } .tone-7 { background: var(--chart-7); }
+.grouped-chart .is-faded { opacity: .45; }
+/* เงินโอน สปสช. (/money/nhso): the legacy dashboard's hero, fund cards, chips, stats and report tabs in BackOffice tokens. */
+.nhso-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.nhso-bar-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.nhso-toolbar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin-bottom: 12px; }
+.nhso-field { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.nhso-field select { max-width: min(420px, 100%); }
+.nhso-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 10px; padding: 0; border: 0; }
+.nhso-chips legend { float: left; margin-right: 8px; color: var(--muted); font-size: .88rem; }
+.nhso-chip { display: inline-flex; gap: 6px; align-items: center; padding: 4px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font-size: .88rem; cursor: pointer; }
+.nhso-chip.is-on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-strong); font-weight: 700; }
+.nhso-chip input { margin: 0; }
+.nhso-hero { margin-bottom: 16px; padding: 20px 22px; border: 1px solid var(--accent); border-radius: 14px; background: var(--accent-soft); }
+.nhso-hero-label { color: var(--accent-strong); font-weight: 700; }
+.nhso-hero-label span { font-weight: 400; color: var(--ink-2); }
+.nhso-hero-total { margin: 4px 0 10px; color: var(--accent-strong); font-size: clamp(1.8rem, 5vw, 2.6rem); font-weight: 800; font-variant-numeric: tabular-nums; }
+.nhso-hero-total small { margin-left: 6px; font-size: 1rem; font-weight: 400; color: var(--muted); }
+.nhso-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.nhso-pill { padding: 3px 10px; border: 1px solid var(--accent-tint); border-radius: 999px; background: var(--surface); font-size: .85rem; }
+.nhso-section-title { margin: 8px 0 12px; font-size: 1.05rem; }
+.nhso-section-title small { color: var(--muted); font-weight: 400; font-size: .85rem; }
+.nhso-fund-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; margin: 0 0 18px; padding: 0; list-style: none; }
+.nhso-fund-card { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-sm); }
+.nhso-fund-head { display: flex; gap: 8px; align-items: flex-start; }
+.nhso-fund-head h4 { margin: 0; font-size: .95rem; }
+.nhso-fund-no { display: inline-grid; place-items: center; flex: 0 0 24px; height: 24px; border-radius: 6px; color: #fff; font-size: .8rem; font-weight: 700; }
+.nhso-fund-amount { font-size: 1.4rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.nhso-fund-amount small { margin-left: 4px; color: var(--muted); font-size: .85rem; font-weight: 400; }
+.nhso-fund-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+.nhso-badge { padding: 2px 8px; border-radius: 999px; background: var(--line-soft); font-size: .78rem; }
+.nhso-badge.is-up, td.is-up { color: var(--chart-up); }
+.nhso-badge.is-down, td.is-down { color: var(--chart-down); }
+.nhso-chart-title { margin: 16px 0 4px; font-size: .92rem; color: var(--ink-2); }
+.nhso-missing { color: var(--chart-down); }
+.nhso-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin: 0 0 16px; }
+.nhso-stats div { display: flex; flex-direction: column-reverse; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--page); }
+.nhso-stats dt { color: var(--muted); font-size: .82rem; }
+.nhso-stats dd { margin: 0; font-size: 1.4rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.nhso-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0 10px; }
+.nhso-tabs button { padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font-size: .85rem; }
+.nhso-tabs button.is-active { border-color: var(--accent); background: var(--accent); color: #fff; font-weight: 700; }
+.nhso-report .money-search { margin-bottom: 8px; }
+.nhso-yes { color: var(--chart-up); font-weight: 700; }
+.nhso-no { color: var(--chart-down); font-weight: 700; }
+.nhso-bad { background: var(--accent-soft); color: var(--chart-down); font-weight: 700; }
+.nhso-settings summary { cursor: pointer; font-weight: 700; }
+.nhso-settings h3 { margin: 16px 0 8px; }
+.nhso-settings input[type="number"] { width: 90px; }
+.nhso-warnings { margin: 8px 0; padding-left: 18px; color: var(--chart-stack-ink); }
+.nhso-drop { display: block; margin: 12px 0; padding: 28px 18px; border: 2px dashed var(--line-strong); border-radius: 12px; background: var(--page); color: var(--ink-2); text-align: center; cursor: pointer; }
+.nhso-drop:hover, .nhso-drop.is-over, .nhso-drop:focus-within { border-color: var(--accent); background: var(--accent-soft); }
+.nhso-drop.is-busy { cursor: progress; opacity: .8; }
+.nhso-results { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; font-size: .9rem; }
+.nhso-results .is-ok { color: var(--chart-up); }
+.nhso-results .is-error { color: var(--chart-down); }
+.nhso-results .is-done { font-weight: 700; }
+@media (max-width: 760px) { .grouped-chart li { grid-template-columns: 1fr; gap: 4px; } .nhso-fund-grid { grid-template-columns: 1fr; } }
 @media (max-width: 960px) { .money-kpis, .money-kpis.is-five { grid-template-columns: repeat(2, minmax(0, 1fr)); } .money-grid-2 { grid-template-columns: 1fr; } }
 @media (max-width: 640px) {
   .money-kpis { gap: 10px; }

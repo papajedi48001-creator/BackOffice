@@ -10,14 +10,15 @@ const tone = (item: ChartSeries) => `tone-${item.tone % 8}${item.faded ? ' is-fa
 const fillClass = (item: ChartSeries) => `grouped-chart-fill ${tone(item)}`;
 
 /**
+ * `compact` draws thin bars for the small charts on fund cards.
  * กราฟแท่งหลายชุด drawn with CSS: each group is a row, with one bar per series (or one stacked bar), and every bar carries
  * its series name and value as text. Used where the legacy page drew Chart.js bars by hospital, fund and ปีงบ.
  */
-export function GroupedBarChart({ groups, series, stacked = false, valueFormat, ariaLabel, emptyText = 'ไม่มีข้อมูล' }: { groups: readonly ChartGroup[]; series: readonly ChartSeries[]; stacked?: boolean; valueFormat: (value: number) => string; ariaLabel: string; emptyText?: string }) {
+export function GroupedBarChart({ groups, series, stacked = false, compact = false, valueFormat, ariaLabel, emptyText = 'ไม่มีข้อมูล' }: { groups: readonly ChartGroup[]; series: readonly ChartSeries[]; stacked?: boolean; compact?: boolean; valueFormat: (value: number) => string; ariaLabel: string; emptyText?: string }) {
   if (groups.length === 0 || series.length === 0) return <figure className="grouped-chart is-empty" aria-label={ariaLabel}><p>{emptyText}</p></figure>;
   const total = (group: ChartGroup) => group.values.reduce((sum, value) => sum + Math.max(value, 0), 0);
   const largest = Math.max(...groups.map((group) => (stacked ? total(group) : Math.max(...group.values, 0))), 0);
-  return <figure className="grouped-chart" aria-label={ariaLabel}>
+  return <figure className={`grouped-chart${compact ? ' is-compact' : ''}`} aria-label={ariaLabel}>
     <figcaption className="grouped-chart-legend">{series.map((item) => <span key={item.name}><i className={`grouped-chart-swatch ${tone(item)}`} aria-hidden="true" />{item.name}</span>)}</figcaption>
     <ul>{groups.map((group, index) => <li key={`${group.label}-${index}`} title={group.title}>
       <span className="grouped-chart-label">{group.label}</span>
