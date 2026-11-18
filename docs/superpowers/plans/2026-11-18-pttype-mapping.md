@@ -42,11 +42,11 @@
 - `PTTYPE_MAPPING_MODULE = 'pttype-mapping'`
 - `hosxpCodeSchema` (string regex above), `pttypeMappingInputSchema` = `{ opd: code|null, ipd: code|null, expected: { opd: code|null, ipd: code|null } }` strict; type `PttypeMappingInput`
 
-- [ ] Step 1: test `pttype-mapping.test.ts`: permissionModules['pttype-mapping.manage'] === 'pttype-mapping'; grantableRoleSchema accepts `pttype-mapping-manager` and `pttype-mapping-tester`; input schema accepts `{opd:'1102050101.301', ipd:null, expected:{opd:null, ipd:null}}`, rejects `opd:'x y'`, `opd:''`, extra key; authorization table row `{ role: 'pttype-mapping-manager', module: 'pttype-mapping', own: ['pttype-mapping.manage'], other: 'money.manage' }`
-- [ ] Step 2: `pnpm --filter @backoffice/contracts test` → FAIL (module missing)
-- [ ] Step 3: implement; i18n keys `modulePttypeMapping: 'Mapping สิทธิ'`, `modulePttypeMappingDescription: 'ผูกผังบัญชี OPD/IPD กับสิทธิการรักษาใน HOSxP'`, `adminRolePttypeMappingManager: 'ผู้จัดการโมดูล Mapping สิทธิ'`, `roleDescPttypeMappingManager`, `pttypeMappingBoard: 'ผูกผังบัญชี'`, `pttypeMappingHistory: 'ประวัติการแก้ไข'`; labels in admin-labels/role-choice-labels
-- [ ] Step 4: `pnpm --filter @backoffice/contracts test && pnpm --filter @backoffice/core test -- authorization-service` → PASS
-- [ ] Step 5: commit `feat(pttype-mapping): contracts, permission and manager role`
+- [x] Step 1: test `pttype-mapping.test.ts`: permissionModules['pttype-mapping.manage'] === 'pttype-mapping'; grantableRoleSchema accepts `pttype-mapping-manager` and `pttype-mapping-tester`; input schema accepts `{opd:'1102050101.301', ipd:null, expected:{opd:null, ipd:null}}`, rejects `opd:'x y'`, `opd:''`, extra key; authorization table row `{ role: 'pttype-mapping-manager', module: 'pttype-mapping', own: ['pttype-mapping.manage'], other: 'money.manage' }`
+- [x] Step 2: `pnpm --filter @backoffice/contracts test` → FAIL (module missing)
+- [x] Step 3: implement; i18n keys `modulePttypeMapping: 'Mapping สิทธิ'`, `modulePttypeMappingDescription: 'ผูกผังบัญชี OPD/IPD กับสิทธิการรักษาใน HOSxP'`, `adminRolePttypeMappingManager: 'ผู้จัดการโมดูล Mapping สิทธิ'`, `roleDescPttypeMappingManager`, `pttypeMappingBoard: 'ผูกผังบัญชี'`, `pttypeMappingHistory: 'ประวัติการแก้ไข'`; labels in admin-labels/role-choice-labels
+- [x] Step 4: `pnpm --filter @backoffice/contracts test && pnpm --filter @backoffice/core test -- authorization-service` → PASS
+- [x] Step 5: commit `feat(pttype-mapping): contracts, permission and manager role`
 
 ### Task 2: Access check
 
@@ -54,8 +54,8 @@
 
 **Produces:** `canManagePttypeMapping(subject: AccessSubject): boolean` (= `organizationScope(subject, 'pttype-mapping.manage') === 'all'`)
 
-- [ ] Step 1: test admin → true, `pttype-mapping-manager` → true, `money-manager` → false, no roles → false
-- [ ] Step 2: run → FAIL; Step 3: implement; Step 4: run → PASS; Step 5: commit `feat(pttype-mapping): access check`
+- [x] Step 1: test admin → true, `pttype-mapping-manager` → true, `money-manager` → false, no roles → false
+- [x] Step 2: run → FAIL; Step 3: implement; Step 4: run → PASS; Step 5: commit `feat(pttype-mapping): access check`
 
 ### Task 3: HOSxP reader and writer
 
@@ -68,7 +68,7 @@
 - `writePttypeMapping(connection, pttype: string, input: PttypeMappingInput): Promise<MappingWrite>` where `MappingWrite = { ok: true; from: { opd: string | null; ipd: string | null } } | { ok: false; code: 'NOT_FOUND' | 'STALE' | 'INVALID_ACCOUNT' | 'NO_CHANGE' }`; throws driver errors (service maps them)
 - `seedFakeMappingHosxp(db, data)` creating `pttype(pttype, name, isuse)`, `paccount(paccount, paccount_year, name, type)`, `paccountopd`/`paccountipd(pttype, paccount, iclaim_status, paccount_year, last_modify DATETIME NULL)` latin1, InnoDB
 
-- [ ] Step 1: integration tests (skip without `DATABASE_ADMIN_URL`, fresh database per suite like `dental-reader.integration.test.ts`):
+- [x] Step 1: integration tests (skip without `DATABASE_ADMIN_URL`, fresh database per suite like `dental-reader.integration.test.ts`):
   - reads only `isuse='Y'`, ordered by code, Thai names repaired
   - pttype with rows 2016 (last_modify 2020-01-01) and 2017 (2026-11-01) → opd.code = the 2026 row; modifiedAt `'2026-11-01 09:00:00'`
   - account names from max year; options split by type with `all` in both
@@ -77,9 +77,9 @@
   - write `opd: null` → OPD rows deleted, none inserted
   - expected ≠ current → `STALE`, nothing changed
   - account of wrong type or unknown → `INVALID_ACCOUNT`; `isuse='N'` or unknown pttype → `NOT_FOUND`; same as current → `NO_CHANGE`
-- [ ] Step 2: `DATABASE_ADMIN_URL=… pnpm --filter @backoffice/core exec vitest run src/pttype-mapping` → FAIL
-- [ ] Step 3: implement; write = one `transaction`: `SELECT … FROM pttype WHERE pttype = ? AND isuse = 'Y' FOR UPDATE`, current per side with `SELECT … FOR UPDATE`, validate, delete/insert changed sides
-- [ ] Step 4: run → PASS; Step 5: commit `feat(pttype-mapping): HOSxP reader and writer`
+- [x] Step 2: `DATABASE_ADMIN_URL=… pnpm --filter @backoffice/core exec vitest run src/pttype-mapping` → FAIL
+- [x] Step 3: implement; write = one `transaction`: `SELECT … FROM pttype WHERE pttype = ? AND isuse = 'Y' FOR UPDATE`, current per side with `SELECT … FOR UPDATE`, validate, delete/insert changed sides
+- [x] Step 4: run → PASS; Step 5: commit `feat(pttype-mapping): HOSxP reader and writer`
 
 ### Task 4: Service with audit, history and export audit
 
@@ -91,8 +91,8 @@
 - `history(limit = 200): Promise<MappingHistoryRow[]>` with `MappingHistoryRow = { id; at; actorName: string | null; pttype: string; opd: { from: string | null; to: string | null } | null; ipd: … | null }` (side `null` when unchanged)
 - `recordExport(personId: string, rows: number): Promise<void>`
 
-- [ ] Step 1: unit tests with fake io: non-manager → FORBIDDEN and io.write not called; NOT_CONFIGURED; errno 1142 → NO_WRITE_PERMISSION; STALE passes through; success records audit with metadata `{ pttype:'34', opd:{from:null,to:'P1'}, ipd:{from:'P2',to:'P2'} }` → only changed side kept; integration test: history returns that row with actor name
-- [ ] Step 2: run → FAIL; Step 3: implement; Step 4: run → PASS; Step 5: commit `feat(pttype-mapping): service, audit and history`
+- [x] Step 1: unit tests with fake io: non-manager → FORBIDDEN and io.write not called; NOT_CONFIGURED; errno 1142 → NO_WRITE_PERMISSION; STALE passes through; success records audit with metadata `{ pttype:'34', opd:{from:null,to:'P1'}, ipd:{from:'P2',to:'P2'} }` → only changed side kept; integration test: history returns that row with actor name
+- [x] Step 2: run → FAIL; Step 3: implement; Step 4: run → PASS; Step 5: commit `feat(pttype-mapping): service, audit and history`
 
 ### Task 5: API routes
 
@@ -101,8 +101,8 @@
 - PUT: `withSessionAndDatabase`; `readInput(request, pttypeMappingInputSchema)`; pttype param must match `hosxpCodeSchema` else 400; status map: FORBIDDEN 403, NOT_FOUND 404, STALE 409, INVALID_ACCOUNT/NO_CHANGE 422, NOT_CONFIGURED/HOSXP_FAILED/NO_WRITE_PERMISSION 503
 - GET export `?pttype=a,b,…` (codes currently shown, max 2000): manager only, audit, `text/csv; charset=utf-8`, filename `pttype_mapping.csv`
 
-- [ ] Step 1: route tests (mock service like `api/money/route.test.ts`): 403 for non-manager, 400 bad body, 409 STALE, 503 NO_WRITE_PERMISSION, 200 ok; export 403/200 with CSV header
-- [ ] Step 2: FAIL; Step 3: implement; Step 4: PASS; Step 5: commit `feat(pttype-mapping): save and export API`
+- [x] Step 1: route tests (mock service like `api/money/route.test.ts`): 403 for non-manager, 400 bad body, 409 STALE, 503 NO_WRITE_PERMISSION, 200 ok; export 403/200 with CSV header
+- [x] Step 2: FAIL; Step 3: implement; Step 4: PASS; Step 5: commit `feat(pttype-mapping): save and export API`
 
 ### Task 6: หน้า "ผูกผังบัญชี"
 
@@ -111,25 +111,25 @@
 - registry: `withSections({ code: 'pttype-mapping', href: '/pttype-mapping', labelKey: 'modulePttypeMapping', descriptionKey: 'modulePttypeMappingDescription', icon: 'link', group: 'services', status: 'live' }, [{ href: '/pttype-mapping', … 'pttypeMappingBoard' }, { href: '/pttype-mapping/history', … 'pttypeMappingHistory' }])`, available = `canManagePttypeMapping`
 - `MappingBoard({ snapshot, editors })`: tiles (สิทธิที่ใช้งาน / ผูกครบแล้ว / ยังไม่ผูก OPD / ยังไม่ผูก IPD) set filter `all|complete|missing-opd|missing-ipd`; SearchCard query matches code, name, account code/name; filters สถานะการผูก and ผังบัญชี; table; button "ผูกผังบัญชี" opens `MappingDialog`
 - `MappingDialog({ right, opdAccounts, ipdAccounts, open, onOpenChange, onSaved })`: FormDialog wide, two selects with "— ยังไม่ผูก —", "เดิม: …", note, submit "บันทึกลง HOSxP" ready only when changed; PUT then `router.refresh()`; STALE → message and refresh
-- [ ] Step 1: component tests: tiles counts and filter; search by account code; dialog submit disabled until change; sends `{opd, ipd, expected}`; shows Thai STALE copy; registry test (manager sees module, others don't); gate test `moduleForPath('/pttype-mapping/history') === 'pttype-mapping'`
-- [ ] Step 2: FAIL; Step 3: implement; Step 4: PASS; Step 5: commit `feat(pttype-mapping): mapping board and dialog`
+- [x] Step 1: component tests: tiles counts and filter; search by account code; dialog submit disabled until change; sends `{opd, ipd, expected}`; shows Thai STALE copy; registry test (manager sees module, others don't); gate test `moduleForPath('/pttype-mapping/history') === 'pttype-mapping'`
+- [x] Step 2: FAIL; Step 3: implement; Step 4: PASS; Step 5: commit `feat(pttype-mapping): mapping board and dialog`
 
 ### Task 7: หน้าประวัติการแก้ไข
 
 **Files:** Create `apps/web/src/app/(app)/pttype-mapping/history/page.tsx`, `history-table.tsx`, `history-table.test.tsx`
 
 - SearchCard: query (รหัสสิทธิ/ชื่อผู้แก้) + ตั้งแต่วันที่/ถึงวันที่ `ThaiDateInput` (start sets end via `endFollowingStart`); columns วันเวลา · ผู้แก้ · สิทธิ · OPD เดิม → ใหม่ · IPD เดิม → ใหม่ ("—" when unchanged, "ยังไม่ผูก" for null)
-- [ ] Step 1: tests filter by query and date range (Bangkok date of `at`); Step 2: FAIL; Step 3: implement; Step 4: PASS; Step 5: commit `feat(pttype-mapping): change history page`
+- [x] Step 1: tests filter by query and date range (Bangkok date of `at`); Step 2: FAIL; Step 3: implement; Step 4: PASS; Step 5: commit `feat(pttype-mapping): change history page`
 
 ### Task 8: รายงานลูกหนี้ทันตกรรมใช้แถวล่าสุด
 
 **Files:** Modify `packages/core/src/smart-money/dental-reader.ts`, `packages/core/src/smart-money/fixtures/fake-hosxp.ts` (paccountopd gains `last_modify DATETIME NULL`, seed tuple gains optional modifiedAt), `dental-reader.integration.test.ts`, `seed-demo-hosxp.ts` if it seeds paccountopd
 
-- [ ] Step 1: integration test: pttype 89 rows `P89OLD` (2025, 2020-01-01), `P89NEW` (2017, 2026-11-01) → name of `P89NEW` from its max-year paccount row regardless of visit year; Step 2: FAIL; Step 3: subquery `ORDER BY pa.last_modify IS NULL, pa.last_modify DESC, pa.paccount LIMIT 1` and name from `paccount` max year; Step 4: PASS; Step 5: commit `fix(money): dental ผังบัญชี follows the latest mapping row`
+- [x] Step 1: integration test: pttype 89 rows `P89OLD` (2025, 2020-01-01), `P89NEW` (2017, 2026-11-01) → name of `P89NEW` from its max-year paccount row regardless of visit year; Step 2: FAIL; Step 3: subquery `ORDER BY pa.last_modify IS NULL, pa.last_modify DESC, pa.paccount LIMIT 1` and name from `paccount` max year; Step 4: PASS; Step 5: commit `fix(money): dental ผังบัญชี follows the latest mapping row`
 
 ### Task 9: Docs, full verification, screenshots, PR
 
-- [ ] CONTEXT.md section "Mapping สิทธิ" (terms: ผูกผังบัญชี, ผังบัญชีปัจจุบัน, ผู้จัดการโมดูล Mapping สิทธิ); update Smart Money "ผังบัญชี (ลูกหนี้ทันตกรรม)" rule; DESIGN.md one line for the module accent
-- [ ] `pnpm lint && pnpm typecheck && pnpm test`; `DATABASE_URL=… DATABASE_ADMIN_URL=… pnpm test:integration`; `git diff --check`
-- [ ] Screenshots 1280/390 of the real pages against a seeded fake HOSxP → `/mnt/project-files/claim-mapping/screens/real-*.png`
+- [x] CONTEXT.md section "Mapping สิทธิ" (terms: ผูกผังบัญชี, ผังบัญชีปัจจุบัน, ผู้จัดการโมดูล Mapping สิทธิ); update Smart Money "ผังบัญชี (ลูกหนี้ทันตกรรม)" rule; DESIGN.md one line for the module accent
+- [x] `pnpm lint && pnpm typecheck && pnpm test`; `DATABASE_URL=… DATABASE_ADMIN_URL=… pnpm test:integration`; `git diff --check`
+- [x] Screenshots 1280/390 of the real pages against a seeded fake HOSxP → `/mnt/project-files/claim-mapping/screens/real-*.png`
 - [ ] Code review, PR, merge on green CI
