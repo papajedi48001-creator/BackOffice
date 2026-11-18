@@ -41,7 +41,7 @@ Data Drug rows (no PID) to the summary. The web page reuses the TTM filter and r
 **Files:** create `herb-summary.ts` (+test), `fixtures/make-herb-legacy.php`, `fixtures/herb-legacy.json`
 **Produces:** `HerbRow`, `HerbRepDoc`, `herbValue(row)`, `isHerbFund(subFund)`, `herbReceivedFromRep(docs)`, `summarizeHerb(rows, rules, received|null): HerbSummary`
 (totals with receivedVisits, groups with drugs, drugs, days; received null without REP).
-- [ ] Port every legacy summary/receivedFromRep/value test plus parity on default and point_baht settings; watch fail; implement; pass; commit.
+- [x] Port every legacy summary/receivedFromRep/value test plus parity on default and point_baht settings; watch fail; implement; pass; commit.
 
 ### Task 4: reader + service + REP view
 **Files:** create `herb-reader.ts` (+unit and integration tests), `herb-service.ts` (+test); modify `fdh-document-service.ts` (+test), `fixtures/fake-hosxp.ts`
