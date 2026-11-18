@@ -18,9 +18,9 @@ const visits: FakeVisit[] = Array.from({ length: 60 }, (_, i) => {
   const total = [350, 500, 600, 800, 1200, 1500, 2800][Math.floor(rand() * 7)]!;
   const paid = rand() < 0.4 ? Math.round(total * rand() / 50) * 50 : 0;
   const pt = pttypes[Math.floor(rand() * rand() * pttypes.length)]![0];
-  return { vn: `6911${String(day).padStart(2, '0')}${String(i).padStart(6, '0')}`, hn: patients[Math.floor(rand() * patients.length)]![0], vstdate: `2026-11-${String(day).padStart(2, '0')}`, pttype: pt, diags: rand() < 0.25 ? [icd[i % 12]![0], icd[(i + 4) % 12]![0]] : [icd[Math.floor(rand() * rand() * 12)]![0]], inc: [total * 0.6, total * 0.4], paid, rcpt: pt === '10' ? 0 : total - paid };
+  return { vn: `6911${String(day).padStart(2, '0')}${String(i).padStart(6, '0')}`, hn: patients[Math.floor(rand() * patients.length)]![0], vstdate: `2026-11-${String(day).padStart(2, '0')}`, pttype: pt, diags: rand() < 0.25 ? [icd[i % 12]![0], icd[(i + 4) % 12]![0]] : [icd[Math.floor(rand() * rand() * 12)]![0]], inc: [total * 0.6, total * 0.4], paid, rcpt: pt === '10' ? 0 : total - paid, dental: [[i % 3 ? 'D01' : 'D02', i % 2 ? 'H01' : null]], icodes: total >= 2800 ? ['3013076'] : [] };
 });
 try {
-  await seedFakeHosxp(database, { patients, icd, pttypes, paccountopd: [['89', 'UC01', 2026], ['10', 'CASH', 2026], ['34', 'CSMBS', 2026], ['A7', 'SSS', 2025], ['71', 'UC02', 2026]], paccounts: [['UC01', 2026, 'ลูกหนี้ค่ารักษา UC-OP ใน CUP'], ['CASH', 2026, 'ลูกหนี้ค่ารักษา-ชำระเงิน'], ['CSMBS', 2026, 'ลูกหนี้ค่ารักษา เบิกจ่ายตรง กรมบัญชีกลาง OP'], ['SSS', 2025, 'ลูกหนี้ค่ารักษา ประกันสังคม OP'], ['UC02', 2026, 'ลูกหนี้ค่ารักษา UC-OP นอก CUP']], visits });
+  await seedFakeHosxp(database, { patients, icd, pttypes, paccountopd: [['89', 'UC01', 2026], ['10', 'CASH', 2026], ['34', 'CSMBS', 2026], ['A7', 'SSS', 2025], ['71', 'UC02', 2026]], paccounts: [['UC01', 2026, 'ลูกหนี้ค่ารักษา UC-OP ใน CUP'], ['CASH', 2026, 'ลูกหนี้ค่ารักษา-ชำระเงิน'], ['CSMBS', 2026, 'ลูกหนี้ค่ารักษา เบิกจ่ายตรง กรมบัญชีกลาง OP'], ['SSS', 2025, 'ลูกหนี้ค่ารักษา ประกันสังคม OP'], ['UC02', 2026, 'ลูกหนี้ค่ารักษา UC-OP นอก CUP']], visits, doctors: [['D01', 'ทพ.สมหมาย ใจงาม'], ['D02', 'ทพญ.วิไล รักษ์ฟัน'], ['H01', 'นางสาวกมลา ช่วยดี']] });
   console.log(`seeded ${visits.length} visits`);
 } finally { await database.close(); }

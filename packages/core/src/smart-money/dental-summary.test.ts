@@ -4,7 +4,7 @@ import expected from './fixtures/dental-expected.json';
 import { summarizeDental, type DentalRow } from './dental-summary';
 
 type Expected = Record<string, Record<string, unknown> & { byPeriod: Record<string, number | string>[]; byGroup: Record<string, number | string>[]; byDiag: Record<string, number | string>[] }>;
-const money = ['total', 'paid', 'claim'];
+const money = ['total', 'paid', 'claim', 'forecast', 'dentureClaim'];
 
 /** Money compared to 2 decimals, everything else exactly. */
 function expectSame(actual: Record<string, unknown>, wanted: Record<string, unknown>) {
@@ -46,6 +46,6 @@ describe('summarizeDental matches the legacy PHP summarize', () => {
   });
 
   it('returns zeros for no rows', () => {
-    expect(summarizeDental([], 'pttype', 'month')).toEqual({ rows: 0, visits: 0, patients: 0, total: 0, paid: 0, claim: 0, byPeriod: [], byGroup: [], byDiag: [] });
+    expect(summarizeDental([], 'pttype', 'month')).toEqual({ rows: 0, visits: 0, patients: 0, total: 0, paid: 0, claim: 0, forecast: 0, byPeriod: [], byGroup: [], byDiag: [] });
   });
 });

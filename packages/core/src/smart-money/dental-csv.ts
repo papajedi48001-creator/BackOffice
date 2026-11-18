@@ -1,7 +1,7 @@
 import type { DentalRow } from './dental-summary';
 
 export const CSV_BOM = String.fromCharCode(0xfeff);
-const HEADER = ['VN', 'วันที่รับบริการ', 'HN', 'ชื่อ-สกุล', 'ICD-10', 'ชื่อโรค', 'รหัสสิทธิ', 'ชื่อสิทธิ', 'ผังบัญชี', 'ค่ารักษารวม', 'ชำระแล้ว', 'ยอดเรียกเก็บ'];
+const HEADER = ['VN', 'วันที่รับบริการ', 'HN', 'ชื่อ-สกุล', 'Diag หลัก', 'ชื่อโรค', 'ทันตแพทย์', 'ผู้ช่วย', 'รหัสสิทธิ', 'ชื่อสิทธิ', 'ผังบัญชี', 'ค่ารักษารวม', 'ชำระแล้ว', 'ลูกหนี้ (ค่ารักษารวม-ชำระแล้ว)'];
 
 /** RFC 4180 quoting; a text cell Excel would run as a formula gets a leading `'`. */
 export function csvCell(value: string | number | null): string {
@@ -13,6 +13,6 @@ export function csvCell(value: string | number | null): string {
 
 /** ส่งออก CSV with the legacy columns; UTF-8 with a BOM so Excel shows Thai. */
 export function dentalCsv(rows: DentalRow[]): string {
-  const lines = [HEADER.join(','), ...rows.map((row) => [row.vn, row.vstdate, row.hn, row.patientName, row.diagCode, row.diagName, row.pttypeCode, row.pttypeName, row.paccountName, row.totalAmount, row.paidMoney, row.claimAmount].map(csvCell).join(','))];
+  const lines = [HEADER.join(','), ...rows.map((row) => [row.vn, row.vstdate, row.hn, row.patientName, row.diagCode, row.diagName, row.doctorName, row.helperName, row.pttypeCode, row.pttypeName, row.paccountName, row.totalAmount, row.paidMoney, row.claimAmount].map(csvCell).join(','))];
   return `${CSV_BOM}${lines.join('\r\n')}\r\n`;
 }
