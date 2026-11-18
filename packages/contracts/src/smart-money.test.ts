@@ -62,10 +62,11 @@ describe('fdhUploadSchema', () => {
     expect(fdhUploadSchema.safeParse({ fileName: 'eclaim_11093_OP_1.xls', sheets }).success).toBe(true);
     expect(fdhKindSchema.options).toEqual(['rep', 'stm']);
   });
-  it('rejects 7 sheets, 81 cells, 30,001 rows, a long sheet name and an extra key', () => {
+  it('rejects 7 sheets, 201 cells, 30,001 rows, a long sheet name and an extra key', () => {
     const seven = Object.fromEntries(Array.from({ length: 7 }, (_, index) => [`s${index}`, []]));
     expect(fdhUploadSchema.safeParse({ fileName: 'a.xls', sheets: seven }).success).toBe(false);
-    expect(fdhUploadSchema.safeParse({ fileName: 'a.xls', sheets: { Detail: [Array(81).fill('x')] } }).success).toBe(false);
+    expect(fdhUploadSchema.safeParse({ fileName: 'a.xls', sheets: { Detail: [Array(201).fill('x')] } }).success).toBe(false);
+    expect(fdhUploadSchema.safeParse({ fileName: 'a.xls', sheets: { Detail: [Array(120).fill('x')] } }).success).toBe(true);
     expect(fdhUploadSchema.safeParse({ fileName: 'a.xls', sheets: { Detail: Array(30001).fill([1]) } }).success).toBe(false);
     expect(fdhUploadSchema.safeParse({ fileName: 'a.xls', sheets: { ['x'.repeat(101)]: [] } }).success).toBe(false);
     expect(fdhUploadSchema.safeParse({ fileName: 'a.xls', sheets, kind: 'rep' }).success).toBe(false);

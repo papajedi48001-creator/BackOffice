@@ -32,9 +32,9 @@ export type NhsoCell = z.infer<typeof nhsoCellSchema>;
 export const fdhKindSchema = z.enum(['rep', 'stm']);
 export type FdhKind = z.infer<typeof fdhKindSchema>;
 
-/** One REP or STM workbook as the browser read it: the sheets used, by name, as rows of cells; the server parses it like the legacy parsers. */
+/** One REP or STM workbook as the browser read it (a REP `Detail` row runs to about 120 cells): the sheets used, by name, as rows of cells; the server parses it like the legacy parsers. */
 export const fdhUploadSchema = z.object({
   fileName: z.string().trim().min(1).max(255),
-  sheets: z.record(z.string().max(100), z.array(z.array(nhsoCellSchema).max(80)).max(30000)).refine((sheets) => Object.keys(sheets).length <= 6, { message: 'too_many_sheets' })
+  sheets: z.record(z.string().max(100), z.array(z.array(nhsoCellSchema).max(200)).max(30000)).refine((sheets) => Object.keys(sheets).length <= 6, { message: 'too_many_sheets' })
 }).strict();
 export type FdhUpload = z.infer<typeof fdhUploadSchema>;

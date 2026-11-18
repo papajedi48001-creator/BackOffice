@@ -43,7 +43,7 @@ Code. The PHP page is being retired; BackOffice must give the same numbers and s
   hospital, patient or money in audit.
 
 ## Constraints
-- Server never runs SheetJS; it validates the posted sheets (≤ 6 sheets, ≤ 30,000 rows and ≤ 80 cells per row each, cells ≤
+- Server never runs SheetJS; it validates the posted sheets (≤ 6 sheets, ≤ 30,000 rows and ≤ 200 cells per row each (a REP `Detail` row has about 120), cells ≤
   1,000 characters, numbers, strings, booleans or null; body ≤ 24 MB).
 - Reuse round 2's browser reader (`@e965/xlsx`), upload helpers and GroupedBarChart; client components import only types from
   `@backoffice/core`.
