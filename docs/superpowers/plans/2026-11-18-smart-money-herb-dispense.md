@@ -29,7 +29,7 @@ Data Drug rows (no PID) to the summary. The web page reuses the TTM filter and r
 
 ### Task 1: page tick `herb`
 **Files:** `packages/contracts/src/smart-money.ts` (+test), `packages/core/src/smart-money/money-access.test.ts`, `apps/web/src/lib/money-pages.ts`
-- [ ] Test: `moneyPageSchema.parse('herb')` passes; page list includes herb → fail, add, pass. Commit `feat(money): herb page tick`.
+- [x] Test: `moneyPageSchema.parse('herb')` passes; page list includes herb → fail, add, pass. Commit `feat(money): herb page tick`.
 
 ### Task 2: rules
 **Files:** create `packages/core/src/smart-money/herb-rules.ts` (+test)
