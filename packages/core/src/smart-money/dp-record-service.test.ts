@@ -29,4 +29,8 @@ describe('DpRecordService', () => {
   it('refuses a เลขที่อ้างอิง longer than 100 characters', async () => {
     expect(await new DpRecordService(untouched, cipher).upload(manager, { fileName: 'a.csv', uploadId, rows: [HEADER, ['1/10/2568', 'กายภาพบำบัด', '1', '1', 'R'.repeat(101)]] })).toEqual({ ok: false, code: 'INVALID_REPORT', message: 'เลขที่อ้างอิงยาวเกิน 100 ตัวอักษร' });
   });
+
+  it('refuses a date whose ปีงบ cannot be stored or deleted, as the legacy store did', async () => {
+    expect(await new DpRecordService(untouched, cipher).upload(manager, { fileName: 'a.csv', uploadId, rows: [HEADER, ['1/1/1000', 'กายภาพบำบัด', '1', '1', 'R1']] })).toEqual({ ok: false, code: 'INVALID_REPORT', message: 'ปีงบไม่ถูกต้อง: 1543' });
+  });
 });

@@ -1,6 +1,6 @@
 # Smart Money round 4: Point ฟื้นฟูผู้พิการ Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Move the legacy `modules/disability_point` pages into BackOffice at `/money/disability` and
 `/money/disability/files`, with the same numbers and screens.
@@ -33,38 +33,61 @@ browser with a TypeScript port of `dp-core.js`.
 ---
 
 ### Task 1: Contracts, migration, schema
-- [ ] `'disability'` in `moneyPageSchema`; `dpUploadSchema = {fileName 1..255, uploadId uuid, rows: ≤1,501 × ≤80 nhsoCell}` strict;
+- [x] `'disability'` in `moneyPageSchema`; `dpUploadSchema = {fileName 1..255, uploadId uuid, rows: ≤1,501 × ≤80 nhsoCell}` strict;
   `dpRemoveSchema = {fy: int 2500..2700}` strict. Tests.
-- [ ] Migration `0043_money_dp.sql`: `money_dp_record` (ref VARCHAR(50) PK, fy SMALLINT, service_date DATE, claim/eligible
+- [x] Migration `0043_money_dp.sql`: `money_dp_record` (ref VARCHAR(50) PK, fy SMALLINT, service_date DATE, claim/eligible
   DECIMAL(15,2), flagged TINYINT, record_ciphertext TEXT, uploaded_at, uploaded_by FK person; index fy) and `money_dp_upload`
   (upload_id CHAR(36), fy, file_name, row_count, uploaded_at, uploaded_by; PK (upload_id, fy)). migrate.ts + test, Drizzle.
 
 ### Task 2: Parser (core `smart-money/dp-report.ts`)
-- [ ] Fixtures from `fixtures/make-dp-legacy.php` (runs the legacy `DpParser` on the legacy test rows, through JSON).
-- [ ] `parseDp(rows)` → `{ok:true, hcode, hname, records, skipped} | {ok:false, message}`, `isDp`, `dpFiscalYear`. Parity test.
+- [x] Fixtures from `fixtures/make-dp-legacy.php` (runs the legacy `DpParser` on the legacy test rows, through JSON).
+- [x] `parseDp(rows)` → `{ok:true, hcode, hname, records, skipped} | {ok:false, message}`, `isDp`, `dpFiscalYear`. Parity test.
 
 ### Task 3: Service (core `smart-money/dp-record-service.ts`)
-- [ ] Unit: non-manager FORBIDDEN untouched; NOT_CONFIGURED; INVALID_REPORT message.
-- [ ] Integration: add/replace/move ปีงบ counts as legacy; upload log one row per (uploadId, fy); `summaries` newest first with
+- [x] Unit: non-manager FORBIDDEN untouched; NOT_CONFIGURED; INVALID_REPORT message.
+- [x] Integration: add/replace/move ปีงบ counts as legacy; upload log one row per (uploadId, fy); `summaries` newest first with
   from/to/count/claim/eligible/flagged/latest file; `all` decrypted with fy for a page member, FORBIDDEN otherwise; ciphertext
   has no เลขบัตร; audit metadata; `removeYear`.
 
 ### Task 4: API routes
-- [ ] `/api/money/disability/records` GET (`?full=1`), POST (2 MB cap, forbidden first), DELETE `{fy}` body. Tests.
+- [x] `/api/money/disability/records` GET (`?full=1`), POST (2 MB cap, forbidden first), DELETE `{fy}` body. Tests.
 
 ### Task 5: dp-core port (web `lib/money/dp-core.ts`)
-- [ ] Port `tests/disability_point/core.test.js` unchanged in meaning; implement with the same names and formulas.
+- [x] Port `tests/disability_point/core.test.js` unchanged in meaning; implement with the same names and formulas.
 
 ### Task 6: Upload and files page
-- [ ] `readDpFile(file)` (`dp-sheet.ts`): CSV TIS-620/UTF-8, Excel dates → `d/m/yyyy` พ.ศ., header search, zip with Thai names.
-- [ ] `/money/disability/files`: upload (parts of 1,500, one uploadId per file, result lines) and the ปีงบ table with ActionDialog delete.
+- [x] `readDpFile(file)` (`dp-sheet.ts`): CSV TIS-620/UTF-8, Excel dates → `d/m/yyyy` พ.ศ., header search, zip with Thai names.
+- [x] `/money/disability/files`: upload (parts of 1,500, one uploadId per file, result lines) and the ปีงบ table with ActionDialog delete.
 
 ### Task 7: Dashboard
-- [ ] `/money/disability`: status line, modes, filters, KPIs, services table + chart, trend, years table, tabs, Excel export.
+- [x] `/money/disability`: status line, modes, filters, KPIs, services table + chart, trend, years table, tabs, Excel export.
 
 ### Task 8: Registry, docs, verification
-- [ ] modules.ts sections, money-pages, i18n, money-access test; CONTEXT.md terms; DESIGN.md note; screens at 1280 and 390.
-- [ ] `pnpm lint && pnpm typecheck && pnpm test`, integration with MariaDB, `git diff --check`.
-- [ ] Whole-branch review, then the PR.
+- [x] modules.ts sections, money-pages, i18n, money-access test; CONTEXT.md terms; DESIGN.md note; screens at 1280 and 390.
+- [x] `pnpm lint && pnpm typecheck && pnpm test`, integration with MariaDB, `git diff --check`.
+- [x] Whole-branch review, then the PR.
 
 ## Rulings during execution
+- Ruling: `ref` VARCHAR(100), and a ref over 100 characters is refused. Real refs are 8 digits. If this is wrong, a longer ref is refused instead of being stored.
+- Ruling: `record_ciphertext` is MEDIUMTEXT, because 29 Thai fields of up to 1,000 characters could overflow TEXT.
+- Ruling: `money_dp_upload.uploaded_at` is DATETIME(6), so that "ไฟล์ล่าสุด" stays in order when two uploads land in the same second.
+- Ruling: ปีงบ "ปรับปรุงเมื่อ" = MAX(uploaded_at) of the ปีงบ's records. Legacy also touched a ปีงบ that only lost moved refs. The cost is that this time can be older than legacy in that one case.
+- Ruling: clicking a trend bar is done through buttons in a collapsible "ตารางแนวโน้ม", because the CSS `BarChart` has no click.
+- Ruling: the browser limit is 50 MB per file and 200 MB per zip. Legacy had no limit of its own.
+- Final: fixed ปีงบ outside 2500–2700 (stored but undeletable). Test `refuses a date whose ปีงบ cannot be stored or deleted` RED→GREEN, with the legacy message "ปีงบไม่ถูกต้อง: N".
+- Final: fixed one unreadable file failing the whole zip. Test `reports an unreadable file inside a .zip` RED→GREEN.
+- Final: fixed the รายการ page not resetting on filter change. Test `goes back to the first page of รายการ` RED→GREEN.
+- Final: deferred minors:
+  - A first load with no data leaves the range at '01'.
+  - Rows are rounded per row before SUM.
+  - The audit key `records` is now allowed for every module.
+  - The ref collation is case-insensitive.
+  - Concurrent uploads can deadlock.
+  - A 413 does not halve the part and resend.
+  - `~$` files are listed where legacy dropped them silently.
+  - Tag keys can be duplicated.
+- Verified:
+  - lint and typecheck pass.
+  - test: contracts 158, core 676, worker 48, web 1358.
+  - integration with MariaDB: db 31, core 408 (+1 skipped already), worker 49, web 1358.
+  - `git diff --check` is clean.

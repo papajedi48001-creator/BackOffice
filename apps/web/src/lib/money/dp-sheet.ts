@@ -59,7 +59,9 @@ export async function readDpFile(file: Picked): Promise<DpSheetFile[]> {
     for (const entry of await excelFilesInZip(bytes, /\.(csv|xlsx|xls)$/i)) {
       const name = fixZipName(entry.name);
       if (entry.bytes.length > MAX_FILE) { files.push({ name, header: [], data: [], problem: 'ไฟล์ใหญ่เกิน 50 MB' }); continue; }
-      files.push(...await readDpFile({ name, arrayBuffer: async () => entry.bytes.buffer.slice(entry.bytes.byteOffset, entry.bytes.byteOffset + entry.bytes.byteLength) as ArrayBuffer }));
+      try {
+        files.push(...await readDpFile({ name, arrayBuffer: async () => entry.bytes.buffer.slice(entry.bytes.byteOffset, entry.bytes.byteOffset + entry.bytes.byteLength) as ArrayBuffer }));
+      } catch { files.push({ name, header: [], data: [], problem: 'อ่านไฟล์ไม่ได้' }); }
     }
     return files;
   }

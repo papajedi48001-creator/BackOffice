@@ -46,6 +46,8 @@ export class DpRecordService {
     if (parsed.records.some((record) => record.ref.length > 100)) return { ok: false, code: 'INVALID_REPORT', message: 'เลขที่อ้างอิงยาวเกิน 100 ตัวอักษร' };
     const name = fileName.split(/[\\/]/).pop() ?? fileName;
     const cipher = this.cipher;
+    const badYear = parsed.records.map((record) => dpFiscalYear(record.date)).find((fy) => fy < 2500 || fy > 2700);
+    if (badYear !== undefined) return { ok: false, code: 'INVALID_REPORT', message: `ปีงบไม่ถูกต้อง: ${badYear}` };
     const sealed = parsed.records.map((record) => ({ record, fy: dpFiscalYear(record.date), ciphertext: cipher.encrypt(JSON.stringify(record)) }));
     const actor = subject.personId;
     return this.database.transaction(async (database) => {

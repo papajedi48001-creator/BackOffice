@@ -48,6 +48,12 @@ describe('readDpFile', () => {
     expect(read.map((item) => [item.name, item.data.length])).toEqual([['a.csv', 1]]);
   });
 
+  it('reports an unreadable file inside a .zip and still reads the others', async () => {
+    const zip = zipOf({ 'd/bad.xlsx': new Uint8Array([0x50, 0x4b, 3, 4, 1, 2, 3]), 'd/a.csv': new TextEncoder().encode(csv([HEADER, ['1/10/2568', 'ก', '1', '1', 'R', '']])) });
+    const read = await readDpFile(file('d.zip', zip));
+    expect(read.map((item) => [item.name, item.data.length, item.problem])).toEqual(expect.arrayContaining([['bad.xlsx', 0, 'อ่านไฟล์ไม่ได้'], ['a.csv', 1, undefined]]));
+  });
+
   it('decodes a Thai name that the zip stored as TIS-620 and leaves other names alone', () => {
     expect(fixZipName(String.fromCharCode(...tis620('ฟื้นฟู.csv')))).toBe('ฟื้นฟู.csv');
     expect(fixZipName('ฟื้นฟู.csv')).toBe('ฟื้นฟู.csv');

@@ -27,6 +27,7 @@ export function DpDashboard({ canManage }: { canManage: boolean }) {
   const [q, setQ] = useState('');
   const query = useDeferredValue(q);
   const [tab, setTab] = useState<DpTab>('list');
+  const [page, setPage] = useState(0);
 
   const load = useCallback(async () => {
     setLoading(true); setFailure('');
@@ -49,7 +50,8 @@ export function DpDashboard({ canManage }: { canManage: boolean }) {
   const options = useMemo(() => ({ years: dpYearOptions(records), right: dpCountOptions(records, 'right'), target: dpCountOptions(records, 'target'), svcType: dpCountOptions(records, 'svc_type') }), [records]);
   const tags = dpActiveTags({ ...state, q: q.trim() });
 
-  const set = (patch: Partial<DpState>) => setS({ ...state, ...patch });
+  // Every change of the time view or a filter starts รายการ on its first page, as the legacy page did.
+  const set = (patch: Partial<DpState>) => { setS({ ...state, ...patch }); setPage(0); };
   const toList = () => { setTab('list'); document.getElementById('dp-detail')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }); };
   const pickService = (name: string) => { const service = state.service === name ? '' : name; set({ service }); if (service) toList(); };
   const pickCode = (code: string) => { const statusCode = state.statusCode === code ? '' : code; set({ statusCode }); if (statusCode) toList(); };
@@ -160,7 +162,7 @@ export function DpDashboard({ canManage }: { canManage: boolean }) {
         </tbody></table></div>
       </section>
 
-      <DpDetail tab={tab} onTab={setTab} list={list} flags={view.flags} service={state.service} statusCode={state.statusCode} q={q} onQuery={setQ}
+      <DpDetail tab={tab} onTab={setTab} page={page} onPage={setPage} list={list} flags={view.flags} service={state.service} statusCode={state.statusCode} q={q} onQuery={setQ}
         onClear={(key) => set({ [key]: '' })} onCode={pickCode} onExport={exportExcel} />
     </>}
   </section>;

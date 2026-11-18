@@ -91,6 +91,17 @@ describe('DpDashboard', () => {
     expect(screen.getByText('กำลังแสดง:').parentElement).toHaveTextContent('1 พ.ย. 2568 – 13 พ.ย. 2568');
   });
 
+  it('goes back to the first page of รายการ when the filters change', async () => {
+    const many = Array.from({ length: 60 }, (_, at) => rec({ ref: String(100 + at), date: '2025-10-10', cid: String(at) }));
+    serve({ years, records: [...records, ...many] });
+    const detail = await shown();
+    expect(within(detail).getByText(/หน้า 1 \/ 2/)).toBeInTheDocument();
+    fireEvent.click(within(detail).getByRole('button', { name: 'ถัดไป ›' }));
+    expect(within(detail).getByText(/หน้า 2 \/ 2/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('สิทธิหลัก'), { target: { value: 'UCS' } });
+    expect(within(detail).getByText(/หน้า 1 \/ 2/)).toBeInTheDocument();
+  });
+
   it('exports the four legacy sheets', async () => {
     serve({ years, records });
     await shown();
