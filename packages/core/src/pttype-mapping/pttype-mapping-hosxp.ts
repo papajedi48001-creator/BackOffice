@@ -9,7 +9,7 @@ export type MappedAccount = { code: string; name: string | null; modifiedAt: str
 export type PttypeRight = { code: string; name: string; opd: MappedAccount | null; ipd: MappedAccount | null };
 export type AccountOption = { code: string; name: string };
 export type MappingSnapshot = { rights: PttypeRight[]; opdAccounts: AccountOption[]; ipdAccounts: AccountOption[] };
-export type MappingWrite = { ok: true; from: { opd: string | null; ipd: string | null } } | { ok: false; code: 'NOT_FOUND' | 'STALE' | 'INVALID_ACCOUNT' | 'NO_CHANGE' };
+export type MappingWrite = { ok: true; from: { opd: string | null; ipd: string | null } } | { ok: false; code: 'NOT_FOUND' | 'STALE' | 'INVALID_ACCOUNT' | 'NO_CHANGE' | 'NOT_TRANSACTIONAL' };
 
 const SIDES: readonly MappingSide[] = ['opd', 'ipd'];
 const table = (side: MappingSide) => (side === 'opd' ? 'paccountopd' : 'paccountipd');
@@ -54,32 +54,45 @@ export async function readPttypeMappings(connection: HosxpConnection): Promise<M
 }
 
 /**
- * ผูกผังบัญชี of one สิทธิ in one HOSxP transaction: lock the สิทธิ and its rows, refuse when they no longer match what the
- * person saw, then for each changed side delete every row and insert one row stamped `last_modify = NOW()`.
+ * ผูกผังบัญชี of one สิทธิ in one HOSxP transaction: refuse when a mapping table is not InnoDB (a failed insert could not
+ * roll back), take a named lock for the สิทธิ (needs no table privilege, unlike `FOR UPDATE` on `pttype` under MySQL 8),
+ * lock its rows, refuse when they no longer match what the person saw, then for each changed side delete every row and
+ * insert one row stamped `last_modify = NOW()`.
  * `paccount_year` stays 2017 like the legacy tool; nothing reads it any more. Driver errors are thrown for the caller to map.
  */
 export async function writePttypeMapping(connection: HosxpConnection, pttype: string, input: PttypeMappingInput): Promise<MappingWrite> {
-  return withHosxp(connection, (hosxp) => hosxp.transaction(async (tx) => {
-    const [right] = await tx.query<{ pttype: string }>("SELECT pttype FROM pttype WHERE pttype = ? AND isuse = 'Y' FOR UPDATE", [pttype]);
-    if (!right) return { ok: false, code: 'NOT_FOUND' } as const;
-    const from = { opd: null as string | null, ipd: null as string | null };
-    for (const side of SIDES) {
-      const rows = await tx.query<{ paccount: string }>(`SELECT paccount FROM ${table(side)} WHERE pttype = ? ${LATEST_ORDER} FOR UPDATE`, [pttype]);
-      from[side] = rows[0]?.paccount ?? null;
-    }
-    if (from.opd !== input.expected.opd || from.ipd !== input.expected.ipd) return { ok: false, code: 'STALE' } as const;
-    const changed = SIDES.filter((side) => input[side] !== from[side]);
-    if (changed.length === 0) return { ok: false, code: 'NO_CHANGE' } as const;
-    for (const side of changed) {
-      const code = input[side];
-      if (code === null) continue;
-      const [account] = await tx.query<{ paccount: string }>('SELECT paccount FROM paccount WHERE paccount = ? AND LOWER(type) IN (?, \'all\') LIMIT 1', [code, side]);
-      if (!account) return { ok: false, code: 'INVALID_ACCOUNT' } as const;
-    }
-    for (const side of changed) {
-      await tx.execute(`DELETE FROM ${table(side)} WHERE pttype = ?`, [pttype]);
-      if (input[side] !== null) await tx.execute(`INSERT INTO ${table(side)} (pttype, paccount, iclaim_status, paccount_year, last_modify) VALUES (?, ?, 1, 2017, NOW())`, [pttype, input[side]]);
-    }
-    return { ok: true, from } as const;
-  }));
+  return withHosxp(connection, async (hosxp) => {
+    const engines = await hosxp.query<{ engine: string | null }>("SELECT ENGINE AS engine FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN ('paccountopd', 'paccountipd')");
+    if (engines.length !== 2 || engines.some((row) => row.engine?.toLowerCase() !== 'innodb')) return { ok: false, code: 'NOT_TRANSACTIONAL' } as const;
+    return hosxp.transaction(async (tx) => {
+      const lock = `backoffice:pttype-mapping:${pttype}`;
+      const [locked] = await tx.query<{ got: number | null }>('SELECT GET_LOCK(?, 10) AS got', [lock]);
+      if (Number(locked?.got) !== 1) return { ok: false, code: 'STALE' } as const;
+      try { return await writeLocked(tx, pttype, input); } finally { await tx.query('SELECT RELEASE_LOCK(?)', [lock]); }
+    });
+  });
+}
+
+async function writeLocked(tx: Database, pttype: string, input: PttypeMappingInput): Promise<MappingWrite> {
+  const [right] = await tx.query<{ pttype: string }>("SELECT pttype FROM pttype WHERE pttype = ? AND isuse = 'Y'", [pttype]);
+  if (!right) return { ok: false, code: 'NOT_FOUND' } as const;
+  const from = { opd: null as string | null, ipd: null as string | null };
+  for (const side of SIDES) {
+    const rows = await tx.query<{ paccount: string }>(`SELECT paccount FROM ${table(side)} WHERE pttype = ? ${LATEST_ORDER} FOR UPDATE`, [pttype]);
+    from[side] = rows[0]?.paccount ?? null;
+  }
+  if (from.opd !== input.expected.opd || from.ipd !== input.expected.ipd) return { ok: false, code: 'STALE' } as const;
+  const changed = SIDES.filter((side) => input[side] !== from[side]);
+  if (changed.length === 0) return { ok: false, code: 'NO_CHANGE' } as const;
+  for (const side of changed) {
+    const code = input[side];
+    if (code === null) continue;
+    const [account] = await tx.query<{ paccount: string }>('SELECT paccount FROM paccount WHERE paccount = ? AND LOWER(type) IN (?, \'all\') LIMIT 1', [code, side]);
+    if (!account) return { ok: false, code: 'INVALID_ACCOUNT' } as const;
+  }
+  for (const side of changed) {
+    await tx.execute(`DELETE FROM ${table(side)} WHERE pttype = ?`, [pttype]);
+    if (input[side] !== null) await tx.execute(`INSERT INTO ${table(side)} (pttype, paccount, iclaim_status, paccount_year, last_modify) VALUES (?, ?, 1, 2017, NOW())`, [pttype, input[side]]);
+  }
+  return { ok: true, from } as const;
 }

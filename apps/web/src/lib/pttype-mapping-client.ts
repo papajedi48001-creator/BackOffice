@@ -9,6 +9,7 @@ const errorMessages: Record<string, string> = {
   NO_CHANGE: 'ค่าเหมือนเดิม ไม่มีอะไรต้องบันทึก',
   NO_WRITE_PERMISSION: 'บัญชี HOSxP ไม่มีสิทธิ์เขียนตาราง paccountopd / paccountipd ติดต่อผู้ดูแลระบบ',
   HOSXP_FAILED: 'เชื่อมต่อ HOSxP ไม่สำเร็จ ค่าใน HOSxP ยังไม่เปลี่ยน ลองอีกครั้ง',
+  NOT_TRANSACTIONAL: 'ตาราง paccountopd / paccountipd ใน HOSxP ไม่ใช่ InnoDB จึงย้อนกลับไม่ได้หากบันทึกล้มเหลว ระบบจึงไม่แก้ไข ติดต่อผู้ดูแลระบบ',
   NOT_CONFIGURED: 'ยังไม่ได้ตั้งค่าการเชื่อมต่อ HOSxP',
   invalid_input: 'ข้อมูลไม่ครบหรือไม่ถูกต้อง'
 };

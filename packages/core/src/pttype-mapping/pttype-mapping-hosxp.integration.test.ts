@@ -83,4 +83,17 @@ describeWithAdmin('Mapping สิทธิ against a fake HOSxP schema', () => {
     expect(await writePttypeMapping(connection, '34', { opd: 'GONE', ipd: 'PIP', expected: { opd: 'GONE', ipd: null } })).toEqual({ ok: true, from: { opd: 'GONE', ipd: null } });
     expect(await rows('opd', '34')).toEqual([{ paccount: 'GONE', iclaim_status: 1, paccount_year: 2017, recent: 0 }]);
   });
+
+  it('rolls the whole change back when an insert fails', async () => {
+    await hosxp!.execute("CREATE TRIGGER fail_opd BEFORE INSERT ON paccountopd FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'boom'");
+    await expect(writePttypeMapping(connection, '89', { opd: 'P10', ipd: 'P10', expected: { opd: 'P89', ipd: 'PIP' } })).rejects.toThrow();
+    expect((await rows('opd', '89')).map((row) => row.paccount).sort()).toEqual(['P89', 'POLD']);
+    expect(await rows('ipd', '89')).toEqual([{ paccount: 'PIP', iclaim_status: 1, paccount_year: 2017, recent: 0 }]);
+  });
+
+  it('refuses to write when a mapping table cannot roll back', async () => {
+    await hosxp!.execute('ALTER TABLE paccountipd ENGINE = MyISAM');
+    expect(await writePttypeMapping(connection, '89', { opd: 'P10', ipd: 'PIP', expected: { opd: 'P89', ipd: 'PIP' } })).toEqual({ ok: false, code: 'NOT_TRANSACTIONAL' });
+    expect((await rows('opd', '89')).map((row) => row.paccount).sort()).toEqual(['P89', 'POLD']);
+  });
 });

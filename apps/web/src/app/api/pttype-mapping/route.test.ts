@@ -30,7 +30,7 @@ describe('PUT /api/pttype-mapping/[pttype]', () => {
 
   it('passes the session, code and input to the service and maps its result', async () => {
     ready(manager);
-    const codes = [['ok', 200], ['FORBIDDEN', 403], ['NOT_FOUND', 404], ['STALE', 409], ['INVALID_ACCOUNT', 422], ['NO_CHANGE', 422], ['NO_WRITE_PERMISSION', 503], ['HOSXP_FAILED', 503], ['NOT_CONFIGURED', 503]] as const;
+    const codes = [['ok', 200], ['FORBIDDEN', 403], ['NOT_FOUND', 404], ['STALE', 409], ['INVALID_ACCOUNT', 422], ['NO_CHANGE', 422], ['NO_WRITE_PERMISSION', 503], ['HOSXP_FAILED', 503], ['NOT_CONFIGURED', 503], ['NOT_TRANSACTIONAL', 503]] as const;
     for (const [code, status] of codes) {
       mocks.save.mockResolvedValueOnce(code === 'ok' ? { ok: true } : { ok: false, code });
       const response = await put('34', body);

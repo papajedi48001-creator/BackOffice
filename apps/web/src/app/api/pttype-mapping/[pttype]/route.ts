@@ -3,7 +3,7 @@ import { hosxpCodeSchema, pttypeMappingInputSchema } from '@backoffice/contracts
 import { pttypeMappingService } from '../../../../lib/hosxp';
 import { readInput, withSessionAndDatabase } from '../../hr/profile-route';
 
-const statusByCode: Record<string, number> = { FORBIDDEN: 403, NOT_FOUND: 404, STALE: 409, INVALID_ACCOUNT: 422, NO_CHANGE: 422, NO_WRITE_PERMISSION: 503, HOSXP_FAILED: 503, NOT_CONFIGURED: 503 };
+const statusByCode: Record<string, number> = { FORBIDDEN: 403, NOT_FOUND: 404, STALE: 409, INVALID_ACCOUNT: 422, NO_CHANGE: 422, NO_WRITE_PERMISSION: 503, HOSXP_FAILED: 503, NOT_CONFIGURED: 503, NOT_TRANSACTIONAL: 503 };
 
 /** ผูกผังบัญชี of one สิทธิ in HOSxP. Only ผู้ดูแลระบบ and ผู้จัดการโมดูล Mapping สิทธิ (checked by the service). */
 export async function PUT(request: Request, { params }: { params: Promise<{ pttype: string }> }): Promise<Response> {
