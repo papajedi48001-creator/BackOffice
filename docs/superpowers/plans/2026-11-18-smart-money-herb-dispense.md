@@ -50,7 +50,7 @@ Data Drug rows (no PID) to the summary. The web page reuses the TTM filter and r
 
 ### Task 5: web page
 **Files:** create `apps/web/src/app/(app)/money/herb/{page.tsx,herb-load.ts,herb-dashboard.tsx,herb-dashboard.test.tsx}`, `apps/web/src/lib/money/{herb-views.ts,herb-views.test.ts,herb-export.ts}`; modify `lib/hosxp.ts`, `lib/modules.ts`(+test), i18n, search-cards exemptions, styles.css, CONTEXT.md, DESIGN.md.
-- [ ] Tests: views (Excel sheets and columns, file name, visible groups, ontop cell text, search); dashboard renders KPIs, รอ REP, opens a group, empty text; fail → implement → pass; commit.
+- [x] Tests: views (Excel sheets and columns, file name, visible groups, ontop cell text, search); dashboard renders KPIs, รอ REP, opens a group, empty text; fail → implement → pass; commit.
 
 ### Task 6: verify, review, screens, PR
 - [ ] `pnpm lint && pnpm typecheck && pnpm test`, integration with MariaDB, `git diff --check`; whole-branch review and fixes; screens 1280/390; PR.

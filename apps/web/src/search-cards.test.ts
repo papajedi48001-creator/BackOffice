@@ -18,7 +18,9 @@ const exempt = new Set(['app/(app)/admin/person-picker.tsx', 'app/(app)/fleet/se
   'app/(app)/money/disability/dp-detail.tsx',
   // The row searches of monitor แพทย์แผนไทย (รายชื่อผู้รับบริการ, รายการค่าใช้จ่าย), under its date filter search-card.
   'app/(app)/money/ttm/ttm-dashboard.tsx',
-  'app/(app)/money/ttm/mapping/ttm-item-table.tsx']);
+  'app/(app)/money/ttm/mapping/ttm-item-table.tsx',
+  // The drug search of การจ่ายยาสมุนไพร (รายยาสมุนไพร), under its date filter search-card.
+  'app/(app)/money/herb/herb-dashboard.tsx']);
 const filterForms = [/method="get"/, /type="search"/, /className="(?:leave|lab|money-date)-filter"/];
 
 function sources(directory: string): string[] {
