@@ -15,7 +15,7 @@ describe('Smart Money access', () => {
   it('lets a manager open every page and manage', () => {
     expect(moneyCan(null, true, 'dental')).toBe(true);
     expect(moneyCan(null, true, 'manage')).toBe(true);
-    expect(moneyVisiblePages(null, true)).toEqual(['dental', 'nhso']);
+    expect(moneyVisiblePages(null, true)).toEqual(['dental', 'nhso', 'fdh']);
   });
 
   it('lets a member open only their pages and never manage', () => {
@@ -24,6 +24,8 @@ describe('Smart Money access', () => {
     expect(moneyCan(member, false, 'manage')).toBe(false);
     expect(moneyCan({ pages: [] }, false, 'dental')).toBe(false);
     expect(moneyVisiblePages(member, false)).toEqual(['dental']);
+    expect(moneyCan(member, false, 'fdh')).toBe(false);
+    expect(moneyCan({ pages: ['fdh'] }, false, 'fdh')).toBe(true);
   });
 
   it('refuses a non-member', () => {

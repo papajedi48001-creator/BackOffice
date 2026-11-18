@@ -75,7 +75,7 @@ everything in the browser with a TypeScript port of `fdh-core.js`.
 
 ### Task 8: Registry, docs, screenshots
 - [x] modules.ts sections, money-pages, i18n, money-access tests; CONTEXT.md terms; DESIGN.md note; screens at 1280 and 390.
-- [ ] Run `pnpm lint && pnpm typecheck && pnpm test`, the integration tests with MariaDB, and `git diff --check`.
+- [x] Run `pnpm lint && pnpm typecheck && pnpm test`, the integration tests with MariaDB, and `git diff --check`.
 - [ ] Do the whole-branch review, then open the PR.
 
 ## Rulings during execution
