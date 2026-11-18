@@ -1,6 +1,7 @@
 # Optional: lets ผู้ดูแลระบบ > การเข้าสู่ระบบ (ThaID, Provider ID) and the HOSxP connection keep secrets typed on the web,
 # sealed under CONNECTION_SECRET_KEY (docs/runbooks/provider-sso.md, "ThaID"). Add this file after the production or staging files.
 # Without it the web pages say secrets cannot be stored and the server environment stays the only source.
+# docker-compose.provider-sso.yml already carries the same key, so a Provider ID deploy needs nothing more; this file stays for other deploys.
 services:
   web:
     environment:

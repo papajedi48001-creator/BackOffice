@@ -25,4 +25,4 @@ else
   echo "CONNECTION_SECRET_KEY_FILE=${key_file}" >> "${env_file}"
 fi
 echo "set CONNECTION_SECRET_KEY_FILE in ${env_file}"
-echo "next: deploy with -f infra/compose/docker-compose.sign-in-settings.yml added after the provider-sso override"
+echo "next: deploy as usual; docker-compose.provider-sso.yml passes the key to web and worker (without Provider ID, add docker-compose.sign-in-settings.yml)"

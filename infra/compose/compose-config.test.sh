@@ -136,6 +136,14 @@ for overrides in "" "${root_dir}/infra/compose/docker-compose.staging-shared-ngi
       if (secrets[name]?.file !== file) fail(`the ${name} secret must come from its _FILE setting`);
     }
     if (!services.web.secrets.some((secret) => secret.source === "session_secret")) fail("web must keep its other secrets");
+    // Every Provider ID deploy (.251) keeps secrets typed on the web: the key comes with this file, so a deploy that forgets
+    // docker-compose.sign-in-settings.yml no longer loses it. setup-sign-in-settings.sh creates the default path.
+    for (const name of ["web", "worker"]) {
+      const serviceEnv = services[name].environment;
+      if (serviceEnv.CONNECTION_SECRET_KEY_FILE !== "/run/secrets/connection_secret_key" || serviceEnv.CONNECTION_SECRET_KEY) fail(`${name} must read CONNECTION_SECRET_KEY only from the secret file`);
+      if (!services[name].secrets.some((secret) => secret.source === "connection_secret_key")) fail(`${name} must mount the connection_secret_key secret`);
+    }
+    if (secrets.connection_secret_key?.file !== "/etc/backoffice/secrets/connection_secret_key") fail("the key must default to /etc/backoffice/secrets/connection_secret_key");
     const joined = Object.keys(services.web.networks ?? {});
     if (!joined.includes("egress") || networks.egress.internal) fail("web must join a non-internal egress network to reach MOPH ID and Provider ID");
     // An unpinned network may get 172.18.0.0/16 from Docker, which overlaps the hospital client network.
