@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { AccessSubject } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import type { HosxpConnection } from '../holidays/hosxp-settings-service';
-import { PttypeMappingService } from './pttype-mapping-service';
+import { editorMatchesStamp, PttypeMappingService } from './pttype-mapping-service';
 
 const subject = (role: string | null): AccessSubject & { personId: string } => ({ authenticated: true, personId: 'p1', roles: role ? [{ name: role, organizationId: null }] : [], dataOwnerModules: [], hospitalWideDataOwnerModules: [] });
 const connection = { host: 'h', port: 3306, database: 'hos', user: 'u', password: 'secret', dateColumn: 'd', nameColumn: 'n' } satisfies HosxpConnection;
@@ -43,5 +43,26 @@ describe('PttypeMappingService.load', () => {
     const failing = new PttypeMappingService(unusedDatabase, async () => connection, { read: vi.fn().mockRejectedValue(driverError(2003)), write: vi.fn() });
     expect(await failing.load()).toEqual({ ok: false, code: 'HOSXP_FAILED' });
     log.mockRestore();
+  });
+});
+
+describe('editorMatchesStamp', () => {
+  it('credits the BackOffice editor only when their save is the latest HOSxP stamp (HOSxP keeps Bangkok time)', () => {
+    expect(editorMatchesStamp('2026-11-13T07:05:00.000Z', '2026-11-13 14:05:01')).toBe(true);
+    expect(editorMatchesStamp('2026-11-13T07:05:00.000Z', '2026-11-13 14:12:00')).toBe(true);
+    expect(editorMatchesStamp('2026-11-01T02:00:00.000Z', '2026-11-10 09:00:00')).toBe(false);
+    expect(editorMatchesStamp('2026-11-13T07:05:00.000Z', '2026-11-13 13:00:00')).toBe(false);
+    expect(editorMatchesStamp('2026-11-13T07:05:00.000Z', null)).toBe(true);
+  });
+});
+
+describe('PttypeMappingService.load editors', () => {
+  it('drops the BackOffice editor when HOSxP was changed after their save', async () => {
+    const at = (iso: string) => ({ id: iso, target_id: iso === '2026-11-01T02:00:00.000Z' ? '89' : '10', metadata: '{}', at: iso, actor_name: 'อลิซ' });
+    const database = { query: vi.fn().mockResolvedValue([at('2026-11-01T02:00:00.000Z'), at('2026-11-13T07:05:00.000Z')]) } as unknown as Database;
+    const right = (code: string, stamp: string) => ({ code, name: code, opd: { code: 'P', name: 'P', modifiedAt: stamp }, ipd: null });
+    const read = vi.fn().mockResolvedValue({ rights: [right('89', '2026-11-10 09:00:00'), right('10', '2026-11-13 14:05:00')], opdAccounts: [], ipdAccounts: [] });
+    const loaded = await new PttypeMappingService(database, async () => connection, { read, write: vi.fn() }).load();
+    expect(loaded.ok && Object.keys(loaded.editors)).toEqual(['10']);
   });
 });

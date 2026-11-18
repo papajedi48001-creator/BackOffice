@@ -48,6 +48,12 @@ describe('MappingBoard', () => {
     expect(cells[4]!.textContent).toBe('วศิน ส.13 พ.ย. 2569 14:05');
   });
 
+  it('falls back to the BackOffice save time when both sides were cleared', () => {
+    render(<MappingBoard snapshot={snapshot} editors={{ '34': { name: 'วศิน ส.', at: '2026-11-13T07:05:00.000Z' } }} />);
+    const row = within(screen.getByRole('table')).getAllByRole('row').find((element) => within(element).queryAllByRole('cell')[0]?.textContent === '34')!;
+    expect(within(row).getAllByRole('cell')[4]!.textContent).toMatch(/^วศิน ส\..*14:05$/);
+  });
+
   it('saves only after a change, with the values the person saw, then refreshes', async () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);

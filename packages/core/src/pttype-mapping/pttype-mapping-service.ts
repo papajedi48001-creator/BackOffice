@@ -9,7 +9,7 @@ import { readPttypeMappings, writePttypeMapping, type MappingSide, type MappingS
 
 export type MappingIo = { read: typeof readPttypeMappings; write: typeof writePttypeMapping };
 export type SideChange = { from: string | null; to: string | null };
-/** ผู้แก้ล่าสุด of a สิทธิ in BackOffice; `at` is UTC ISO. Changes made straight in HOSxP have none. */
+/** ผู้แก้ล่าสุด of a สิทธิ in BackOffice; `at` is UTC ISO. Left out when the latest HOSxP stamp is not that save (edited straight in HOSxP). */
 export type MappingEditor = { name: string | null; at: string };
 export type MappingLoad = { ok: true; snapshot: MappingSnapshot; editors: Record<string, MappingEditor> } | { ok: false; code: 'NOT_CONFIGURED' | 'HOSXP_FAILED' };
 export type MappingSave = { ok: true } | { ok: false; code: 'FORBIDDEN' | 'NOT_CONFIGURED' | 'HOSXP_FAILED' | 'NO_WRITE_PERMISSION' | Extract<MappingWrite, { ok: false }>['code'] };
@@ -17,6 +17,20 @@ export type MappingSave = { ok: true } | { ok: false; code: 'FORBIDDEN' | 'NOT_C
 export type MappingHistoryRow = { id: string; at: string; actorName: string | null; pttype: string; opd: SideChange | null; ipd: SideChange | null };
 
 const UPDATE = 'pttype_mapping.update';
+/** Allowed gap between BackOffice's clock and HOSxP's when matching a save to its `last_modify`. */
+const STAMP_TOLERANCE_MS = 10 * 60_000;
+const BANGKOK_OFFSET_MS = 7 * 3_600_000;
+
+/**
+ * Whether a BackOffice save (`at`, UTC ISO) is the change behind HOSxP's latest stamp (Bangkok wall time). A later
+ * stamp means someone edited straight in HOSxP, so the BackOffice editor must not be named. No stamp: nothing to contradict.
+ */
+export function editorMatchesStamp(at: string, stamp: string | null): boolean {
+  if (stamp === null) return true;
+  const stampMs = Date.parse(`${stamp.replace(' ', 'T')}Z`) - BANGKOK_OFFSET_MS;
+  return Number.isFinite(stampMs) && Math.abs(stampMs - Date.parse(at)) <= STAMP_TOLERANCE_MS;
+}
+const latestStamp = (stamps: (string | null | undefined)[]) => stamps.filter((stamp): stamp is string => Boolean(stamp)).sort().at(-1) ?? null;
 const EDITOR_WINDOW = 2000;
 /** MariaDB refusals that mean the HOSxP account may read but not write: table, column or database access denied. */
 const WRITE_DENIED = new Set([1142, 1143, 1044]);
@@ -43,6 +57,10 @@ export class PttypeMappingService {
     try { snapshot = await this.io.read(connection); } catch (error) { logFailure('HOSxP read', error); return { ok: false, code: 'HOSXP_FAILED' }; }
     const editors: Record<string, MappingEditor> = {};
     for (const row of await this.auditRows(EDITOR_WINDOW)) editors[row.target_id] ??= { name: row.actor_name, at: row.at };
+    for (const right of snapshot.rights) {
+      const editor = editors[right.code];
+      if (editor && !editorMatchesStamp(editor.at, latestStamp([right.opd?.modifiedAt, right.ipd?.modifiedAt]))) delete editors[right.code];
+    }
     return { ok: true, snapshot, editors };
   }
 

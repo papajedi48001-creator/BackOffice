@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import type { MappedAccount, MappingEditor, MappingSnapshot, PttypeRight } from '@backoffice/core';
 import { SearchCard } from '../../../components/search-card';
+import { formatBangkokDateTime } from '../../../lib/bangkok-time';
 import { formatHosxpStamp } from '../../../lib/pttype-mapping-client';
 import { MappingDialog } from './mapping-dialog';
 
@@ -79,7 +80,7 @@ export function MappingBoard({ snapshot, editors }: { snapshot: MappingSnapshot;
           <td><strong>{right.name}</strong></td>
           <td data-label="OPD"><AccountCell account={right.opd} /></td>
           <td data-label="IPD"><AccountCell account={right.ipd} /></td>
-          <td className="mapping-who"><span>{editor?.name ?? null}{stamp ? <small>{formatHosxpStamp(stamp)}</small> : editor ? null : <small>—</small>}</span></td>
+          <td className="mapping-who"><span>{editor?.name ?? null}<small>{stamp ? formatHosxpStamp(stamp) : editor ? formatBangkokDateTime(editor.at) : '—'}</small></span></td>
           <td className="mapping-action"><button type="button" className="button-secondary" aria-label={`ผูกผังบัญชี ${right.code} ${right.name}`} onClick={() => setEditing(right.code)}>ผูกผังบัญชี</button></td>
         </tr>;
       })}</tbody>
