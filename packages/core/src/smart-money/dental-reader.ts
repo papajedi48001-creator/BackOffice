@@ -1,11 +1,10 @@
 import { createDatabase } from '@backoffice/db';
-import type { HosxpConnection } from '../holidays/hosxp-settings-service';
+import { hosxpConnectionUrl } from '../holidays/hosxp-settings-service';
 import type { DentalReader } from './dental-service';
 import type { DentalRow } from './dental-summary';
 import { fixThaiText } from './thai-text';
 
 /** The URL is built in memory only; it holds the password, so it is never logged or returned. */
-const urlOf = (connection: HosxpConnection) => `mysql://${encodeURIComponent(connection.user)}:${encodeURIComponent(connection.password)}@${connection.host}:${connection.port}/${encodeURIComponent(connection.database)}?connectTimeout=5000&connectionLimit=1&dateStrings=true`;
 
 const INC_SUM = `(${Array.from({ length: 16 }, (_, i) => `vn.inc${String(i + 1).padStart(2, '0')}`).join(' + ')})`;
 
@@ -40,7 +39,7 @@ const text = (value: string | null) => fixThaiText(value ?? '');
 
 /** One read-only SELECT on HOSxP; nothing is ever written there. */
 export const readDentalClaims: DentalReader = async (connection, start, end) => {
-  const hosxp = createDatabase(urlOf(connection));
+  const hosxp = createDatabase(hosxpConnectionUrl(connection));
   try {
     const rows = await hosxp.query<Raw>(SQL, [start, end]);
     return rows.map((row): DentalRow => ({
