@@ -12,7 +12,7 @@ export interface Database {
  * `READ COMMITTED` lets a transaction read and lock rows other transactions committed after it began.
  * MariaDB 11.8 runs REPEATABLE READ with snapshot isolation, which instead fails such a locking read with ER_CHECKREAD.
  */
-export interface TransactionOptions { isolationLevel?: 'READ COMMITTED'; }
+export interface TransactionOptions { isolationLevel?: 'READ COMMITTED'; /** The server refuses any write inside it (used for reads from HOSxP). */ readOnly?: true; }
 
 export function createDatabase(connectionUrl: string): Database {
   const pool = mysql.createPool(connectionUrl);
@@ -32,7 +32,8 @@ export function createDatabase(connectionUrl: string): Database {
       };
       try {
         // Applies to the next transaction on this connection only.
-        if (options.isolationLevel) await connection.query(`SET TRANSACTION ISOLATION LEVEL ${options.isolationLevel}`);
+        const characteristics = [options.isolationLevel && `ISOLATION LEVEL ${options.isolationLevel}`, options.readOnly && 'READ ONLY'].filter(Boolean);
+        if (characteristics.length > 0) await connection.query(`SET TRANSACTION ${characteristics.join(', ')}`);
         await connection.beginTransaction();
         const result = await work(transactionDatabase);
         await connection.commit();
