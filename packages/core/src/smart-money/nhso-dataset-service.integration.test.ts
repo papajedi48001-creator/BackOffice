@@ -28,6 +28,7 @@ describeWithDatabase('NhsoDatasetService against MariaDB', () => {
 
   beforeAll(async () => {
     await runMigrations(database);
+    await database.execute('DELETE FROM money_nhso_dataset');
     [manager, viewer, outsider] = await Promise.all([insertPerson('ผู้จัดการ'), insertPerson('ผู้ดู'), insertPerson('อื่น')]);
     await new MoneyMemberService(database).saveMember(subject(manager, 'money-manager'), { personId: viewer, pages: ['nhso'] });
     await new MoneyMemberService(database).saveMember(subject(manager, 'money-manager'), { personId: outsider, pages: ['dental'] });
@@ -45,7 +46,7 @@ describeWithDatabase('NhsoDatasetService against MariaDB', () => {
     expect(listed.ok && listed.datasets[1]).toMatchObject({ hcode: '11093', fileName: 'b.xlsx', rowCount: 1, transferTotal: 250.75, dateFrom: '2025-10-01', dateTo: '2026-09-30' });
     expect(listed.ok && 'rows' in listed.datasets[1]!).toBe(false);
     const rows = await audits('money.nhso.upload');
-    expect(rows.map((row) => JSON.parse(row.metadata))).toEqual([{ fiscalYear: 2569, rows: 1 }, { fiscalYear: 2569, rows: 1 }, { fiscalYear: 2570, rows: 1 }, { fiscalYear: 2569, rows: 1 }]);
+    expect(rows.map((row) => row.metadata).sort().map((text) => JSON.parse(text))).toEqual([{ fiscalYear: 2569, rows: 1 }, { fiscalYear: 2569, rows: 1 }, { fiscalYear: 2569, rows: 1 }, { fiscalYear: 2570, rows: 1 }]);
     expect(rows.every((row) => !row.metadata.includes('วาริชภูมิ'))).toBe(true);
   });
 
