@@ -14,6 +14,9 @@ export type MappingEditor = { name: string | null; at: string };
 export type MappingLoad = { ok: true; snapshot: MappingSnapshot; editors: Record<string, MappingEditor> } | { ok: false; code: 'NOT_CONFIGURED' | 'HOSXP_FAILED' };
 export type MappingSave = { ok: true } | { ok: false; code: 'FORBIDDEN' | 'NOT_CONFIGURED' | 'HOSXP_FAILED' | 'NO_WRITE_PERMISSION' | Extract<MappingWrite, { ok: false }>['code'] };
 /** One row of ประวัติการแก้ไข; a side is null when that save left it unchanged. */
+/** Bangkok days `YYYY-MM-DD`; a malformed day is ignored. */
+export type MappingHistoryQuery = { from?: string; to?: string; limit?: number };
+export const HISTORY_LIMIT = 200;
 export type MappingHistoryRow = { id: string; at: string; actorName: string | null; pttype: string; opd: SideChange | null; ipd: SideChange | null };
 
 const UPDATE = 'pttype_mapping.update';
@@ -30,6 +33,12 @@ export function editorMatchesStamp(at: string, stamp: string | null): boolean {
   const stampMs = Date.parse(`${stamp.replace(' ', 'T')}Z`) - BANGKOK_OFFSET_MS;
   return Number.isFinite(stampMs) && Math.abs(stampMs - Date.parse(at)) <= STAMP_TOLERANCE_MS;
 }
+/** UTC `YYYY-MM-DD HH:MM:SS` of 00:00 Bangkok on `day` plus `addDays`, for comparing with `created_at`; null when `day` is not a date. */
+const bangkokDayStart = (day: string, addDays: number) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
+  const ms = Date.parse(`${day}T00:00:00Z`);
+  return Number.isFinite(ms) ? new Date(ms + addDays * 86_400_000 - BANGKOK_OFFSET_MS).toISOString().slice(0, 19).replace('T', ' ') : null;
+};
 const latestStamp = (stamps: (string | null | undefined)[]) => stamps.filter((stamp): stamp is string => Boolean(stamp)).sort().at(-1) ?? null;
 const EDITOR_WINDOW = 2000;
 /** MariaDB refusals that mean the HOSxP account may read but not write: table, column or database access denied. */
@@ -81,8 +90,9 @@ export class PttypeMappingService {
     return { ok: true };
   }
 
-  async history(limit = 200): Promise<MappingHistoryRow[]> {
-    return (await this.auditRows(limit)).map((row) => {
+  /** ประวัติการแก้ไข, newest first, at most `limit` rows; `from`/`to` are Bangkok days (YYYY-MM-DD), both inclusive. */
+  async history({ from, to, limit = HISTORY_LIMIT }: MappingHistoryQuery = {}): Promise<MappingHistoryRow[]> {
+    return (await this.auditRows(limit, from ? bangkokDayStart(from, 0) : null, to ? bangkokDayStart(to, 1) : null)).map((row) => {
       const metadata = parse(row.metadata);
       return { id: row.id, at: row.at, actorName: row.actor_name, pttype: row.target_id, opd: side(metadata.opd), ipd: side(metadata.ipd) };
     });
@@ -93,10 +103,10 @@ export class PttypeMappingService {
     return this.audit(personId, 'pttype_mapping.export', 'module', 'pttype-mapping', { exportKind: 'pttype-mapping', rows });
   }
 
-  private auditRows(limit: number): Promise<AuditRow[]> {
+  private auditRows(limit: number, from: string | null = null, before: string | null = null): Promise<AuditRow[]> {
     return this.database.query<AuditRow>(
-      "SELECT e.id, e.target_id, e.metadata, DATE_FORMAT(e.created_at, '%Y-%m-%dT%H:%i:%s.000Z') AS at, p.display_name AS actor_name FROM audit_event e LEFT JOIN person p ON p.id = e.actor_person_id WHERE e.action = ? ORDER BY e.created_at DESC, e.id DESC LIMIT ?",
-      [UPDATE, limit]);
+      `SELECT e.id, e.target_id, e.metadata, DATE_FORMAT(e.created_at, '%Y-%m-%dT%H:%i:%s.000Z') AS at, p.display_name AS actor_name FROM audit_event e LEFT JOIN person p ON p.id = e.actor_person_id WHERE e.action = ?${from ? ' AND e.created_at >= ?' : ''}${before ? ' AND e.created_at < ?' : ''} ORDER BY e.created_at DESC, e.id DESC LIMIT ?`,
+      [UPDATE, ...(from ? [from] : []), ...(before ? [before] : []), limit]);
   }
 
   private audit(actorPersonId: string, action: string, targetType: string, targetId: string, metadata: Record<string, unknown>): Promise<void> {

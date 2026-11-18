@@ -10,7 +10,7 @@
 
 ## เป้าหมาย
 
-- โมดูลใหม่ "Mapping สิทธิ" (`pttype-mapping`, `/pttype-mapping`) หน้าจอแบบ B (ผู้ใช้เลือกแล้ว): ตารางสิทธิพร้อม popup ผูกผังบัญชีทีละสิทธิ
+- โมดูลใหม่ "Mapping สิทธิ" (`pttype-mapping`, `/pttype-mapping` พาไปหน้า `/pttype-mapping/board`) หน้าจอแบบ B (ผู้ใช้เลือกแล้ว): ตารางสิทธิพร้อม popup ผูกผังบัญชีทีละสิทธิ
 - เฉพาะผู้ดูแลระบบและผู้จัดการโมดูลนี้ (`pttype-mapping.manage`) เท่านั้นที่เห็นโมดูลและแก้ไขได้ คนอื่นไม่เห็นโมดูล
 - อ่านและเขียน HOSxP ผ่าน `HosxpSettingsService` (การเชื่อมต่อกลางใน "ตั้งค่าการเชื่อมต่อ")
 - ไม่มีระบบปี (ผู้ใช้สั่ง 18 พ.ย. 2569): ไม่แสดงและไม่ให้เลือกปี ผังบัญชีปัจจุบันของสิทธิ = แถวที่ `last_modify` ล่าสุด ทุกครั้งที่บันทึกประทับ `last_modify` เป็นเวลาที่บันทึก
@@ -31,7 +31,7 @@
 ## ข้อจำกัด
 
 - HOSxP production, charset tis620: ข้อความไทยอ่านผ่าน `fixThaiText` เหมือน `dental-reader.ts` ค่าที่เขียนเป็นรหัส ASCII เท่านั้น (`pttype`, `paccount`)
-- บัญชีของการเชื่อมต่อกลางต้องมีสิทธิ์ `SELECT` บน `pttype`, `paccount`, `paccountopd`, `paccountipd` และ `INSERT`, `DELETE` บน `paccountopd`, `paccountipd` ถ้าไม่มี การบันทึกจะล้มพร้อมข้อความ "บัญชี HOSxP ไม่มีสิทธิ์เขียน" (อ่านได้ตามปกติ)
+- บัญชีของการเชื่อมต่อกลางต้องมีสิทธิ์ `SELECT` บน `pttype`, `paccount`, `paccountopd`, `paccountipd` และ `INSERT`, `DELETE` บน `paccountopd`, `paccountipd` ถ้าไม่มี การบันทึกจะล้มพร้อมข้อความ "บัญชี HOSxP ไม่มีสิทธิ์เขียน" (อ่านได้ตามปกติ) และตาราง `paccountopd`, `paccountipd` ต้องเป็น InnoDB ถ้าไม่ใช่ ระบบจะไม่ยอมบันทึก
 - การเขียน HOSxP และการเขียน audit อยู่คนละฐานข้อมูล จึงทำใน transaction เดียวกันไม่ได้ (ดู "ลำดับการบันทึก")
 - กฎของโปรเจกต์: popup ปิดได้จากปุ่มเท่านั้น, การ์ดค้นหาแบบ 2, วันที่แบบ "13 พ.ย. 2569" เวลาไทย, สิทธิ์ตรวจที่เซิร์ฟเวอร์, map permission ใน `permissionModules`
 
@@ -52,7 +52,7 @@
 - permission ใหม่ `pttype-mapping.manage` → `permissionModules['pttype-mapping.manage'] = 'pttype-mapping'` (`packages/contracts/src/access.ts`)
 - role ใหม่ `pttype-mapping-manager` (ผู้จัดการโมดูล Mapping สิทธิ) และ tester role ตามแบบโมดูลอื่น เพิ่มใน `grantableRoleSchema` / `testerModuleCodes`
 - `AuthorizationService` ตัดสิน: ผู้ดูแลระบบ หรือผู้มี `pttype-mapping.manage` ทุกหน้าและทุก API เรียก `canManagePttypeMapping` ซ้ำ ไม่พึ่ง UI
-- ลงทะเบียนใน `apps/web/src/lib/modules.ts` กลุ่ม services, ไอคอนจากชุดที่มี, สีประจำโมดูลใหม่ `[data-module="pttype-mapping"]` ใน `styles.css` ส่วนย่อย: "ผูกผังบัญชี" (`/pttype-mapping`) และ "ประวัติการแก้ไข" (`/pttype-mapping/history`)
+- ลงทะเบียนใน `apps/web/src/lib/modules.ts` กลุ่ม services, ไอคอนจากชุดที่มี, สีประจำโมดูลใหม่ `[data-module="pttype-mapping"]` ใน `styles.css` ส่วนย่อย: "ผูกผังบัญชี" (`/pttype-mapping/board`) และ "ประวัติการแก้ไข" (`/pttype-mapping/history`)
 
 ### อ่านข้อมูล (HOSxP, read)
 
@@ -84,13 +84,13 @@
 
 1. ตรวจ session + `canManagePttypeMapping` ไม่ผ่าน → 403
 2. ตรวจรูปแบบ: `pttype` และ `paccount` เป็นรหัส `^[A-Za-z0-9._-]{1,20}$`
-3. ใน transaction ของ HOSxP: `SELECT … FOR UPDATE` สิทธิ (ต้อง `isuse='Y'`) และผังบัญชีปัจจุบัน ถ้าไม่ตรง `expected` → rollback, 409 `STALE` ตรวจว่าผังบัญชีที่เลือกมีอยู่และ type ตรงฝั่ง ไม่ตรง → 422 แล้วต่อเฉพาะฝั่งที่เปลี่ยน: `DELETE FROM paccountopd|paccountipd WHERE pttype = ?` แล้ว (ถ้ามีค่า) `INSERT (pttype, paccount, iclaim_status, paccount_year, last_modify) VALUES (?, ?, 1, 2017, NOW())` → commit
+3. ถ้าตาราง `paccountopd`/`paccountipd` ไม่ใช่ InnoDB (ย้อนกลับไม่ได้) → 503 `NOT_TRANSACTIONAL` ไม่แตะข้อมูล แล้วใน transaction ของ HOSxP: ล็อกชื่อ `GET_LOCK('backoffice:pttype-mapping:<รหัส>')` (ไม่ต้องมีสิทธิ์ UPDATE บน `pttype` ซึ่ง MySQL 8 ต้องการสำหรับ `FOR UPDATE`), อ่านสิทธิ (ต้อง `isuse='Y'`) และ `SELECT … FOR UPDATE` ผังบัญชีปัจจุบัน ถ้าไม่ตรง `expected` → rollback, 409 `STALE` ตรวจว่าผังบัญชีที่เลือกมีอยู่และ type ตรงฝั่ง ไม่ตรง → 422 แล้วต่อเฉพาะฝั่งที่เปลี่ยน: `DELETE FROM paccountopd|paccountipd WHERE pttype = ?` แล้ว (ถ้ามีค่า) `INSERT (pttype, paccount, iclaim_status, paccount_year, last_modify) VALUES (?, ?, 1, 2017, NOW())` → commit
 4. หลัง commit เขียน audit ใน BackOffice: action `pttype_mapping.update`, target `pttype`/รหัส, metadata `{ pttype, opd: { from, to }, ipd: { from, to } }` (รหัสเท่านั้น ไม่มีข้อมูลส่วนบุคคล) ถ้าเขียน audit ไม่ได้ ตอบสำเร็จพร้อมบันทึก error ฝั่งเซิร์ฟเวอร์ (ไม่มีข้อมูลลับ) เพราะ HOSxP เปลี่ยนแล้ว
 5. ไม่มี outbox event และไม่มีการแจ้งเตือน
 
 ### หน้า "ประวัติการแก้ไข"
 
-ตารางจาก audit `pttype_mapping.update` ใหม่สุดก่อน: วันเวลา (ไทย) · ผู้แก้ · สิทธิ · OPD เดิม → ใหม่ · IPD เดิม → ใหม่ การ์ดค้นหา: ค้นรหัสสิทธิ/ชื่อผู้แก้ และช่วงวันที่ด้วย `ThaiDateInput` (เลือกวันเริ่ม วันสิ้นสุดตามมา)
+ตารางจาก audit `pttype_mapping.update` ใหม่สุดก่อน อ่านจากเซิร์ฟเวอร์ตามช่วงวันที่ใน URL (`?from=&to=` วันตามเวลาไทย) ได้ไม่เกิน 200 รายการล่าสุดในช่วงนั้น ถ้าครบ 200 แจ้งให้เลือกช่วงให้แคบลง: วันเวลา (ไทย) · ผู้แก้ · สิทธิ · OPD เดิม → ใหม่ · IPD เดิม → ใหม่ การ์ดค้นหา: ค้นรหัสสิทธิ/ชื่อผู้แก้ และช่วงวันที่ด้วย `ThaiDateInput` (เลือกวันเริ่ม วันสิ้นสุดตามมา)
 
 ### รายงานลูกหนี้ทันตกรรม
 
@@ -107,7 +107,8 @@
 - ค่า `paccount_year` ที่เขียนยังเป็น 2017 เหมือนระบบเดิม เพราะคอลัมน์มีอยู่และอาจห้ามว่าง แต่ไม่มีส่วนไหนของ BackOffice ใช้ค่านี้อีก
 - รหัสโมดูล `pttype-mapping`, role `pttype-mapping-manager`
 - เปลี่ยนกฎเลือกผังบัญชีในรายงานลูกหนี้ทันตกรรมเป็น `last_modify` ล่าสุดตามข้างบน
-- ช่วงวันที่ในประวัติไม่จำกัด แสดงทีละ 200 แถว
+- ช่วงวันที่ในประวัติไม่จำกัด อ่านจากเซิร์ฟเวอร์ตามช่วง ได้ไม่เกิน 200 รายการล่าสุดต่อช่วง
+- ชื่อผู้แก้ในช่อง "แก้ไขล่าสุด" แสดงเมื่อการบันทึกใน BackOffice ตรงกับ `last_modify` ล่าสุดใน HOSxP (คลาดได้ 10 นาที, HOSxP เก็บเวลาไทย) ถ้ามีคนแก้ตรงใน HOSxP ทีหลัง แสดงเฉพาะวันที่
 
 ## ทดสอบ
 

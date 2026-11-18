@@ -45,4 +45,14 @@ describeWithDatabase('PttypeMappingService against MariaDB', () => {
     const rows = await database.query<{ metadata: string }>("SELECT metadata FROM audit_event WHERE action = 'pttype_mapping.export' AND actor_person_id = ?", [manager]);
     expect(JSON.parse(rows[0]!.metadata)).toEqual({ exportKind: 'pttype-mapping', rows: 7 });
   });
+
+  it('reaches changes older than the latest 200 by Bangkok date range', async () => {
+    const old = `O${randomUUID().slice(0, 6)}`;
+    await database.execute("INSERT INTO audit_event (id, actor_person_id, action, target_type, target_id, result, metadata, created_at) VALUES (?, ?, 'pttype_mapping.update', 'pttype', ?, 'SUCCESS', ?, '2019-03-31 17:30:00')", [randomUUID(), manager, old, JSON.stringify({ pttype: old, opd: { from: null, to: 'P1' } })]);
+    const day = (from: string, to: string) => service().history({ from, to, limit: 50 }).then((rows) => rows.map((row) => row.pttype));
+    expect(await day('2019-04-01', '2019-04-01')).toContain(old);
+    expect(await day('2019-03-31', '2019-03-31')).not.toContain(old);
+    expect(await day('2019-04-02', '2019-04-30')).not.toContain(old);
+    expect((await service().history({ limit: 1 })).map((row) => row.pttype)).not.toContain(old);
+  });
 });
