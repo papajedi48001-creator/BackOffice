@@ -147,6 +147,7 @@ export * from './smart-money/dental-csv';
 export * from './smart-money/dental-service';
 export * from './smart-money/dental-reader';
 export * from './smart-money/thai-text';
+export * from './smart-money/nhso-report';
 export { recordDentalExport } from './smart-money/money-db';
 export * from './pttype-mapping/pttype-mapping-access';
 export * from './pttype-mapping/pttype-mapping-hosxp';
