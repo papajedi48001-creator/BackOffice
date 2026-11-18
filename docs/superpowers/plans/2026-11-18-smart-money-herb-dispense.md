@@ -35,7 +35,7 @@ Data Drug rows (no PID) to the summary. The web page reuses the TTM filter and r
 **Files:** create `packages/core/src/smart-money/herb-rules.ts` (+test)
 **Produces:** `HERB_ONTOP: readonly [icode, name, unit, stdQty, baht|null, points|null][]` (38), `HerbOntopRate`, `HerbRules
 {herbIcodes, ontopRates: Record<string,HerbOntopRate>, rightMap, pointBaht: number|null}`, `herbRules(custom: {point_baht?: string}, ttm: TtmRules)`.
-- [ ] Port the legacy rules checks (38 rates, 92 baht, 264.5 point, no 1560027/1630008, point_baht '0.5'/'abc', every ontop icode in the herb list, baht xor points); watch fail; implement; pass; commit.
+- [x] Port the legacy rules checks (38 rates, 92 baht, 264.5 point, no 1560027/1630008, point_baht '0.5'/'abc', every ontop icode in the herb list, baht xor points); watch fail; implement; pass; commit.
 
 ### Task 3: summary + parity
 **Files:** create `herb-summary.ts` (+test), `fixtures/make-herb-legacy.php`, `fixtures/herb-legacy.json`
