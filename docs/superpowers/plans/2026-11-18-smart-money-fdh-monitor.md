@@ -33,40 +33,40 @@ everything in the browser with a TypeScript port of `fdh-core.js`.
 ---
 
 ### Task 1: Contracts, migration, schema
-- [ ] `packages/contracts/src/smart-money.ts`: `'fdh'` in `moneyPageSchema`; `fdhKindSchema = z.enum(['rep','stm'])`;
+- [x] `packages/contracts/src/smart-money.ts`: `'fdh'` in `moneyPageSchema`; `fdhKindSchema = z.enum(['rep','stm'])`;
   `fdhUploadSchema = { fileName: string 1..255, sheets: record(name ≤ 100 chars → array ≤ 30,000 of array ≤ 200 of nhsoCell) }`,
   at most 6 sheets. Test: valid, 7 sheets refused, 201 cells refused.
-- [ ] Migration `0042_money_fdh_document.sql`: kind ENUM('rep','stm'), doc_no VARCHAR(100), hcode CHAR(5) NULL, hname,
+- [x] Migration `0042_money_fdh_document.sql`: kind ENUM('rep','stm'), doc_no VARCHAR(100), hcode CHAR(5) NULL, hname,
   period, report_date DATE NULL, file_name, item_count INT, money_sum DECIMAL(15,2), document_ciphertext LONGTEXT,
   uploaded_at, uploaded_by FK person; PK (kind, doc_no). Register in migrate.ts (+ test), Drizzle `moneyFdhDocuments`.
 
 ### Task 2: Parsers (core `smart-money/fdh-report.ts`)
-- [ ] Fixtures: `scratchpad/fdh-fixtures.php` includes the legacy PHP tests' builders and writes
+- [x] Fixtures: `scratchpad/fdh-fixtures.php` includes the legacy PHP tests' builders and writes
   `packages/core/src/smart-money/fixtures/fdh-legacy.json` = list of {name, fileName, sheets, expected | error}.
-- [ ] Test: `parseFdhDocument(sheets, fileName)` equals every fixture's expected document (or error message).
-- [ ] Implement `parseFdhRep`, `parseFdhStm`, `parseFdhDocument` (REP first, then STM, else "ไฟล์นี้ไม่ใช่ REP หรือ STM ของ FDH"),
+- [x] Test: `parseFdhDocument(sheets, fileName)` equals every fixture's expected document (or error message).
+- [x] Implement `parseFdhRep`, `parseFdhStm`, `parseFdhDocument` (REP first, then STM, else "ไฟล์นี้ไม่ใช่ REP หรือ STM ของ FDH"),
   `fdhIsoDate`, `fdhStr`, `fdhNum`. Result `{ok:true, document} | {ok:false, message}`.
 
 ### Task 3: Service (core `smart-money/fdh-document-service.ts`)
-- [ ] Unit tests: non-manager FORBIDDEN without touching the database; INVALID_REPORT message; no protector → refused.
-- [ ] Integration test: upload REP + STM, re-upload replaces, list summaries (count, sum, newest order as legacy), `all` returns
+- [x] Unit tests: non-manager FORBIDDEN without touching the database; INVALID_REPORT message; no protector → refused.
+- [x] Integration test: upload REP + STM, re-upload replaces, list summaries (count, sum, newest order as legacy), `all` returns
   decrypted documents to a page member, FORBIDDEN for others, ciphertext column has no PID, audit metadata only kind/rows,
   remove and removeAll per kind.
-- [ ] Implement `FdhDocumentService(database, protector | null)`: upload, list, all, remove(kind, docNo), removeAll(kind).
+- [x] Implement `FdhDocumentService(database, protector | null)`: upload, list, all, remove(kind, docNo), removeAll(kind).
 
 ### Task 4: API routes
-- [ ] Tests (`api/money/fdh/route.test.ts`): 401 signed out; non-manager 403 before reading body; 413 over 24 MB; 400 bad
+- [x] Tests (`api/money/fdh/route.test.ts`): 401 signed out; non-manager 403 before reading body; 413 over 24 MB; 400 bad
   body; INVALID_REPORT → 400 with message; GET list / `?full=1`; DELETE one (path check 404) and all (`?kind=`).
-- [ ] Implement `/api/money/fdh/documents` (GET, POST, DELETE) and `/api/money/fdh/documents/[kind]/[docNo]` (DELETE).
+- [x] Implement `/api/money/fdh/documents` (GET, POST, DELETE) and `/api/money/fdh/documents/[kind]/[docNo]` (DELETE).
 
 ### Task 5: fdh-core port (web `lib/money/fdh-core.ts`)
-- [ ] Port `tests/fdh/core.test.js` to vitest unchanged in meaning; implement the port with the same names and formulas.
+- [x] Port `tests/fdh/core.test.js` to vitest unchanged in meaning; implement the port with the same names and formulas.
 
 ### Task 6: Upload and files page
-- [ ] `readFdhFile(file)` in `nhso-sheet.ts` sibling `fdh-sheet.ts`: wanted sheets only, trimmed rows, .zip expansion with the
+- [x] `readFdhFile(file)` in `nhso-sheet.ts` sibling `fdh-sheet.ts`: wanted sheets only, trimmed rows, .zip expansion with the
   10 MB per-file limit. Test with a generated workbook and zip.
-- [ ] `fdh-upload.ts` helpers (fileProblem: .xls/.xlsx/.zip only; uploadLine). Tests.
-- [ ] `/money/fdh/files`: FdhUpload + FdhFiles (two tables, ActionDialog deletes). Component tests.
+- [x] `fdh-upload.ts` helpers (fileProblem: .xls/.xlsx/.zip only; uploadLine). Tests.
+- [x] `/money/fdh/files`: FdhUpload + FdhFiles (two tables, ActionDialog deletes). Component tests.
 
 ### Task 7: Dashboard
 - [ ] `/money/fdh` page and components: status line, filters, KPIs, status strip, sub-fund chart + table, money table,
