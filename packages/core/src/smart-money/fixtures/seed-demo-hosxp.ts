@@ -1,5 +1,5 @@
 import { createDatabase } from '@backoffice/db';
-import { seedFakeHosxp, seedFakeTtm, type FakeTtmCharge, type FakeTtmService, type FakeVisit } from './fake-hosxp';
+import { seedFakeHerb, seedFakeHosxp, seedFakeTtm, tis, type FakeHerbDispense, type FakeTtmCharge, type FakeTtmService, type FakeVisit } from './fake-hosxp';
 import { TTM_HERB_ICODES, TTM_PROCEDURES } from '../ttm-rules';
 
 // Fills an empty local database with a made-up HOSxP for screenshots: `HOSXP_DEMO_URL=mysql://…/hosxp_demo tsx …/seed-demo-hosxp.ts`.
@@ -42,6 +42,17 @@ for (let day = 0; day < 49; day += 1) {
     if (rand() < 0.5) ttmCharges.push({ vn, icode: '3015968', income: '14', qty: 1, price: 50 });
   }
 }
+// การจ่ายยาสมุนไพร: herbal lines with rxdate on the same visits (OPD and the few IPD), cost and standard price per drug.
+const herbDispenses: FakeHerbDispense[] = [];
+const herbDrugs = TTM_HERB_ICODES.slice(0, 40);
+for (const visit of ttmVisits) {
+  const lines = rand() < 0.55 ? 1 + Math.floor(rand() * 3) : 0;
+  for (let k = 0; k < lines; k += 1) {
+    const [icode] = herbDrugs[Math.floor(rand() * rand() * herbDrugs.length)]!;
+    const qty = [1, 2, 10, 20, 42][Math.floor(rand() * 5)]!;
+    herbDispenses.push({ rxdate: visit.vstdate, vn: visit.vn, an: visit.an, hn: visit.hn, icode, qty, price: qty * 2 });
+  }
+}
 try {
   await seedFakeHosxp(database, { patients, icd, pttypes, paccountopd: [['89', 'UC01', 2026], ['10', 'CASH', 2026], ['34', 'CSMBS', 2026], ['A7', 'SSS', 2025], ['71', 'UC02', 2026]], paccounts: [['UC01', 2026, 'ลูกหนี้ค่ารักษา UC-OP ใน CUP'], ['CASH', 2026, 'ลูกหนี้ค่ารักษา-ชำระเงิน'], ['CSMBS', 2026, 'ลูกหนี้ค่ารักษา เบิกจ่ายตรง กรมบัญชีกลาง OP'], ['SSS', 2025, 'ลูกหนี้ค่ารักษา ประกันสังคม OP'], ['UC02', 2026, 'ลูกหนี้ค่ารักษา UC-OP นอก CUP']], visits, doctors: [['D01', 'ทพ.สมหมาย ใจงาม'], ['D02', 'ทพญ.วิไล รักษ์ฟัน'], ['H01', 'นางสาวกมลา ช่วยดี']] });
   await database.execute('INSERT INTO ovst (vn, hn, vstdate, pttype, an) VALUES ' + ttmVisits.map(() => '(?, ?, ?, ?, ?)').join(', '), ttmVisits.flatMap((v) => [v.vn, v.hn, v.vstdate, v.pttype, v.an ?? null]));
@@ -52,5 +63,10 @@ try {
     drugs: TTM_HERB_ICODES.slice(0, 20).map(([code, name]) => [code, name]), nondrugs: [...procedures.map(([code, , name]) => [code, name] as [string, string]), ['3015968', 'IMC Intermidiate Care']],
     services: ttmServices, charges: ttmCharges
   });
-  console.log(`seeded ${visits.length} visits and ${ttmVisits.length} แพทย์แผนไทย visits`);
+  await seedFakeHerb(database, {
+    drugs: herbDrugs.slice(20).map(([code, name], i) => [code, name, null, i % 2 ? 'แคปซูล' : 'ขวด', 0.5 + (i % 5), i % 7 === 0 ? null : 1 + (i % 6)]),
+    admissions: ttmVisits.filter((visit) => visit.an).map((visit) => [visit.an!, visit.vn, '34']), dispenses: herbDispenses
+  });
+  for (const [i, [code]] of herbDrugs.slice(0, 20).entries()) await database.execute('UPDATE drugitems SET units = ?, unitcost = ?, stdprice = ? WHERE icode = ?', [tis(i % 3 ? 'แคปซูล' : 'ซอง'), 0.4 + (i % 4) * 0.3, i % 6 === 0 ? 0 : 1 + (i % 5) * 0.5, code]);
+  console.log(`seeded ${visits.length} visits, ${ttmVisits.length} แพทย์แผนไทย visits and ${herbDispenses.length} herbal lines`);
 } finally { await database.close(); }

@@ -254,7 +254,7 @@ const BY_HIPDATA: Record<string, TtmRightGroup> = { OFC: 'ofc', BKK: 'ofc', BMT:
 const BY_NAME: readonly (readonly [string, TtmRightGroup])[] = [['ข้าราชการ', 'ofc'], ['ท้องถิ่น', 'lgo'], ['อปท', 'lgo'], ['ประกันสังคม', 'sss'], ['บัตรทอง', 'uc'], ['หลักประกันสุขภาพ', 'uc'], ['UC', 'uc'], ['30 บาท', 'uc']];
 
 /** กลุ่มสิทธิ of a pttype: configured map → name (ใบเสร็จ, ชำระเงิน) → hipdata_code → broader name → other (legacy `rightGroup`). */
-export function ttmRightGroup(pttype: string, name: string, hipdata: string, rules: TtmRules): TtmRightGroup {
+export function ttmRightGroup(pttype: string, name: string, hipdata: string, rules: Pick<TtmRules, 'rightMap'>): TtmRightGroup {
   const mapped = Object.hasOwn(rules.rightMap, pttype) ? rules.rightMap[pttype] : undefined;
   if (mapped) return mapped;
   if (pttype === '' && name === '' && hipdata === '') return 'other';

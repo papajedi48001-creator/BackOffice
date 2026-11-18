@@ -20,7 +20,7 @@ describeWithDatabase('FdhDocumentService against MariaDB', () => {
   const database = databaseUrl ? createDatabase(databaseUrl) : undefined as never;
   const protector = new NationalIdProtector(randomBytes(32).toString('hex'), randomBytes(32).toString('hex'));
   const service = new FdhDocumentService(database, protector);
-  let manager: string; let viewer: string; let outsider: string;
+  let manager: string; let viewer: string; let outsider: string; let herbViewer: string;
   const insertPerson = async (name: string) => {
     const id = randomUUID();
     await database.execute("INSERT INTO person (id, national_id_ciphertext, national_id_lookup, display_name, employment_status, created_at) VALUES (?, 'ciphertext', ?, ?, 'ACTIVE', UTC_TIMESTAMP())", [id, randomUUID(), `${name} ${id.slice(0, 8)}`]);
@@ -31,7 +31,8 @@ describeWithDatabase('FdhDocumentService against MariaDB', () => {
   beforeAll(async () => {
     await runMigrations(database);
     await database.execute('DELETE FROM money_fdh_document');
-    [manager, viewer, outsider] = await Promise.all([insertPerson('ผู้จัดการ'), insertPerson('ผู้ดู'), insertPerson('อื่น')]);
+    [manager, viewer, outsider, herbViewer] = await Promise.all([insertPerson('ผู้จัดการ'), insertPerson('ผู้ดู'), insertPerson('อื่น'), insertPerson('สมุนไพร')]);
+    await new MoneyMemberService(database).saveMember(subject(manager, 'money-manager'), { personId: herbViewer, pages: ['herb'] });
     await new MoneyMemberService(database).saveMember(subject(manager, 'money-manager'), { personId: viewer, pages: ['fdh'] });
     await new MoneyMemberService(database).saveMember(subject(manager, 'money-manager'), { personId: outsider, pages: ['nhso'] });
   });
@@ -62,6 +63,27 @@ describeWithDatabase('FdhDocumentService against MariaDB', () => {
     expect(await service.list(subject(outsider, null))).toEqual({ ok: false, code: 'FORBIDDEN' });
     expect(await service.upload(subject(viewer, null), { fileName: 'x.xls', sheets: REP })).toEqual({ ok: false, code: 'FORBIDDEN' });
     expect(await service.remove(subject(viewer, null), 'rep', REP_NO)).toEqual({ ok: false, code: 'FORBIDDEN' });
+  });
+
+  it('gives การจ่ายยาสมุนไพร only what it reads of each REP, never PID or names', async () => {
+    const herb = await service.herbRep(subject(herbViewer, null));
+    expect(herb).toEqual({ ok: true, unreadable: 0, docs: [{ doc_no: REP_NO, report_date: '2026-11-06', drugs: [], cases: [
+      { tran_id: '835483474', seq: '691028070326', sub_fund: 'OPAE,OPAE-DRUG' }, { tran_id: '835476654', seq: '691001000076', sub_fund: '' }
+    ] }] });
+    expect(JSON.stringify(herb)).not.toContain('1000000000001');
+    expect((await service.herbRep(subject(viewer, null))).ok).toBe(true);
+    expect((await service.herbRep(subject(manager, 'money-manager'))).ok).toBe(true);
+    expect(await service.herbRep(subject(outsider, null))).toEqual({ ok: false, code: 'FORBIDDEN' });
+    expect(await service.all(subject(herbViewer, null))).toEqual({ ok: false, code: 'FORBIDDEN' });
+    expect(await new FdhDocumentService(database, null).herbRep(subject(herbViewer, null))).toMatchObject({ ok: false, code: 'NOT_CONFIGURED' });
+  });
+
+  it('skips a REP it cannot open and counts it, instead of failing the page', async () => {
+    await database.execute("INSERT INTO money_fdh_document (kind, doc_no, hcode, hname, period, report_date, file_name, item_count, money_sum, document_ciphertext, uploaded_at, uploaded_by) VALUES ('rep', 'zz-broken', NULL, '', '', NULL, 'b.xls', 0, 0, 'not-a-ciphertext', UTC_TIMESTAMP(), ?)", [manager]);
+    const herb = await service.herbRep(subject(herbViewer, null));
+    expect(herb.ok && herb.docs.map((doc) => doc.doc_no)).toEqual([REP_NO]);
+    expect(herb.ok && herb.unreadable).toBe(1);
+    await database.execute("DELETE FROM money_fdh_document WHERE doc_no = 'zz-broken'");
   });
 
   it('removes one document, then all of one kind, with audit', async () => {

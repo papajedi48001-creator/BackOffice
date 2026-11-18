@@ -1513,3 +1513,20 @@ h2.chat-window-title { cursor: default; }
 @media (max-width: 640px) { .ttm-kpis { grid-template-columns: 1fr; } .ttm-banner h3 { font-size: 1.15rem; } .ttm-filter-actions { margin-left: 0; } }
 .money-ttm .ttm-banner h3 { color: #fff; }
 .money-ttm .thai-date-field input { width: 22ch; }
+/* การจ่ายยาสมุนไพร (/money/herb): the แพทย์แผนไทย look plus its own cards and the สิทธิ table that opens to drugs. */
+.money-herb .ttm-banner h2 { margin: 0; font-size: 1.4rem; color: #fff; }
+.herb-kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+.herb-kpis .money-kpi strong { font-size: 1.35rem; }
+.ttm-tag.is-herb { background: #e7f3e2; color: var(--ttm-herb); font-weight: 600; }
+.herb-rights td.money-number small, .herb-rights th small { display: block; }
+.herb-kpis .herb-warn { display: block; color: #b45309; font-weight: 600; }
+.herb-rights .herb-drug-row td { font-size: .9rem; background: var(--surface-muted, #f8fafc); }
+.herb-rights .herb-drug-row td:first-child { padding-left: 32px; }
+.herb-rights .herb-drug-row td:first-child small { display: inline; color: var(--muted); }
+.herb-rights tbody.is-empty td { color: var(--muted); }
+.app-main .money-herb .herb-toggle { min-height: 0; box-shadow: none; border-radius: 0; display: inline-flex; gap: 6px; align-items: center; padding: 0; border: 0; background: none; color: inherit; font: inherit; font-weight: 600; cursor: pointer; text-align: left; }
+.herb-toggle::before { content: '▸'; color: var(--muted); transition: transform .15s; }
+.herb-toggle[aria-expanded="true"]::before { transform: rotate(90deg); }
+.money-herb table[aria-label="รายยาสมุนไพร"] { min-width: 900px; }
+@media (max-width: 1100px) { .herb-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .herb-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .money-herb .ttm-banner h2 { font-size: 1.15rem; } }

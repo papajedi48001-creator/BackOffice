@@ -1,4 +1,4 @@
-import { connectionSecretBoxFrom, DentalService, readTtm, TtmService, PttypeMappingService, HolidaySyncService, HosxpSettingsService, readDentalClaims, readHosxpHolidays } from '@backoffice/core';
+import { connectionSecretBoxFrom, DentalService, HerbService, readHerb, readTtm, TtmService, PttypeMappingService, HolidaySyncService, HosxpSettingsService, readDentalClaims, readHosxpHolidays } from '@backoffice/core';
 import type { Database } from '@backoffice/db';
 import { readRuntimeValue } from './runtime-env';
 
@@ -12,3 +12,5 @@ export const dentalService = (database: Database) => { const settings = hosxpSet
 export const pttypeMappingService = (database: Database) => { const settings = hosxpSettings(database); return new PttypeMappingService(database, () => settings.resolve()); };
 /** งานแพทย์แผนไทย read live from HOSxP over the same connection, in a READ ONLY transaction. */
 export const ttmService = (database: Database) => { const settings = hosxpSettings(database); return new TtmService(() => settings.resolve(), readTtm); };
+/** การจ่ายยาสมุนไพร read live from HOSxP over the same connection, in a READ ONLY transaction. */
+export const herbService = (database: Database) => { const settings = hosxpSettings(database); return new HerbService(() => settings.resolve(), readHerb); };
