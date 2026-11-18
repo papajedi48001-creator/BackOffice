@@ -152,7 +152,7 @@ export const th = {
   modulePttypeMapping: 'Mapping สิทธิ', modulePttypeMappingDescription: 'ผูกผังบัญชี OPD/IPD กับสิทธิการรักษาใน HOSxP', adminRolePttypeMappingManager: 'ผู้จัดการโมดูล Mapping สิทธิ', roleDescPttypeMappingManager: 'ผูกผังบัญชี OPD/IPD กับสิทธิการรักษาใน HOSxP และดูประวัติการแก้ไข',
   pttypeMappingBoard: 'ผูกผังบัญชี', pttypeMappingHistory: 'ประวัติการแก้ไข',
   moduleSmartMoney: 'Smart Money', moduleSmartMoneyDescription: 'ติดตามการเงินและการเรียกเก็บค่ารักษาพยาบาล', adminRoleMoneyManager: 'ผู้จัดการโมดูล Smart Money', roleDescMoneyManager: 'จัดการสมาชิกและข้อมูลของ Smart Money และเห็นทุกหน้าในโมดูล',
-  moneyDental: 'ลูกหนี้ทันตกรรม', moneyNhso: 'เงินโอน สปสช.', moneyNhsoFiles: 'นำเข้าไฟล์ สปสช.', moneyFdh: 'ติดตามกองทุนย่อย FDH', moneyFdhFiles: 'นำเข้าไฟล์ REP / STM', moneyDisability: 'Point ฟื้นฟูผู้พิการ', moneyDisabilityFiles: 'นำเข้าไฟล์บริการฟื้นฟู', moneySettings: 'ตั้งค่า',
+  moneyDental: 'ลูกหนี้ทันตกรรม', moneyNhso: 'เงินโอน สปสช.', moneyNhsoFiles: 'นำเข้าไฟล์ สปสช.', moneyFdh: 'ติดตามกองทุนย่อย FDH', moneyFdhFiles: 'นำเข้าไฟล์ REP / STM', moneyDisability: 'Point ฟื้นฟูผู้พิการ', moneyDisabilityFiles: 'นำเข้าไฟล์บริการฟื้นฟู', moneyTtm: 'monitor แพทย์แผนไทย', moneySettings: 'ตั้งค่า',
   labUsage: 'ตัดใช้', labRequisitions: 'ใบขอเบิก', labReceipts: 'รับเข้า', labStock: 'ยอดคงเหลือ', labOpening: 'ยอดยกมา', labSettings: 'ตั้งค่า',
   adminModuleAppearance: 'สีและไอคอน', adminAppearanceColor: 'สีประจำโมดูล', adminAppearanceIcon: 'ไอคอน', adminAppearanceColorOne: 'สี', adminAppearanceColorDefault: 'สีเดิม', adminAppearanceIconDefault: 'ไอคอนเดิม', adminAppearanceDefault: 'เดิม', adminAppearancePreview: 'ตัวอย่าง',
   auditAdminModuleAppearanceChanged: 'เปลี่ยนสีหรือไอคอนโมดูล',

@@ -15,7 +15,10 @@ const exempt = new Set(['app/(app)/admin/person-picker.tsx', 'app/(app)/fleet/se
   // The searches inside the รายเคส / รายบุคคล / รายกองทุนย่อย tabs of ติดตามกองทุนย่อย FDH, under its filter search-card.
   'app/(app)/money/fdh/fdh-detail.tsx',
   // The row search inside the รายการ tab of Point ฟื้นฟูผู้พิการ, under its filter search-card.
-  'app/(app)/money/disability/dp-detail.tsx']);
+  'app/(app)/money/disability/dp-detail.tsx',
+  // The row searches of monitor แพทย์แผนไทย (รายชื่อผู้รับบริการ, รายการค่าใช้จ่าย), under its date filter search-card.
+  'app/(app)/money/ttm/ttm-dashboard.tsx',
+  'app/(app)/money/ttm/mapping/ttm-item-table.tsx']);
 const filterForms = [/method="get"/, /type="search"/, /className="(?:leave|lab|money-date)-filter"/];
 
 function sources(directory: string): string[] {

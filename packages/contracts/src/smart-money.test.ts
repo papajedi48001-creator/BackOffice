@@ -32,7 +32,7 @@ describe('moneyMemberInputSchema', () => {
 
 describe('dental filter enums', () => {
   it('lists the pages, groups and periods', () => {
-    expect(moneyPageSchema.options).toEqual(['dental', 'nhso', 'fdh', 'disability']);
+    expect(moneyPageSchema.options).toEqual(['dental', 'nhso', 'fdh', 'disability', 'ttm']);
     expect(dentalGroupSchema.options).toEqual(['pttype', 'paccount']);
     expect(dentalPeriodSchema.options).toEqual(['day', 'month']);
   });

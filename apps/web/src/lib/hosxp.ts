@@ -1,4 +1,4 @@
-import { connectionSecretBoxFrom, DentalService, PttypeMappingService, HolidaySyncService, HosxpSettingsService, readDentalClaims, readHosxpHolidays } from '@backoffice/core';
+import { connectionSecretBoxFrom, DentalService, readTtm, TtmService, PttypeMappingService, HolidaySyncService, HosxpSettingsService, readDentalClaims, readHosxpHolidays } from '@backoffice/core';
 import type { Database } from '@backoffice/db';
 import { readRuntimeValue } from './runtime-env';
 
@@ -10,3 +10,5 @@ export const holidaySync = (database: Database) => { const settings = hosxpSetti
 export const dentalService = (database: Database) => { const settings = hosxpSettings(database); return new DentalService(() => settings.resolve(), readDentalClaims); };
 /** Mapping สิทธิ: reads and writes `paccountopd`/`paccountipd` in HOSxP over the same connection; who changed what is audited here. */
 export const pttypeMappingService = (database: Database) => { const settings = hosxpSettings(database); return new PttypeMappingService(database, () => settings.resolve()); };
+/** งานแพทย์แผนไทย read live from HOSxP over the same connection, in a READ ONLY transaction. */
+export const ttmService = (database: Database) => { const settings = hosxpSettings(database); return new TtmService(() => settings.resolve(), readTtm); };
