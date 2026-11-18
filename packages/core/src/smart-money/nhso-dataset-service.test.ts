@@ -16,6 +16,13 @@ describe('NhsoDatasetService.upload', () => {
     expect(await new NhsoDatasetService(untouched).upload(manager, { fileName: 'a.xlsx', aoa })).toEqual({ ok: false, code: 'INVALID_REPORT', message: 'รหัสหน่วยบริการหรือปีงบไม่ถูกต้อง' });
   });
 
+  it('measures the stored table in UTF-8 bytes, so a Thai-heavy table under 12 M characters is still refused', async () => {
+    const thai = 'ก'.repeat(1000);
+    const rows = Array.from({ length: 5000 }, (_, index) => [`1/10/2568`, thai, index, 1]);
+    const aoa = [['หน่วยบริการ 11093 โรงพยาบาลวาริชภูมิ'], ['วันที่โอน', 'กองทุน', 'คงเหลือ', 'เงินโอนเข้าบัญชี'], ...rows];
+    expect(await new NhsoDatasetService(untouched).upload(manager, { fileName: 'a.xlsx', aoa })).toEqual({ ok: false, code: 'INVALID_REPORT', message: 'ไฟล์ใหญ่เกินไป' });
+  });
+
   it('refuses a person without money.manage before reading the table', async () => {
     expect(await new NhsoDatasetService(untouched).upload({ ...manager, roles: [] }, { fileName: 'a.xlsx', aoa: [] })).toEqual({ ok: false, code: 'FORBIDDEN' });
   });

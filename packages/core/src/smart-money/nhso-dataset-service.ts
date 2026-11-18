@@ -43,7 +43,7 @@ export class NhsoDatasetService {
     const report = parsed.report;
     if (!/^\d{5}$/.test(report.hcode) || report.fy < 2500 || report.fy > 2700) return { ok: false, code: 'INVALID_REPORT', message: 'รหัสหน่วยบริการหรือปีงบไม่ถูกต้อง' };
     const rowsJson = JSON.stringify(report.rows);
-    if (rowsJson.length > MAX_ROWS_JSON) return { ok: false, code: 'INVALID_REPORT', message: 'ไฟล์ใหญ่เกินไป' };
+    if (Buffer.byteLength(rowsJson, 'utf8') > MAX_ROWS_JSON) return { ok: false, code: 'INVALID_REPORT', message: 'ไฟล์ใหญ่เกินไป' };
     const actor = subject.personId;
     return this.database.transaction(async (database) => {
       const replaced = (await database.query('SELECT hcode FROM money_nhso_dataset WHERE hcode = ? AND fy = ? FOR UPDATE', [report.hcode, report.fy])).length > 0;
