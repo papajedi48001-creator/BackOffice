@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { permissionModules } from './access.ts';
 import { grantableRoleSchema, testerModuleCodes } from './admin.ts';
-import { dentalGroupSchema, dentalPeriodSchema, MONEY_MODULE, moneyMemberInputSchema, moneyPageSchema, nhsoUploadSchema, fdhUploadSchema, fdhKindSchema, fdhRemoveSchema } from './smart-money.ts';
+import { dentalGroupSchema, dentalPeriodSchema, MONEY_MODULE, moneyMemberInputSchema, moneyPageSchema, nhsoUploadSchema, fdhUploadSchema, fdhKindSchema, fdhRemoveSchema, dpUploadSchema, dpRemoveSchema } from './smart-money.ts';
 
 const uuid = '0b6f3c1e-5d1a-4c8e-9a51-2f7c1d9e8b10';
 
@@ -32,7 +32,7 @@ describe('moneyMemberInputSchema', () => {
 
 describe('dental filter enums', () => {
   it('lists the pages, groups and periods', () => {
-    expect(moneyPageSchema.options).toEqual(['dental', 'nhso', 'fdh']);
+    expect(moneyPageSchema.options).toEqual(['dental', 'nhso', 'fdh', 'disability']);
     expect(dentalGroupSchema.options).toEqual(['pttype', 'paccount']);
     expect(dentalPeriodSchema.options).toEqual(['day', 'month']);
   });
@@ -81,5 +81,34 @@ describe('fdhRemoveSchema', () => {
     expect(fdhRemoveSchema.safeParse({ kind: 'rep', docNo: 'a'.repeat(101) }).success).toBe(false);
     expect(fdhRemoveSchema.safeParse({ kind: 'all' }).success).toBe(false);
     expect(fdhRemoveSchema.safeParse({ kind: 'rep', extra: 1 }).success).toBe(false);
+  });
+});
+
+describe('dpUploadSchema', () => {
+  const uploadId = '7c9e6679-7425-40de-944b-e07fc1f90ae7';
+  const rows = [['เลขที่อ้างอิง', 'ชื่อบริการฟื้นฟู'], ['R1', 'กายภาพบำบัด', 1.5, true, null]];
+  it('accepts a file name, an upload id and up to 1,501 rows of 80 cells', () => {
+    expect(dpUploadSchema.safeParse({ fileName: 'บริการฟื้นฟู.csv', uploadId, rows }).success).toBe(true);
+    expect(dpUploadSchema.safeParse({ fileName: 'a.csv', uploadId, rows: Array(1501).fill([Array(80).fill('x')].flat()) }).success).toBe(true);
+  });
+  it('rejects 1,502 rows, 81 cells, a long cell, a bad upload id, a bad name and an extra key', () => {
+    expect(dpUploadSchema.safeParse({ fileName: 'a.csv', uploadId, rows: Array(1502).fill(['x']) }).success).toBe(false);
+    expect(dpUploadSchema.safeParse({ fileName: 'a.csv', uploadId, rows: [Array(81).fill('x')] }).success).toBe(false);
+    expect(dpUploadSchema.safeParse({ fileName: 'a.csv', uploadId, rows: [['x'.repeat(1001)]] }).success).toBe(false);
+    expect(dpUploadSchema.safeParse({ fileName: 'a.csv', uploadId: 'abc', rows }).success).toBe(false);
+    expect(dpUploadSchema.safeParse({ fileName: '', uploadId, rows }).success).toBe(false);
+    expect(dpUploadSchema.safeParse({ fileName: 'a'.repeat(256), uploadId, rows }).success).toBe(false);
+    expect(dpUploadSchema.safeParse({ fileName: 'a.csv', uploadId, rows, fy: 2569 }).success).toBe(false);
+  });
+});
+
+describe('dpRemoveSchema', () => {
+  it('takes one ปีงบ between 2500 and 2700 and nothing else', () => {
+    expect(dpRemoveSchema.safeParse({ fy: 2569 }).success).toBe(true);
+    expect(dpRemoveSchema.safeParse({ fy: 2499 }).success).toBe(false);
+    expect(dpRemoveSchema.safeParse({ fy: 2701 }).success).toBe(false);
+    expect(dpRemoveSchema.safeParse({ fy: 2569.5 }).success).toBe(false);
+    expect(dpRemoveSchema.safeParse({ fy: '2569' }).success).toBe(false);
+    expect(dpRemoveSchema.safeParse({ fy: 2569, all: true }).success).toBe(false);
   });
 });

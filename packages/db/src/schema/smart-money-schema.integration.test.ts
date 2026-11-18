@@ -29,4 +29,14 @@ describeWithDatabase('smart money schema (migration 0038)', () => {
     const plain = await db.query<{ name: string }>("SELECT column_name AS name FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'money_fdh_document' AND column_name IN ('pid', 'name', 'document_json')");
     expect(plain).toEqual([]);
   });
+
+  it('keeps one Point ฟื้นฟูผู้พิการ record per เลขที่อ้างอิง, stored as ciphertext, and one upload log row per file and ปีงบ (migration 0043)', async () => {
+    const key = async (table: string) => (await db.query<{ name: string }>(`SELECT column_name AS name FROM information_schema.key_column_usage WHERE table_schema = DATABASE() AND table_name = '${table}' AND constraint_name = 'PRIMARY' ORDER BY ordinal_position`)).map((row) => row.name);
+    expect(await key('money_dp_record')).toEqual(['ref']);
+    expect(await key('money_dp_upload')).toEqual(['upload_id', 'fy']);
+    const plain = await db.query<{ name: string }>("SELECT column_name AS name FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'money_dp_record' AND column_name IN ('cid', 'name', 'hn', 'record_json')");
+    expect(plain).toEqual([]);
+    const indexes = await db.query<{ name: string }>("SELECT DISTINCT index_name AS name FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'money_dp_record' AND column_name = 'fy'");
+    expect(indexes.length).toBeGreaterThan(0);
+  });
 });

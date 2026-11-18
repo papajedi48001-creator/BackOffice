@@ -1,4 +1,4 @@
-import { char, date, datetime, decimal, int, longtext, mysqlEnum, mysqlTable, primaryKey, smallint, varchar } from 'drizzle-orm/mysql-core';
+import { boolean, char, date, datetime, decimal, index, int, longtext, mysqlEnum, mysqlTable, primaryKey, smallint, text, varchar } from 'drizzle-orm/mysql-core';
 
 // Smart Money (migration 0038): เจ้าหน้าที่ Smart Money and the pages each may open. ผู้ดูแล are not listed here.
 const uuid = (name: string) => varchar(name, { length: 36 });
@@ -21,3 +21,16 @@ export const moneyFdhDocuments = mysqlTable('money_fdh_document', {
   fileName: varchar('file_name', { length: 255 }).notNull(), itemCount: int('item_count').notNull(), moneySum: decimal('money_sum', { precision: 15, scale: 2 }).notNull(),
   documentCiphertext: longtext('document_ciphertext').notNull(), uploadedAt: datetime('uploaded_at', { mode: 'date' }).notNull(), uploadedBy: uuid('uploaded_by').notNull()
 }, (t) => [primaryKey({ columns: [t.kind, t.docNo] })]);
+
+/** Point ฟื้นฟูผู้พิการ (migration 0043): one service row per เลขที่อ้างอิง; the parsed record (เลขบัตร, name, HN …) is stored encrypted. */
+export const moneyDpRecords = mysqlTable('money_dp_record', {
+  ref: varchar('ref', { length: 50 }).primaryKey(), fy: smallint('fy').notNull(), serviceDate: date('service_date', { mode: 'string' }).notNull(),
+  claim: decimal('claim', { precision: 15, scale: 2 }).notNull(), eligible: decimal('eligible', { precision: 15, scale: 2 }).notNull(), flagged: boolean('flagged').notNull(),
+  recordCiphertext: text('record_ciphertext').notNull(), uploadedAt: datetime('uploaded_at', { mode: 'date' }).notNull(), uploadedBy: uuid('uploaded_by').notNull()
+}, (t) => [index('money_dp_record_fy').on(t.fy, t.serviceDate)]);
+
+/** One uploaded file per ปีงบ (its parts share one upload id). */
+export const moneyDpUploads = mysqlTable('money_dp_upload', {
+  uploadId: char('upload_id', { length: 36 }).notNull(), fy: smallint('fy').notNull(), fileName: varchar('file_name', { length: 255 }).notNull(), rowCount: int('row_count').notNull(),
+  uploadedAt: datetime('uploaded_at', { mode: 'date' }).notNull(), uploadedBy: uuid('uploaded_by').notNull()
+}, (t) => [primaryKey({ columns: [t.uploadId, t.fy] }), index('money_dp_upload_fy').on(t.fy, t.uploadedAt)]);
