@@ -1524,7 +1524,7 @@ h2.chat-window-title { cursor: default; }
 .herb-rights .herb-drug-row td:first-child { padding-left: 32px; }
 .herb-rights .herb-drug-row td:first-child small { display: inline; color: var(--muted); }
 .herb-rights tbody.is-empty td { color: var(--muted); }
-.herb-toggle { display: inline-flex; gap: 6px; align-items: center; padding: 0; border: 0; background: none; color: inherit; font: inherit; font-weight: 600; cursor: pointer; text-align: left; }
+.app-main .money-herb .herb-toggle { min-height: 0; box-shadow: none; border-radius: 0; display: inline-flex; gap: 6px; align-items: center; padding: 0; border: 0; background: none; color: inherit; font: inherit; font-weight: 600; cursor: pointer; text-align: left; }
 .herb-toggle::before { content: '▸'; color: var(--muted); transition: transform .15s; }
 .herb-toggle[aria-expanded="true"]::before { transform: rotate(90deg); }
 .money-herb table[aria-label="รายยาสมุนไพร"] { min-width: 900px; }

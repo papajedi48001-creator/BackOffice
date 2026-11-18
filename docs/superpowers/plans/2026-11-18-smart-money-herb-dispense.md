@@ -53,7 +53,7 @@ Data Drug rows (no PID) to the summary. The web page reuses the TTM filter and r
 - [x] Tests: views (Excel sheets and columns, file name, visible groups, ontop cell text, search); dashboard renders KPIs, รอ REP, opens a group, empty text; fail → implement → pass; commit.
 
 ### Task 6: verify, review, screens, PR
-- [ ] `pnpm lint && pnpm typecheck && pnpm test`, integration with MariaDB, `git diff --check`; whole-branch review and fixes; screens 1280/390; PR.
+- [x] `pnpm lint && pnpm typecheck && pnpm test`, integration with MariaDB, `git diff --check`; whole-branch review and fixes; screens 1280/390; PR.
 
 ## Rulings
 - The REP view checks `herb` (or `fdh`, or manager) on the server and returns only the six fields the summary reads.
