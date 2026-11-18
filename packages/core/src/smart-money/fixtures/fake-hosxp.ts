@@ -9,7 +9,7 @@ export const FAKE_HOSXP_TABLES = [
   'CREATE TABLE ovstdiag (ovst_diag_id INT AUTO_INCREMENT PRIMARY KEY, vn VARCHAR(13) NOT NULL, icd10 VARCHAR(9) NOT NULL, diagtype VARCHAR(1) NULL) DEFAULT CHARSET=latin1',
   'CREATE TABLE dtmain (dtmain_id INT AUTO_INCREMENT PRIMARY KEY, vn VARCHAR(13) NOT NULL, hn VARCHAR(9) NOT NULL, vstdate DATE NOT NULL, doctor VARCHAR(7) NULL, doctor_helper VARCHAR(7) NULL) DEFAULT CHARSET=latin1',
   'CREATE TABLE doctor (code VARCHAR(7) PRIMARY KEY, name VARCHAR(250) NULL) DEFAULT CHARSET=latin1',
-  'CREATE TABLE opitemrece (opitemrece_id INT AUTO_INCREMENT PRIMARY KEY, vn VARCHAR(13) NULL, icode VARCHAR(7) NOT NULL, income VARCHAR(2) NULL, qty DECIMAL(12,2) NOT NULL DEFAULT 1, sum_price DECIMAL(12,2) NOT NULL DEFAULT 0) DEFAULT CHARSET=latin1',
+  'CREATE TABLE opitemrece (opitemrece_id INT AUTO_INCREMENT PRIMARY KEY, vn VARCHAR(13) NULL, an VARCHAR(9) NULL, hn VARCHAR(9) NULL, rxdate DATE NULL, icode VARCHAR(7) NOT NULL, income VARCHAR(2) NULL, qty DECIMAL(12,2) NOT NULL DEFAULT 1, sum_price DECIMAL(12,2) NOT NULL DEFAULT 0) DEFAULT CHARSET=latin1',
   'CREATE TABLE patient (hn VARCHAR(9) PRIMARY KEY, pname VARCHAR(25) NULL, fname VARCHAR(100) NULL, lname VARCHAR(100) NULL) DEFAULT CHARSET=latin1',
   'CREATE TABLE icd101 (code VARCHAR(9) PRIMARY KEY, name VARCHAR(250) NULL) DEFAULT CHARSET=latin1',
   'CREATE TABLE pttype (pttype VARCHAR(2) PRIMARY KEY, name VARCHAR(150) NULL, hipdata_code VARCHAR(3) NULL) DEFAULT CHARSET=latin1',
@@ -21,7 +21,8 @@ export const FAKE_HOSXP_TABLES = [
   'CREATE TABLE health_med_doctor (health_med_doctor_id INT PRIMARY KEY, health_med_doctor_name VARCHAR(150) NULL) DEFAULT CHARSET=latin1',
   'CREATE TABLE health_med_treatment_type (health_med_treatment_type_id INT PRIMARY KEY, health_med_treatment_type_name VARCHAR(150) NULL) DEFAULT CHARSET=latin1',
   'CREATE TABLE income (income VARCHAR(2) PRIMARY KEY, name VARCHAR(150) NULL) DEFAULT CHARSET=latin1',
-  'CREATE TABLE drugitems (icode VARCHAR(7) PRIMARY KEY, name VARCHAR(150) NULL) DEFAULT CHARSET=latin1',
+  'CREATE TABLE drugitems (icode VARCHAR(7) PRIMARY KEY, name VARCHAR(150) NULL, strength VARCHAR(100) NULL, units VARCHAR(50) NULL, unitcost DECIMAL(12,2) NULL, stdprice DECIMAL(12,2) NULL) DEFAULT CHARSET=latin1',
+  'CREATE TABLE ipt (an VARCHAR(9) PRIMARY KEY, vn VARCHAR(13) NULL, pttype VARCHAR(2) NULL) DEFAULT CHARSET=latin1',
   'CREATE TABLE nondrugitems (icode VARCHAR(7) PRIMARY KEY, name VARCHAR(150) NULL) DEFAULT CHARSET=latin1',
   `CREATE TABLE vn_stat (vn VARCHAR(13) PRIMARY KEY, ${Array.from({ length: 16 }, (_, i) => `inc${String(i + 1).padStart(2, '0')} DECIMAL(12,2) NOT NULL DEFAULT 0`).join(', ')}, paid_money DECIMAL(12,2) NOT NULL DEFAULT 0, rcpt_money DECIMAL(12,2) NOT NULL DEFAULT 0)`
 ];
@@ -64,8 +65,18 @@ export async function seedFakeTtm(database: Database, data: { types: [id: number
   for (const [id, name] of data.doctors) await database.execute('INSERT INTO health_med_doctor VALUES (?, ?)', [id, tis(name)]);
   for (const [id, name] of data.treatments) await database.execute('INSERT INTO health_med_treatment_type VALUES (?, ?)', [id, tis(name)]);
   for (const [code, name] of data.incomes) await database.execute('INSERT INTO income VALUES (?, ?)', [code, tis(name)]);
-  for (const [icode, name] of data.drugs) await database.execute('INSERT INTO drugitems VALUES (?, ?)', [icode, tis(name)]);
+  for (const [icode, name] of data.drugs) await database.execute('INSERT INTO drugitems (icode, name) VALUES (?, ?)', [icode, tis(name)]);
   for (const [icode, name] of data.nondrugs) await database.execute('INSERT INTO nondrugitems VALUES (?, ?)', [icode, tis(name)]);
   for (const row of data.services) await database.execute('INSERT INTO health_med_service (vn, hn, an, service_date, service_time, health_med_service_type_id, health_med_doctor_id, health_med_treatment_type_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [row.vn, row.hn, row.an ?? null, row.date, row.time, row.type, row.doctor, row.treatment]);
   for (const row of data.charges) await database.execute('INSERT INTO opitemrece (vn, icode, income, qty, sum_price) VALUES (?, ?, ?, ?, ?)', [row.vn, row.icode, row.income, row.qty, row.price]);
+}
+
+/** One herbal drug line in `opitemrece` (OPD by vn, IPD with an too). */
+export type FakeHerbDispense = { rxdate: string; vn: string; an?: string; hn: string; icode: string; qty: number; price: number };
+
+/** Adds การจ่ายยาสมุนไพร data: drugs with their cost and standard price, admissions (`ipt.pttype`) and dispensed lines. */
+export async function seedFakeHerb(database: Database, data: { drugs: [icode: string, name: string, strength: string | null, units: string | null, unitcost: number | null, stdprice: number | null][]; admissions: [an: string, vn: string, pttype: string][]; dispenses: FakeHerbDispense[] }): Promise<void> {
+  for (const [icode, name, strength, units, unitcost, stdprice] of data.drugs) await database.execute('INSERT INTO drugitems (icode, name, strength, units, unitcost, stdprice) VALUES (?, ?, ?, ?, ?, ?)', [icode, tis(name), strength, units === null ? null : tis(units), unitcost, stdprice]);
+  for (const [an, vn, pttype] of data.admissions) await database.execute('INSERT INTO ipt (an, vn, pttype) VALUES (?, ?, ?)', [an, vn, pttype]);
+  for (const row of data.dispenses) await database.execute('INSERT INTO opitemrece (rxdate, vn, an, hn, icode, income, qty, sum_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [row.rxdate, row.vn, row.an ?? null, row.hn, row.icode, '17', row.qty, row.price]);
 }

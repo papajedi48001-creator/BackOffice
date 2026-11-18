@@ -3,6 +3,7 @@ import { deflateRawSync, inflateRawSync } from 'node:zlib';
 import { fdhUploadSchema, type AccessSubject, type FdhKind, type FdhUpload } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 import { parseFdhDocument, type FdhRep, type FdhStm } from './fdh-report';
+import type { HerbRepDoc } from './herb-summary';
 import { canManageMoney, loadMoneyMember, moneyCan } from './money-access';
 import { moneyAudit } from './money-db';
 
@@ -117,6 +118,29 @@ export class FdhDocumentService {
       reps: sorted.filter((row) => row.kind === 'rep').map(open) as FdhStored<FdhRep>[],
       stms: sorted.filter((row) => row.kind === 'stm').map(open) as FdhStored<FdhStm>[]
     };
+  }
+
+  /**
+   * การจ่ายยาสมุนไพร: each REP reduced to what its รับจริง reads (TRAN_ID, SEQ, กองทุนย่อย, and Data Drug icode/type/paid); no PID or
+   * name leaves the store for that page. Members with the `herb` or `fdh` page and Smart Money managers may read it.
+   */
+  async herbRep(subject: AccessSubject): Promise<{ ok: true; docs: HerbRepDoc[] } | Denied | { ok: false; code: 'NOT_CONFIGURED'; message: string }> {
+    if (!subject.personId) return { ok: false, code: 'FORBIDDEN' };
+    if (!canManageMoney(subject)) {
+      const member = await loadMoneyMember(this.database, subject.personId);
+      if (!moneyCan(member, false, 'herb') && !moneyCan(member, false, 'fdh')) return { ok: false, code: 'FORBIDDEN' };
+    }
+    const rows = await this.database.query<Row>(`SELECT ${COLUMNS}, document_ciphertext FROM money_fdh_document WHERE kind = 'rep'`);
+    if (rows.length && !this.cipher) return { ok: false, code: 'NOT_CONFIGURED', message: MESSAGE_NOT_CONFIGURED };
+    const docs = [...rows].sort((a, b) => byteOrder(a.doc_no, b.doc_no)).map((row): HerbRepDoc => {
+      const rep = JSON.parse(unpackFdhDocument(this.cipher!.decrypt(row.document_ciphertext ?? ''))) as FdhRep;
+      return {
+        doc_no: rep.doc_no, report_date: rep.report_date,
+        cases: (rep.cases ?? []).map((item) => ({ tran_id: item.tran_id, seq: item.seq, sub_fund: item.sub_fund })),
+        drugs: (rep.drugs ?? []).map((drug) => ({ tran_id: drug.tran_id, icode: drug.icode, type: drug.type, paid: drug.paid }))
+      };
+    });
+    return { ok: true, docs };
   }
 
   async remove(subject: AccessSubject, kind: FdhKind, docNo: string): Promise<{ ok: true } | Denied | { ok: false; code: 'NOT_FOUND' }> {

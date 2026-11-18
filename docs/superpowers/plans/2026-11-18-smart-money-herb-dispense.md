@@ -46,7 +46,7 @@ Data Drug rows (no PID) to the summary. The web page reuses the TTM filter and r
 ### Task 4: reader + service + REP view
 **Files:** create `herb-reader.ts` (+unit and integration tests), `herb-service.ts` (+test); modify `fdh-document-service.ts` (+test), `fixtures/fake-hosxp.ts`
 **Produces:** `HERB_SQL`, `herbQueryParams(start,end,icodes)`, `readHerb: HerbReader`, `HerbService.load(start,end,icodes)`, `FdhDocumentService.herbRep(subject)` → `{ok:true, docs: HerbRepDoc[]}`.
-- [ ] Tests: query de-dupes icodes, refuses empty, SQL read-only and not inlined; integration reads fake HOSxP (ipt pttype wins); herbRep strips PID and is denied without herb/fdh/manager; fail → implement → pass; commit.
+- [x] Tests: query de-dupes icodes, refuses empty, SQL read-only and not inlined; integration reads fake HOSxP (ipt pttype wins); herbRep strips PID and is denied without herb/fdh/manager; fail → implement → pass; commit.
 
 ### Task 5: web page
 **Files:** create `apps/web/src/app/(app)/money/herb/{page.tsx,herb-load.ts,herb-dashboard.tsx,herb-dashboard.test.tsx}`, `apps/web/src/lib/money/{herb-views.ts,herb-views.test.ts,herb-export.ts}`; modify `lib/hosxp.ts`, `lib/modules.ts`(+test), i18n, search-cards exemptions, styles.css, CONTEXT.md, DESIGN.md.
