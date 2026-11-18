@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { permissionModules } from './access.ts';
 import { grantableRoleSchema, testerModuleCodes } from './admin.ts';
-import { dentalGroupSchema, dentalPeriodSchema, MONEY_MODULE, moneyMemberInputSchema, moneyPageSchema } from './smart-money.ts';
+import { dentalGroupSchema, dentalPeriodSchema, MONEY_MODULE, moneyMemberInputSchema, moneyPageSchema, nhsoUploadSchema } from './smart-money.ts';
 
 const uuid = '0b6f3c1e-5d1a-4c8e-9a51-2f7c1d9e8b10';
 
@@ -32,8 +32,26 @@ describe('moneyMemberInputSchema', () => {
 
 describe('dental filter enums', () => {
   it('lists the pages, groups and periods', () => {
-    expect(moneyPageSchema.options).toEqual(['dental']);
+    expect(moneyPageSchema.options).toEqual(['dental', 'nhso']);
     expect(dentalGroupSchema.options).toEqual(['pttype', 'paccount']);
     expect(dentalPeriodSchema.options).toEqual(['day', 'month']);
+  });
+});
+
+describe('nhsoUploadSchema', () => {
+  const table = [['หน่วยบริการ 11093 โรงพยาบาลวาริชภูมิ'], ['ลำดับ', 'วันที่โอน', 1.5, true, null]];
+  it('accepts a file name and a table of strings, numbers, booleans and blanks', () => {
+    expect(nhsoUploadSchema.safeParse({ fileName: 'nhso 11093 2569.xlsx', aoa: table }).success).toBe(true);
+  });
+  it('rejects 81 columns, a 1,001-character cell, 20,001 rows, an object cell and an extra key', () => {
+    expect(nhsoUploadSchema.safeParse({ fileName: 'a.xlsx', aoa: [Array(81).fill('x')] }).success).toBe(false);
+    expect(nhsoUploadSchema.safeParse({ fileName: 'a.xlsx', aoa: [['x'.repeat(1001)]] }).success).toBe(false);
+    expect(nhsoUploadSchema.safeParse({ fileName: 'a.xlsx', aoa: Array(20001).fill([1]) }).success).toBe(false);
+    expect(nhsoUploadSchema.safeParse({ fileName: 'a.xlsx', aoa: [[{}]] }).success).toBe(false);
+    expect(nhsoUploadSchema.safeParse({ fileName: 'a.xlsx', aoa: table, hcode: '11093' }).success).toBe(false);
+  });
+  it('rejects an empty or long file name', () => {
+    expect(nhsoUploadSchema.safeParse({ fileName: '', aoa: table }).success).toBe(false);
+    expect(nhsoUploadSchema.safeParse({ fileName: 'a'.repeat(256), aoa: table }).success).toBe(false);
   });
 });
