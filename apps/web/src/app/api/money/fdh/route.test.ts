@@ -10,15 +10,14 @@ vi.mock('@backoffice/core', async (importOriginal) => ({
   FdhDocumentService: class { upload = mocks.upload; list = mocks.list; all = mocks.all; remove = mocks.remove; removeAll = mocks.removeAll; }
 }));
 
-import { DELETE as REMOVE_ALL, GET, POST } from './documents/route';
-import { DELETE as REMOVE } from './documents/[kind]/[docNo]/route';
+import { DELETE, GET, POST } from './documents/route';
 
 const manager = { authenticated: true, personId: 'person-a', roles: [{ name: 'money-manager', organizationId: null }], dataOwnerModules: [] };
 const ready = (session: object | null) => { mocks.readSession.mockResolvedValue(session); mocks.getSharedDatabase.mockReturnValue({ query: vi.fn() }); mocks.cipher.mockReturnValue(null); };
 const url = 'http://localhost/api/money/fdh/documents';
 const post = (value: unknown) => new Request(url, { method: 'POST', body: JSON.stringify(value) });
 const sheets = { Detail: [['REP No.']] };
-const params = (kind: string, docNo: string) => ({ params: Promise.resolve({ kind, docNo }) });
+const remove = (value: unknown) => new Request(url, { method: 'DELETE', body: JSON.stringify(value) });
 
 afterEach(() => vi.resetAllMocks());
 
@@ -69,16 +68,28 @@ describe('FDH document routes', () => {
     expect((await GET(new Request(`${url}?full=1`))).status).toBe(403);
   });
 
-  it('removes one document (checking the path) and every document of one kind', async () => {
+  it('removes one document or every document of one kind, with เลขที่เอกสาร in the body and never in the URL', async () => {
     ready(manager);
     mocks.remove.mockResolvedValueOnce({ ok: true });
     mocks.removeAll.mockResolvedValueOnce({ ok: true, removed: 3 });
-    expect((await REMOVE(new Request(`${url}/rep/eclaim_1`, { method: 'DELETE' }), params('rep', 'eclaim_1'))).status).toBe(200);
+    expect((await DELETE(remove({ kind: 'rep', docNo: 'eclaim_1' }))).status).toBe(200);
     expect(mocks.remove).toHaveBeenCalledWith(manager, 'rep', 'eclaim_1');
-    expect((await REMOVE(new Request(url, { method: 'DELETE' }), params('xls', 'eclaim_1'))).status).toBe(404);
-    expect((await REMOVE(new Request(url, { method: 'DELETE' }), params('rep', '../x'))).status).toBe(404);
-    expect(await (await REMOVE_ALL(new Request(`${url}?kind=stm`, { method: 'DELETE' }))).json()).toEqual({ ok: true, removed: 3 });
+    expect((await DELETE(remove({ kind: 'xls', docNo: 'eclaim_1' }))).status).toBe(400);
+    expect((await DELETE(remove({ kind: 'rep', docNo: '../x' }))).status).toBe(400);
+    expect((await DELETE(new Request(url, { method: 'DELETE', body: 'not json' }))).status).toBe(400);
+    expect(await (await DELETE(remove({ kind: 'stm' }))).json()).toEqual({ ok: true, removed: 3 });
     expect(mocks.removeAll).toHaveBeenCalledWith(manager, 'stm');
-    expect((await REMOVE_ALL(new Request(`${url}?kind=all`, { method: 'DELETE' }))).status).toBe(400);
+    expect((await DELETE(remove({ kind: 'all' }))).status).toBe(400);
+  });
+
+  it('refuses a delete from a non-manager without reading the body', async () => {
+    ready({ ...manager, roles: [] });
+    const request = remove({ kind: 'rep', docNo: 'eclaim_1' });
+    const json = vi.spyOn(request, 'json');
+    const text = vi.spyOn(request, 'text');
+    expect((await DELETE(request)).status).toBe(403);
+    expect(json).not.toHaveBeenCalled();
+    expect(text).not.toHaveBeenCalled();
+    expect(mocks.remove).not.toHaveBeenCalled();
   });
 });

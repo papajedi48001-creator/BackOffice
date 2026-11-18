@@ -35,7 +35,7 @@ it('deletes one document after confirming in a dialog', async () => {
   expect(dialog).toHaveTextContent('ลบ REP eclaim_11093_OP_2 ?');
   fireEvent.click(within(dialog).getByRole('button', { name: 'ลบ' }));
   await waitFor(() => expect(refresh).toHaveBeenCalled());
-  expect(fetchMock).toHaveBeenCalledWith('/api/money/fdh/documents/rep/eclaim_11093_OP_2', expect.objectContaining({ method: 'DELETE' }));
+  expect(fetchMock).toHaveBeenCalledWith('/api/money/fdh/documents', expect.objectContaining({ method: 'DELETE', body: JSON.stringify({ kind: 'rep', docNo: 'eclaim_11093_OP_2' }) }));
   expect(screen.getByRole('status')).toHaveTextContent('ลบข้อมูลแล้ว');
 });
 
@@ -50,5 +50,5 @@ it('deletes every STM after confirming, with the legacy wording', async () => {
   expect(dialog).toHaveTextContent('ลบไฟล์ STM ทั้งหมด 1 ไฟล์? ลบแล้วกู้คืนไม่ได้ ต้องอัปโหลดใหม่');
   fireEvent.click(within(dialog).getByRole('button', { name: 'ลบทั้งหมด' }));
   await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('ลบไฟล์ STM ทั้งหมดแล้ว (1 ไฟล์)'));
-  expect(fetchMock).toHaveBeenCalledWith('/api/money/fdh/documents?kind=stm', expect.objectContaining({ method: 'DELETE' }));
+  expect(fetchMock).toHaveBeenCalledWith('/api/money/fdh/documents', expect.objectContaining({ method: 'DELETE', body: JSON.stringify({ kind: 'stm' }) }));
 });

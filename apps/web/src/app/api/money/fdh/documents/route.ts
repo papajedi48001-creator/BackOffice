@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { fdhKindSchema, fdhUploadSchema } from '@backoffice/contracts';
+import { fdhRemoveSchema, fdhUploadSchema } from '@backoffice/contracts';
 import { canManageMoney, FdhDocumentService } from '@backoffice/core';
 import { getNationalIdProtector } from '../../../../../lib/national-id';
 import { forbidden, moneyResult, readCapped, withSessionAndDatabase } from '../../money-route';
@@ -37,11 +37,17 @@ export async function POST(request: Request): Promise<Response> {
   });
 }
 
-/** ลบ REP หรือ STM ทั้งหมด (`?kind=rep|stm`): ผู้ดูแล Smart Money only. */
+/** ลบ one document (`{kind, docNo}`) or every REP/STM (`{kind}`): ผู้ดูแล Smart Money only, refused before the body is read. */
 export async function DELETE(request: Request): Promise<Response> {
   return withSessionAndDatabase(request, async (session, database) => {
-    const kind = fdhKindSchema.safeParse(new URL(request.url).searchParams.get('kind'));
-    if (!kind.success) return NextResponse.json({ error: 'invalid_input', fields: ['kind'] }, { status: 400 });
-    return moneyResult(await service(database).removeAll(session, kind.data));
+    if (!canManageMoney(session)) return forbidden();
+    const text = await readCapped(request, 1024);
+    let body: unknown = null;
+    try { body = text === null ? null : JSON.parse(text); } catch { body = null; }
+    const parsed = fdhRemoveSchema.safeParse(body);
+    if (!parsed.success) return NextResponse.json({ error: 'invalid_input', fields: ['kind', 'docNo'] }, { status: 400 });
+    const fdh = service(database);
+    const { kind, docNo } = parsed.data;
+    return moneyResult(docNo === undefined ? await fdh.removeAll(session, kind) : await fdh.remove(session, kind, docNo));
   });
 }

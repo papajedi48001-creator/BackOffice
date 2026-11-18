@@ -31,6 +31,9 @@ export type NhsoCell = z.infer<typeof nhsoCellSchema>;
 /** ติดตามกองทุนย่อย FDH: REP (การเบิก) or STM (statement). */
 export const fdhKindSchema = z.enum(['rep', 'stm']);
 export type FdhKind = z.infer<typeof fdhKindSchema>;
+/** ลบเอกสาร FDH: one document (with `docNo`) or every document of a kind; sent in the body so เลขที่เอกสาร stays out of URLs. */
+export const fdhRemoveSchema = z.object({ kind: fdhKindSchema, docNo: z.string().regex(/^[A-Za-z0-9_]{1,100}$/).optional() }).strict();
+export type FdhRemove = z.infer<typeof fdhRemoveSchema>;
 
 /** One REP or STM workbook as the browser read it (a REP `Detail` row runs to about 120 cells): the sheets used, by name, as rows of cells; the server parses it like the legacy parsers. */
 export const fdhUploadSchema = z.object({

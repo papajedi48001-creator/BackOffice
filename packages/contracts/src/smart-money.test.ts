@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { permissionModules } from './access.ts';
 import { grantableRoleSchema, testerModuleCodes } from './admin.ts';
-import { dentalGroupSchema, dentalPeriodSchema, MONEY_MODULE, moneyMemberInputSchema, moneyPageSchema, nhsoUploadSchema, fdhUploadSchema, fdhKindSchema } from './smart-money.ts';
+import { dentalGroupSchema, dentalPeriodSchema, MONEY_MODULE, moneyMemberInputSchema, moneyPageSchema, nhsoUploadSchema, fdhUploadSchema, fdhKindSchema, fdhRemoveSchema } from './smart-money.ts';
 
 const uuid = '0b6f3c1e-5d1a-4c8e-9a51-2f7c1d9e8b10';
 
@@ -70,5 +70,16 @@ describe('fdhUploadSchema', () => {
     expect(fdhUploadSchema.safeParse({ fileName: 'a.xls', sheets: { Detail: Array(30001).fill([1]) } }).success).toBe(false);
     expect(fdhUploadSchema.safeParse({ fileName: 'a.xls', sheets: { ['x'.repeat(101)]: [] } }).success).toBe(false);
     expect(fdhUploadSchema.safeParse({ fileName: 'a.xls', sheets, kind: 'rep' }).success).toBe(false);
+  });
+});
+
+describe('fdhRemoveSchema', () => {
+  it('takes a kind and an optional เลขที่เอกสาร of letters, digits and _ only', () => {
+    expect(fdhRemoveSchema.safeParse({ kind: 'rep', docNo: 'eclaim_11093_OP_1' }).success).toBe(true);
+    expect(fdhRemoveSchema.safeParse({ kind: 'stm' }).success).toBe(true);
+    expect(fdhRemoveSchema.safeParse({ kind: 'rep', docNo: '../x' }).success).toBe(false);
+    expect(fdhRemoveSchema.safeParse({ kind: 'rep', docNo: 'a'.repeat(101) }).success).toBe(false);
+    expect(fdhRemoveSchema.safeParse({ kind: 'all' }).success).toBe(false);
+    expect(fdhRemoveSchema.safeParse({ kind: 'rep', extra: 1 }).success).toBe(false);
   });
 });

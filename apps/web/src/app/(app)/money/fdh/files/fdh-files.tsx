@@ -27,9 +27,10 @@ export function FdhFiles({ reps, stms }: { reps: readonly FdhDocumentSummary[]; 
   async function confirm() {
     if (!pending) return;
     setBusy(true); setError(null);
-    const url = pending.document ? `/api/money/fdh/documents/${pending.kind}/${pending.document.docNo}` : `/api/money/fdh/documents?kind=${pending.kind}`;
+    const target = pending.document ? { kind: pending.kind, docNo: pending.document.docNo } : { kind: pending.kind };
     try {
-      const response = await fetch(url, { method: 'DELETE' });
+      // เลขที่เอกสาร goes in the body, never in the URL (it would reach access logs).
+      const response = await fetch('/api/money/fdh/documents', { method: 'DELETE', headers: { 'content-type': 'application/json' }, body: JSON.stringify(target) });
       const body = (await response.json().catch(() => ({}))) as { error?: string; removed?: number };
       if (!response.ok) { setError(response.status === 404 ? 'ไม่พบข้อมูลที่จะลบ' : moneyErrorMessage(body.error ?? null)); return; }
       setNotice(pending.document ? 'ลบข้อมูลแล้ว' : body.removed ? `ลบไฟล์ ${LABEL[pending.kind]} ทั้งหมดแล้ว (${count(body.removed)} ไฟล์)` : 'ไม่มีข้อมูลให้ลบ');
