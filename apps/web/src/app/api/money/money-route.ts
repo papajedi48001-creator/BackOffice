@@ -14,3 +14,19 @@ export function moneyResult(result: { ok: true } | { ok: false; code: string }):
   if (result.ok) return NextResponse.json(result);
   return NextResponse.json({ error: result.code }, { status: statusByCode[result.code] ?? 400 });
 }
+
+/** The body as text, or null once it passes `limit` bytes; stops reading there, so a chunked body without a length cannot grow without bound. */
+export async function readCapped(request: Request, limit: number): Promise<string | null> {
+  if (!request.body) return '';
+  const reader = request.body.getReader();
+  const parts: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > limit) { await reader.cancel().catch(() => undefined); return null; }
+    parts.push(value);
+  }
+  return Buffer.concat(parts).toString('utf8');
+}

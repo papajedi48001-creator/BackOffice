@@ -1260,6 +1260,64 @@ h2.chat-window-title { cursor: default; }
 .nhso-results .is-ok { color: var(--chart-up); }
 .nhso-results .is-error { color: var(--chart-down); }
 .nhso-results .is-done { font-weight: 700; }
+/* ติดตามกองทุนย่อย FDH (/money/fdh): the legacy fdh_monitor KPI row, status chips, tags and popups in BackOffice tokens. */
+.fdh-filters { display: grid; gap: 12px; margin-bottom: 16px; }
+.fdh-filter-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px 16px; }
+.fdh-field { display: grid; gap: 4px; min-width: 0; color: var(--muted); font-size: .85rem; }
+.fdh-field select { width: 100%; }
+.fdh-filter-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.fdh-active { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; color: var(--muted); font-size: .88rem; }
+.fdh-kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
+.fdh-kpis .money-kpi strong { font-size: 1.35rem; }
+.fdh-kpi-pending { border-color: var(--chart-stack-ink); }
+.fdh-kpi-error { border-color: var(--chart-down); }
+.fdh-kpi-error strong { color: var(--chart-down); }
+.fdh-progress { display: inline-block; width: 64px; height: 6px; margin-right: 6px; overflow: hidden; border-radius: 999px; background: var(--line-soft); vertical-align: middle; }
+.fdh-progress i { display: block; height: 100%; background: var(--accent); }
+.fdh-prog { white-space: nowrap; }
+.fdh-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 16px; }
+.app-main .fdh .fdh-chip { display: inline-flex; gap: 6px; align-items: center; padding: 5px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink); font-size: .85rem; font-weight: 400; }
+.app-main .fdh .fdh-chip.is-on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-strong); font-weight: 700; }
+.fdh-badge { display: inline-block; padding: 1px 8px; border-radius: 999px; background: var(--line-soft); font-size: .8rem; white-space: nowrap; }
+.fdh-badge.st-paid { color: var(--chart-up); } .fdh-badge.st-error, .fdh-badge.st-mismatch { color: var(--chart-down); } .fdh-badge.st-pending { color: var(--chart-stack-ink); }
+.fdh-tag { display: inline-block; margin: 1px 4px 1px 0; padding: 1px 8px; border: 1px solid var(--accent-tint); border-radius: 999px; background: var(--accent-soft); color: var(--accent-strong); font-size: .8rem; }
+.fdh-tag.is-dim { opacity: .5; }
+.fdh-tag.is-fixed { border-color: var(--chart-up); background: transparent; color: var(--chart-up); }
+.app-main .fdh button.link-button { padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; color: var(--accent); font-weight: 700; text-align: left; text-decoration: underline; text-underline-offset: 3px; }
+.app-main .fdh button.link-button:hover { background: none; color: var(--accent-strong); }
+.app-main .fdh button.link-button.fdh-tag { padding: 1px 8px; border: 1px solid var(--accent-tint); border-radius: 999px; background: var(--accent-soft); color: var(--accent-strong); font-weight: 400; text-decoration: none; }
+.app-main .fdh button.link-button.money-code { padding: 1px 6px; border-radius: 6px; background: var(--line-soft); color: var(--ink); font-weight: 700; }
+.fdh-muted { color: var(--muted); }
+.fdh-ok { color: var(--chart-up); }
+.fdh-bad { color: var(--chart-down); font-weight: 700; }
+.fdh-mono { font-family: ui-monospace, 'Cascadia Mono', monospace; }
+.fdh-small { font-size: .8rem; }
+.fdh .is-selected td { background: var(--accent-soft); }
+.fdh-sum td { border-top: 2px solid var(--line); font-weight: 700; }
+.fdh-cont td { border-top: 0; }
+.fdh-tools { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-bottom: 10px; }
+.fdh-tools .fdh-chips { margin: 0; }
+.fdh-pager { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; margin-top: 10px; color: var(--muted); font-size: .85rem; }
+.fdh-fund-chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin: 10px 0 14px; padding: 0; list-style: none; }
+.app-main .fdh .fdh-fund-chip { display: grid; gap: 2px; width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); text-align: left; font-weight: 400; }
+.fdh-fund-chip span { color: var(--muted); font-size: .8rem; }
+.fdh-fund-chip .fdh-amount { color: var(--chart-up); font-weight: 700; font-variant-numeric: tabular-nums; }
+.app-main .fdh .fdh-fund-chip.is-on { border-color: var(--accent); background: var(--accent-soft); }
+.fdh-fund-title { margin: 0; font-size: .95rem; }
+.fdh-dialog { width: min(1100px, calc(100vw - 24px)); max-height: 90dvh; margin: auto; padding: 0; overflow: hidden; border: 0; border-top: 4px solid var(--accent); border-radius: 18px; background: var(--surface); color: var(--ink); box-shadow: 0 24px 60px rgba(15, 30, 70, .22); }
+.fdh-dialog[open] { display: flex; flex-direction: column; }
+.fdh-dialog::backdrop { background: rgba(12, 28, 21, .38); backdrop-filter: blur(3px); }
+.fdh-dialog-head { display: flex; flex: 0 0 auto; gap: 12px; align-items: flex-start; justify-content: space-between; padding: 16px 20px 12px; border-bottom: 1px solid var(--line-soft); }
+.fdh-dialog-head h2 { min-width: 0; margin: 0; font-size: 1.1rem; overflow-wrap: anywhere; }
+.fdh-dialog-head button { flex: 0 0 auto; }
+.fdh-dialog-body { flex: 1 1 auto; min-width: 0; min-height: 0; overflow: auto; padding: 8px 20px 20px; }
+.fdh-dialog-body h3 { margin: 18px 0 8px; font-size: .98rem; }
+.fdh-kv { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px 16px; margin: 0; }
+.fdh-kv div { display: grid; gap: 2px; }
+.fdh-kv dt { color: var(--muted); font-size: .8rem; }
+.fdh-kv dd { margin: 0; font-weight: 700; overflow-wrap: anywhere; }
+@media (max-width: 1200px) { .fdh-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .fdh-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .fdh-pager { justify-content: flex-start; } }
 @media (max-width: 760px) { .grouped-chart li { grid-template-columns: 1fr; gap: 4px; } .nhso-fund-grid { grid-template-columns: 1fr; } }
 @media (max-width: 960px) { .money-kpis, .money-kpis.is-five { grid-template-columns: repeat(2, minmax(0, 1fr)); } .money-grid-2 { grid-template-columns: 1fr; } }
 @media (max-width: 640px) {

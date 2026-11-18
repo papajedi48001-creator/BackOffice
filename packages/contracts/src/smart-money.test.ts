@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { permissionModules } from './access.ts';
 import { grantableRoleSchema, testerModuleCodes } from './admin.ts';
-import { dentalGroupSchema, dentalPeriodSchema, MONEY_MODULE, moneyMemberInputSchema, moneyPageSchema, nhsoUploadSchema } from './smart-money.ts';
+import { dentalGroupSchema, dentalPeriodSchema, MONEY_MODULE, moneyMemberInputSchema, moneyPageSchema, nhsoUploadSchema, fdhUploadSchema, fdhKindSchema, fdhRemoveSchema } from './smart-money.ts';
 
 const uuid = '0b6f3c1e-5d1a-4c8e-9a51-2f7c1d9e8b10';
 
@@ -32,7 +32,7 @@ describe('moneyMemberInputSchema', () => {
 
 describe('dental filter enums', () => {
   it('lists the pages, groups and periods', () => {
-    expect(moneyPageSchema.options).toEqual(['dental', 'nhso']);
+    expect(moneyPageSchema.options).toEqual(['dental', 'nhso', 'fdh']);
     expect(dentalGroupSchema.options).toEqual(['pttype', 'paccount']);
     expect(dentalPeriodSchema.options).toEqual(['day', 'month']);
   });
@@ -53,5 +53,33 @@ describe('nhsoUploadSchema', () => {
   it('rejects an empty or long file name', () => {
     expect(nhsoUploadSchema.safeParse({ fileName: '', aoa: table }).success).toBe(false);
     expect(nhsoUploadSchema.safeParse({ fileName: 'a'.repeat(256), aoa: table }).success).toBe(false);
+  });
+});
+
+describe('fdhUploadSchema', () => {
+  const sheets = { Detail: [['REP No.', 'TRAN_ID'], ['691100011', 835483474, null, true]], 'Data DENY': [] };
+  it('accepts a file name and up to 6 named sheets of rows', () => {
+    expect(fdhUploadSchema.safeParse({ fileName: 'eclaim_11093_OP_1.xls', sheets }).success).toBe(true);
+    expect(fdhKindSchema.options).toEqual(['rep', 'stm']);
+  });
+  it('rejects 7 sheets, 201 cells, 30,001 rows, a long sheet name and an extra key', () => {
+    const seven = Object.fromEntries(Array.from({ length: 7 }, (_, index) => [`s${index}`, []]));
+    expect(fdhUploadSchema.safeParse({ fileName: 'a.xls', sheets: seven }).success).toBe(false);
+    expect(fdhUploadSchema.safeParse({ fileName: 'a.xls', sheets: { Detail: [Array(201).fill('x')] } }).success).toBe(false);
+    expect(fdhUploadSchema.safeParse({ fileName: 'a.xls', sheets: { Detail: [Array(120).fill('x')] } }).success).toBe(true);
+    expect(fdhUploadSchema.safeParse({ fileName: 'a.xls', sheets: { Detail: Array(30001).fill([1]) } }).success).toBe(false);
+    expect(fdhUploadSchema.safeParse({ fileName: 'a.xls', sheets: { ['x'.repeat(101)]: [] } }).success).toBe(false);
+    expect(fdhUploadSchema.safeParse({ fileName: 'a.xls', sheets, kind: 'rep' }).success).toBe(false);
+  });
+});
+
+describe('fdhRemoveSchema', () => {
+  it('takes a kind and an optional เลขที่เอกสาร of letters, digits and _ only', () => {
+    expect(fdhRemoveSchema.safeParse({ kind: 'rep', docNo: 'eclaim_11093_OP_1' }).success).toBe(true);
+    expect(fdhRemoveSchema.safeParse({ kind: 'stm' }).success).toBe(true);
+    expect(fdhRemoveSchema.safeParse({ kind: 'rep', docNo: '../x' }).success).toBe(false);
+    expect(fdhRemoveSchema.safeParse({ kind: 'rep', docNo: 'a'.repeat(101) }).success).toBe(false);
+    expect(fdhRemoveSchema.safeParse({ kind: 'all' }).success).toBe(false);
+    expect(fdhRemoveSchema.safeParse({ kind: 'rep', extra: 1 }).success).toBe(false);
   });
 });

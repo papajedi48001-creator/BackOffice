@@ -11,7 +11,9 @@ const exempt = new Set(['app/(app)/admin/person-picker.tsx', 'app/(app)/fleet/se
   // Rendered inside the search-card of dental-dashboard.tsx, and the row search inside the รายละเอียดรายการ card.
   'app/(app)/money/dental/dental-filters.tsx', 'app/(app)/money/dental/dental-detail-table.tsx',
   // The row search inside the report tabs of เงินโอน สปสช., as on the legacy page.
-  'app/(app)/money/nhso/nhso-details.tsx']);
+  'app/(app)/money/nhso/nhso-details.tsx',
+  // The searches inside the รายเคส / รายบุคคล / รายกองทุนย่อย tabs of ติดตามกองทุนย่อย FDH, under its filter search-card.
+  'app/(app)/money/fdh/fdh-detail.tsx']);
 const filterForms = [/method="get"/, /type="search"/, /className="(?:leave|lab|money-date)-filter"/];
 
 function sources(directory: string): string[] {

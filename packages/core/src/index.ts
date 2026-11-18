@@ -149,6 +149,8 @@ export * from './smart-money/dental-reader';
 export * from './smart-money/thai-text';
 export * from './smart-money/nhso-report';
 export * from './smart-money/nhso-dataset-service';
+export * from './smart-money/fdh-report';
+export * from './smart-money/fdh-document-service';
 export { recordDentalExport } from './smart-money/money-db';
 export * from './pttype-mapping/pttype-mapping-access';
 export * from './pttype-mapping/pttype-mapping-hosxp';

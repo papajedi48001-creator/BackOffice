@@ -22,4 +22,11 @@ describeWithDatabase('smart money schema (migration 0038)', () => {
     const columns = await db.query<{ name: string }>("SELECT column_name AS name FROM information_schema.key_column_usage WHERE table_schema = DATABASE() AND table_name = 'money_nhso_dataset' AND constraint_name = 'PRIMARY' ORDER BY ordinal_position");
     expect(columns.map((row) => row.name)).toEqual(['hcode', 'fy']);
   });
+
+  it('keeps one FDH document per kind and เลขที่เอกสาร, stored as ciphertext (migration 0042)', async () => {
+    const columns = await db.query<{ name: string }>("SELECT column_name AS name FROM information_schema.key_column_usage WHERE table_schema = DATABASE() AND table_name = 'money_fdh_document' AND constraint_name = 'PRIMARY' ORDER BY ordinal_position");
+    expect(columns.map((row) => row.name)).toEqual(['kind', 'doc_no']);
+    const plain = await db.query<{ name: string }>("SELECT column_name AS name FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'money_fdh_document' AND column_name IN ('pid', 'name', 'document_json')");
+    expect(plain).toEqual([]);
+  });
 });
