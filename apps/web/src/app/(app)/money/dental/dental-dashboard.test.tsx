@@ -1,7 +1,8 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { dentalPresets, summarizeDental, type DentalRow } from '@backoffice/core';
 import rows from '../../../../../../../packages/core/src/smart-money/fixtures/dental-rows.json';
+const rowsJson = rows;
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 import { DentalDashboard, type DentalDashboardProps } from './dental-dashboard';
@@ -10,25 +11,52 @@ const fixture = rows as DentalRow[];
 const base: DentalDashboardProps = { start: '2026-10-01', end: '2026-11-30', group: 'pttype', period: 'day', presets: dentalPresets('2026-11-13'), showConnectionLink: false, outcome: { kind: 'data', rows: fixture, summary: summarizeDental(fixture, 'pttype', 'day') } };
 
 describe('DentalDashboard', () => {
-  it('shows the four summary cards from the summary', () => {
+  it('shows the five summary cards, ลูกหนี้ = ค่ารักษารวม − ชำระแล้ว and คาดการณ์รายรับ', () => {
     render(<DentalDashboard {...base} />);
     const cards = screen.getByRole('region', { name: 'สรุป' });
     expect(within(cards).getByText('ผู้รับบริการทันตกรรม')).toBeInTheDocument();
-    expect(within(cards).getByText('7')).toBeInTheDocument();
-    expect(within(cards).getByText('10 visit')).toBeInTheDocument();
-    expect(within(cards).getByText('7,251.00')).toBeInTheDocument();
-    expect(within(cards).getByText('775.25')).toBeInTheDocument();
-    expect(within(cards).getByText('6,475.75')).toBeInTheDocument();
+    expect(within(cards).getByText('10')).toBeInTheDocument();
+    expect(within(cards).getByText('13 visit')).toBeInTheDocument();
+    expect(within(cards).getByText('9,651.00')).toBeInTheDocument();
+    expect(within(cards).getByText('1,275.25')).toBeInTheDocument();
+    expect(within(cards).getByText('มูลค่าลูกหนี้ (บาท)')).toBeInTheDocument();
+    expect(within(cards).getByText('8,575.75')).toBeInTheDocument();
+    expect(within(cards).getByText('ค่ารักษารวม − ชำระแล้ว')).toBeInTheDocument();
+    expect(within(cards).getByText('คาดการณ์รายรับทันตกรรม (บาท)')).toBeInTheDocument();
+    expect(within(cards).getByText('6,175.00')).toBeInTheDocument();
+    expect(within(cards).getByText('ลูกหนี้ทุกผังบัญชี ยกเว้น UC-OP ใน CUP และ PP')).toBeInTheDocument();
   });
 
-  it('labels group bars with the number of people and lists the top 10 diagnoses', () => {
+  it('charts ลูกหนี้ by group, largest first, with งานฟันปลอม stacked and UC ใน CUP in red', () => {
     render(<DentalDashboard {...base} />);
-    expect(within(screen.getByRole('figure', { name: 'ค่ารักษารวมแยกตามสิทธิการรักษา' })).getAllByText(/\(\d+ คน\)/).length).toBeGreaterThan(0);
-    const top = screen.getByRole('table', { name: 'รหัสโรคที่พบบ่อย (Top 10)' });
-    expect(within(top).getAllByRole('row')).toHaveLength(11);
+    const chart = screen.getByRole('figure', { name: 'มูลค่าลูกหนี้แยกตามสิทธิการรักษา' });
+    const items = within(chart).getAllByRole('listitem');
+    expect(items.map((item) => item.querySelector('.bar-chart-label')!.firstChild!.textContent!.split(' ')[0])).toEqual(['A8', '89', '71', '10', 'A7', '34', '23']);
+    expect(items[1]).toHaveClass('is-alert');
+    expect(items[0]).not.toHaveClass('is-alert');
+    expect(within(items[2]!).getByText(/งานฟันปลอม 1,500\.00 บาท/)).toBeInTheDocument();
+    expect(chart.querySelector('figcaption')).toHaveTextContent('ลูกหนี้งานฟันปลอม');
+    expect(screen.getByRole('table', { name: 'Diag หลักที่พบบ่อย (Top 10)' })).toBeInTheDocument();
     expect(screen.getByRole('table', { name: 'สรุปตามสิทธิการรักษา' })).toBeInTheDocument();
-    expect(screen.getByText(/1 visit ที่มีหลายรหัสโรคจะแสดงหลายแถว/)).toBeInTheDocument();
-    expect(screen.getByRole('table', { name: 'รายละเอียดรายการ' })).toBeInTheDocument();
+    expect(screen.getByText(/1 แถว = 1 visit ที่มีงานทันตกรรม \(dtmain\)/)).toBeInTheDocument();
+    expect(screen.getByText(/งานทันตกรรม \(dtmain\) · เฉพาะลูกหนี้/)).toBeInTheDocument();
+  });
+
+  it('shows the dentist and filters the detail by สิทธิ, ผังบัญชี and search, counting each visit once', () => {
+    render(<DentalDashboard {...base} />);
+    const table = screen.getByRole('table', { name: 'รายละเอียดรายการ' });
+    expect(within(table).getByRole('columnheader', { name: 'ทันตแพทย์' })).toBeInTheDocument();
+    expect(within(table).getByRole('columnheader', { name: 'Diag หลัก' })).toBeInTheDocument();
+    expect(screen.queryByText(/^แสดง \d/)).toBeNull();
+    fireEvent.change(screen.getByRole('combobox', { name: 'กรองตามสิทธิ' }), { target: { value: '71' } });
+    expect(within(table).getAllByRole('row')).toHaveLength(2);
+    expect(screen.getByText('แสดง 1 แถว · 1 visit · ลูกหนี้ 1,500.00 บาท')).toBeInTheDocument();
+    fireEvent.change(screen.getByRole('combobox', { name: 'กรองตามสิทธิ' }), { target: { value: '' } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'กรองตามผังบัญชี' }), { target: { value: 'ลูกหนี้ค่ารักษา UC-OP ใน CUP' } });
+    const rows = (rowsJson as DentalRow[]).filter((row) => row.paccountName === 'ลูกหนี้ค่ารักษา UC-OP ใน CUP');
+    expect(within(table).getAllByRole('row')).toHaveLength(rows.length + 1);
+    fireEvent.change(screen.getByRole('searchbox', { name: 'ค้นหารายการ' }), { target: { value: 'zzz' } });
+    expect(screen.getByText('แสดง 0 แถว · 0 visit · ลูกหนี้ 0.00 บาท')).toBeInTheDocument();
   });
 
   it('keeps the filters in the links and the CSV download', () => {

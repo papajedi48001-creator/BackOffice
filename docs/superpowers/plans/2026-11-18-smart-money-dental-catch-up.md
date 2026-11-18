@@ -22,9 +22,9 @@
 - [x] `cd packages/core && npx vitest run src/smart-money` → PASS; commit `feat(money): dental follows the latest legacy rules`.
 
 ### Task 2: web dashboard
-- [ ] Failing tests in `dental-dashboard.test.tsx`: five KPI cards incl. คาดการณ์; group chart stacked denture + red; detail filters and info line; ทันตแพทย์ column.
-- [ ] Implement; BarChart gains per-bar colour and a stacked second series.
-- [ ] `cd apps/web && npx vitest run src/app/\(app\)/money src/components/bar-chart` → PASS; commit `feat(money): dental dashboard forecast, denture stack and detail filters`.
+- [x] Failing tests in `dental-dashboard.test.tsx`: five KPI cards incl. คาดการณ์; group chart stacked denture + red; detail filters and info line; ทันตแพทย์ column.
+- [x] Implement; BarChart gains per-bar colour and a stacked second series.
+- [x] `cd apps/web && npx vitest run src/app/\(app\)/money src/components/bar-chart` → PASS; commit `feat(money): dental dashboard forecast, denture stack and detail filters`.
 
 ### Task 3: verify, review, PR
 - [ ] `pnpm lint && pnpm typecheck && pnpm test`, `pnpm test:integration` with DATABASE_URL; screenshots; review; PR.

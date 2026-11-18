@@ -1132,6 +1132,9 @@ h2.chat-window-title { cursor: default; }
 .money-card-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .money-card-head h3 { margin: 0; }
 .money-search { min-width: min(320px, 100%); }
+.money-kpis.is-five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.money-table-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.money-table-filters select { max-width: 100%; }
 .money-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .money-table-wrap { max-width: 100%; overflow-x: auto; }
 .money-table-wrap.is-tall { max-height: 560px; overflow-y: auto; }
@@ -1153,6 +1156,15 @@ h2.chat-window-title { cursor: default; }
 .bar-chart-legend .is-secondary::before { background: #f59e0b; }
 .bar-chart-fill { display: block; border-radius: 6px; background: var(--accent); }
 .bar-chart-bar.is-secondary .bar-chart-fill { background: #f59e0b; }
+/* ส่วนซ้อน (stack): the part of a bar in orange at its end; red bars (is-alert) carry their reason as text under the label. */
+.bar-chart-fill { position: relative; overflow: hidden; }
+.bar-chart-stack { position: absolute; background: #f59e0b; }
+.bar-chart-legend.is-stack .is-secondary::before { background: #f59e0b; }
+.bar-chart li.is-alert .bar-chart-bar.is-primary .bar-chart-fill { background: #e5484d; }
+.bar-chart-label small.bar-chart-alert { color: #c62a2f; }
+.bar-chart-label small.bar-chart-stack-note { color: #b45309; }
+.bar-chart[data-orientation="vertical"] .bar-chart-stack { left: 0; right: 0; top: 0; height: var(--stack-size); }
+.bar-chart[data-orientation="horizontal"] .bar-chart-stack { top: 0; bottom: 0; right: 0; width: var(--stack-size); }
 .bar-chart-value { font-size: .8rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .bar-chart-label { font-size: .82rem; color: var(--ink-2); }
 .bar-chart-label small { display: block; color: var(--muted); }
@@ -1168,7 +1180,7 @@ h2.chat-window-title { cursor: default; }
 .bar-chart[data-orientation="horizontal"] .bar-chart-bars { display: grid; gap: 3px; }
 .bar-chart[data-orientation="horizontal"] .bar-chart-bar { display: flex; align-items: center; gap: 8px; }
 .bar-chart[data-orientation="horizontal"] .bar-chart-fill { width: calc(var(--bar-size) * .82); min-width: 2px; height: 22px; border-radius: 0 6px 6px 0; }
-@media (max-width: 960px) { .money-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .money-grid-2 { grid-template-columns: 1fr; } }
+@media (max-width: 960px) { .money-kpis, .money-kpis.is-five { grid-template-columns: repeat(2, minmax(0, 1fr)); } .money-grid-2 { grid-template-columns: 1fr; } }
 @media (max-width: 640px) {
   .money-kpis { gap: 10px; }
   .money-kpi { padding: 12px; }

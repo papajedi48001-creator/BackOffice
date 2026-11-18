@@ -31,7 +31,7 @@ export function DentalDashboard({ start, end, group, period, presets, showConnec
       <nav className="money-segmented" aria-label="แยกตาม"><span>แยกตาม</span>{(Object.keys(GROUPS) as DentalGroup[]).map((key) => <Link key={key} href={link({ group: key })} className={key === group ? 'is-active' : undefined} aria-current={key === group ? 'true' : undefined}>{GROUPS[key]}</Link>)}</nav>
       <nav className="money-segmented" aria-label="ช่วงเวลา"><span>ช่วงเวลา</span>{(Object.keys(PERIODS) as DentalPeriod[]).map((key) => <Link key={key} href={link({ period: key })} className={key === period ? 'is-active' : undefined} aria-current={key === period ? 'true' : undefined}>{PERIODS[key]}</Link>)}</nav>
     </div>
-    <p className="money-period">ช่วงวันที่ <strong>{formatBangkokDateOnly(start)}</strong> ถึง <strong>{formatBangkokDateOnly(end)}</strong> · รหัสโรค K00–K11 · เฉพาะลูกหนี้ (มียอดเรียกเก็บ หรือชำระไม่ครบ)</p>
+    <p className="money-period">ช่วงวันที่ <strong>{formatBangkokDateOnly(start)}</strong> ถึง <strong>{formatBangkokDateOnly(end)}</strong> · งานทันตกรรม (dtmain) · เฉพาะลูกหนี้ (มียอดเรียกเก็บ หรือชำระไม่ครบ)</p>
     <DentalBody outcome={outcome} group={group} period={period} groupLabel={groupLabel} showConnectionLink={showConnectionLink} />
   </section>;
 }
@@ -45,15 +45,21 @@ function DentalBody({ outcome, group, period, groupLabel, showConnectionLink }: 
   if (rows.length === 0) return <p className="money-empty">ไม่พบข้อมูลในช่วงวันที่ที่เลือก</p>;
   const groupName = (row: { code: string; name: string }) => row.name || row.code || '-';
   return <>
-    <section className="money-kpis" aria-label="สรุป">
+    <section className="money-kpis is-five" aria-label="สรุป">
       <div className="money-kpi"><span>ผู้รับบริการทันตกรรม</span><strong><span>{formatWhole(summary.patients)}</span> <em>คน</em></strong><small>{`${formatWhole(summary.visits)} visit`}</small></div>
       <div className="money-kpi"><span>ค่ารักษารวม (บาท)</span><strong>{formatMoney(summary.total)}</strong><small>inc01–inc16</small></div>
       <div className="money-kpi"><span>ชำระเงินแล้ว (บาท)</span><strong>{formatMoney(summary.paid)}</strong><small>paid_money</small></div>
-      <div className="money-kpi is-accent"><span>มูลค่าลูกหนี้ / เรียกเก็บ (บาท)</span><strong>{formatMoney(summary.claim)}</strong><small>rcpt_money</small></div>
+      <div className="money-kpi is-accent"><span>มูลค่าลูกหนี้ (บาท)</span><strong>{formatMoney(summary.claim)}</strong><small>ค่ารักษารวม − ชำระแล้ว</small></div>
+      <div className="money-kpi is-accent"><span>คาดการณ์รายรับทันตกรรม (บาท)</span><strong>{formatMoney(summary.forecast)}</strong><small>ลูกหนี้ทุกผังบัญชี ยกเว้น UC-OP ใน CUP และ PP</small></div>
     </section>
     <section className="money-card">
-      <h3>ค่ารักษารวมแยกตาม{groupLabel} <small>(ตัวเลขในวงเล็บ = จำนวนคน)</small></h3>
-      <BarChart ariaLabel={`ค่ารักษารวมแยกตาม${groupLabel}`} valueFormat={formatWhole} bars={summary.byGroup.map((row) => ({ label: group === 'pttype' && row.code ? `${row.code} ${groupName(row)}` : groupName(row), sublabel: `(${formatWhole(row.patients)} คน)`, value: row.total, note: `ค่ารักษารวม ${formatMoney(row.total)} บาท · ลูกหนี้ ${formatMoney(row.claim)} บาท · ${formatWhole(row.patients)} คน (${formatWhole(row.visits)} visit)` }))} />
+      <h3>มูลค่าลูกหนี้แยกตาม{groupLabel} <small>(ตัวเลขในวงเล็บ = จำนวนคน · ส่วนซ้อนสีส้ม = งานฟันปลอม · แท่งสีแดง = {group === 'paccount' ? 'ผัง UC ใน CUP และ PP' : 'สิทธิในผัง UC ใน CUP'})</small></h3>
+      <BarChart ariaLabel={`มูลค่าลูกหนี้แยกตาม${groupLabel}`} valueFormat={formatWhole} stackLegend={['ลูกหนี้ (ไม่รวมฟันปลอม)', 'ลูกหนี้งานฟันปลอม']} bars={[...summary.byGroup].sort((a, b) => b.claim - a.claim).map((row) => ({
+        label: group === 'pttype' && row.code ? `${row.code} ${groupName(row)}` : groupName(row), sublabel: `(${formatWhole(row.patients)} คน)`, value: row.claim,
+        stack: row.dentureClaim, stackNote: row.dentureVisits > 0 ? `งานฟันปลอม ${formatMoney(row.dentureClaim)} บาท (${formatWhole(row.denturePatients)} คน)` : undefined,
+        alert: row.red ? (group === 'paccount' ? 'ไม่นับในคาดการณ์รายรับ' : 'ผัง UC ใน CUP') : undefined,
+        note: `มูลค่าลูกหนี้ ${formatMoney(row.claim)} บาท · ค่ารักษารวม ${formatMoney(row.total)} บาท · ผู้รับบริการ ${formatWhole(row.patients)} คน (${formatWhole(row.visits)} visit)`
+      }))} />
     </section>
     <section className="money-card">
       <h3>มูลค่า{period === 'month' ? 'รายเดือน' : 'รายวัน'}</h3>
@@ -69,16 +75,16 @@ function DentalBody({ outcome, group, period, groupLabel, showConnectionLink }: 
         </table></div>
       </section>
       <section className="money-card">
-        <h3>รหัสโรคที่พบบ่อย (Top 10)</h3>
-        <div className="money-table-wrap"><table aria-label="รหัสโรคที่พบบ่อย (Top 10)">
+        <h3>Diag หลักที่พบบ่อย (Top 10)</h3>
+        <div className="money-table-wrap"><table aria-label="Diag หลักที่พบบ่อย (Top 10)">
           <thead><tr><th>ICD-10</th><th>ชื่อโรค</th><th className="money-number">จำนวน</th></tr></thead>
-          <tbody>{summary.byDiag.slice(0, 10).map((row) => <tr key={row.code}><td><span className="money-code">{row.code}</span></td><td>{row.name}</td><td className="money-number">{formatWhole(row.count)}</td></tr>)}</tbody>
+          <tbody>{summary.byDiag.slice(0, 10).map((row) => <tr key={row.code || '-'}><td><span className="money-code">{row.code}</span></td><td>{row.name}</td><td className="money-number">{formatWhole(row.count)}</td></tr>)}</tbody>
         </table></div>
       </section>
     </div>
     <section className="money-card">
       <DentalDetailTable rows={rows} />
-      <p className="money-note">หมายเหตุ: 1 visit ที่มีหลายรหัสโรคจะแสดงหลายแถว ยอดเงินในการ์ดสรุปและกราฟนับต่อ visit ครั้งเดียว</p>
+      <p className="money-note">หมายเหตุ: 1 แถว = 1 visit ที่มีงานทันตกรรม (dtmain) แสดง Diag หลักของ visit ยอดเงินนับต่อ visit ครั้งเดียว</p>
     </section>
   </>;
 }
