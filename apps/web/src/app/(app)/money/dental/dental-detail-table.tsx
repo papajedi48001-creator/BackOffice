@@ -8,6 +8,9 @@ import { formatMoney } from './dental-format';
 
 const paccountOf = (row: DentalRow) => (row.paccountName ?? '').trim() || NO_PACCOUNT;
 const byThai = (a: string, b: string) => a.localeCompare(b, 'th');
+/** Option value for visits with no สิทธิ, so it is not mistaken for ทุกสิทธิ (''). */
+const NO_PTTYPE = '__none';
+const pttypeOf = (row: DentalRow) => row.pttypeCode || NO_PTTYPE;
 
 /**
  * รายละเอียดรายการ with ทุกสิทธิ / ทุกผังบัญชี filters and a search box, all in the browser (nothing leaves the page). While any
@@ -18,12 +21,12 @@ export function DentalDetailTable({ rows }: { rows: readonly DentalRow[] }) {
   const [query, setQuery] = useState('');
   const [pttype, setPttype] = useState('');
   const [paccount, setPaccount] = useState('');
-  const pttypes = useMemo(() => [...new Map(rows.map((row) => [row.pttypeCode, `${row.pttypeCode} ${row.pttypeName}`.trim()])).entries()].sort(([, a], [, b]) => byThai(a, b)), [rows]);
+  const pttypes = useMemo(() => [...new Map(rows.map((row) => [pttypeOf(row), `${row.pttypeCode} ${row.pttypeName}`.trim() || '(ไม่ระบุสิทธิ)'])).entries()].sort(([, a], [, b]) => byThai(a, b)), [rows]);
   const paccounts = useMemo(() => [...new Set(rows.map(paccountOf))].sort(byThai), [rows]);
   const shown = useMemo(() => {
     const words = query.trim().toLowerCase();
-    return rows.filter((row) => (!pttype || row.pttypeCode === pttype) && (!paccount || paccountOf(row) === paccount)
-      && (!words || [formatBangkokDateOnly(row.vstdate), row.hn, row.patientName, row.diagCode, row.diagName, row.doctorName, row.pttypeCode, row.pttypeName, row.paccountName ?? ''].join(' ').toLowerCase().includes(words)));
+    return rows.filter((row) => (!pttype || pttypeOf(row) === pttype) && (!paccount || paccountOf(row) === paccount)
+      && (!words || [formatBangkokDateOnly(row.vstdate), row.hn, row.patientName, row.diagCode, row.diagName, row.doctorName, row.pttypeCode, row.pttypeName, row.paccountName ?? '', formatMoney(row.totalAmount), formatMoney(row.paidMoney), formatMoney(row.claimAmount)].join(' ').toLowerCase().includes(words)));
   }, [rows, query, pttype, paccount]);
   const filtered = Boolean(query.trim() || pttype || paccount);
   const visits = new Map(shown.map((row) => [row.vn, row.claimAmount]));
@@ -39,7 +42,7 @@ export function DentalDetailTable({ rows }: { rows: readonly DentalRow[] }) {
         <input type="search" className="money-search" aria-label="ค้นหารายการ" placeholder="ค้นหา HN / ชื่อ / Diag หลัก / ทันตแพทย์ / สิทธิ / ผังบัญชี" value={query} onChange={(event) => setQuery(event.target.value)} />
       </div>
     </div>
-    {filtered && <p className="money-note" role="status">{`แสดง ${shown.length.toLocaleString('th-TH')} แถว · ${visits.size.toLocaleString('th-TH')} visit · ลูกหนี้ ${formatMoney(claim)} บาท`}</p>}
+    <p className="money-note" role="status" hidden={!filtered}>{filtered ? `แสดง ${shown.length.toLocaleString('th-TH')} แถว · ${visits.size.toLocaleString('th-TH')} visit · ลูกหนี้ ${formatMoney(claim)} บาท` : ''}</p>
     <div className="money-table-wrap is-tall"><table aria-label="รายละเอียดรายการ">
       <thead><tr><th>วันที่</th><th>HN</th><th>ชื่อ-สกุล</th><th>Diag หลัก</th><th>ชื่อโรค</th><th>ทันตแพทย์</th><th>สิทธิ</th><th>ผังบัญชี</th><th className="money-number">ค่ารักษารวม</th><th className="money-number">ชำระแล้ว</th><th className="money-number">ลูกหนี้</th></tr></thead>
       <tbody>{shown.map((row, index) => <tr key={`${row.vn}-${row.diagCode}-${index}`}>

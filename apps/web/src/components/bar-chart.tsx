@@ -14,7 +14,7 @@ export function BarChart({ bars, orientation = 'auto', valueFormat, ariaLabel, l
   const largest = Math.max(...bars.flatMap((bar) => [bar.value, bar.secondary ?? 0]), 0);
   const share = (part: number, whole: number) => `${whole > 0 ? Math.round((Math.max(part, 0) / whole) * 1000) / 10 : 0}%`;
   const fill = (value: number, series: 'primary' | 'secondary', name?: string, stack?: number) => <span className={`bar-chart-bar is-${series}`}>
-    <span className="bar-chart-fill" style={{ '--bar-size': share(value, largest) } as React.CSSProperties}>
+    <span className={`bar-chart-fill${stack ? ' is-stacked' : ''}`} style={{ '--bar-size': share(value, largest) } as React.CSSProperties}>
       {stack !== undefined && stack > 0 && <span className="bar-chart-stack" style={{ '--stack-size': share(Math.min(stack, value), value) } as React.CSSProperties} />}
     </span>
     <span className="bar-chart-value">{name && <span className="visually-hidden">{name} </span>}{valueFormat(value)}</span>

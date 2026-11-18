@@ -59,6 +59,26 @@ describe('DentalDashboard', () => {
     expect(screen.getByText('แสดง 0 แถว · 0 visit · ลูกหนี้ 0.00 บาท')).toBeInTheDocument();
   });
 
+  it('counts a visit once in the info line even when it has two rows, and finds rows by amount', () => {
+    const visit = (rowsJson as DentalRow[]).filter((row) => row.vn === '681002080138');
+    expect(visit.length).toBeGreaterThan(1);
+    render(<DentalDashboard {...base} outcome={{ kind: 'data', rows: visit, summary: summarizeDental(visit, 'pttype', 'day') }} />);
+    fireEvent.change(screen.getByRole('searchbox', { name: 'ค้นหารายการ' }), { target: { value: '000123' } });
+    expect(screen.getByText(`แสดง ${visit.length} แถว · 1 visit · ลูกหนี้ ${visit[0]!.claimAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท`)).toBeInTheDocument();
+    fireEvent.change(screen.getByRole('searchbox', { name: 'ค้นหารายการ' }), { target: { value: visit[0]!.totalAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 }) } });
+    expect(within(screen.getByRole('table', { name: 'รายละเอียดรายการ' })).getAllByRole('row')).toHaveLength(visit.length + 1);
+  });
+
+  it('lets a visit with no สิทธิ be picked on its own', () => {
+    const [first, second] = rowsJson as DentalRow[];
+    const rows = [{ ...first!, pttypeCode: '', pttypeName: '' }, { ...second!, vn: '999', pttypeCode: '10' }];
+    render(<DentalDashboard {...base} outcome={{ kind: 'data', rows, summary: summarizeDental(rows, 'pttype', 'day') }} />);
+    const select = screen.getByRole('combobox', { name: 'กรองตามสิทธิ' });
+    const empty = within(select).getByRole('option', { name: '(ไม่ระบุสิทธิ)' }) as HTMLOptionElement;
+    fireEvent.change(select, { target: { value: empty.value } });
+    expect(within(screen.getByRole('table', { name: 'รายละเอียดรายการ' })).getAllByRole('row')).toHaveLength(2);
+  });
+
   it('keeps the filters in the links and the CSV download', () => {
     render(<DentalDashboard {...base} />);
     expect(screen.getByRole('link', { name: 'ผังบัญชี' })).toHaveAttribute('href', '/money/dental?start=2026-10-01&end=2026-11-30&group=paccount&period=day');

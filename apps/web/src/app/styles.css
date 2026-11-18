@@ -675,6 +675,7 @@ video.inventory-camera { display: block; flex-basis: 100%; width: 100%; max-widt
 .admin-picked small { color: var(--muted); }
 
 /* โหมดพัฒนา (ตั้งค่าโปรแกรม): amber dashed border, diagonal stripes and a text ribbon, so the state never relies on colour alone. */
+:root { --chart-series-2: #f59e0b; --chart-stack-ink: #9a3412; --chart-alert: #dc2626; --chart-alert-ink: #b91c1c; }
 :root { --dev-amber: #b45309; --dev-amber-soft: #fef3c7; --dev-amber-ink: #78350f; }
 .module-tile.is-development { border: 2px dashed var(--dev-amber); border-top: 2px dashed var(--dev-amber); background: repeating-linear-gradient(135deg, var(--surface) 0 14px, var(--dev-amber-soft) 14px 22px); }
 .module-tile.is-development .module-go, .module-tile.is-development .module-badge { top: 44px; }
@@ -1153,16 +1154,15 @@ h2.chat-window-title { cursor: default; }
 .bar-chart ul { margin: 0; padding: 0; list-style: none; }
 .bar-chart-legend { display: flex; gap: 16px; margin-bottom: 10px; color: var(--muted); font-size: .85rem; }
 .bar-chart-legend span::before { content: ''; display: inline-block; width: 12px; height: 12px; margin-right: 6px; border-radius: 3px; vertical-align: -1px; background: var(--accent); }
-.bar-chart-legend .is-secondary::before { background: #f59e0b; }
+.bar-chart-legend .is-secondary::before { background: var(--chart-series-2); }
 .bar-chart-fill { display: block; border-radius: 6px; background: var(--accent); }
-.bar-chart-bar.is-secondary .bar-chart-fill { background: #f59e0b; }
+.bar-chart-bar.is-secondary .bar-chart-fill { background: var(--chart-series-2); }
 /* ส่วนซ้อน (stack): the part of a bar in orange at its end; red bars (is-alert) carry their reason as text under the label. */
-.bar-chart-fill { position: relative; overflow: hidden; }
-.bar-chart-stack { position: absolute; background: #f59e0b; }
-.bar-chart-legend.is-stack .is-secondary::before { background: #f59e0b; }
-.bar-chart li.is-alert .bar-chart-bar.is-primary .bar-chart-fill { background: #e5484d; }
-.bar-chart-label small.bar-chart-alert { color: #c62a2f; }
-.bar-chart-label small.bar-chart-stack-note { color: #b45309; }
+.bar-chart-fill.is-stacked { position: relative; overflow: hidden; }
+.bar-chart-stack { position: absolute; background: var(--chart-series-2); }
+.bar-chart li.is-alert .bar-chart-bar.is-primary .bar-chart-fill { background: var(--chart-alert); }
+.bar-chart-label small.bar-chart-alert { color: var(--chart-alert-ink); }
+.bar-chart-label small.bar-chart-stack-note { color: var(--chart-stack-ink); }
 .bar-chart[data-orientation="vertical"] .bar-chart-stack { left: 0; right: 0; top: 0; height: var(--stack-size); }
 .bar-chart[data-orientation="horizontal"] .bar-chart-stack { top: 0; bottom: 0; right: 0; width: var(--stack-size); }
 .bar-chart-value { font-size: .8rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
