@@ -32,4 +32,11 @@ describe('readNhsoFile', () => {
     const result = await readNhsoFile(file('all.zip', new Uint8Array(data)));
     expect(result).toEqual([{ name: 'one.xlsx', aoa: [['x', 'y', 'z']] }]);
   });
+
+  it('reports a file inside a .zip that is over 10 MB instead of reading it', async () => {
+    const zip = XLSX.CFB.utils.cfb_new();
+    XLSX.CFB.utils.cfb_add(zip, 'folder/big.xlsx', new Uint8Array(10 * 1024 * 1024 + 1));
+    const data = XLSX.CFB.write(zip, { type: 'array', fileType: 'zip' }) as Uint8Array;
+    expect(await readNhsoFile(file('all.zip', new Uint8Array(data)))).toEqual([{ name: 'big.xlsx', aoa: [], problem: 'ไฟล์ใหญ่เกิน 10 MB' }]);
+  });
 });

@@ -2,6 +2,8 @@
 import { moneyErrorMessage } from '../money-client';
 
 export const NHSO_MAX_FILE_BYTES = 10 * 1024 * 1024;
+/** A whole Google Drive folder as one .zip; each Excel file inside still has the 10 MB limit. */
+export const NHSO_MAX_ZIP_BYTES = 200 * 1024 * 1024;
 export const NHSO_ACCEPT = '.xlsx,.xls,.xlsm,.csv,.zip';
 
 /** An Excel date cell → "dd/mm/yyyy" พ.ศ., like the date text in the NHSO report; blanks become null. */
@@ -21,6 +23,7 @@ export function excelCell(value: unknown): string | number | boolean | null {
 export function fileProblem(file: { name: string; size: number }): string | null {
   if (file.name.startsWith('~$')) return 'ข้ามไฟล์ชั่วคราวของ Excel';
   if (!/\.(xlsx|xls|xlsm|csv|zip)$/i.test(file.name)) return 'รองรับเฉพาะไฟล์ .xlsx .xls .xlsm .csv หรือ .zip';
+  if (/\.zip$/i.test(file.name)) return file.size > NHSO_MAX_ZIP_BYTES ? 'ไฟล์ .zip ใหญ่เกิน 200 MB' : null;
   if (file.size > NHSO_MAX_FILE_BYTES) return 'ไฟล์ใหญ่เกิน 10 MB';
   return null;
 }

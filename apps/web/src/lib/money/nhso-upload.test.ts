@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { excelCell, fileProblem, uploadLine, NHSO_MAX_FILE_BYTES } from './nhso-upload';
+import { excelCell, fileProblem, uploadLine, NHSO_MAX_FILE_BYTES, NHSO_MAX_ZIP_BYTES } from './nhso-upload';
 
 describe('nhso-upload helpers', () => {
   it('turns an Excel date cell into dd/mm/yyyy พ.ศ. and keeps other cells', () => {
@@ -16,6 +16,8 @@ describe('nhso-upload helpers', () => {
     expect(fileProblem({ name: 'report.pdf', size: 10 })).toBe('รองรับเฉพาะไฟล์ .xlsx .xls .xlsm .csv หรือ .zip');
     expect(fileProblem({ name: 'Report.XLSX', size: 10 })).toBeNull();
     expect(fileProblem({ name: 'all.zip', size: 10 })).toBeNull();
+    expect(fileProblem({ name: 'all.zip', size: 60 * 1024 * 1024 })).toBeNull();
+    expect(fileProblem({ name: 'all.zip', size: NHSO_MAX_ZIP_BYTES + 1 })).toBe('ไฟล์ .zip ใหญ่เกิน 200 MB');
   });
 
   it('writes the result line like the legacy page', () => {

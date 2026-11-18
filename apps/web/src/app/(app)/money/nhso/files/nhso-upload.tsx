@@ -43,6 +43,7 @@ export function NhsoUpload() {
       if (/\.zip$/i.test(file.name)) show({ text: `แตกไฟล์ ${file.name}: พบไฟล์ Excel ${sheets.length} ไฟล์`, tone: sheets.length ? 'wait' : 'error' });
       for (const sheet of sheets) {
         total += 1;
+        if (sheet.problem) { show({ text: `✗ ${sheet.name}: ${sheet.problem}`, tone: 'error' }); continue; }
         const line = uploadLine(sheet.name, await send(sheet.name, sheet.aoa));
         if (line.ok) done += 1;
         show({ text: line.text, tone: line.ok ? 'ok' : 'error' });
