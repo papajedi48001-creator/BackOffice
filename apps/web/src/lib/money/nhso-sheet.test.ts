@@ -17,6 +17,11 @@ describe('readNhsoFile', () => {
     expect(result).toEqual([{ name: 'a.xlsx', aoa: [['หน่วยบริการ 11093 โรงพยาบาลวาริชภูมิ', null, null], ['วันที่โอน', 'กองทุน', 'คงเหลือ'], ['25/09/2569', 'ก', 1.5]] }]);
   });
 
+  it('reads a UTF-8 .csv with Thai text, as the legacy page did with codepage 65001', async () => {
+    const csv = new TextEncoder().encode('หน่วยบริการ 11093 โรงพยาบาลวาริชภูมิ\nวันที่โอน,กองทุน,คงเหลือ\n');
+    expect((await readNhsoFile(file('a.csv', csv)))[0]!.aoa[0]![0]).toBe('หน่วยบริการ 11093 โรงพยาบาลวาริชภูมิ');
+  });
+
   it('opens a .zip and reads each Excel file inside, skipping temp and Mac files', async () => {
     const zip = XLSX.CFB.utils.cfb_new();
     XLSX.CFB.utils.cfb_add(zip, 'folder/one.xlsx', new Uint8Array(workbook([['x', 'y', 'z']])));
