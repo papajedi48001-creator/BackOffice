@@ -34,6 +34,21 @@ describe('NHSO dataset routes', () => {
     expect(mocks.upload).not.toHaveBeenCalled();
   });
 
+  it('refuses a non-manager before reading the body, and caps a chunked body by bytes', async () => {
+    ready({ ...manager, roles: [] });
+    const unread = post({ fileName: 'a.xlsx', aoa: table });
+    expect((await POST(unread)).status).toBe(403);
+    expect(unread.bodyUsed).toBe(false);
+    ready(manager);
+    const chunk = new Uint8Array(1024 * 1024).fill(32);
+    let sent = 0;
+    const endless = new ReadableStream({ pull(controller) { sent += 1; if (sent > 40) controller.close(); else controller.enqueue(chunk); } });
+    const big = await POST(new Request('http://localhost/api/money/nhso/datasets', { method: 'POST', body: endless, duplex: 'half' } as RequestInit));
+    expect(big.status).toBe(413);
+    expect(sent).toBeLessThan(25);
+    expect(mocks.upload).not.toHaveBeenCalled();
+  });
+
   it('returns the import result, the parser message as 400 and 403 for a non-manager', async () => {
     ready(manager);
     mocks.upload
