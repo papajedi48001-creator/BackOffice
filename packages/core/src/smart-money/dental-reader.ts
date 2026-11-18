@@ -1,27 +1,26 @@
 import { createDatabase } from '@backoffice/db';
-import type { HosxpConnection } from '../holidays/hosxp-settings-service';
+import { hosxpConnectionUrl } from '../holidays/hosxp-settings-service';
 import type { DentalReader } from './dental-service';
 import type { DentalRow } from './dental-summary';
 import { fixThaiText } from './thai-text';
 
 /** The URL is built in memory only; it holds the password, so it is never logged or returned. */
-const urlOf = (connection: HosxpConnection) => `mysql://${encodeURIComponent(connection.user)}:${encodeURIComponent(connection.password)}@${connection.host}:${connection.port}/${encodeURIComponent(connection.database)}?connectTimeout=5000&connectionLimit=1&dateStrings=true`;
 
 const INC_SUM = `(${Array.from({ length: 16 }, (_, i) => `vn.inc${String(i + 1).padStart(2, '0')}`).join(' + ')})`;
 
 /**
- * The legacy query (Smart Money `DentalClaimsRepository::fetch`) with one change: ผังบัญชี is chosen by a fixed rule
- * (the visit's own year, else the latest year, then the lowest `paccount`) instead of whatever row MariaDB happened to keep.
+ * The legacy query (Smart Money `DentalClaimsRepository::fetch`) with one change: ผังบัญชี is the สิทธิ's ผังบัญชีปัจจุบัน, the
+ * rule Mapping สิทธิ uses (the `paccountopd` row with the latest `last_modify`, then the lowest `paccount`; no year), named
+ * from that code's latest `paccount_year`, instead of whatever row MariaDB happened to keep.
  * One row per visit × K00–K11 diagnosis, only visits with an amount to collect or not fully paid.
  */
 const SQL = `
   SELECT ov.vn, v.vstdate, p.hn,
          CONCAT(COALESCE(p.pname, ''), COALESCE(p.fname, ''), ' ', COALESCE(p.lname, '')) AS patient_name,
          ov.icd10 AS diag_code, icd.name AS diag_name, pty.pttype AS pttype_code, pty.name AS pttype_name,
-         (SELECT pac.name FROM paccountopd pa JOIN paccount pac ON pac.paccount = pa.paccount AND pac.paccount_year = pa.paccount_year
-           WHERE pa.pttype = pty.pttype
-             AND (pa.paccount_year = YEAR(v.vstdate) OR pa.paccount_year = (SELECT MAX(x.paccount_year) FROM paccountopd x WHERE x.pttype = pty.pttype))
-           ORDER BY pa.paccount_year = YEAR(v.vstdate) DESC, pa.paccount_year DESC, pa.paccount ASC LIMIT 1) AS paccount_name,
+         (SELECT (SELECT pac.name FROM paccount pac WHERE pac.paccount = pa.paccount ORDER BY pac.paccount_year DESC LIMIT 1)
+            FROM paccountopd pa WHERE pa.pttype = pty.pttype
+           ORDER BY pa.last_modify IS NULL, pa.last_modify DESC, pa.paccount ASC LIMIT 1) AS paccount_name,
          ${INC_SUM} AS total_amount, vn.paid_money, vn.rcpt_money AS claim_amount
     FROM (SELECT d.vn, d.icd10 FROM ovstdiag d JOIN ovst o ON o.vn = d.vn
            WHERE o.vstdate BETWEEN ? AND ? AND (d.icd10 BETWEEN 'K00' AND 'K119' OR d.icd10 REGEXP '^K0[0-9]|^K1[0-1]')
@@ -40,7 +39,7 @@ const text = (value: string | null) => fixThaiText(value ?? '');
 
 /** One read-only SELECT on HOSxP; nothing is ever written there. */
 export const readDentalClaims: DentalReader = async (connection, start, end) => {
-  const hosxp = createDatabase(urlOf(connection));
+  const hosxp = createDatabase(hosxpConnectionUrl(connection));
   try {
     const rows = await hosxp.query<Raw>(SQL, [start, end]);
     return rows.map((row): DentalRow => ({

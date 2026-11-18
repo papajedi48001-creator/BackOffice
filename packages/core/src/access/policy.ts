@@ -17,6 +17,7 @@ const permissionsByRole: Record<string, readonly Permission[]> = {
   'attendance-auditor': ['attendance.audit.read'],
   'lab-manager': ['lab.manage'],
   'money-manager': ['money.manage'],
+  'pttype-mapping-manager': ['pttype-mapping.manage'],
   // ผู้จัดการ of การลา and ไปราชการ without the rest of HR; both permissions still need the HR data-owner assignment.
   'leave-manager': ['leave.manage'],
   'travel-manager': ['travel.manage']
