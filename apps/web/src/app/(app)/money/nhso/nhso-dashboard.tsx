@@ -126,7 +126,7 @@ export function NhsoDashboard({ canManage }: { canManage: boolean }) {
       <span className="money-note" role="status">{status}</span>
       <div className="nhso-bar-actions">
         <button type="button" onClick={() => void load()} disabled={loading}>โหลดข้อมูลล่าสุด</button>
-        {canManage && <Link className="button-secondary" href="/money/nhso/files">จัดการไฟล์ (ผู้ดูแล)</Link>}
+        {canManage && <Link className="nhso-link-button" href="/money/nhso/files">จัดการไฟล์ (ผู้ดูแล)</Link>}
       </div>
     </div>
 
