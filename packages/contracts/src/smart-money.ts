@@ -3,8 +3,8 @@ import { z } from 'zod';
 /** Smart Money: the module code used by the registry, the gate and the manager role. */
 export const MONEY_MODULE = 'smart-money';
 
-/** หน้า Smart Money a เจ้าหน้าที่ may be given. Rounds 2–4 add `nhso`, `fdh`, `disability`. */
-export const moneyPageSchema = z.enum(['dental', 'nhso', 'fdh', 'disability']);
+/** หน้า Smart Money a เจ้าหน้าที่ may be given. Rounds 2–5 add `nhso`, `fdh`, `disability`, `ttm`. */
+export const moneyPageSchema = z.enum(['dental', 'nhso', 'fdh', 'disability', 'ttm']);
 export type MoneyPage = z.infer<typeof moneyPageSchema>;
 
 /** One เจ้าหน้าที่ Smart Money and the pages they may open (at least one). */
