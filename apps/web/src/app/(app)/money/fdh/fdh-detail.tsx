@@ -39,16 +39,19 @@ function Cases({ view, q, onQuery, chips, onOpen }: { view: readonly FdhCase[]; 
 export type PeopleQuery = { q: string; sub: string };
 
 /** รายบุคคล rows as searched: also what the Excel sheet รายบุคคลแยกกองทุน holds (legacy `people.filter(personMatches)`). */
-export function peopleRows(cases: readonly FdhCase[], query: PeopleQuery): { subs: string[]; only: string; list: PersonFundGroup[] } {
+export function peopleGroups(cases: readonly FdhCase[], sub: string): { subs: string[]; only: string; groups: PersonFundGroup[] } {
   const subs = [...new Set(cases.flatMap((c) => c.subFunds))].sort();
-  const only = subs.includes(query.sub) ? query.sub : '';
-  return { subs, only, list: byPersonFund(cases, only).filter((p) => personMatches(p, query.q.trim())) };
+  const only = subs.includes(sub) ? sub : '';
+  return { subs, only, groups: byPersonFund(cases, only) };
 }
+export const peopleRows = (cases: readonly FdhCase[], query: PeopleQuery) => peopleGroups(cases, query.sub).groups.filter((p) => personMatches(p, query.q.trim()));
 
 function People({ cases, query, onQuery, onOpen }: { cases: readonly FdhCase[]; query: PeopleQuery; onQuery: (query: PeopleQuery) => void; onOpen: (open: FdhOpen) => void }) {
   const [page, setPage] = useState(0);
-  const { subs, only, list } = useMemo(() => peopleRows(cases, query), [cases, query]);
+  // Grouping runs when the cases or the sub-fund change; typing only filters the groups (legacy personMatches).
+  const { subs, only, groups } = useMemo(() => peopleGroups(cases, query.sub), [cases, query.sub]);
   const q = query.q;
+  const list = useMemo(() => groups.filter((p) => personMatches(p, q.trim())), [groups, q]);
   const setQ = (value: string) => onQuery({ ...query, q: value });
   const setSub = (value: string) => onQuery({ ...query, sub: value });
   const shown = paged(list, page);

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useId, useMemo, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useId, useMemo, useState } from 'react';
 import { GroupedBarChart } from '../../../../components/grouped-bar-chart';
 import { ThaiDateInput } from '../../../../components/thai-date-input';
 import { buildCases, byErrorCode, byFundVisit, byMoneyColumn, bySubFund, filterCases, MONEY_COLUMNS, STATUS, summarize, type FdhPayload, type FdhStatus } from '../../../../lib/money/fdh-core';
@@ -23,7 +23,10 @@ export function FdhDashboard({ canManage }: { canManage: boolean }) {
   const [data, setData] = useState<Stored | null>(null);
   const [failure, setFailure] = useState('');
   const [loading, setLoading] = useState(false);
+  // The case search is kept apart from the other filters so typing re-filters only the case list, not every summary.
   const [f, setF] = useState<FdhFilters>(() => initialFilters({ from: '', to: '' }));
+  const [q, setQ] = useState('');
+  const query = useDeferredValue(q);
   const [tab, setTab] = useState<FdhTab>('cases');
   const [people, setPeople] = useState<PeopleQuery>({ q: '', sub: '' });
   const [open, setOpen] = useState<FdhOpen | null>(null);
@@ -37,18 +40,17 @@ export function FdhDashboard({ canManage }: { canManage: boolean }) {
       const response = await fetch('/api/money/fdh/documents?full=1', { cache: 'no-store' });
       const body = (await response.json()) as Partial<Stored> & { error?: string; message?: string };
       if (!response.ok || !body.reps || !body.stms) throw new Error(body.message ?? body.error ?? `HTTP ${response.status}`);
-      const stored = body as Stored;
-      const edges = dateBounds(buildCases(stored));
-      setF((current) => ({ ...current, from: edges.from, to: edges.to }));
-      setData(stored);
+      setData(body as Stored);
     } catch (error) {
       setFailure(`โหลดข้อมูลไม่ได้: ${error instanceof Error ? error.message : String(error)}`);
     } finally { setLoading(false); }
   }, []);
   useEffect(() => { void load(); }, [load]);
+  // New data: the date filters start at its first and last วันรับบริการ, as the legacy setupFilters did.
+  useEffect(() => { setF((current) => ({ ...current, from: bounds.from, to: bounds.to })); }, [bounds]);
 
   const base = useMemo(() => filterCases(all, { ...filterArgs(f, bounds, true), q: '' }), [all, f, bounds]);
-  const view = useMemo(() => filterCases(all, filterArgs(f, bounds, false)), [all, f, bounds]);
+  const view = useMemo(() => filterCases(all, { ...filterArgs(f, bounds, false), q: query }), [all, f, bounds, query]);
   const peopleCases = useMemo(() => filterCases(all, { ...filterArgs(f, bounds, false), q: '' }), [all, f, bounds]);
   const funds = useMemo(() => byFundVisit(peopleCases), [peopleCases]);
   const summary = useMemo(() => summarize(base), [base]);
@@ -56,7 +58,7 @@ export function FdhDashboard({ canManage }: { canManage: boolean }) {
   const moneyRows = useMemo(() => byMoneyColumn(base), [base]);
   const errors = useMemo(() => byErrorCode(base), [base]);
   const options = useMemo(() => filterOptions(all), [all]);
-  const tags = activeFilterTags(f, bounds);
+  const tags = activeFilterTags({ ...f, q }, bounds);
 
   function setFilter(patch: Partial<FdhFilters>, toCases = false) {
     setF((current) => ({ ...current, ...patch }));
@@ -65,7 +67,7 @@ export function FdhDashboard({ canManage }: { canManage: boolean }) {
       document.getElementById('fdh-detail')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
     }
   }
-  const clear = () => setF(initialFilters(bounds));
+  const clear = () => { setF(initialFilters(bounds)); setQ(''); };
 
   const statusChips = (label: string, toCases: boolean) => <div className="fdh-chips" role="group" aria-label={label}>
     {STATUSES.map((key) => <button key={key} type="button" className={`fdh-chip st-${key}${f.status === key ? ' is-on' : ''}`} aria-pressed={f.status === key}
@@ -74,7 +76,7 @@ export function FdhDashboard({ canManage }: { canManage: boolean }) {
   </div>;
 
   const exportExcel = () => {
-    const sheets = fdhExportSheets({ view, base, people: peopleRows(peopleCases, people).list, funds });
+    const sheets = fdhExportSheets({ view, base, people: peopleRows(peopleCases, people), funds });
     void import('../../../../lib/money/fdh-export').then((module) => module.downloadFdhExport(sheets));
   };
 
@@ -159,7 +161,7 @@ export function FdhDashboard({ canManage }: { canManage: boolean }) {
       </section>
 
       <FdhDetail tab={tab} onTab={setTab} view={view} peopleCases={peopleCases} funds={funds} people={people} onPeople={setPeople} errors={errors} errorCode={f.errorCode}
-        q={f.q} onQuery={(q) => setFilter({ q })} chips={statusChips('สถานะในรายเคส', false)} onCode={(code) => setFilter({ status: 'error', errorCode: code }, true)}
+        q={q} onQuery={setQ} chips={statusChips('สถานะในรายเคส', false)} onCode={(code) => setFilter({ status: 'error', errorCode: code }, true)}
         onOpen={setOpen} onExport={exportExcel} />
     </>}
 

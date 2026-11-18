@@ -4,6 +4,14 @@ import { fdhStored } from '../../../../lib/money/fixtures/fdh-stored';
 
 const { downloadFdhExport } = vi.hoisted(() => ({ downloadFdhExport: vi.fn() }));
 vi.mock('../../../../lib/money/fdh-export', () => ({ downloadFdhExport }));
+const core = vi.hoisted(() => ({ buildCases: vi.fn(), summarize: vi.fn(), byPersonFund: vi.fn() }));
+vi.mock('../../../../lib/money/fdh-core', async (importOriginal) => {
+  const real = await importOriginal<typeof import('../../../../lib/money/fdh-core')>();
+  core.buildCases.mockImplementation(real.buildCases);
+  core.summarize.mockImplementation(real.summarize);
+  core.byPersonFund.mockImplementation(real.byPersonFund);
+  return { ...real, buildCases: core.buildCases, summarize: core.summarize, byPersonFund: core.byPersonFund };
+});
 import { FdhDashboard } from './fdh-dashboard';
 
 const serve = (body: unknown, status = 200) => vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(body), { status })));
@@ -11,7 +19,7 @@ const shown = async () => { render(<FdhDashboard canManage />); return screen.fi
 const bodyRows = (table: HTMLElement) => within(table).getAllByRole('row').slice(1) as HTMLTableRowElement[];
 const caseRows = (detail: HTMLElement) => bodyRows(within(detail).getByRole('table', { name: 'รายเคส' }));
 
-afterEach(() => { vi.unstubAllGlobals(); downloadFdhExport.mockReset(); });
+afterEach(() => { vi.unstubAllGlobals(); downloadFdhExport.mockReset(); core.buildCases.mockClear(); core.summarize.mockClear(); core.byPersonFund.mockClear(); });
 
 describe('FdhDashboard', () => {
   it('shows the status line, KPI cards, status strip, sub-fund and STM money tables', async () => {
@@ -103,6 +111,21 @@ describe('FdhDashboard', () => {
     fireEvent.click(within(detail).getByRole('button', { name: 'ดาวน์โหลด Excel' }));
     await waitFor(() => expect(downloadFdhExport).toHaveBeenCalled());
     expect(downloadFdhExport.mock.calls[0]![0]['รายเคส']).toHaveLength(4);
+  });
+
+  it('builds the cases once per load and does not recompute the summaries or people while typing a search', async () => {
+    serve({ ok: true, ...fdhStored });
+    const detail = await shown();
+    expect(core.buildCases).toHaveBeenCalledTimes(1);
+    const summaries = core.summarize.mock.calls.length;
+    fireEvent.change(within(detail).getByRole('searchbox', { name: 'ค้นหา' }), { target: { value: 'H1' } });
+    await waitFor(() => expect(caseRows(detail)).toHaveLength(2));
+    expect(core.summarize).toHaveBeenCalledTimes(summaries);
+    fireEvent.click(within(detail).getByRole('tab', { name: 'รายบุคคล' }));
+    const people = core.byPersonFund.mock.calls.length;
+    fireEvent.change(within(detail).getByRole('searchbox', { name: 'ค้นหารายบุคคล' }), { target: { value: 'สมหญิง' } });
+    expect(within(within(detail).getByRole('table', { name: 'รายบุคคล' })).getAllByRole('row')).toHaveLength(3);
+    expect(core.byPersonFund).toHaveBeenCalledTimes(people);
   });
 
   it('says when there is no data (files link for managers) and when loading fails', async () => {
