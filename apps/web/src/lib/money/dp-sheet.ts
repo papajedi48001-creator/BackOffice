@@ -64,7 +64,7 @@ export async function readDpFile(file: Picked): Promise<DpSheetFile[]> {
     return files;
   }
   const book = /\.csv$/i.test(file.name)
-    ? XLSX.read(decode(bytes).replace(/^﻿/, ''), { type: 'string', raw: true })
+    ? XLSX.read(decode(bytes).replace(/^\uFEFF/, ''), { type: 'string', raw: true })
     : XLSX.read(bytes, { type: 'array', cellDates: true });
   for (const sheetName of book.SheetNames) {
     const rows = XLSX.utils.sheet_to_json<unknown[]>(book.Sheets[sheetName]!, { header: 1, defval: null, raw: true }).map((row) => trimRow((row ?? []).map(dpCell)));

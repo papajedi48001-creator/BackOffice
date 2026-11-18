@@ -36,7 +36,7 @@ function text(value: NhsoCell | undefined): string {
   return phpTrim(phpString(value));
 }
 /** `preg_replace('/\s+/u', ' ')` then trim (PCRE Unicode whitespace, which leaves out U+FEFF unlike JavaScript `\s`). */
-const collapse = (s: string) => phpTrim(s.replace(/[^\S﻿]+/gu, ' '));
+const collapse = (s: string) => phpTrim(s.replace(/[^\S\uFEFF]+/gu, ' '));
 function number(s: string): number {
   const t = s.replace(/[, ]/g, '');
   return /^[ \t\n\r\v\f]*[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?[ \t\n\r\v\f]*$/.test(t) ? Number(t) : 0;
@@ -64,7 +64,7 @@ function findHeader(rows: Rows): [number, Map<string, number>] | null {
     if (!Array.isArray(row)) continue;
     const cols = new Map<string, number>();
     row.forEach((value, index) => {
-      const t = collapse(text(value).replaceAll('﻿', ''));
+      const t = collapse(text(value).replaceAll('\uFEFF', ''));
       if (t !== '' && !cols.has(t)) cols.set(t, index);
     });
     if (cols.has('เลขที่อ้างอิง') && cols.has('ชื่อบริการฟื้นฟู')) return [i, cols];

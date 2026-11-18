@@ -403,11 +403,12 @@ describe('Smart Money module', () => {
     expect(await shown(fakeDb(['dental']), subject())).toEqual(['/money/dental']);
     expect(await shown(fakeDb(['nhso']), subject())).toEqual(['/money/nhso']);
     expect(await shown(fakeDb(['fdh']), subject())).toEqual(['/money/fdh']);
+    expect(await shown(fakeDb(['disability']), subject())).toEqual(['/money/disability']);
   });
 
   it('shows a money-manager every section without membership', async () => {
     const manager = subject({ roles: [{ name: 'money-manager', organizationId: null }] });
-    expect(await shown(fakeDb(null), manager)).toEqual(['/money/dental', '/money/nhso', '/money/nhso/files', '/money/fdh', '/money/fdh/files', '/money/settings']);
+    expect(await shown(fakeDb(null), manager)).toEqual(['/money/dental', '/money/nhso', '/money/nhso/files', '/money/fdh', '/money/fdh/files', '/money/disability', '/money/disability/files', '/money/settings']);
     expect(await availableModules([money()], fakeDb(null), manager)).toHaveLength(1);
   });
 });

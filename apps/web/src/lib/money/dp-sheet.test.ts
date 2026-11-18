@@ -26,7 +26,7 @@ describe('readDpFile', () => {
   });
 
   it('reads a UTF-8 CSV with a BOM', async () => {
-    const bytes = new TextEncoder().encode(`﻿${csv([HEADER, ['2025-01-05', 'จิตบำบัด', '300', '300', 'R1', '1']])}`);
+    const bytes = new TextEncoder().encode(`\uFEFF${csv([HEADER, ['2025-01-05', 'จิตบำบัด', '300', '300', 'R1', '1']])}`);
     const [read] = await readDpFile(file('a.csv', bytes));
     expect(read!.header).toEqual(HEADER);
     expect(read!.data).toEqual([['2025-01-05', 'จิตบำบัด', '300', '300', 'R1', '1']]);

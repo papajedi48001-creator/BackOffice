@@ -13,7 +13,9 @@ const exempt = new Set(['app/(app)/admin/person-picker.tsx', 'app/(app)/fleet/se
   // The row search inside the report tabs of เงินโอน สปสช., as on the legacy page.
   'app/(app)/money/nhso/nhso-details.tsx',
   // The searches inside the รายเคส / รายบุคคล / รายกองทุนย่อย tabs of ติดตามกองทุนย่อย FDH, under its filter search-card.
-  'app/(app)/money/fdh/fdh-detail.tsx']);
+  'app/(app)/money/fdh/fdh-detail.tsx',
+  // The row search inside the รายการ tab of Point ฟื้นฟูผู้พิการ, under its filter search-card.
+  'app/(app)/money/disability/dp-detail.tsx']);
 const filterForms = [/method="get"/, /type="search"/, /className="(?:leave|lab|money-date)-filter"/];
 
 function sources(directory: string): string[] {
