@@ -79,7 +79,7 @@ export function MappingBoard({ snapshot, editors }: { snapshot: MappingSnapshot;
           <td><strong>{right.name}</strong></td>
           <td data-label="OPD"><AccountCell account={right.opd} /></td>
           <td data-label="IPD"><AccountCell account={right.ipd} /></td>
-          <td className="mapping-who">{editor?.name ?? null}{stamp ? <small>{formatHosxpStamp(stamp)}</small> : editor ? null : <small>—</small>}</td>
+          <td className="mapping-who"><span>{editor?.name ?? null}{stamp ? <small>{formatHosxpStamp(stamp)}</small> : editor ? null : <small>—</small>}</span></td>
           <td className="mapping-action"><button type="button" className="button-secondary" aria-label={`ผูกผังบัญชี ${right.code} ${right.name}`} onClick={() => setEditing(right.code)}>ผูกผังบัญชี</button></td>
         </tr>;
       })}</tbody>
