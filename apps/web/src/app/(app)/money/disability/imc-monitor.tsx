@@ -1,17 +1,19 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import type { ImcOverview } from '@backoffice/core';
 import { GroupedBarChart } from '../../../../components/grouped-bar-chart';
+import { ThaiDateInput } from '../../../../components/thai-date-input';
 import { bangkokToday } from '../../../../lib/bangkok-time';
-import { imcBuckets, imcDate, imcRemain, type ImcGroup, type ImcUnit } from '../../../../lib/money/imc-views';
+import { imcAutoUnit, imcBuckets, imcDate, imcInRange, imcPresets, imcRemain, type ImcGroup, type ImcUnit } from '../../../../lib/money/imc-views';
 import { int, money } from '../fdh/fdh-shared';
 import { ImcUpload } from './imc-upload';
 
 type Payload = ImcOverview & { updatedAt: string | null };
 type Filter = 'all' | Exclude<ImcGroup, 'ok'>;
 const FILTERS: [Filter, string][] = [['all', 'ทั้งหมด'], ['soon', '≤ 30 วัน'], ['mid', '31–60 วัน'], ['done', 'ครบกำหนดแล้ว']];
-const UNITS: [ImcUnit, string][] = [['day', 'รายวัน'], ['month', 'รายเดือน'], ['year', 'รายปี']];
+type ChartUnit = 'auto' | ImcUnit;
+const UNITS: [ChartUnit, string][] = [['auto', 'อัตโนมัติ'], ['day', 'รายวัน'], ['month', 'รายเดือน'], ['year', 'รายปีงบ']];
 const RING = 2 * Math.PI * 31;
 const DAY = 86_400_000;
 /** "Traumatic brain injury (TBI)" → "TBI" for the summary card. */
@@ -33,7 +35,9 @@ export function ImcMonitor({ canManage, today = bangkokToday() }: { canManage: b
   const [failure, setFailure] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
   const [hideDone, setHideDone] = useState(true);
-  const [unit, setUnit] = useState<ImcUnit>('month');
+  const [unit, setUnit] = useState<ChartUnit>('auto');
+  const [picked, setPicked] = useState<{ from: string; to: string } | null>(null);
+  const [opened, setOpened] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     setFailure('');
@@ -47,6 +51,19 @@ export function ImcMonitor({ canManage, today = bangkokToday() }: { canManage: b
     }
   }, []);
   useEffect(() => { void load(); }, [load]);
+  // The range bar sticks just under the module tabs, whose height depends on how many rows they wrap to.
+  const [stickTop, setStickTop] = useState<number | undefined>(undefined);
+  useEffect(() => {
+    const tabs = document.querySelector<HTMLElement>('.module-subnav');
+    if (!tabs || typeof ResizeObserver === 'undefined') return;
+    const place = () => {
+      const style = getComputedStyle(tabs);
+      setStickTop(style.position === 'sticky' ? (parseFloat(style.top) || 0) + tabs.getBoundingClientRect().height + 6 : undefined);
+    };
+    const watch = new ResizeObserver(place);
+    watch.observe(tabs);
+    return () => watch.disconnect();
+  }, []);
 
   const persons = useMemo(() => (data?.persons ?? []).map((person) => ({ ...person, remain: imcRemain(person, today) })), [data, today]);
   const doneCount = persons.filter((person) => person.remain.group === 'done').length;
@@ -54,7 +71,14 @@ export function ImcMonitor({ canManage, today = bangkokToday() }: { canManage: b
   const shown = inCare.filter((person) => filter === 'all' || person.remain.group === filter);
   // Asking for ครบกำหนดแล้ว means wanting to see them, so the switch turns off.
   const pickFilter = (next: Filter) => { setFilter(next); if (next === 'done') setHideDone(false); };
-  const groups = useMemo(() => (data ? imcBuckets(data.lines, data.services, unit) : []), [data, unit]);
+  const presets = useMemo(() => imcPresets(today, data?.lines[0]?.date ?? '', data?.lines.at(-1)?.date ?? ''), [data, today]);
+  // The range starts on ทั้งหมด, so the page opens showing everything, as it did before the range bar.
+  const { from, to } = picked ?? presets[0]!;
+  const range = useMemo(() => imcInRange({ lines: data?.lines ?? [], reps: data?.reps ?? [] }, from, to), [data, from, to]);
+  const drawn = unit === 'auto' ? imcAutoUnit(from, to) : unit;
+  const groups = useMemo(() => (data ? imcBuckets(data.lines, data.services, drawn, { from, to }) : []), [data, drawn, from, to]);
+  const serviceName = new Map((data?.services ?? []).map((service) => [service.code, service.name]));
+  const inRange = (id: number) => range.people.get(id) ?? { visits: 0, claim: 0, paid: 0, repNos: [], lines: [] };
   const totals = data?.totals;
 
   return <section className="money-card imc" aria-labelledby="imc-title">
@@ -68,10 +92,19 @@ export function ImcMonitor({ canManage, today = bangkokToday() }: { canManage: b
       <p>{canManage ? 'กด "นำเข้าไฟล์ IMC" แล้วเลือกไฟล์ทะเบียนคนไข้ IMC (.csv) และไฟล์ REP (.xlsx)' : 'ติดต่อผู้ดูแล Smart Money เพื่อนำเข้าไฟล์ IMC'}</p></div>}
 
     {totals && persons.length > 0 && <>
+      <div className="imc-range" role="group" aria-label="ช่วงวันที่" style={stickTop === undefined ? undefined : { top: stickTop }}>
+        <ThaiDateInput aria-label="ตั้งแต่วันที่" value={from} max={to} onChange={(day) => { if (day) setPicked({ from: day, to }); }} />
+        <span>ถึง</span>
+        <ThaiDateInput aria-label="ถึงวันที่" value={to} min={from} onChange={(day) => { if (day) setPicked({ from, to: day }); }} />
+        <div className="imc-range-shortcuts" role="group" aria-label="ช่วงลัด">
+          {presets.map((preset) => { const on = preset.from === from && preset.to === to;
+            return <button key={preset.key} type="button" className={on ? 'is-active' : ''} aria-pressed={on} onClick={() => setPicked({ from: preset.from, to: preset.to })}>{preset.label}</button>; })}
+        </div>
+      </div>
       <section className="money-kpis imc-kpis" aria-label="สรุป IMC">
         <div className="money-kpi"><span>ทะเบียน IMC</span><strong>{int(totals.people)} <em>คน</em></strong><small>{totals.diseases.map(([name, count]) => `${short(name)} ${int(count)}`).join(' · ')}</small></div>
-        <div className="money-kpi"><span>เรียกเก็บ IMC</span><strong>{money(totals.claim)} <em>บาท</em></strong><small>{`${int(totals.visits)} ครั้ง${totals.pending ? ` (รอประมวลผล ${int(totals.pending)})` : ''}`}</small></div>
-        <div className="money-kpi is-accent"><span>REP</span><strong>{money(totals.paid)} <em>บาท</em></strong><small>{`ยังไม่มี REP ${money(totals.noRep)} บาท`}{totals.repOutside ? ` · ${int(totals.repOutside)} รายการไม่อยู่ในทะเบียน` : ''}</small></div>
+        <div className="money-kpi"><span>เรียกเก็บ IMC</span><strong>{money(range.claim)} <em>บาท</em></strong><small>{`${int(range.visits)} ครั้ง${range.pending ? ` (รอประมวลผล ${int(range.pending)})` : ''}`}</small></div>
+        <div className="money-kpi is-accent"><span>REP</span><strong>{money(range.paid)} <em>บาท</em></strong><small>{`ยังไม่มี REP ${money(range.noRep)} บาท`}{range.repOutside ? ` · ${int(range.repOutside)} รายการไม่อยู่ในทะเบียน` : ''}</small></div>
         <div className="money-kpi"><span>ใกล้ครบกำหนด (≤ 30 วัน)</span><strong>{int(persons.filter((person) => person.remain.group === 'soon').length)} <em>คน</em></strong><small>นัดให้บริการก่อนครบกำหนด</small></div>
       </section>
 
@@ -104,26 +137,40 @@ export function ImcMonitor({ canManage, today = bangkokToday() }: { canManage: b
 
       <section className="imc-block" aria-labelledby="imc-detail-title">
         <h4 id="imc-detail-title">รายละเอียดรายบุคคล</h4>
-        <div className="money-table-wrap"><table aria-label="รายละเอียดรายบุคคล"><thead><tr><th className="money-number">ลำดับ</th><th>ชื่อ-สกุล</th><th>วันเริ่มป่วย</th><th>วันจำหน่าย</th><th>เหลืออีก</th><th className="money-number">เรียกเก็บ</th></tr></thead><tbody>
-          {inCare.map((person, index) => <tr key={person.id}>
-            <td className="money-number">{index + 1}</td><td>{person.name}<br /><small className="fdh-muted">{person.disease}</small></td><td>{imcDate(person.onset)}</td><td>{imcDate(person.discharge)}</td>
-            <td><span className={`imc-tag is-${person.remain.tone}`}>{person.remain.text}</span></td><td className="money-number">{`${int(person.visits)} ครั้ง`}</td></tr>)}
+        <div className="money-table-wrap"><table aria-label="รายละเอียดรายบุคคล"><thead><tr><th className="money-number">ลำดับ</th><th>ชื่อ-สกุล</th><th>วันเริ่มป่วย</th><th>วันจำหน่าย</th><th>เหลืออีก</th><th className="money-number">เรียกเก็บ</th><th className="money-number">บาท</th></tr></thead><tbody>
+          {inCare.map((person, index) => { const own = inRange(person.id); const isOpen = opened === person.id;
+            const toggle = () => setOpened(isOpen ? null : person.id);
+            return <Fragment key={person.id}>
+              <tr className={`imc-row${isOpen ? ' is-open' : ''}`} onClick={toggle}>
+                <td className="money-number">{index + 1}</td>
+                <td><button type="button" className="imc-row-toggle" aria-expanded={isOpen} onClick={(event) => { event.stopPropagation(); toggle(); }}>{person.name}</button><br /><small className="fdh-muted">{person.disease}</small></td>
+                <td>{imcDate(person.onset)}</td><td>{imcDate(person.discharge)}</td>
+                <td><span className={`imc-tag is-${person.remain.tone}`}>{person.remain.text}</span></td><td className="money-number">{`${int(own.visits)} ครั้ง`}</td><td className="money-number">{money(own.claim)}</td></tr>
+              {isOpen && <tr className="imc-lines-row"><td colSpan={7}>
+                {own.lines.length === 0 ? <p className="imc-none">ไม่มีการเรียกเก็บในช่วงนี้</p>
+                  : <table className="imc-lines" aria-label={`รายการเรียกเก็บ ${person.name}`}><thead><tr><th>วันที่รับบริการ</th><th>รหัสบริการ</th><th>บริการ</th><th className="money-number">เรียกเก็บ (บาท)</th><th>สถานะ</th><th>REP NO</th></tr></thead><tbody>
+                    {[...own.lines].reverse().map((line, at) => <tr key={at}><td>{imcDate(line.date)}</td><td className="fdh-mono">{line.code}</td><td>{serviceName.get(line.code) ?? line.code}</td>
+                      <td className="money-number">{money(line.claim)}</td><td>{line.pending ? <span className="imc-tag is-warn">รอประมวลผล</span> : ''}</td>
+                      <td className="fdh-mono">{line.repNo || <span className="imc-tag is-warn">ยังไม่มี REP</span>}</td></tr>)}
+                  </tbody><tfoot><tr><th colSpan={3}>{`รวม ${int(own.visits)} ครั้ง`}</th><th className="money-number">{money(own.claim)}</th><th></th><th>{`REP ${money(own.paid)}`}</th></tr></tfoot></table>}
+              </td></tr>}
+            </Fragment>; })}
         </tbody></table></div>
       </section>
 
       <section className="imc-block" aria-labelledby="imc-chart-title">
-        <div className="imc-block-head"><h4 id="imc-chart-title">การเรียกเก็บ IMC</h4><Segmented label="ช่วงเวลา" items={UNITS} value={unit} onChange={setUnit} /></div>
-        <GroupedBarChart ariaLabel="กราฟการเรียกเก็บ IMC" valueFormat={int} axisTitle={unit === 'year' ? 'ปีงบประมาณ' : undefined}
+        <div className="imc-block-head"><h4 id="imc-chart-title">การเรียกเก็บ IMC</h4><Segmented label="กราฟราย" items={UNITS} value={unit} onChange={setUnit} /></div>
+        <GroupedBarChart ariaLabel="กราฟการเรียกเก็บ IMC" valueFormat={int} axisTitle={drawn === 'year' ? 'ปีงบประมาณ' : undefined} emptyText="ไม่มีการเรียกเก็บในช่วงนี้"
           series={data!.services.map((service, index) => ({ name: service.name, tone: index }))} groups={groups} />
       </section>
 
       <section className="imc-block" aria-labelledby="imc-rep-title">
         <h4 id="imc-rep-title">เรียกเก็บเทียบ REP</h4>
         <div className="money-table-wrap"><table aria-label="เรียกเก็บเทียบ REP"><thead><tr><th className="money-number">ลำดับ</th><th>ชื่อ-สกุล</th><th className="money-number">เรียกเก็บ (บาท)</th><th className="money-number">REP (บาท)</th><th>REP NO</th></tr></thead><tbody>
-          {persons.map((person, index) => <tr key={person.id}>
-            <td className="money-number">{index + 1}</td><td>{person.name}</td><td className="money-number">{money(person.claim)}</td>
-            <td className="money-number">{person.repNos.length ? money(person.paid) : <span className="imc-tag is-warn">ยังไม่มี REP</span>}</td><td className="fdh-mono">{person.repNos.join(', ') || '-'}</td></tr>)}
-        </tbody><tfoot><tr><th></th><th>{`รวม ${int(persons.length)} คน`}</th><th className="money-number">{money(totals.claim)}</th><th className="money-number">{money(persons.reduce((sum, person) => sum + person.paid, 0))}</th><th></th></tr></tfoot></table></div>
+          {persons.map((person, index) => { const own = inRange(person.id); return <tr key={person.id}>
+            <td className="money-number">{index + 1}</td><td>{person.name}</td><td className="money-number">{money(own.claim)}</td>
+            <td className="money-number">{own.repNos.length ? money(own.paid) : <span className="imc-tag is-warn">ยังไม่มี REP</span>}</td><td className="fdh-mono">{own.repNos.join(', ') || '-'}</td></tr>; })}
+        </tbody><tfoot><tr><th></th><th>{`รวม ${int(persons.length)} คน`}</th><th className="money-number">{money(range.claim)}</th><th className="money-number">{money(persons.reduce((sum, person) => sum + inRange(person.id).paid, 0))}</th><th></th></tr></tfoot></table></div>
       </section>
     </>}
   </section>;

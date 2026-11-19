@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { imcBuckets, imcDate, imcRemain } from './imc-views';
+import { imcAutoUnit, imcBuckets, imcDate, imcInRange, imcPresets, imcRemain } from './imc-views';
 
 describe('imcRemain', () => {
   const person = (due: string, status = 'ปกติ') => ({ due, status });
@@ -18,8 +18,8 @@ describe('imcRemain', () => {
 });
 
 describe('imcDate', () => {
-  it('writes d/m/yyyy พ.ศ. and a dash for no date', () => {
-    expect(imcDate('2026-04-13')).toBe('13/4/2569');
+  it('writes d MMM yyyy พ.ศ. and a dash for no date', () => {
+    expect(imcDate('2026-04-13')).toBe('13 เม.ย. 2569');
     expect(imcDate('')).toBe('-');
   });
 });
@@ -47,5 +47,49 @@ describe('imcBuckets', () => {
   });
   it('is empty with no lines', () => {
     expect(imcBuckets([], services, 'month')).toEqual([]);
+  });
+});
+
+describe('imc date range', () => {
+  const services = [{ code: 'H9339.1', name: 'กายภาพบำบัด' }, { code: 'H9340', name: 'ให้บริการIMCที่บ้าน' }];
+  it('draws every day, month or ปีงบ of a range, ignoring lines outside it', () => {
+    const lines = [{ date: '2026-10-30', code: 'H9339.1', claim: 450 }, { date: '2026-11-02', code: 'H9340', claim: 200 }, { date: '2026-12-01', code: 'H9340', claim: 200 }];
+    expect(imcBuckets(lines, services, 'day', { from: '2026-11-01', to: '2026-11-03' }).map((group) => [group.label, group.values])).toEqual([['1 พ.ย.', [0, 0]], ['2 พ.ย.', [0, 200]], ['3 พ.ย.', [0, 0]]]);
+    expect(imcBuckets(lines, services, 'month', { from: '2026-09-15', to: '2026-11-19' }).map((group) => [group.label, group.values])).toEqual([['ก.ย. 69', [0, 0]], ['ต.ค. 69', [450, 0]], ['พ.ย. 69', [0, 200]]]);
+    expect(imcBuckets(lines, services, 'year', { from: '2026-09-15', to: '2026-11-19' }).map((group) => group.label)).toEqual(['ปีงบ 2569', 'ปีงบ 2570']);
+  });
+  it('picks รายวัน for up to 62 days and รายเดือน beyond', () => {
+    expect(imcAutoUnit('2026-10-01', '2026-12-01')).toBe('day');
+    expect(imcAutoUnit('2026-10-01', '2026-12-02')).toBe('month');
+  });
+  it('offers the shortcuts, ทั้งหมด running from the first service date to today or the latest one', () => {
+    expect(imcPresets('2026-11-19', '2025-10-03', '2026-11-01')).toEqual([
+      { key: 'all', label: 'ทั้งหมด', from: '2025-10-03', to: '2026-11-19' },
+      { key: 'today', label: 'วันนี้', from: '2026-11-19', to: '2026-11-19' },
+      { key: 'week', label: '7 วันล่าสุด', from: '2026-11-13', to: '2026-11-19' },
+      { key: 'month', label: 'เดือนนี้', from: '2026-11-01', to: '2026-11-19' },
+      { key: 'lastMonth', label: 'เดือนก่อน', from: '2026-10-01', to: '2026-10-31' },
+      { key: 'fy', label: 'ปีงบนี้ (2570)', from: '2026-10-01', to: '2026-11-19' },
+      { key: 'lastFy', label: 'ปีงบ 2569', from: '2025-10-01', to: '2026-09-30' }
+    ]);
+    expect(imcPresets('2026-01-05', '', '')[0]).toEqual({ key: 'all', label: 'ทั้งหมด', from: '2026-01-05', to: '2026-01-05' });
+    expect(imcPresets('2026-01-05', '2025-12-01', '2026-02-01')[0]!.to).toBe('2026-02-01');
+    expect(imcPresets('2026-01-05', '', '')[4]).toMatchObject({ from: '2025-12-01', to: '2025-12-31' });
+  });
+  it('sums claims, REP and claim lines per person inside the range', () => {
+    const data = {
+      lines: [
+        { person: 1, date: '2026-10-01', code: 'H9339.1', claim: 450, pending: false, repNo: 'R1' },
+        { person: 1, date: '2026-11-02', code: 'H9340', claim: 200, pending: true, repNo: '' },
+        { person: 2, date: '2026-11-03', code: 'H9339.1', claim: 450, pending: false, repNo: '' }
+      ],
+      reps: [{ person: 1, date: '2026-10-01', repNo: 'R1', paid: 450 }, { person: 1, date: '2026-11-02', repNo: 'R2', paid: 100 }, { person: null, date: '2026-11-05', repNo: 'R2', paid: 300 }]
+    };
+    const range = imcInRange(data, '2026-11-01', '2026-11-30');
+    expect(range).toMatchObject({ visits: 2, claim: 650, pending: 1, paid: 400, noRep: 650, repOutside: 1 });
+    expect(range.people.get(1)).toEqual({ visits: 1, claim: 200, paid: 100, repNos: ['R2'], lines: [data.lines[1]] });
+    expect(range.people.get(2)).toMatchObject({ visits: 1, claim: 450, paid: 0, repNos: [] });
+    expect(range.people.get(3)).toBeUndefined();
+    expect(imcInRange(data, '2026-01-01', '2026-12-31')).toMatchObject({ visits: 3, claim: 1100, paid: 850, noRep: 650 });
   });
 });

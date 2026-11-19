@@ -1584,3 +1584,19 @@ h2.chat-window-title { cursor: default; }
 .imc-switch input:checked::after { transform: translateX(20px); }
 .imc-switch input:focus-visible { outline: 3px solid var(--accent-tint); outline-offset: 2px; }
 .imc-hidden-note { margin: 10px 0 0; color: var(--muted); font-size: .85rem; }
+.imc-range { position: sticky; top: calc(var(--topbar-height) + 6px); z-index: 20; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-bottom: 14px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-md); }
+.imc-range > span { color: var(--muted); }
+.imc-range-shortcuts { display: flex; flex-wrap: wrap; gap: 6px; }
+.app-main .imc-range-shortcuts button { min-height: 36px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink); font-size: .85rem; font-weight: 400; }
+.app-main .imc-range-shortcuts button:hover:not(:disabled) { background: var(--accent-soft); }
+.app-main .imc-range-shortcuts button.is-active, .app-main .imc-range-shortcuts button.is-active:hover { border-color: var(--brand-deep); background: var(--brand-deep); color: #fff; font-weight: 700; animation: segment-pop var(--motion-base) var(--ease-out); }
+.imc-row { cursor: pointer; transition: background var(--motion-fast) var(--ease-out); }
+.imc-row:hover, .imc-row.is-open { background: var(--accent-soft); }
+.app-main button.imc-row-toggle, .app-main button.imc-row-toggle:hover:not(:disabled) { padding: 0; border: 0; background: none; box-shadow: none; color: var(--ink); font-weight: 700; text-align: left; }
+.imc-row-toggle::before { content: "▸"; display: inline-block; width: 1.1em; color: var(--muted); transition: transform var(--motion-fast) var(--ease-out); }
+.imc-row-toggle[aria-expanded="true"]::before { transform: rotate(90deg); }
+.imc-lines-row > td { padding: 0 0 12px 28px; background: var(--accent-soft); }
+.imc-lines { width: 100%; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-size: .86rem; animation: rise-in var(--motion-base) var(--ease-out) both; }
+@media (prefers-reduced-motion: reduce) { .imc-lines { animation: none; } }
+@media (max-width: 640px) { .imc-range { position: static; } }
+.imc-range .thai-date-field input { width: 22ch; }
