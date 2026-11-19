@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useId, useRef, useState } from 'react';
+import { FormDialog } from '../../../../../components/form-dialog';
 import { readNhsoFile } from '../../../../../lib/money/nhso-sheet';
 import { fileProblem, NHSO_ACCEPT, uploadLine, type NhsoUploadAnswer } from '../../../../../lib/money/nhso-upload';
 
@@ -55,16 +56,17 @@ export function NhsoUpload() {
     if (done > 0) router.refresh();
   }
 
-  return <section className="money-card nhso-upload" aria-labelledby={`${inputId}-title`}>
-    <h3 id={`${inputId}-title`}>อัปโหลดรายงานโอนเงิน</h3>
-    <p className="money-note">ไฟล์ &quot;รายงานเอกสารการโอนเงินแยกตามหน่วยงาน&quot; จาก สปสช. เลือกได้หลายไฟล์พร้อมกัน หรือใช้ไฟล์ .zip ที่ดาวน์โหลดทั้งโฟลเดอร์จาก Google Drive ได้เลย ระบบอ่านรหัสหน่วยบริการและปีงบจากหัวรายงานเอง
-      ถ้าอัปโหลดไฟล์ของ รพ. เดิมปีงบเดิมซ้ำ จะแทนที่ข้อมูลเดิมทั้งชุด (รายงานเป็นยอดสะสม)</p>
-    <label htmlFor={inputId} className={`nhso-drop${over ? ' is-over' : ''}${busy ? ' is-busy' : ''}`}
-      onDragOver={(event) => { event.preventDefault(); setOver(true); }} onDragEnter={(event) => { event.preventDefault(); setOver(true); }}
-      onDragLeave={() => setOver(false)} onDrop={(event) => { event.preventDefault(); setOver(false); void addFiles(event.dataTransfer.files); }}>
-      {busy ? 'กำลังนำเข้า…' : 'ลากไฟล์มาวางที่นี่ หรือคลิกเพื่อเลือก (.xlsx .xls .csv หรือ .zip ทั้งโฟลเดอร์)'}
-      <input ref={input} id={inputId} className="visually-hidden" type="file" multiple accept={NHSO_ACCEPT} aria-label="เลือกไฟล์รายงานโอนเงิน" disabled={busy} onChange={(event) => void addFiles(event.target.files)} />
-    </label>
-    <ul className="nhso-results" aria-live="polite">{lines.map((line, index) => <li key={index} className={`is-${line.tone}`}>{line.text}</li>)}</ul>
-  </section>;
+  return <FormDialog title="อัปโหลดรายงานโอนเงิน" triggerLabel="อัปโหลดรายงานโอนเงิน" wide isSubmitting={busy} onOpenChange={(open) => { if (open) setLines([]); }}>
+    <div className="nhso-upload">
+      <p className="money-note">ไฟล์ &quot;รายงานเอกสารการโอนเงินแยกตามหน่วยงาน&quot; จาก สปสช. เลือกได้หลายไฟล์พร้อมกัน หรือใช้ไฟล์ .zip ที่ดาวน์โหลดทั้งโฟลเดอร์จาก Google Drive ได้เลย ระบบอ่านรหัสหน่วยบริการและปีงบจากหัวรายงานเอง
+        ถ้าอัปโหลดไฟล์ของ รพ. เดิมปีงบเดิมซ้ำ จะแทนที่ข้อมูลเดิมทั้งชุด (รายงานเป็นยอดสะสม)</p>
+      <label htmlFor={inputId} className={`nhso-drop${over ? ' is-over' : ''}${busy ? ' is-busy' : ''}`}
+        onDragOver={(event) => { event.preventDefault(); setOver(true); }} onDragEnter={(event) => { event.preventDefault(); setOver(true); }}
+        onDragLeave={() => setOver(false)} onDrop={(event) => { event.preventDefault(); setOver(false); void addFiles(event.dataTransfer.files); }}>
+        {busy ? 'กำลังนำเข้า…' : 'ลากไฟล์มาวางที่นี่ หรือคลิกเพื่อเลือก (.xlsx .xls .csv หรือ .zip ทั้งโฟลเดอร์)'}
+        <input ref={input} id={inputId} className="visually-hidden" type="file" multiple accept={NHSO_ACCEPT} aria-label="เลือกไฟล์รายงานโอนเงิน" disabled={busy} onChange={(event) => void addFiles(event.target.files)} />
+      </label>
+      <ul className="nhso-results" aria-live="polite">{lines.map((line, index) => <li key={index} className={`is-${line.tone}`}>{line.text}</li>)}</ul>
+    </div>
+  </FormDialog>;
 }

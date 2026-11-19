@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useId, useRef, useState } from 'react';
+import { FormDialog } from '../../../../../components/form-dialog';
 import type { NhsoCell } from '@backoffice/contracts';
 import { readFdhFile } from '../../../../../lib/money/fdh-sheet';
 import { FDH_ACCEPT, fdhFileProblem, fdhUploadLine, type FdhUploadAnswer } from '../../../../../lib/money/fdh-upload';
@@ -61,16 +62,17 @@ export function FdhUpload() {
     if (done > 0) router.refresh();
   }
 
-  return <section className="money-card nhso-upload" aria-labelledby={`${inputId}-title`}>
-    <h3 id={`${inputId}-title`}>อัปโหลดไฟล์ REP / STM</h3>
-    <p className="money-note">ลากไฟล์ .zip ของ REP และ STM ทั้งเดือนมาวางพร้อมกันได้เลย ระบบแตก zip และแยกเองว่าไฟล์ไหนเป็น REP หรือ STM จากเนื้อหาในไฟล์
-      ไฟล์ที่เลขที่เอกสารซ้ำของเดิมจะแทนที่ของเดิม ไม่นับซ้ำ เดือนใหม่อัปโหลดเพิ่มได้เรื่อย ๆ</p>
-    <label htmlFor={inputId} className={`nhso-drop${over ? ' is-over' : ''}${busy ? ' is-busy' : ''}`}
-      onDragOver={(event) => { event.preventDefault(); setOver(true); }} onDragEnter={(event) => { event.preventDefault(); setOver(true); }}
-      onDragLeave={() => setOver(false)} onDrop={(event) => { event.preventDefault(); setOver(false); void addFiles(event.dataTransfer.files); }}>
-      {busy ? 'กำลังนำเข้า…' : 'ลากไฟล์มาวางที่นี่ หรือคลิกเพื่อเลือก (.zip ทั้งเดือน หรือ .xls หลายไฟล์)'}
-      <input ref={input} id={inputId} className="visually-hidden" type="file" multiple accept={FDH_ACCEPT} aria-label="เลือกไฟล์ REP / STM" disabled={busy} onChange={(event) => void addFiles(event.target.files)} />
-    </label>
-    <ul className="nhso-results" aria-live="polite">{lines.map((line, index) => <li key={index} className={`is-${line.tone}`}>{line.text}</li>)}</ul>
-  </section>;
+  return <FormDialog title="อัปโหลดไฟล์ REP / STM" triggerLabel="อัปโหลดไฟล์ REP / STM" wide isSubmitting={busy} onOpenChange={(open) => { if (open) setLines([]); }}>
+    <div className="nhso-upload">
+      <p className="money-note">ลากไฟล์ .zip ของ REP และ STM ทั้งเดือนมาวางพร้อมกันได้เลย ระบบแตก zip และแยกเองว่าไฟล์ไหนเป็น REP หรือ STM จากเนื้อหาในไฟล์
+        ไฟล์ที่เลขที่เอกสารซ้ำของเดิมจะแทนที่ของเดิม ไม่นับซ้ำ เดือนใหม่อัปโหลดเพิ่มได้เรื่อย ๆ</p>
+      <label htmlFor={inputId} className={`nhso-drop${over ? ' is-over' : ''}${busy ? ' is-busy' : ''}`}
+        onDragOver={(event) => { event.preventDefault(); setOver(true); }} onDragEnter={(event) => { event.preventDefault(); setOver(true); }}
+        onDragLeave={() => setOver(false)} onDrop={(event) => { event.preventDefault(); setOver(false); void addFiles(event.dataTransfer.files); }}>
+        {busy ? 'กำลังนำเข้า…' : 'ลากไฟล์มาวางที่นี่ หรือคลิกเพื่อเลือก (.zip ทั้งเดือน หรือ .xls หลายไฟล์)'}
+        <input ref={input} id={inputId} className="visually-hidden" type="file" multiple accept={FDH_ACCEPT} aria-label="เลือกไฟล์ REP / STM" disabled={busy} onChange={(event) => void addFiles(event.target.files)} />
+      </label>
+      <ul className="nhso-results" aria-live="polite">{lines.map((line, index) => <li key={index} className={`is-${line.tone}`}>{line.text}</li>)}</ul>
+    </div>
+  </FormDialog>;
 }

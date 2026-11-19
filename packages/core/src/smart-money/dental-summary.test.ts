@@ -48,4 +48,10 @@ describe('summarizeDental matches the legacy PHP summarize', () => {
   it('returns zeros for no rows', () => {
     expect(summarizeDental([], 'pttype', 'month')).toEqual({ rows: 0, visits: 0, patients: 0, total: 0, paid: 0, claim: 0, forecast: 0, byPeriod: [], byGroup: [], byDiag: [] });
   });
+
+  it('marks สิทธิ 25 (PP Workload) red when grouped by สิทธิ', () => {
+    const pp = { ...(rows as DentalRow[])[0]!, pttypeCode: '25', pttypeName: 'PP Workload (เบิกไม่ได้)', paccountName: 'ลูกหนี้อื่น' };
+    expect(summarizeDental([pp], 'pttype', 'day').byGroup[0]).toMatchObject({ code: '25', red: true });
+    expect(summarizeDental([pp], 'paccount', 'day').byGroup[0]).toMatchObject({ red: false });
+  });
 });

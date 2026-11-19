@@ -1,5 +1,5 @@
 import { NO_PACCOUNT, type DentalGroup, type DentalPeriod } from '@backoffice/contracts';
-import { isExcludedFromForecast, isUcInCup } from './dental-rules';
+import { isExcludedFromForecast, isUcInCup, RED_PTTYPES } from './dental-rules';
 
 /**
  * One HOSxP row: a visit with dental work (`dtmain`) and its main diagnosis ('' when it has none). Money columns belong to the
@@ -59,7 +59,7 @@ export function summarizeDental(rows: DentalRow[], group: DentalGroup, period: D
     const groupEntry = byGroup.get(key) ?? { code, name, bucket: bucket(), red: false, dentureClaim: 0, dentureVisits: 0, dentureHns: new Set<string>() };
     add(groupEntry.bucket, row);
     if (row.isDenture) { groupEntry.dentureClaim += Number(row.claimAmount); groupEntry.dentureVisits += 1; groupEntry.dentureHns.add(row.hn); }
-    if (group === 'paccount' ? isExcludedFromForecast(paccountRaw) : isUcInCup(paccountRaw)) groupEntry.red = true;
+    if (group === 'paccount' ? isExcludedFromForecast(paccountRaw) : isUcInCup(paccountRaw) || RED_PTTYPES.includes(row.pttypeCode)) groupEntry.red = true;
     byGroup.set(key, groupEntry);
   }
 

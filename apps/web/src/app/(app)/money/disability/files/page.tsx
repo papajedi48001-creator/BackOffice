@@ -17,7 +17,7 @@ export default async function DpFilesPage() {
     <h2>{TITLE}</h2>
     <p><Link href="/money/disability">← กลับไปหน้า dashboard</Link></p>
     {!getNationalIdProtector() && <p className="money-alert" role="alert">ยังไม่ได้ตั้งค่ากุญแจเข้ารหัสข้อมูลผู้ป่วย (NATIONAL_ID_ENCRYPTION_KEY) จึงนำเข้าไฟล์ไม่ได้ ติดต่อผู้ดูแลระบบ</p>}
-    <DpUpload />
+    <div className="page-actions"><DpUpload /></div>
     <DpFiles years={listed.ok ? listed.years : []} />
   </section>;
 }

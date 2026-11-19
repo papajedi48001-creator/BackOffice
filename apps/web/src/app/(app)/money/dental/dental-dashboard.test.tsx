@@ -42,6 +42,16 @@ describe('DentalDashboard', () => {
     expect(screen.getByText(/งานทันตกรรม \(dtmain\) · เฉพาะลูกหนี้/)).toBeInTheDocument();
   });
 
+  it('shows สิทธิ 25 PP Workload as a red bar and says so in the legend', () => {
+    const pp = fixture.map((row) => (row.pttypeCode === '34' ? { ...row, pttypeCode: '25', pttypeName: 'PP Workload (เบิกไม่ได้)' } : row));
+    render(<DentalDashboard {...base} outcome={{ kind: 'data', rows: pp, summary: summarizeDental(pp, 'pttype', 'day') }} />);
+    const chart = screen.getByRole('figure', { name: 'มูลค่าลูกหนี้แยกตามสิทธิการรักษา' });
+    const bar = within(chart).getAllByRole('listitem').find((item) => item.querySelector('.bar-chart-label')!.firstChild!.textContent!.split(' ')[0] === '25')!;
+    expect(bar).toHaveClass('is-alert');
+    expect(within(bar).getByText('PP Workload')).toBeInTheDocument();
+    expect(screen.getByText(/แท่งสีแดง = สิทธิในผัง UC ใน CUP และ 25 PP Workload/)).toBeInTheDocument();
+  });
+
   it('shows the dentist and filters the detail by สิทธิ, ผังบัญชี and search, counting each visit once', () => {
     render(<DentalDashboard {...base} />);
     const table = screen.getByRole('table', { name: 'รายละเอียดรายการ' });

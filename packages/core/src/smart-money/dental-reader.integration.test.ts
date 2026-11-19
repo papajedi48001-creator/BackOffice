@@ -21,7 +21,7 @@ describeWithAdmin('readDentalClaims against a fake HOSxP schema', () => {
     await seedFakeHosxp(hosxp, {
       patients: [['000001', 'นาย', 'สมชาย', 'ใจดี'], ['000002', 'นาง', 'สมศรี', 'มีสุข']],
       icd: [['K021', 'ฟันผุที่เนื้อฟัน'], ['K051', 'เหงือกอักเสบเรื้อรัง'], ['J00', 'หวัด']],
-      pttypes: [['10', 'ชำระเงินเอง'], ['89', 'บัตรทอง'], ['34', 'ข้าราชการ']],
+      pttypes: [['10', 'ชำระเงินเอง'], ['89', 'บัตรทอง'], ['34', 'ข้าราชการ'], ['23', 'OP ส่งเสริมและป้องกันโรค']],
       // Mapping สิทธิ stamps last_modify and writes year 2017; the latest stamped row wins whatever its year or the visit's.
       paccountopd: [['10', 'P10', 2026], ['89', 'P89OLD', 2026, '2020-01-01 08:00:00'], ['89', 'P89NEW', 2017, '2026-11-01 09:00:00'], ['89', 'P89A', 2026]],
       paccounts: [['P10', 2026, 'ลูกหนี้ชำระเงิน'], ['P89OLD', 2026, 'ลูกหนี้ UC เก่า'], ['P89NEW', 2025, 'ลูกหนี้ UC ชื่อเดิม'], ['P89NEW', 2027, 'ลูกหนี้ UC ล่าสุด'], ['P89A', 2026, 'ลูกหนี้ UC ไม่มีเวลา']],
@@ -36,6 +36,9 @@ describeWithAdmin('readDentalClaims against a fake HOSxP schema', () => {
         { vn: '691106000005', hn: '000001', vstdate: '2026-11-06', pttype: '10', diags: ['K021'], inc: [300], paid: 0, rcpt: 300 },
         // Dental work with no diagnosis at all.
         { vn: '691107000006', hn: '000002', vstdate: '2026-11-07', pttype: '10', diags: [], inc: [100, 50], paid: 0, rcpt: 0, dental: [['D02', 'H01']] },
+        // สิทธิ 23 counts only icode 3015628 (250 of the 700 charged); one without it is dropped.
+        { vn: '691208000007', hn: '000001', vstdate: '2026-12-08', pttype: '23', diags: ['K021'], inc: [700], paid: 100, rcpt: 700, dental: [['D01', null]], icodes: [['3015628', 250], ['1000001', 450]] },
+        { vn: '691209000008', hn: '000002', vstdate: '2026-12-09', pttype: '23', diags: ['K021'], inc: [300], paid: 0, rcpt: 300, dental: [['D01', null]], icodes: [['1000001', 300]] },
         { vn: '691201000004', hn: '000001', vstdate: '2026-12-01', pttype: '34', diags: ['K021'], inc: [100], paid: 0, rcpt: 100, dental: [['D01', null]] }
       ]
     });
@@ -59,7 +62,7 @@ describeWithAdmin('readDentalClaims against a fake HOSxP schema', () => {
   });
 
   it('uses the latest stamped mapping whatever the visit year, and null when the pttype has none', async () => {
-    const rows = await readDentalClaims(connection, '2026-12-01', '2026-12-31');
+    const rows = await readDentalClaims(connection, '2026-12-01', '2026-12-07');
     expect(rows).toHaveLength(1);
     expect(rows[0]!.paccountName).toBeNull();
     const hos = createDatabase(`${adminUrl!.replace(/\/[^/]*$/, '')}/${name}`);
@@ -68,5 +71,10 @@ describeWithAdmin('readDentalClaims against a fake HOSxP schema', () => {
     await hos.close();
     const later = await readDentalClaims(connection, '2028-01-01', '2028-01-31');
     expect(later[0]!.paccountName).toBe('ลูกหนี้ UC ล่าสุด');
+  });
+
+  it('counts สิทธิ 23 only by icode 3015628 and drops its visits without it', async () => {
+    const rows = await readDentalClaims(connection, '2026-12-08', '2026-12-09');
+    expect(rows.map((row) => [row.vn, row.totalAmount, row.paidMoney, row.claimAmount])).toEqual([['691208000007', 250, 0, 250]]);
   });
 });

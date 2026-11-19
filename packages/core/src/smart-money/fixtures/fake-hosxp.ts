@@ -32,9 +32,9 @@ export const tis = (text: string) => Buffer.from([...text].map((ch) => { const c
 
 /**
  * `diags[0]` is the main diagnosis (`diagtype` '1'), the rest '2'. `dental` lists the `dtmain` rows as [doctor, helper] codes;
- * a visit without any is not dental work. `icodes` go into `opitemrece`.
+ * a visit without any is not dental work. `icodes` go into `opitemrece`, as a code or [code, sum_price].
  */
-export type FakeVisit = { vn: string; hn: string; vstdate: string; pttype: string; an?: string; diags: string[]; inc: number[]; paid: number; rcpt: number; dental?: [doctor: string, helper: string | null][]; icodes?: string[] };
+export type FakeVisit = { vn: string; hn: string; vstdate: string; pttype: string; an?: string; diags: string[]; inc: number[]; paid: number; rcpt: number; dental?: [doctor: string, helper: string | null][]; icodes?: (string | [icode: string, price: number])[] };
 
 export async function seedFakeHosxp(database: Database, data: { patients: [hn: string, pname: string, fname: string, lname: string][]; icd: [code: string, name: string][]; pttypes: [code: string, name: string, hipdata?: string][]; paccountopd: [pttype: string, paccount: string, year: number, lastModify?: string][]; paccounts: [paccount: string, year: number, name: string][]; visits: FakeVisit[]; doctors?: [code: string, name: string][] }): Promise<void> {
   for (const sql of FAKE_HOSXP_TABLES) await database.execute(sql);
@@ -48,7 +48,7 @@ export async function seedFakeHosxp(database: Database, data: { patients: [hn: s
     await database.execute('INSERT INTO ovst (vn, hn, vstdate, pttype, an) VALUES (?, ?, ?, ?, ?)', [visit.vn, visit.hn, visit.vstdate, visit.pttype, visit.an ?? null]);
     for (const [index, icd10] of visit.diags.entries()) await database.execute('INSERT INTO ovstdiag (vn, icd10, diagtype) VALUES (?, ?, ?)', [visit.vn, icd10, index === 0 ? '1' : '2']);
     for (const [doctor, helper] of visit.dental ?? []) await database.execute('INSERT INTO dtmain (vn, hn, vstdate, doctor, doctor_helper) VALUES (?, ?, ?, ?, ?)', [visit.vn, visit.hn, visit.vstdate, doctor, helper]);
-    for (const icode of visit.icodes ?? []) await database.execute('INSERT INTO opitemrece (vn, icode) VALUES (?, ?)', [visit.vn, icode]);
+    for (const item of visit.icodes ?? []) { const [icode, price] = typeof item === 'string' ? [item, 0] : item; await database.execute('INSERT INTO opitemrece (vn, icode, sum_price) VALUES (?, ?, ?)', [visit.vn, icode, price]); }
     const inc = Array.from({ length: 16 }, (_, i) => visit.inc[i] ?? 0);
     await database.execute(`INSERT INTO vn_stat VALUES (?, ${inc.map(() => '?').join(', ')}, ?, ?)`, [visit.vn, ...inc, visit.paid, visit.rcpt]);
   }
