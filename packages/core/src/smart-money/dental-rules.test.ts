@@ -29,14 +29,14 @@ describe('dental สิทธิ rules asked by งานประกัน (202
     expect(RED_PTTYPES).toEqual(['25']);
   });
 
-  it('counts สิทธิ 23 only by icode 3015628', () => {
+  it('keeps a สิทธิ 23 visit with icode 3015628 at its full amount', () => {
     expect(DENTAL_PTTYPE_ICODES).toEqual({ '23': ['3015628'] });
-    expect(applyPttypeItems(row, 250)).toEqual({ ...row, totalAmount: 250, paidMoney: 0, claimAmount: 250 });
+    expect(applyPttypeItems(row, true)).toEqual(row);
   });
 
   it('drops a สิทธิ 23 visit without icode 3015628', () => {
+    expect(applyPttypeItems(row, false)).toBeNull();
     expect(applyPttypeItems(row, null)).toBeNull();
-    expect(applyPttypeItems(row, 0)).toBeNull();
   });
 
   it('leaves every other สิทธิ as it was', () => {
