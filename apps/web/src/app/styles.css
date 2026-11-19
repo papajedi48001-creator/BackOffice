@@ -1543,3 +1543,36 @@ h2.chat-window-title { cursor: default; }
 .money-herb table[aria-label="รายยาสมุนไพร"] { min-width: 900px; }
 @media (max-width: 1100px) { .herb-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 640px) { .herb-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .money-herb .ttm-banner h2 { font-size: 1.15rem; } }
+
+/* Monitor IMC (กองทุนฟื้นฟูสมรรถภาพ): summary, patient cards with a ring of days left, tables and the claim chart. */
+.imc-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-bottom: 14px; }
+.imc-head h3 { margin: 0; }
+.imc-head [role="status"] { flex: 1 1 auto; }
+.imc-kpis { margin-bottom: 18px; }
+.imc-block { margin-top: 18px; }
+.imc-block h4 { margin: 0 0 10px; }
+.imc-block-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.imc-block-head h4 { margin: 0; }
+.imc-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.imc-person { --imc-tone: var(--line-strong); display: flex; gap: 12px; align-items: center; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-sm); transition: transform var(--motion-fast) var(--ease-out), box-shadow var(--motion-fast) var(--ease-out), border-color var(--motion-fast) var(--ease-out); animation: rise-in var(--motion-base) var(--ease-out) both; animation-delay: calc(min(var(--i, 0), 12) * 35ms); }
+.imc-person:hover { transform: translateY(-2px); border-color: var(--imc-tone); box-shadow: var(--shadow-md); }
+.imc-person.is-ok { --imc-tone: var(--chart-up); }
+.imc-person.is-warn { --imc-tone: #c2410c; }
+.imc-person.is-bad { --imc-tone: var(--chart-down); }
+.imc-person.is-mute { --imc-tone: var(--line-strong); }
+.imc-ring { flex: 0 0 64px; width: 64px; height: 64px; transform: rotate(-90deg); }
+.imc-ring circle { fill: none; stroke-width: 7; }
+.imc-ring-track { stroke: var(--line-soft); }
+.imc-ring-fill { stroke: var(--imc-tone); stroke-linecap: round; transition: stroke-dashoffset var(--motion-base) var(--ease-out); }
+.imc-ring text { transform: rotate(90deg); transform-origin: 37px 37px; fill: var(--ink); font-size: 17px; font-weight: 700; }
+.imc-ring text.imc-ring-unit { font-size: 9px; font-weight: 400; fill: var(--muted); }
+.imc-person-body { display: grid; gap: 2px; min-width: 0; }
+.imc-person-body h5 { margin: 0; font-size: .95rem; }
+.imc-person-body small { color: var(--muted); font-size: .8rem; }
+.imc-tag { display: inline-block; padding: 1px 8px; border-radius: 6px; background: var(--line-soft); color: var(--ink-2); font-size: .8rem; font-weight: 700; white-space: nowrap; }
+.imc-tag.is-ok { background: var(--success-soft); color: var(--success); }
+.imc-tag.is-warn { background: #fff4ed; color: #9a3412; }
+.imc-tag.is-bad { background: #fde8e8; color: var(--chart-alert-ink); }
+.imc-tag.is-mute { background: var(--line-soft); color: var(--muted); }
+.imc-none { color: var(--muted); padding: 12px; }
+@media (max-width: 640px) { .imc-cards { grid-template-columns: 1fr; } }

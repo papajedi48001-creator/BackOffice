@@ -34,3 +34,17 @@ export const moneyDpUploads = mysqlTable('money_dp_upload', {
   uploadId: char('upload_id', { length: 36 }).notNull(), fy: smallint('fy').notNull(), fileName: varchar('file_name', { length: 255 }).notNull(), rowCount: int('row_count').notNull(),
   uploadedAt: datetime('uploaded_at', { mode: 'date', fsp: 6 }).notNull(), uploadedBy: uuid('uploaded_by').notNull()
 }, (t) => [primaryKey({ columns: [t.uploadId, t.fy] }), index('money_dp_upload_fy').on(t.fy, t.uploadedAt)]);
+
+/** Monitor IMC (migration 0044): one service line of the ทะเบียนคนไข้ IMC per line key (sha-256 of HN, date, ครั้งที่ and รหัสบริการ); the parsed line (name, HN …) is stored encrypted. */
+export const moneyImcVisits = mysqlTable('money_imc_visit', {
+  lineKey: char('line_key', { length: 64 }).primaryKey(), serviceDate: date('service_date', { mode: 'string' }).notNull(), code: varchar('code', { length: 20 }).notNull(),
+  claim: decimal('claim', { precision: 15, scale: 2 }).notNull(), recordCiphertext: mediumtext('record_ciphertext').notNull(),
+  uploadedAt: datetime('uploaded_at', { mode: 'date' }).notNull(), uploadedBy: uuid('uploaded_by').notNull()
+}, (t) => [index('money_imc_visit_date').on(t.serviceDate)]);
+
+/** One REP individual line (REP No., Trans ID, ลำดับที่); HN, PID and name are inside the encrypted record. */
+export const moneyImcReps = mysqlTable('money_imc_rep', {
+  repNo: varchar('rep_no', { length: 30 }).notNull(), transId: varchar('trans_id', { length: 30 }).notNull(), itemNo: int('item_no').notNull(),
+  serviceDate: date('service_date', { mode: 'string' }).notNull(), claim: decimal('claim', { precision: 15, scale: 2 }).notNull(), paid: decimal('paid', { precision: 15, scale: 2 }).notNull(),
+  recordCiphertext: mediumtext('record_ciphertext').notNull(), uploadedAt: datetime('uploaded_at', { mode: 'date' }).notNull(), uploadedBy: uuid('uploaded_by').notNull()
+}, (t) => [primaryKey({ columns: [t.repNo, t.transId, t.itemNo] }), index('money_imc_rep_date').on(t.serviceDate)]);

@@ -41,8 +41,8 @@ function number(s: string): number {
   const t = s.replace(/[, ]/g, '');
   return /^[ \t\n\r\v\f]*[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?[ \t\n\r\v\f]*$/.test(t) ? Number(t) : 0;
 }
-/** "d/m/yyyy" (พ.ศ. or ค.ศ., time allowed after it) or "yyyy-mm-dd" → ISO ค.ศ.; an impossible date → ''. */
-function isoDate(s: string): string {
+/** "d/m/yyyy" (พ.ศ. or ค.ศ., time allowed after it) or "yyyy-mm-dd" → ISO ค.ศ.; an impossible date → ''. Monitor IMC reads its dates with it too. */
+export function isoDate(s: string): string {
   let y: number, mo: number, d: number;
   let m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s);
   if (m) [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];

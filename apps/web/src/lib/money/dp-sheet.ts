@@ -29,7 +29,7 @@ export function dpFileProblem(file: { name: string; size: number }): string | nu
 }
 
 /** An Excel date → "d/m/yyyy" พ.ศ. like the CSV; text cut at 1,000 characters; anything else blank. */
-function dpCell(value: unknown): NhsoCell {
+export function dpCell(value: unknown): NhsoCell {
   if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : `${value.getDate()}/${value.getMonth() + 1}/${value.getFullYear() + 543}`;
   if (typeof value === 'number') return Number.isFinite(value) ? value : null;
   if (typeof value === 'boolean') return value;
@@ -37,13 +37,13 @@ function dpCell(value: unknown): NhsoCell {
   return String(value).slice(0, 1000);
 }
 const blank = (value: NhsoCell) => value === null || value === '';
-function trimRow(row: NhsoCell[]): NhsoCell[] {
+export function trimRow(row: NhsoCell[]): NhsoCell[] {
   let n = Math.min(row.length, MAX_CELLS);
   while (n && blank(row[n - 1]!)) n--;
   return row.slice(0, n);
 }
 /** CSV from the NHSO program is TIS-620 (windows-874); UTF-8 is read as it is. */
-function decode(bytes: Uint8Array): string {
+export function decode(bytes: Uint8Array): string {
   try { return new TextDecoder('utf-8', { fatal: true }).decode(bytes); } catch { return new TextDecoder('windows-874').decode(bytes); }
 }
 /** A Thai name inside a .zip made on Windows is TIS-620 without the UTF-8 flag, so it arrives as latin1. */

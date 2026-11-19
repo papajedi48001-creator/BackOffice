@@ -42,7 +42,7 @@ export const fdhUploadSchema = z.object({
 }).strict();
 export type FdhUpload = z.infer<typeof fdhUploadSchema>;
 
-/** Point ฟื้นฟูผู้พิการ: one part of a file as the browser read it (the header row and at most 1,500 data rows); one `uploadId` per file. */
+/** Point ฟื้นฟูผู้พิการ (กองทุนฟื้นฟูสมรรถภาพ): one part of a file as the browser read it (the header row and at most 1,500 data rows); one `uploadId` per file. */
 export const dpUploadSchema = z.object({
   fileName: z.string().trim().min(1).max(255),
   uploadId: z.string().uuid(),
@@ -52,6 +52,14 @@ export type DpUpload = z.infer<typeof dpUploadSchema>;
 /** ลบข้อมูล Point ฟื้นฟูผู้พิการ of one ปีงบ (พ.ศ.). */
 export const dpRemoveSchema = z.object({ fy: z.number().int().min(2500).max(2700) }).strict();
 export type DpRemove = z.infer<typeof dpRemoveSchema>;
+/** Monitor IMC: one part of the ทะเบียนคนไข้ IMC CSV or the REP individual xlsx (its header rows, then at most 1,500 data rows); one `uploadId` per file. */
+export const imcUploadSchema = z.object({
+  kind: z.enum(['register', 'rep']),
+  fileName: z.string().trim().min(1).max(255),
+  uploadId: z.string().uuid(),
+  rows: z.array(z.array(nhsoCellSchema).max(80)).max(1502)
+}).strict();
+export type ImcUpload = z.infer<typeof imcUploadSchema>;
 
 // monitor แพทย์แผนไทย labels (here so client components can show them; the rules live in core `ttm-rules`).
 /** กลุ่มสิทธิ in the order of the กลุ่มงาน daily report. */
