@@ -29,7 +29,7 @@ export async function readInput<T>(request: Request, schema: Schema<T>, prepare:
   return { ok: false, response: NextResponse.json({ error: 'invalid_input', fields }, { status: 400 }) };
 }
 
-const statusByCode: Record<string, number> = { FORBIDDEN: 403, NOT_FOUND: 404, DUPLICATE_CODE: 409, DUPLICATE_NAME: 409, POSITION_IN_USE: 409, DUPLICATE_NATIONAL_ID: 409, DUPLICATE_EMPLOYEE_CODE: 409, DUPLICATE_USERNAME: 409, ACCOUNT_EXISTS: 409, NO_ACCOUNT: 409, PROTECTED_ACCOUNT: 409 };
+const statusByCode: Record<string, number> = { FORBIDDEN: 403, NOT_FOUND: 404, DUPLICATE_CODE: 409, DUPLICATE_NAME: 409, POSITION_IN_USE: 409, DUPLICATE_NATIONAL_ID: 409, DUPLICATE_EMPLOYEE_CODE: 409, DUPLICATE_USERNAME: 409, ACCOUNT_EXISTS: 409, NO_ACCOUNT: 409, PROTECTED_ACCOUNT: 409, SELF_STATUS: 403 };
 
 export function resultResponse(result: { ok: true; id?: string } | { ok: false; code: string }, createdStatus = 200): Response {
   if (result.ok) return NextResponse.json(result, { status: createdStatus });

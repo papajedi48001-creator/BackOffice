@@ -25,6 +25,18 @@ async function download(response: Response): Promise<void> {
   URL.revokeObjectURL(url);
 }
 
+/** ปฏิบัติงาน, ย้าย or ลาออก. */
+export function employmentStatusLabel(status: string): string {
+  return t(status === 'ACTIVE' ? 'employmentActive' : status === 'TRANSFERRED' ? 'employmentTransferred' : 'employmentInactive');
+}
+
+const twoFactor = { provider: { src: '/provider-id-logo.png', name: 'Provider ID' }, thaid: { src: '/thaid-logo.png', name: 'ThaiD' } } as const;
+/** One 2FA mark: the logo in colour once linked, faded until then. */
+function TwoFactorLogo({ kind, linked }: { kind: keyof typeof twoFactor; linked: boolean }) {
+  const label = `${twoFactor[kind].name} ${t(linked ? 'twoFactorLinked' : 'twoFactorNotLinked')}`;
+  return <img className={linked ? 'two-factor-logo' : 'two-factor-logo is-off'} src={twoFactor[kind].src} alt={label} title={label} height={22} />;
+}
+
 /**
  * ทะเบียนบุคลากร: the heading, a search card (ค้นหารายชื่อ, filters, count, ล้างตัวกรอง) and the table. It filters the list the server
  * already limited to the viewer's scope. ส่งออกข้อมูล shows only with `canExport`; the server checks the right again and filters the same way.
@@ -34,8 +46,9 @@ export function PeopleTable({ people, canExport = false, actions }: { people: Di
   const [chosen, setChosen] = useState<Record<FilterField, string>>(noFilters);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState(false);
+  const [onlyActive, setOnlyActive] = useState(true);
   const options = useMemo(() => Object.fromEntries(filters.map(([field]) => [field, [...new Set(people.map((person) => person[field]).filter((value): value is string => value !== null))].sort((a, b) => a.localeCompare(b, 'th'))])) as Record<FilterField, string[]>, [people]);
-  const shown = filterPeople(people, { query, ...chosen });
+  const shown = filterPeople(people, { query, ...chosen }).filter((person) => !onlyActive || person.employmentStatus === 'ACTIVE');
   const filtered = query !== '' || Object.values(chosen).some((value) => value !== '');
 
   async function exportShown() {
@@ -73,16 +86,21 @@ export function PeopleTable({ people, canExport = false, actions }: { people: Di
         </select>
       </label>)}
     </SearchCard>
+    <div className="people-only-active"><button type="button" role="switch" aria-checked={onlyActive} className="switch" onClick={() => setOnlyActive((current) => !current)}><span className="switch-track" aria-hidden="true" />{t('peopleOnlyActive')}</button></div>
     {shown.length === 0 ? <p>{t('peopleNoMatch')}</p> : <table>
-      <thead><tr><th>{t('employeeCode')}</th><th>{t('displayName')}</th><th>{t('positionTitle')}</th><th>{t('hrFieldEmploymentType')}</th><th>{t('organization')}</th><th>{t('nationalIdLabel')}</th><th>{t('employmentStatus')}</th></tr></thead>
+      <thead><tr><th>{t('employeeCode')}</th><th>{t('displayName')}</th><th>{t('positionTitle')}</th><th>{t('hrFieldEmploymentType')}</th><th>{t('organization')}</th><th>{t('nationalIdLabel')}</th><th>{t('employmentStatus')}</th><th>2FA</th><th><span className="visually-hidden">{t('editItem')}</span></th></tr></thead>
       <tbody>{shown.map((person) => <tr key={person.id}>
         <td>{person.employeeCode ?? t('notAssigned')}</td>
-        <td><Link href={`/hr/people/${person.id}`}>{person.displayName ?? t('notAssigned')}</Link></td>
+        <td>{person.displayName ?? t('notAssigned')}</td>
         <td>{person.positionTitle ?? t('notAssigned')}</td>
         <td>{person.employmentTypeName ?? t('notAssigned')}</td>
         <td>{person.organizationName ?? t('notAssigned')}</td>
         <td>{person.nationalIdMasked ?? t('notAssigned')}</td>
-        <td>{person.employmentStatus === 'ACTIVE' ? t('employmentActive') : t('employmentInactive')}</td>
+        <td><span className={`status-chip status-${person.employmentStatus.toLowerCase()}`}>{employmentStatusLabel(person.employmentStatus)}</span></td>
+        <td><span className="two-factor"><TwoFactorLogo kind="provider" linked={person.providerLinked} /><TwoFactorLogo kind="thaid" linked={person.thaidLinked} /></span></td>
+        <td className="row-actions"><Link className="icon-button" href={`/hr/people/${person.id}`} aria-label={`${t('editItem')} ${person.displayName ?? person.employeeCode ?? ''}`.trim()} scroll={false}>
+          <svg viewBox="0 0 24 24" width="17" height="17" {...icon}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+        </Link></td>
       </tr>)}</tbody>
     </table>}
   </>;
