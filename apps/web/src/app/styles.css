@@ -1512,7 +1512,7 @@ h2.chat-window-title { cursor: default; }
 @media (max-width: 1100px) { .ttm-main { grid-template-columns: 1fr; } .ttm-kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 640px) { .ttm-kpis { grid-template-columns: 1fr; } .ttm-banner h3 { font-size: 1.15rem; } .ttm-filter-actions { margin-left: 0; } }
 .money-ttm .ttm-banner h3 { color: #fff; }
-.money-ttm .thai-date-field input { width: 22ch; }
+.money-date-filter .thai-date-field input { width: 22ch; }
 /* การจ่ายยาสมุนไพร (/money/herb): the แพทย์แผนไทย look plus its own cards and the สิทธิ table that opens to drugs. */
 .money-herb .ttm-banner h2 { margin: 0; font-size: 1.4rem; color: #fff; }
 .herb-kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
