@@ -1,4 +1,5 @@
 'use client';
+import { employmentStatusLabel } from '../lib/employment-status';
 
 import Link from 'next/link';
 import { useMemo, useState, type ReactNode } from 'react';
@@ -25,10 +26,7 @@ async function download(response: Response): Promise<void> {
   URL.revokeObjectURL(url);
 }
 
-/** ปฏิบัติงาน, ย้าย or ลาออก. */
-export function employmentStatusLabel(status: string): string {
-  return t(status === 'ACTIVE' ? 'employmentActive' : status === 'TRANSFERRED' ? 'employmentTransferred' : 'employmentInactive');
-}
+export { employmentStatusLabel };
 
 const twoFactor = { provider: { src: '/provider-id-logo.png', name: 'Provider ID' }, thaid: { src: '/thaid-logo.png', name: 'ThaiD' } } as const;
 /** One 2FA mark: the logo in colour once linked, faded until then. */
