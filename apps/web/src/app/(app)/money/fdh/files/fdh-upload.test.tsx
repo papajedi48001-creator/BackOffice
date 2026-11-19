@@ -9,13 +9,27 @@ import { FdhUpload } from './fdh-upload';
 afterEach(() => { vi.unstubAllGlobals(); refresh.mockReset(); readFdhFile.mockReset(); });
 const pick = (files: File[]) => fireEvent.change(screen.getByLabelText('เลือกไฟล์ REP / STM'), { target: { files } });
 
+
+/** The upload opens as a popup (FormDialog) from its button, like every add form. */
+const open = () => { render(<FdhUpload />); fireEvent.click(screen.getByRole('button', { name: 'อัปโหลดไฟล์ REP / STM' })); };
+
+it('keeps the drop zone in a popup that opens from its button and closes only from its buttons', () => {
+  render(<FdhUpload />);
+  expect(screen.queryByLabelText('เลือกไฟล์ REP / STM')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'อัปโหลดไฟล์ REP / STM' }));
+  expect(screen.getByRole('dialog', { name: 'อัปโหลดไฟล์ REP / STM' })).toBeInTheDocument();
+  expect(screen.getByLabelText('เลือกไฟล์ REP / STM')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'ยกเลิก' }));
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+});
+
 it('reads each file, posts its sheets one at a time and lists the result lines, then refreshes the list', async () => {
   readFdhFile.mockImplementation(async (file: File) => [{ name: file.name, sheets: { Detail: [['REP No.']] } }]);
   const fetchMock = vi.fn()
     .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, kind: 'rep', docNo: 'eclaim_1', period: '', items: 56, replaced: true }), { status: 200 }))
     .mockResolvedValueOnce(new Response(JSON.stringify({ error: 'INVALID_REPORT', message: 'ไฟล์ REP ไม่มีคอลัมน์: SEQ NO' }), { status: 400 }));
   vi.stubGlobal('fetch', fetchMock);
-  render(<FdhUpload />);
+  open();
   pick([new File(['a'], 'a.xls'), new File(['b'], 'b.xls')]);
   await waitFor(() => expect(screen.getByText('เสร็จแล้ว นำเข้าได้ 1/2 ไฟล์')).toBeInTheDocument());
   expect(screen.getByText('✓ a.xls: REP eclaim_1 (56 เคส) — แทนที่ข้อมูลเดิม')).toBeInTheDocument();
@@ -28,7 +42,7 @@ it('shows what a .zip held, skips files with a problem and never sends them', as
   readFdhFile.mockResolvedValueOnce([{ name: 'big.xls', sheets: {}, problem: 'ไฟล์ใหญ่เกิน 10 MB' }, { name: 'c.xls', sheets: { Detail: [] } }]);
   const fetchMock = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, kind: 'stm', docNo: 'STM_1', period: '6910_OP_02', items: 3, replaced: false }), { status: 200 }));
   vi.stubGlobal('fetch', fetchMock);
-  render(<FdhUpload />);
+  open();
   pick([new File(['x'], 'month.zip'), new File(['x'], '~$a.xls')]);
   await waitFor(() => expect(screen.getByText('เสร็จแล้ว นำเข้าได้ 1/3 ไฟล์')).toBeInTheDocument());
   expect(screen.getByText('แตกไฟล์ month.zip: พบไฟล์ Excel 2 ไฟล์')).toBeInTheDocument();
@@ -41,7 +55,7 @@ it('shows what a .zip held, skips files with a problem and never sends them', as
 it('says when a .zip cannot be opened and when the server refuses a large file', async () => {
   readFdhFile.mockRejectedValueOnce(new Error('bad zip')).mockResolvedValueOnce([{ name: 'c.xls', sheets: { Detail: [] } }]);
   vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(new Response('<html>413</html>', { status: 413 })));
-  render(<FdhUpload />);
+  open();
   pick([new File(['x'], 'all.zip'), new File(['x'], 'c.xls')]);
   await waitFor(() => expect(screen.getByText(/เสร็จแล้ว/)).toBeInTheDocument());
   expect(screen.getByText('✗ all.zip: แตกไฟล์ zip ไม่ได้')).toBeInTheDocument();

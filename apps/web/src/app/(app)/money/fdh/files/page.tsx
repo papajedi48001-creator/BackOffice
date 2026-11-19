@@ -17,7 +17,7 @@ export default async function FdhFilesPage() {
     <h2>{TITLE}</h2>
     <p><Link href="/money/fdh">← กลับไปหน้า dashboard</Link></p>
     {!getNationalIdProtector() && <p className="money-alert" role="alert">ยังไม่ได้ตั้งค่ากุญแจเข้ารหัสข้อมูลผู้ป่วย (NATIONAL_ID_ENCRYPTION_KEY) จึงนำเข้าไฟล์ไม่ได้ ติดต่อผู้ดูแลระบบ</p>}
-    <FdhUpload />
+    <div className="page-actions"><FdhUpload /></div>
     <FdhFiles reps={listed.ok ? listed.reps : []} stms={listed.ok ? listed.stms : []} />
   </section>;
 }

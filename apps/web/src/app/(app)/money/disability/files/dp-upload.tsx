@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useId, useRef, useState } from 'react';
+import { FormDialog } from '../../../../../components/form-dialog';
 import type { NhsoCell } from '@backoffice/contracts';
 import { addDpAnswer, DP_ACCEPT, dpFileProblem, dpParts, dpUploadLine, readDpFile, type DpAnswer, type DpSum } from '../../../../../lib/money/dp-sheet';
 import { moneyErrorMessage } from '../../../../../lib/money-client';
@@ -75,16 +76,17 @@ export function DpUpload() {
     if (done > 0) router.refresh();
   }
 
-  return <section className="money-card nhso-upload" aria-labelledby={`${inputId}-title`}>
-    <h3 id={`${inputId}-title`}>อัปโหลดไฟล์บริการฟื้นฟู</h3>
-    <p className="money-note">รับไฟล์ .csv ที่ส่งออกจากโปรแกรมบริการฟื้นฟูของ สปสช. (ภาษาไทย TIS-620 หรือ UTF-8) ไฟล์ Excel ที่หัวคอลัมน์เหมือนกัน หรือ .zip ที่มีไฟล์เหล่านี้
-      ระบบแยกปีงบจาก &quot;วันที่รับบริการ&quot; เอง แถวที่ &quot;เลขที่อ้างอิง&quot; ซ้ำของเดิมจะแทนที่ของเดิม ไม่นับซ้ำ อัปโหลดไฟล์ปีปัจจุบันซ้ำเมื่อข้อมูลเพิ่มได้เลย</p>
-    <label htmlFor={inputId} className={`nhso-drop${over ? ' is-over' : ''}${busy ? ' is-busy' : ''}`}
-      onDragOver={(event) => { event.preventDefault(); setOver(true); }} onDragEnter={(event) => { event.preventDefault(); setOver(true); }}
-      onDragLeave={() => setOver(false)} onDrop={(event) => { event.preventDefault(); setOver(false); void addFiles(event.dataTransfer.files); }}>
-      {busy ? 'กำลังนำเข้า…' : 'ลากไฟล์มาวางที่นี่ หรือคลิกเพื่อเลือก (.zip / .csv / .xlsx หลายไฟล์ได้)'}
-      <input ref={input} id={inputId} className="visually-hidden" type="file" multiple accept={DP_ACCEPT} aria-label="เลือกไฟล์บริการฟื้นฟู" disabled={busy} onChange={(event) => void addFiles(event.target.files)} />
-    </label>
-    <ul className="nhso-results" aria-live="polite">{lines.map((line, index) => <li key={index} className={`is-${line.tone}`}>{line.text}</li>)}</ul>
-  </section>;
+  return <FormDialog title="อัปโหลดไฟล์บริการฟื้นฟู" triggerLabel="อัปโหลดไฟล์บริการฟื้นฟู" wide isSubmitting={busy} onOpenChange={(open) => { if (open) setLines([]); }}>
+    <div className="nhso-upload">
+      <p className="money-note">รับไฟล์ .csv ที่ส่งออกจากโปรแกรมบริการฟื้นฟูของ สปสช. (ภาษาไทย TIS-620 หรือ UTF-8) ไฟล์ Excel ที่หัวคอลัมน์เหมือนกัน หรือ .zip ที่มีไฟล์เหล่านี้
+        ระบบแยกปีงบจาก &quot;วันที่รับบริการ&quot; เอง แถวที่ &quot;เลขที่อ้างอิง&quot; ซ้ำของเดิมจะแทนที่ของเดิม ไม่นับซ้ำ อัปโหลดไฟล์ปีปัจจุบันซ้ำเมื่อข้อมูลเพิ่มได้เลย</p>
+      <label htmlFor={inputId} className={`nhso-drop${over ? ' is-over' : ''}${busy ? ' is-busy' : ''}`}
+        onDragOver={(event) => { event.preventDefault(); setOver(true); }} onDragEnter={(event) => { event.preventDefault(); setOver(true); }}
+        onDragLeave={() => setOver(false)} onDrop={(event) => { event.preventDefault(); setOver(false); void addFiles(event.dataTransfer.files); }}>
+        {busy ? 'กำลังนำเข้า…' : 'ลากไฟล์มาวางที่นี่ หรือคลิกเพื่อเลือก (.zip / .csv / .xlsx หลายไฟล์ได้)'}
+        <input ref={input} id={inputId} className="visually-hidden" type="file" multiple accept={DP_ACCEPT} aria-label="เลือกไฟล์บริการฟื้นฟู" disabled={busy} onChange={(event) => void addFiles(event.target.files)} />
+      </label>
+      <ul className="nhso-results" aria-live="polite">{lines.map((line, index) => <li key={index} className={`is-${line.tone}`}>{line.text}</li>)}</ul>
+    </div>
+  </FormDialog>;
 }

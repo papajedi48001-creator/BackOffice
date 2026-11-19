@@ -10,6 +10,20 @@ afterEach(() => { vi.unstubAllGlobals(); refresh.mockReset(); readDpFile.mockRes
 const pick = (files: File[]) => fireEvent.change(screen.getByLabelText('เลือกไฟล์บริการฟื้นฟู'), { target: { files } });
 const answer = (body: object, status = 200) => new Response(JSON.stringify(body), { status });
 
+
+/** The upload opens as a popup (FormDialog) from its button, like every add form. */
+const open = () => { render(<DpUpload />); fireEvent.click(screen.getByRole('button', { name: 'อัปโหลดไฟล์บริการฟื้นฟู' })); };
+
+it('keeps the drop zone in a popup that opens from its button and closes only from its buttons', () => {
+  render(<DpUpload />);
+  expect(screen.queryByLabelText('เลือกไฟล์บริการฟื้นฟู')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'อัปโหลดไฟล์บริการฟื้นฟู' }));
+  expect(screen.getByRole('dialog', { name: 'อัปโหลดไฟล์บริการฟื้นฟู' })).toBeInTheDocument();
+  expect(screen.getByLabelText('เลือกไฟล์บริการฟื้นฟู')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'ยกเลิก' }));
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+});
+
 it('sends a file in parts of 1,500 rows under one upload id and writes one result line, then refreshes', async () => {
   const data = Array.from({ length: 1501 }, (_, at) => [String(at)]);
   readDpFile.mockResolvedValueOnce([{ name: 'ฟื้นฟู.csv', header: ['h'], data }]);
@@ -17,7 +31,7 @@ it('sends a file in parts of 1,500 rows under one upload id and writes one resul
     .mockResolvedValueOnce(answer({ ok: true, rows: 1500, added: 1500, updated: 0, skipped: 0, years: { 2569: 1500 } }))
     .mockResolvedValueOnce(answer({ ok: true, rows: 0, added: 0, updated: 0, skipped: 1, years: {} }));
   vi.stubGlobal('fetch', fetchMock);
-  render(<DpUpload />);
+  open();
   pick([new File(['a'], 'ฟื้นฟู.csv')]);
   await waitFor(() => expect(screen.getByText('เสร็จแล้ว นำเข้าได้ 1/1 ไฟล์')).toBeInTheDocument());
   expect(screen.getByText('✓ ฟื้นฟู.csv: 1,500 ครั้ง (ปีงบ 2569: 1,500) · ใหม่ 1,500 · แทนที่ของเดิม 0 · ข้าม 1 แถว (ไม่มีเลขที่อ้างอิง/วันที่)')).toBeInTheDocument();
@@ -33,7 +47,7 @@ it('shows the server message, what a .zip held, and files skipped before sending
   readDpFile.mockResolvedValueOnce([{ name: 'x.xlsx', header: [], data: [], problem: 'ไม่ใช่ไฟล์ข้อมูลบริการฟื้นฟู (ไม่พบคอลัมน์ "เลขที่อ้างอิง" และ "ชื่อบริการฟื้นฟู")' }, { name: 'b.csv', header: ['h'], data: [['1']] }]);
   const fetchMock = vi.fn().mockResolvedValueOnce(answer({ error: 'INVALID_REPORT', message: 'ไฟล์ขาดคอลัมน์: วันที่รับบริการ' }, 400));
   vi.stubGlobal('fetch', fetchMock);
-  render(<DpUpload />);
+  open();
   pick([new File(['x'], 'all.zip'), new File(['x'], 'a.pdf')]);
   await waitFor(() => expect(screen.getByText('เสร็จแล้ว นำเข้าได้ 0/3 ไฟล์')).toBeInTheDocument());
   expect(screen.getByText('แตกไฟล์ all.zip: พบ 2 ไฟล์')).toBeInTheDocument();
@@ -47,7 +61,7 @@ it('shows the server message, what a .zip held, and files skipped before sending
 it('says when a .zip cannot be opened', async () => {
   readDpFile.mockRejectedValueOnce(new Error('bad zip'));
   vi.stubGlobal('fetch', vi.fn());
-  render(<DpUpload />);
+  open();
   pick([new File(['x'], 'all.zip')]);
   await waitFor(() => expect(screen.getByText(/เสร็จแล้ว/)).toBeInTheDocument());
   expect(screen.getByText('✗ all.zip: แตกไฟล์ zip ไม่ได้')).toBeInTheDocument();

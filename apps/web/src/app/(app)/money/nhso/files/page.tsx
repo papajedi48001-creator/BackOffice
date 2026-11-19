@@ -15,7 +15,7 @@ export default async function NhsoFilesPage() {
   return <section className="nhso">
     <h2>{TITLE}</h2>
     <p><Link href="/money/nhso">← กลับไปหน้า dashboard</Link></p>
-    <NhsoUpload />
+    <div className="page-actions"><NhsoUpload /></div>
     <NhsoFiles datasets={listed.ok ? listed.datasets : []} />
   </section>;
 }
