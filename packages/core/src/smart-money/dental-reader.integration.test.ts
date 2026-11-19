@@ -36,7 +36,7 @@ describeWithAdmin('readDentalClaims against a fake HOSxP schema', () => {
         { vn: '691106000005', hn: '000001', vstdate: '2026-11-06', pttype: '10', diags: ['K021'], inc: [300], paid: 0, rcpt: 300 },
         // Dental work with no diagnosis at all.
         { vn: '691107000006', hn: '000002', vstdate: '2026-11-07', pttype: '10', diags: [], inc: [100, 50], paid: 0, rcpt: 0, dental: [['D02', 'H01']] },
-        // สิทธิ 23 counts only icode 3015628 (250 of the 700 charged); one without it is dropped.
+        // สิทธิ 23 counts only visits with icode 3015628, at the full amount; one without it is dropped.
         { vn: '691208000007', hn: '000001', vstdate: '2026-12-08', pttype: '23', diags: ['K021'], inc: [700], paid: 100, rcpt: 700, dental: [['D01', null]], icodes: [['3015628', 250], ['1000001', 450]] },
         { vn: '691209000008', hn: '000002', vstdate: '2026-12-09', pttype: '23', diags: ['K021'], inc: [300], paid: 0, rcpt: 300, dental: [['D01', null]], icodes: [['1000001', 300]] },
         { vn: '691201000004', hn: '000001', vstdate: '2026-12-01', pttype: '34', diags: ['K021'], inc: [100], paid: 0, rcpt: 100, dental: [['D01', null]] }
@@ -73,8 +73,8 @@ describeWithAdmin('readDentalClaims against a fake HOSxP schema', () => {
     expect(later[0]!.paccountName).toBe('ลูกหนี้ UC ล่าสุด');
   });
 
-  it('counts สิทธิ 23 only by icode 3015628 and drops its visits without it', async () => {
+  it('keeps สิทธิ 23 visits with icode 3015628 at their full amount and drops the rest', async () => {
     const rows = await readDentalClaims(connection, '2026-12-08', '2026-12-09');
-    expect(rows.map((row) => [row.vn, row.totalAmount, row.paidMoney, row.claimAmount])).toEqual([['691208000007', 250, 0, 250]]);
+    expect(rows.map((row) => [row.vn, row.totalAmount, row.paidMoney, row.claimAmount])).toEqual([['691208000007', 700, 100, 600]]);
   });
 });

@@ -11,9 +11,9 @@ import { fixThaiText } from './thai-text';
 const INC_SUM = `(${Array.from({ length: 16 }, (_, i) => `vn.inc${String(i + 1).padStart(2, '0')}`).join(' + ')})`;
 
 const DENTURE_IN = DENTURE_ICODES.map((code) => `'${code}'`).join(', ');
-/** สิทธิ counted only by some icodes: the visit's `sum_price` of those icodes, NULL for every other สิทธิ. */
+/** สิทธิ counted only on visits with some icodes: 1 when the visit has one of them, 0 when not, NULL for every other สิทธิ. */
 const PTTYPE_ITEMS = Object.keys(DENTAL_PTTYPE_ICODES).length === 0 ? 'NULL' : `CASE ${Object.entries(DENTAL_PTTYPE_ICODES).map(([pttype, icodes]) =>
-  `WHEN pty.pttype = '${pttype}' THEN (SELECT SUM(oi.sum_price) FROM opitemrece oi WHERE oi.vn = d1.vn AND oi.icode IN (${icodes.map((code) => `'${code}'`).join(', ')}))`).join(' ')} END`;
+  `WHEN pty.pttype = '${pttype}' THEN EXISTS (SELECT 1 FROM opitemrece oi WHERE oi.vn = d1.vn AND oi.icode IN (${icodes.map((code) => `'${code}'`).join(', ')}))`).join(' ')} END`;
 
 /**
  * The legacy query (Smart Money `DentalClaimsRepository::fetch`, latest version) with one change: ผังบัญชี is the สิทธิ's
@@ -21,7 +21,7 @@ const PTTYPE_ITEMS = Object.keys(DENTAL_PTTYPE_ICODES).length === 0 ? 'NULL' : `
  * no year), named from that code's latest `paccount_year`.
  * One row per visit with dental work (`dtmain`, lowest doctor codes), its main diagnosis (`diagtype` '1'), งานฟันปลอม when
  * `opitemrece` holds a denture icode, ลูกหนี้ = ค่ารักษารวม − ชำระแล้ว (not below 0); only visits with an amount to collect
- * or not fully paid. Dates are bound; the denture icodes are constants. `item_amount` feeds `applyPttypeItems` (สิทธิ 23 = icode 3015628 only).
+ * or not fully paid. Dates are bound; the denture icodes are constants. `has_items` feeds `applyPttypeItems` (สิทธิ 23 = visits with icode 3015628).
  */
 export const DENTAL_SQL = `
   SELECT d1.vn, d1.vstdate, d1.hn,
@@ -33,7 +33,7 @@ export const DENTAL_SQL = `
          (SELECT (SELECT pac.name FROM paccount pac WHERE pac.paccount = pa.paccount ORDER BY pac.paccount_year DESC LIMIT 1)
             FROM paccountopd pa WHERE pa.pttype = pty.pttype
            ORDER BY pa.last_modify IS NULL, pa.last_modify DESC, pa.paccount ASC LIMIT 1) AS paccount_name,
-         ${INC_SUM} AS total_amount, vn.paid_money, ${PTTYPE_ITEMS} AS item_amount,
+         ${INC_SUM} AS total_amount, vn.paid_money, ${PTTYPE_ITEMS} AS has_items,
          GREATEST(${INC_SUM} - COALESCE(vn.paid_money, 0), 0) AS claim_amount
     FROM (SELECT vn, hn, vstdate, MIN(doctor) AS doctor, MIN(doctor_helper) AS doctor_helper
             FROM dtmain WHERE vstdate BETWEEN ? AND ? GROUP BY vn, hn, vstdate) d1
@@ -48,7 +48,7 @@ export const DENTAL_SQL = `
    WHERE vn.rcpt_money > 0 OR vn.paid_money < ${INC_SUM}
    ORDER BY d1.vstdate, d1.vn, pdx.icd10`;
 
-type Raw = { vn: string; vstdate: string; hn: string | null; patient_name: string | null; doctor_name: string | null; helper_name: string | null; diag_code: string | null; diag_name: string | null; is_denture: string | number; pttype_code: string | null; pttype_name: string | null; paccount_name: string | null; total_amount: string | number; paid_money: string | number; claim_amount: string | number; item_amount: string | number | null };
+type Raw = { vn: string; vstdate: string; hn: string | null; patient_name: string | null; doctor_name: string | null; helper_name: string | null; diag_code: string | null; diag_name: string | null; is_denture: string | number; pttype_code: string | null; pttype_name: string | null; paccount_name: string | null; total_amount: string | number; paid_money: string | number; claim_amount: string | number; has_items: string | number | null };
 
 const text = (value: string | null) => fixThaiText(value ?? '');
 
@@ -65,7 +65,7 @@ export const readDentalClaims: DentalReader = async (connection, start, end) => 
         paccountName: row.paccount_name === null ? null : text(row.paccount_name),
         totalAmount: Number(row.total_amount), paidMoney: Number(row.paid_money), claimAmount: Number(row.claim_amount)
       };
-      const kept = applyPttypeItems(read, row.item_amount === null ? null : Number(row.item_amount));
+      const kept = applyPttypeItems(read, row.has_items === null ? null : Number(row.has_items) === 1);
       return kept ? [kept] : [];
     });
   } finally { await hosxp.close(); }
