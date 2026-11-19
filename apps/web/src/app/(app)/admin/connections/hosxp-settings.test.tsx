@@ -11,7 +11,7 @@ it('shows the connection without the password and the last sync in Bangkok time'
   render(<HosxpSettings view={view} />);
   expect(screen.getByText('192.168.1.254:3306')).toBeInTheDocument();
   expect(screen.getByText('ตั้งไว้แล้ว')).toBeInTheDocument();
-  expect(screen.getByText('พุธ 4 พ.ย. 2569 08:00 · 21 รายการ')).toBeInTheDocument();
+  expect(screen.getByText('4 พ.ย. 2569 08:00 · 21 รายการ')).toBeInTheDocument();
 });
 
 it('saves in a FormDialog, sending a blank password to keep the stored one', async () => {

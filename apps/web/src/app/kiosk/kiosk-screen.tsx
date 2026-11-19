@@ -8,7 +8,7 @@ import { KioskPairing } from './kiosk-pairing';
 type Paired = { deviceId: string; deviceName: string; locationName: string };
 const HEARTBEAT_MS = 60_000;
 const thaiClock = (date: Date) => date.toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', second: '2-digit' });
-const thaiDate = (date: Date) => date.toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+const thaiDate = (date: Date) => date.toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', year: 'numeric' });
 
 function savedDevice(): Paired | null {
   try { return JSON.parse(localStorage.getItem(kioskDeviceStorageKey) ?? 'null') as Paired | null; } catch { return null; }

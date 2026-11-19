@@ -8,7 +8,7 @@ import { ModuleIcon } from './module-icon';
 export interface LauncherSummary extends Pick<DashboardSummary, 'displayName' | 'greetingName' | 'organizationName'> { pendingApprovals: number | null; unreadNotifications: number | null; }
 
 const registryOrder = (entry: ModuleEntry) => moduleRegistry.findIndex((candidate) => candidate.code === entry.code);
-const thaiDate = new Intl.DateTimeFormat('th-TH-u-ca-buddhist', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Bangkok' });
+const thaiDate = new Intl.DateTimeFormat('th-TH-u-ca-buddhist', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Bangkok' });
 const calendarParts = new Intl.DateTimeFormat('th-TH-u-ca-buddhist', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Bangkok' });
 
 /** ท8: today as a hanging Thai calendar page (เดือนย่อ พ.ศ. / วันที่ / ชื่อวัน). The date is already in the eyebrow, so this is decoration. */

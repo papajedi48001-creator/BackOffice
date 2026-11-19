@@ -169,8 +169,13 @@ export function yearCompare(datasets: readonly NhsoHospital[], dash: NhsoDash, m
 /** A report cell as the legacy table showed it: money with 2 decimals for fractions and amounts from 1,000. */
 export function reportCell(raw: unknown): string {
   if (typeof raw === 'number' && (!Number.isInteger(raw) || Math.abs(raw) >= 1000)) return raw.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  return raw == null ? '' : String(raw);
+  if (raw == null) return '';
+  // NHSO dates come as dd/mm/yyyy พ.ศ.; the system shows every date as "16 พ.ย. 2569".
+  const date = /^(\d{1,2})\/(\d{1,2})\/(\d{4})(\s.*)?$/.exec(String(raw));
+  if (date && Number(date[2]) >= 1 && Number(date[2]) <= 12) return `${Number(date[1])} ${TH_MONTHS[Number(date[2]) - 1]} ${date[3]}${date[4] ?? ''}`;
+  return String(raw);
 }
+const TH_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
 export const MAX_SHOW = 2000;
 /** Search over every column of a report sheet, first 2,000 rows shown. */

@@ -27,7 +27,7 @@ it('links each day heading to that day when given a day link', () => {
 
 it('greys a วันหยุด and names it', () => {
   render(<RoomCalendar dates={['2026-11-06']} entries={[]} holidays={{ '2026-11-06': 'วันหยุดชดเชย' }} />);
-  const day = screen.getByRole('region', { name: /ศุกร์ 6 พ.ย. 2569/ });
+  const day = screen.getByRole('region', { name: /6 พ.ย. 2569/ });
   expect(day).toHaveClass('is-holiday');
   expect(within(day).getByText('วันหยุด วันหยุดชดเชย')).toBeInTheDocument();
 });
