@@ -10,7 +10,7 @@ import { genderLabelKeys } from '../lib/hr-profile-labels';
 import type { ProfileFormPosition, ProfileFormUnit } from './hr-profile-forms';
 import { ActionDialog } from './action-dialog';
 import { FormDialog } from './form-dialog';
-import { employmentStatusLabel } from './people-table';
+import { employmentStatusLabel } from '../lib/employment-status';
 
 const errorKeys: Record<string, MessageKey> = {
   DUPLICATE_NATIONAL_ID: 'hrErrorDuplicateNationalId', DUPLICATE_EMPLOYEE_CODE: 'hrErrorDuplicateEmployeeCode', DUPLICATE_USERNAME: 'hrErrorDuplicateUsername',

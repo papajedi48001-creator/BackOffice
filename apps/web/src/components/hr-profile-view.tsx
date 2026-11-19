@@ -7,7 +7,7 @@ import { CivilServiceForm, EducationForm, PositionHistoryForm } from './hr-kp7-s
 import { ContactForm, PersonalForm, PhotoForm, ProfileForm, type ProfileFormPosition, type ProfileFormUnit } from './hr-profile-forms';
 import { initialsOf } from '../lib/initials';
 import { SectionEditor } from './section-editor';
-import { employmentStatusLabel } from './people-table';
+import { employmentStatusLabel } from '../lib/employment-status';
 
 const day = (value: string | null) => value ? formatBangkokDate(value) : t('notAssigned');
 const text = (value: string | null) => value ?? t('notAssigned');
