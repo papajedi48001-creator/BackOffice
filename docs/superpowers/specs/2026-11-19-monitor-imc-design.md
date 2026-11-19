@@ -61,3 +61,11 @@ Approved by wasan from the mockup "แบบ 1 + ผู้ป่วยในท�
 ## Left to the builder
 
 Component split, CSS names (reuse Smart Money style 2 classes), chart day range (the 31 days ending at the latest service date).
+
+## Follow-up: hide people who are done (wasan, 2026-11-19, แบบ 1 from three mockups)
+
+- A switch "ซ่อนคนที่จำหน่าย/ครบกำหนดแล้ว (n)" sits beside the ผู้ป่วยในทะเบียน filter and starts on.
+- On, it hides people whose เหลืออีก group is ครบกำหนดแล้ว (past due or "จำหน่ายจาก IMC แล้ว") from the cards and from รายละเอียดรายบุคคล, and says "ซ่อนอยู่ n คน".
+- เรียกเก็บเทียบ REP and the KPI cards keep everyone: money already claimed still counts.
+- Choosing the ครบกำหนดแล้ว filter turns the switch off, since that asks to see them. (Builder's call.)
+- "เรียกเก็บ … ครั้ง" counts register lines (one รหัสบริการ on one date); unchanged.

@@ -52,3 +52,11 @@ describe('Monitor IMC cards', () => {
     expect(rule('.imc-tag.is-bad')).toMatch(/color:/);
   });
 });
+
+describe('Monitor IMC hide switch', () => {
+  it('draws the checkbox as a sliding switch in the accent colour when on', () => {
+    expect(rule('.imc-switch input')).toMatch(/appearance: none/);
+    expect(rule('.imc-switch input:checked')).toMatch(/background: var\(--accent\)/);
+    expect(rule('.imc-switch input:checked::after')).toMatch(/transform: translateX/);
+  });
+});
