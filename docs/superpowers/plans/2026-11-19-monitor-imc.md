@@ -1,6 +1,6 @@
 # Monitor IMC Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans. Steps use checkbox (`- [ ]`) syntax.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans. Steps use checkbox (`- [x]`) syntax.
 
 **Goal:** Rename Point ฟื้นฟูผู้พิการ to กองทุนฟื้นฟูสมรรถภาพ and add Monitor IMC (register + REP import, person cards, table, chart, REP table) on top.
 
