@@ -71,6 +71,9 @@ describe('nhso-views', () => {
     expect(reportCell(12)).toBe('12');
     expect(reportCell(1.5)).toBe('1.50');
     expect(reportCell(null)).toBe('');
+    expect(reportCell('05/11/2569')).toBe('5 พ.ย. 2569'); // the system's date form, not dd/mm/yyyy
+    expect(reportCell('31/01/2568 10:15')).toBe('31 ม.ค. 2568 10:15');
+    expect(reportCell('5/11')).toBe('5/11');
     expect(changePercent(0, 5)).toBeNull();
     const big = { columns: ['key'], rows: Array.from({ length: 2500 }, (_, i) => ({ key: `k${i}` })) };
     expect(searchReport(big, '')).toMatchObject({ total: 2500 });

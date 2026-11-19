@@ -17,9 +17,9 @@ describe('HistoryTable', () => {
   it('lists each change in Bangkok time with old → new per side', () => {
     render(<HistoryTable rows={rows} />);
     const cells = within(within(screen.getByRole('table')).getAllByRole('row')[1]!).getAllByRole('cell').map((cell) => cell.textContent);
-    expect(cells).toEqual(['ศุกร์ 13 พ.ย. 2569 14:05', 'วศิน ส.', '89', 'P1 → P2', '—']);
+    expect(cells).toEqual(['13 พ.ย. 2569 14:05', 'วศิน ส.', '89', 'P1 → P2', '—']);
     const second = within(within(screen.getByRole('table')).getAllByRole('row')[2]!).getAllByRole('cell').map((cell) => cell.textContent);
-    expect(second[0]).toBe('จันทร์ 2 พ.ย. 2569 01:30');
+    expect(second[0]).toBe('2 พ.ย. 2569 01:30');
     expect(second[4]).toBe('ยังไม่ผูก → P9');
   });
 

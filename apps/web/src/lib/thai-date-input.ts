@@ -1,4 +1,4 @@
-import { addDays, datesBetween, formatBangkokDate, formatBangkokDateOnly, mondayOf } from './bangkok-time';
+import { addDays, datesBetween, formatBangkokDateOnly, formatBangkokDateWithWeekday, mondayOf } from './bangkok-time';
 
 const monthFormatter = new Intl.DateTimeFormat('th-TH', { timeZone: 'UTC', month: 'long', year: 'numeric' });
 
@@ -16,7 +16,7 @@ export function formatThaiDateInput(iso: string): string {
  * The full date sits inside the box; nothing is repeated under it.
  */
 export function formatThaiDateField(iso: string): string {
-  return formatThaiDateInput(iso) ? formatBangkokDate(iso) : '';
+  return formatThaiDateInput(iso) ? formatBangkokDateWithWeekday(iso) : '';
 }
 
 const thaiWeekday = /^(?:วัน)?(?:จันทร์|อังคาร|พุธ|พฤหัสบดี|พฤหัส|ศุกร์|เสาร์|อาทิตย์)\s+/;

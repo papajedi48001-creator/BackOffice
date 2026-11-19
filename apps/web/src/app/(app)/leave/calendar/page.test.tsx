@@ -57,7 +57,7 @@ describe('LeaveCalendarPage', () => {
     mocks.headedOrganizationIds.mockResolvedValue(['unit-1']);
     mocks.teamCalendar.mockResolvedValue([{ personId: 'p1', displayName: 'สมใจ ใจดี', organizationName: 'งานการพยาบาล', days: [] }]);
     render(await LeaveCalendarPage({ searchParams: Promise.resolve({ month: '2026-11' }) }));
-    const head = screen.getByRole('columnheader', { name: 'ศุกร์ 6 พ.ย. 2569 วันหยุด วันหยุดชดเชย' });
+    const head = screen.getByRole('columnheader', { name: '6 พ.ย. 2569 วันหยุด วันหยุดชดเชย' });
     expect(head).toHaveClass('is-holiday');
     expect(head).toHaveTextContent('วันหยุดชดเชย');
   });

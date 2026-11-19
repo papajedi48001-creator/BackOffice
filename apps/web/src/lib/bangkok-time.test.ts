@@ -3,8 +3,8 @@ import { addDays, datesBetween, formatBangkokDate, formatBangkokDateOnly, format
 
 describe('Bangkok time display', () => {
   it('formats a booking date in Thai with the Buddhist year', () => {
-    expect(formatBangkokDate('2026-11-05')).toBe('พฤหัสบดี 5 พ.ย. 2569');
-    expect(formatBangkokDate('2026-11-09')).toBe('จันทร์ 9 พ.ย. 2569');
+    expect(formatBangkokDate('2026-11-05')).toBe('5 พ.ย. 2569');
+    expect(formatBangkokDate('2026-11-09')).toBe('9 พ.ย. 2569');
     expect(formatBangkokDateOnly('2026-11-09')).toBe('9 พ.ย. 2569');
   });
   it('formats minutes after midnight as a 24-hour clock', () => {
@@ -32,8 +32,8 @@ describe('Bangkok time display', () => {
   });
 
   it('shows an instant as a Bangkok date and time, crossing midnight', () => {
-    expect(formatBangkokDateTime('2026-10-25T18:30:00.000Z')).toBe('จันทร์ 26 ต.ค. 2569 01:30');
-    expect(formatBangkokDateTime('2026-11-09T02:00:00.000Z')).toBe('จันทร์ 9 พ.ย. 2569 09:00');
+    expect(formatBangkokDateTime('2026-10-25T18:30:00.000Z')).toBe('26 ต.ค. 2569 01:30');
+    expect(formatBangkokDateTime('2026-11-09T02:00:00.000Z')).toBe('9 พ.ย. 2569 09:00');
   });
   it('names weekdays in full, Monday first, without the วัน prefix', () => {
     expect(formatWeekday('2026-11-08')).toBe('อาทิตย์');

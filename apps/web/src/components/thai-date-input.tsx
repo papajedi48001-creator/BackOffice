@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { addDays, bangkokToday, formatBangkokDate, weekdayHeaders } from '../lib/bangkok-time';
+import { addDays, bangkokToday, formatBangkokDate, formatBangkokDateWithWeekday, weekdayHeaders } from '../lib/bangkok-time';
 import type { HolidayView } from '../lib/holidays';
 import { formatThaiDateField, monthCells, parseThaiDateInput, shiftMonth, thaiMonthTitle } from '../lib/thai-date-input';
 
@@ -66,7 +66,7 @@ export function ThaiDateInput(props: ThaiDateInputProps) {
   const holidayId = `${id}-holiday`;
   return <span className={['thai-date', className].filter(Boolean).join(' ')}>
     <span className="thai-date-field">
-      <input ref={input} id={id} type="text" inputMode="numeric" autoComplete="off" placeholder="วว/ดด/ปปปป" aria-label={props['aria-label']} aria-describedby={holidayName ? holidayId : undefined} title={value ? `${formatBangkokDate(value)}${holidayName ? ` วันหยุด ${holidayName}` : ''}` : undefined}
+      <input ref={input} id={id} type="text" inputMode="numeric" autoComplete="off" placeholder="วว/ดด/ปปปป" aria-label={props['aria-label']} aria-describedby={holidayName ? holidayId : undefined} title={value ? `${formatBangkokDateWithWeekday(value)}${holidayName ? ` วันหยุด ${holidayName}` : ''}` : undefined}
         value={text} data-min={min} data-max={max} required={required} disabled={disabled} aria-invalid={problem ? true : undefined}
         onFocus={(event) => event.currentTarget.select()}
         onChange={(event) => typed(event.target.value)} onBlur={() => { const iso = parseThaiDateInput(text); if (iso && iso === value) setText(formatThaiDateField(iso)); }} />
@@ -119,7 +119,7 @@ function ThaiCalendarPopup({ selected, holidays, isDisabled, onPick, onClose }: 
         const classes = ['thai-date-day', cell.inMonth ? '' : 'is-outside', holiday ? 'is-holiday' : '', cell.date === selected ? 'is-selected' : '', cell.date === bangkokToday() ? 'is-today' : ''].filter(Boolean).join(' ');
         return <td key={cell.date} role="gridcell" aria-selected={cell.date === selected}>
           <button type="button" data-date={cell.date} className={classes} tabIndex={cell.date === focused ? 0 : -1} disabled={disabled}
-            aria-label={`${formatBangkokDate(cell.date)}${holiday ? ` วันหยุด ${holiday}` : ''}`} title={holiday}
+            aria-label={`${formatBangkokDateWithWeekday(cell.date)}${holiday ? ` วันหยุด ${holiday}` : ''}`} title={holiday}
             onClick={() => onPick(cell.date)} onFocus={() => { if (cell.date !== focused) setFocused(cell.date); }}>
             <span className="thai-date-number">{Number(cell.date.slice(8))}</span>
             {holiday && <span className="thai-date-holiday">{holiday}</span>}
