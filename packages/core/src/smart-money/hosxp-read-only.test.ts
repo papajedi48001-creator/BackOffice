@@ -1,18 +1,21 @@
 import { describe, expect, it, vi } from 'vitest';
-import { isTtmReadOnlySql, TTM_SQL, withReadOnlyFallback } from './ttm-reader';
+import { DENTAL_SQL } from './dental-reader';
+import { HERB_SQL } from './herb-reader';
+import { isReadOnlySelect, withReadOnlyFallback } from './hosxp-read-only';
+import { TTM_SQL } from './ttm-reader';
 
-describe('isTtmReadOnlySql (legacy TtmRepository::isReadOnly)', () => {
-  it('lets the three queries through', () => {
-    for (const sql of Object.values(TTM_SQL)) expect(isTtmReadOnlySql(sql)).toBe(true);
+describe('isReadOnlySelect (legacy TtmRepository::isReadOnly)', () => {
+  it('lets every Smart Money HOSxP query through: ทันตกรรม, แพทย์แผนไทย, สมุนไพร', () => {
+    for (const sql of [DENTAL_SQL, HERB_SQL, ...Object.values(TTM_SQL)]) expect(isReadOnlySelect(sql)).toBe(true);
   });
 
   it('refuses anything that is not one SELECT', () => {
-    expect(isTtmReadOnlySql('UPDATE ovst SET pttype = 1')).toBe(false);
-    expect(isTtmReadOnlySql('SELECT 1; DELETE FROM ovst')).toBe(false);
-    expect(isTtmReadOnlySql('select * from ovst for update lock')).toBe(false);
-    expect(isTtmReadOnlySql('SELECT * INTO  OUTFILE "/tmp/x" FROM ovst')).toBe(false);
-    expect(isTtmReadOnlySql('  select vn from ovst')).toBe(true);
-    expect(isTtmReadOnlySql('SELECT updated_at FROM ovst')).toBe(true);
+    expect(isReadOnlySelect('UPDATE ovst SET pttype = 1')).toBe(false);
+    expect(isReadOnlySelect('SELECT 1; DELETE FROM ovst')).toBe(false);
+    expect(isReadOnlySelect('select * from ovst for update lock')).toBe(false);
+    expect(isReadOnlySelect('SELECT * INTO  OUTFILE "/tmp/x" FROM ovst')).toBe(false);
+    expect(isReadOnlySelect('  select vn from ovst')).toBe(true);
+    expect(isReadOnlySelect('SELECT updated_at FROM ovst')).toBe(true);
   });
 });
 
@@ -34,6 +37,7 @@ describe('withReadOnlyFallback', () => {
     expect(await withReadOnlyFallback(db as never, async () => 'rows')).toBe('rows');
     expect(calls).toEqual([{ readOnly: true }, undefined]);
     expect(JSON.stringify(log.mock.calls)).toContain('ER_PARSE_ERROR');
+    expect(JSON.stringify(log.mock.calls)).not.toContain('ttm');
     log.mockRestore();
   });
 

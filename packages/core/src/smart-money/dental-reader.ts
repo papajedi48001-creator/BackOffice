@@ -3,6 +3,7 @@ import { hosxpConnectionUrl } from '../holidays/hosxp-settings-service';
 import type { DentalReader } from './dental-service';
 import type { DentalRow } from './dental-summary';
 import { DENTURE_ICODES } from './dental-rules';
+import { isReadOnlySelect, withReadOnlyFallback } from './hosxp-read-only';
 import { fixThaiText } from './thai-text';
 
 /** The URL is built in memory only; it holds the password, so it is never logged or returned. */
@@ -19,7 +20,7 @@ const DENTURE_IN = DENTURE_ICODES.map((code) => `'${code}'`).join(', ');
  * `opitemrece` holds a denture icode, ลูกหนี้ = ค่ารักษารวม − ชำระแล้ว (not below 0); only visits with an amount to collect
  * or not fully paid. Dates are bound; the denture icodes are constants.
  */
-const SQL = `
+export const DENTAL_SQL = `
   SELECT d1.vn, d1.vstdate, d1.hn,
          CONCAT(COALESCE(p.pname, ''), COALESCE(p.fname, ''), '  ', COALESCE(p.lname, '')) AS patient_name,
          d3.name AS doctor_name, d4.name AS helper_name,
@@ -48,11 +49,12 @@ type Raw = { vn: string; vstdate: string; hn: string | null; patient_name: strin
 
 const text = (value: string | null) => fixThaiText(value ?? '');
 
-/** One read-only SELECT on HOSxP; nothing is ever written there. */
+/** The one SELECT in a READ ONLY transaction on HOSxP, after the text guard; nothing is ever written there. */
 export const readDentalClaims: DentalReader = async (connection, start, end) => {
+  if (!isReadOnlySelect(DENTAL_SQL)) throw new Error('dental: only SELECT is allowed');
   const hosxp = createDatabase(hosxpConnectionUrl(connection));
   try {
-    const rows = await hosxp.query<Raw>(SQL, [start, end]);
+    const rows = await withReadOnlyFallback(hosxp, (tx) => tx.query<Raw>(DENTAL_SQL, [start, end]));
     return rows.map((row): DentalRow => ({
       vn: String(row.vn), vstdate: String(row.vstdate).slice(0, 10), hn: row.hn ?? '', patientName: text(row.patient_name).trim(),
       diagCode: row.diag_code ?? '', diagName: text(row.diag_name), doctorName: text(row.doctor_name), helperName: text(row.helper_name), isDenture: Number(row.is_denture) === 1, pttypeCode: row.pttype_code ?? '', pttypeName: text(row.pttype_name),

@@ -3,7 +3,7 @@ import { hosxpConnectionUrl } from '../holidays/hosxp-settings-service';
 import type { HerbReader } from './herb-service';
 import type { HerbRow } from './herb-summary';
 import { fixThaiText } from './thai-text';
-import { isTtmReadOnlySql, withReadOnlyFallback } from './ttm-reader';
+import { isReadOnlySelect, withReadOnlyFallback } from './hosxp-read-only';
 
 /**
  * The legacy `HerbRepository` query: herbal `opitemrece` lines of every department (OPD and IPD) by `rxdate`, grouped by date, vn,
@@ -47,7 +47,7 @@ const amount = (value: unknown) => (value === null || value === undefined || val
 /** The one SELECT in a READ ONLY transaction on HOSxP, after the text guard. The URL holds the password, so it is never logged. */
 export const readHerb: HerbReader = async (connection, start, end, icodes) => {
   const { sql, params } = herbQuery(start, end, icodes);
-  if (!isTtmReadOnlySql(sql)) throw new Error('herb: only SELECT is allowed');
+  if (!isReadOnlySelect(sql)) throw new Error('herb: only SELECT is allowed');
   const hosxp = createDatabase(hosxpConnectionUrl(connection));
   try {
     const rows = await withReadOnlyFallback(hosxp, (tx) => tx.query<Raw>(sql, params));

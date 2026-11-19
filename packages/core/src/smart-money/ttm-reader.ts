@@ -1,8 +1,9 @@
-import { createDatabase, type Database } from '@backoffice/db';
+import { createDatabase } from '@backoffice/db';
 import { hosxpConnectionUrl } from '../holidays/hosxp-settings-service';
 import type { TtmReader } from './ttm-service';
 import type { TtmItem } from './ttm-rules';
 import type { TtmServiceRow, TtmVisit } from './ttm-summary';
+import { isReadOnlySelect, withReadOnlyFallback } from './hosxp-read-only';
 import { fixThaiText } from './thai-text';
 
 /** vn that came for แพทย์แผนไทย in the range. */
@@ -43,27 +44,6 @@ export const TTM_SQL = {
      GROUP BY o.vn, o.icode, o.income`
 } as const;
 
-/** The legacy guard: one statement that starts with SELECT and names no write or lock command. */
-export function isTtmReadOnlySql(sql: string): boolean {
-  const text = sql.trim().toUpperCase();
-  if (!text.startsWith('SELECT') || text.includes(';')) return false;
-  return !/\b(INSERT|UPDATE|DELETE|REPLACE|ALTER|DROP|CREATE|TRUNCATE|GRANT|RENAME|LOCK|CALL|INTO\s+OUTFILE)\b/.test(text);
-}
-
-/**
- * Runs `work` in a READ ONLY transaction. A server too old to parse `SET TRANSACTION READ ONLY` (MySQL < 5.6.5, MariaDB < 10.0, still
- * common under HOSxP) gets a plain transaction instead, as the legacy page carried on; the SELECT text guard still applies.
- */
-export async function withReadOnlyFallback<T>(database: Pick<Database, 'transaction'>, work: (tx: Database) => Promise<T>): Promise<T> {
-  try {
-    return await database.transaction(work, { readOnly: true });
-  } catch (error) {
-    if ((error as { code?: unknown } | null)?.code !== 'ER_PARSE_ERROR') throw error;
-    console.error('[smart-money] ttm HOSxP read-only transaction not supported', 'ER_PARSE_ERROR');
-    return database.transaction(work);
-  }
-}
-
 type Raw = Record<string, unknown>;
 const text = (value: unknown) => fixThaiText(value === null || value === undefined ? '' : String(value));
 const plain = (value: unknown) => (value === null || value === undefined ? '' : String(value));
@@ -77,7 +57,7 @@ export const readTtm: TtmReader = async (connection, start, end) => {
   try {
     return await withReadOnlyFallback(hosxp, async (tx) => {
       const select = (sql: string) => {
-        if (!isTtmReadOnlySql(sql)) throw new Error('ttm: only SELECT is allowed');
+        if (!isReadOnlySelect(sql)) throw new Error('ttm: only SELECT is allowed');
         return tx.query<Raw>(sql, [start, end]);
       };
       const [services, visits, items] = [await select(TTM_SQL.services), await select(TTM_SQL.visits), await select(TTM_SQL.items)];

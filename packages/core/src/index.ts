@@ -157,6 +157,7 @@ export * from './smart-money/ttm-rules';
 export * from './smart-money/ttm-summary';
 export * from './smart-money/ttm-range';
 export * from './smart-money/ttm-service';
+export * from './smart-money/hosxp-read-only';
 export * from './smart-money/ttm-reader';
 export * from './smart-money/herb-rules';
 export * from './smart-money/herb-summary';
