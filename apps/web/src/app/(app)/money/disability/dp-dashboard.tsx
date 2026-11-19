@@ -72,7 +72,7 @@ export function DpDashboard({ canManage }: { canManage: boolean }) {
   </>;
 
   return <section className="nhso fdh dp">
-    <h2>Point ฟื้นฟูผู้พิการ</h2>
+    <h2>บริการฟื้นฟู (ขอเบิก / พึงเบิก)</h2>
     <div className="nhso-bar">
       <span className="money-note" role="status">{data === null ? (failure ? '' : 'กำลังโหลดข้อมูล...') : empty ? 'ยังไม่มีข้อมูล' : dpStatusLine(records, data.years)}</span>
       <div className="nhso-bar-actions">

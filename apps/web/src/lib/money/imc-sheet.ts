@@ -18,7 +18,7 @@ const MAX_FILE = 50 * 1024 * 1024;
 const SCAN = 15;
 const KIND_NAME: Record<ImcKind, string> = { register: 'ทะเบียนคนไข้ IMC', rep: 'REP' };
 const int = (n: number) => n.toLocaleString('en-US');
-const titles = (row: NhsoCell[]) => row.map((value) => String(value ?? '').replaceAll('﻿', '').replace(/\s+/g, ' ').trim());
+const titles = (row: NhsoCell[]) => row.map((value) => String(value ?? '').replaceAll('\uFEFF', '').replace(/\s+/g, ' ').trim());
 const blank = (row: NhsoCell[]) => row.every((value) => value === null || value === '');
 const skip = (name: string, problem: string): ImcSheetFile => ({ name, kind: null, head: [], data: [], problem });
 
@@ -28,7 +28,7 @@ export async function readImcFile(file: Picked & { size?: number }): Promise<Imc
   const XLSX = await import('@e965/xlsx');
   const bytes = new Uint8Array(await file.arrayBuffer());
   const book = /\.csv$/i.test(file.name)
-    ? XLSX.read(decode(bytes).replace(/^﻿/, ''), { type: 'string', raw: true })
+    ? XLSX.read(decode(bytes).replace(/^\uFEFF/, ''), { type: 'string', raw: true })
     : XLSX.read(bytes, { type: 'array', cellDates: true });
   let service = false;
   for (const sheetName of book.SheetNames) {

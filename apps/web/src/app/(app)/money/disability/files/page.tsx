@@ -6,7 +6,7 @@ import { DpFiles } from './dp-files';
 import { DpUpload } from './dp-upload';
 
 export const dynamic = 'force-dynamic';
-const TITLE = 'จัดการไฟล์บริการฟื้นฟู (Point ผู้พิการ)';
+const TITLE = 'จัดการไฟล์บริการฟื้นฟู (กองทุนฟื้นฟูสมรรถภาพ)';
 
 /** อัปโหลดไฟล์บริการฟื้นฟู and the stored ปีงบ; ผู้ดูแล Smart Money only (checked here and again by every API call). */
 export default async function DpFilesPage() {

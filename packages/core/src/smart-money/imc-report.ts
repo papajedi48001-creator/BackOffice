@@ -24,7 +24,7 @@ const SCAN = 15;
 const NOT_REGISTER = 'ไม่ใช่ไฟล์ทะเบียนคนไข้ IMC (ไม่พบคอลัมน์ "วันที่ครบกำหนดการให้บริการ" และ "วันที่ให้บริการ")';
 const NOT_REP = 'ไม่ใช่ไฟล์ REP (ไม่พบคอลัมน์ "REP No." และ "Trans ID")';
 const text = (value: NhsoCell | undefined) => (value === null || value === undefined || typeof value === 'boolean' ? '' : phpTrim(phpString(value)));
-const title = (value: NhsoCell | undefined) => text(value).replaceAll('﻿', '').replace(/\s+/g, ' ').trim();
+const title = (value: NhsoCell | undefined) => text(value).replaceAll('\uFEFF', '').replace(/\s+/g, ' ').trim();
 const number = (s: string) => { const t = s.replace(/[, ]/g, ''); return /^[+-]?(\d+(\.\d*)?|\.\d+)$/.test(t) ? Number(t) : 0; };
 const row = (rows: Rows, at: number) => (Array.isArray(rows[at]) ? rows[at]! : []);
 const titles = (cells: readonly NhsoCell[]) => cells.map(title);

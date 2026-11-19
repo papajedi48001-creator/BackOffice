@@ -37,3 +37,19 @@ describe('Smart Money standard controls and motion', () => {
     expect(css).toMatch(/@keyframes bar-grow\b/);
   });
 });
+
+/** Monitor IMC (wasan, 2026-11-19, แบบ 1 + ผู้ป่วยในทะเบียน): patient cards with a ring of days left in four tones. */
+describe('Monitor IMC cards', () => {
+  it('lays the patient cards in a wrapping grid, lifts them on hover and rises them in on entry', () => {
+    expect(rule('.imc-cards')).toMatch(/grid-template-columns: repeat\(auto-fill, minmax\(/);
+    expect(rule('.imc-person:hover')).toMatch(/transform: translateY\(-2px\)/);
+    expect(rule('.imc-person')).toMatch(/animation: .*rise/);
+  });
+  it('colours the ring and the tag by tone and draws the ring from the top', () => {
+    for (const tone of ['ok', 'warn', 'bad', 'mute']) expect(rule(`.imc-person.is-${tone}`)).toMatch(/--imc-tone:/);
+    expect(rule('.imc-ring-fill')).toMatch(/stroke: var\(--imc-tone\)/);
+    expect(rule('.imc-ring')).toMatch(/transform: rotate\(-90deg\)/);
+    expect(rule('.imc-tag.is-bad')).toMatch(/color:/);
+  });
+});
+
