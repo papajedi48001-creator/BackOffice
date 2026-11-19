@@ -38,6 +38,11 @@ describe('NhsoDashboard', () => {
     expect(within(details).getByText('โรงพยาบาล', { selector: 'dt' }).nextSibling).toHaveTextContent('3');
     const fundTable = within(details).getByRole('table', { name: 'ยอดเงินตามกองทุน เทียบทุกโรงพยาบาล' });
     expect(within(fundTable).getByText('รวม 3 โรงพยาบาล').parentElement).toHaveTextContent('345.00');
+    const layout = within(details).getByRole('group', { name: 'รูปแบบ' });
+    expect(within(layout).getByRole('button', { name: 'แท่งเรียงกัน' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(within(layout).getByRole('button', { name: 'แท่งซ้อนกัน' }));
+    expect(within(layout).getByRole('button', { name: 'แท่งซ้อนกัน' })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(layout).getByRole('button', { name: 'แท่งเรียงกัน' })).toHaveAttribute('aria-pressed', 'false');
     for (const name of ['ยอดเงินตามกองทุน เทียบทุกโรงพยาบาล', 'รายรับแยกรายกองทุน', 'เทียบรายกองทุน ตามปีงบประมาณ']) {
       expect(within(details).getByRole('table', { name }).parentElement, name).toHaveClass('money-table-wrap', 'is-matrix');
     }
