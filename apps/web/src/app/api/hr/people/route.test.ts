@@ -17,7 +17,7 @@ import { DELETE as removePerson } from './[personId]/route';
 const manager = { authenticated: true, personId: 'person-a', roles: [{ name: 'hr-manager', organizationId: null }], dataOwnerModules: ['hr'], hospitalWideDataOwnerModules: ['hr'] };
 const params = { params: Promise.resolve({ personId: 'person-b' }) };
 const request = (method: string, body: unknown) => new Request('http://localhost/api/hr/people', { method, body: typeof body === 'string' ? body : JSON.stringify(body) });
-const newPerson = { nationalId: '1101700230708', firstName: 'สมใจ', lastName: 'ใจดี', username: 'somjai', password: 'long-enough-1' };
+const newPerson = { nationalId: '1101700230708', firstName: 'สมใจ', lastName: 'ใจดี', username: 'somjai' };
 
 afterEach(() => vi.clearAllMocks());
 const ready = () => { mocks.readSession.mockResolvedValue(manager); mocks.getSharedDatabase.mockReturnValue({}); mocks.getNationalIdProtector.mockReturnValue({}); };
@@ -43,10 +43,10 @@ describe('POST /api/hr/people', () => {
 
   it('names only the bad fields, never echoing a national ID or password', async () => {
     ready();
-    const response = await postPerson(request('POST', { ...newPerson, nationalId: '1234567890123', password: 'short' }));
+    const response = await postPerson(request('POST', { ...newPerson, nationalId: '1234567890123', username: 'x' }));
     expect(response.status).toBe(400);
     const body = await response.text();
-    expect(JSON.parse(body)).toEqual({ error: 'invalid_input', fields: ['nationalId', 'password'] });
+    expect(JSON.parse(body)).toEqual({ error: 'invalid_input', fields: ['nationalId', 'username'] });
     expect(body).not.toContain('1234567890123');
     expect(mocks.create).not.toHaveBeenCalled();
   });
@@ -74,10 +74,11 @@ describe('identity, password and account of an existing person', () => {
   it('saves identity fields for the session actor', async () => {
     ready();
     mocks.updateIdentity.mockResolvedValueOnce({ ok: true });
-    expect((await putIdentity(request('PUT', { employmentStatus: 'INACTIVE', employeeCode: 'E9' }), params)).status).toBe(200);
-    expect(mocks.updateIdentity).toHaveBeenCalledWith('person-b', { employmentStatus: 'INACTIVE', employeeCode: 'E9' }, manager);
-    mocks.updateIdentity.mockResolvedValueOnce({ ok: false, code: 'DUPLICATE_EMPLOYEE_CODE' });
-    expect((await putIdentity(request('PUT', { employeeCode: 'E1' }), params)).status).toBe(409);
+    expect((await putIdentity(request('PUT', { employmentStatus: 'TRANSFERRED' }), params)).status).toBe(200);
+    expect(mocks.updateIdentity).toHaveBeenCalledWith('person-b', { employmentStatus: 'TRANSFERRED' }, manager);
+    expect((await putIdentity(request('PUT', { employeeCode: 'E9' }), params)).status).toBe(400);
+    mocks.updateIdentity.mockResolvedValueOnce({ ok: false, code: 'SELF_STATUS' });
+    expect((await putIdentity(request('PUT', { employmentStatus: 'INACTIVE' }), params)).status).toBe(403);
   });
 
   it('resets a password to the default and maps a person without an account or a refusal', async () => {
@@ -94,9 +95,9 @@ describe('identity, password and account of an existing person', () => {
   it('adds an account to a person who has none', async () => {
     ready();
     mocks.createAccount.mockResolvedValueOnce({ ok: true });
-    expect((await postAccount(request('POST', { username: 'somjai', password: 'long-enough-1' }), params)).status).toBe(201);
+    expect((await postAccount(request('POST', { username: 'somjai' }), params)).status).toBe(201);
     mocks.createAccount.mockResolvedValueOnce({ ok: false, code: 'ACCOUNT_EXISTS' });
-    expect((await postAccount(request('POST', { username: 'somjai', password: 'long-enough-1' }), params)).status).toBe(409);
+    expect((await postAccount(request('POST', { username: 'somjai' }), params)).status).toBe(409);
   });
 
   it('refuses someone who is not a hospital-wide HR manager before reading the body', async () => {

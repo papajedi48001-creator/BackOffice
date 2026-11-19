@@ -1,16 +1,17 @@
 import { describe, expect, it, vi } from 'vitest';
 import { exportPeople, peopleCsv } from './people-export';
 
-const person = { id: 'p1', employeeCode: 'RN001', displayName: '=HYPERLINK("x")', positionTitle: 'พยาบาลวิชาชีพ', employmentStatus: 'ACTIVE', nationalIdMasked: 'X-XXXX-XXXXX-12-3', employmentTypeName: 'ข้าราชการ', organizationName: null, organizationCode: null };
+const person = { id: 'p1', employeeCode: 'RN001', displayName: '=HYPERLINK("x")', positionTitle: 'พยาบาลวิชาชีพ', employmentStatus: 'ACTIVE', nationalIdMasked: 'X-XXXX-XXXXX-12-3', employmentTypeName: 'ข้าราชการ', organizationName: null, organizationCode: null, providerLinked: false, thaidLinked: false };
 
 describe('peopleCsv', () => {
   it('writes the table columns for Excel, the masked ID only, and no formulas', () => {
-    const csv = peopleCsv([person, { ...person, id: 'p2', displayName: 'นายสมชาย ใจดี', employmentStatus: 'INACTIVE', employeeCode: null }]);
+    const csv = peopleCsv([person, { ...person, id: 'p2', displayName: 'นายสมชาย ใจดี', employmentStatus: 'INACTIVE', employeeCode: null }, { ...person, id: 'p3', employmentStatus: 'TRANSFERRED' }]);
     expect(csv.startsWith('﻿')).toBe(true);
     const lines = csv.slice(1).trimEnd().split('\r\n');
     expect(lines[0]).toBe('"รหัสบุคลากร","ชื่อ-นามสกุล","ตำแหน่งงาน","ประเภทการจ้าง","หน่วยงาน","เลขประจำตัวประชาชน","สถานะ"');
-    expect(lines[1]).toBe('"RN001","\'=HYPERLINK(""x"")","พยาบาลวิชาชีพ","ข้าราชการ","ยังไม่ระบุ","X-XXXX-XXXXX-12-3","คงอยู่"');
+    expect(lines[1]).toBe('"RN001","\'=HYPERLINK(""x"")","พยาบาลวิชาชีพ","ข้าราชการ","ยังไม่ระบุ","X-XXXX-XXXXX-12-3","ปฏิบัติงาน"');
     expect(lines[2]).toBe('"ยังไม่ระบุ","นายสมชาย ใจดี","พยาบาลวิชาชีพ","ข้าราชการ","ยังไม่ระบุ","X-XXXX-XXXXX-12-3","ลาออก"');
+    expect(lines[3]).toMatch(/,"ย้าย"$/);
   });
 });
 

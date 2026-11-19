@@ -1,7 +1,7 @@
 import type { OrganizationUnitType } from '@backoffice/contracts';
 import type { Database } from '@backoffice/db';
 
-export interface DirectoryPerson { id: string; employeeCode: string | null; displayName: string | null; positionTitle: string | null; employmentStatus: string; nationalIdMasked: string | null; employmentTypeName: string | null; organizationName: string | null; organizationCode: string | null; }
+export interface DirectoryPerson { id: string; employeeCode: string | null; displayName: string | null; positionTitle: string | null; employmentStatus: string; nationalIdMasked: string | null; employmentTypeName: string | null; organizationName: string | null; organizationCode: string | null; providerLinked: boolean; thaidLinked: boolean; }
 export interface DirectoryOrganization { id: string; code: string | null; name: string; parentId: string | null; activePeople: number; unitType: OrganizationUnitType | null; headPersonId: string | null; headDisplayName: string | null; headActive: boolean; }
 export interface OrganizationHeadTerm { personId: string; displayName: string | null; employeeCode: string | null; effectiveFrom: string; effectiveUntil: string | null; }
 export interface OrganizationDetail { id: string; code: string | null; name: string; parentId: string | null; unitType: OrganizationUnitType | null; headPersonId: string | null; headActive: boolean; headHistory: OrganizationHeadTerm[]; }
@@ -14,8 +14,11 @@ export class HrDirectory {
   async listPeople(scope: DirectoryScope): Promise<DirectoryPerson[]> {
     if (scope.organizationIds !== 'all' && scope.organizationIds.length === 0) return [];
     const scoped = scope.organizationIds === 'all' ? 'WHERE p.deleted_at IS NULL' : `WHERE p.deleted_at IS NULL AND a.organization_id IN (${scope.organizationIds.map(() => '?').join(', ')})`;
-    return this.database.query<DirectoryPerson>(
-      `SELECT p.id, p.employee_code AS employeeCode, p.display_name AS displayName, p.position_title AS positionTitle, p.employment_status AS employmentStatus, p.national_id_masked AS nationalIdMasked, t.name AS employmentTypeName, o.name AS organizationName, o.code AS organizationCode
+    // 2FA: a Provider ID link, and a ThaiD sign-in that succeeded at least once (ThaiD needs no link row: the national ID is the link).
+    const rows = await this.database.query<Omit<DirectoryPerson, 'providerLinked' | 'thaidLinked'> & { providerLinked: number | string; thaidLinked: number | string }>(
+      `SELECT p.id, p.employee_code AS employeeCode, p.display_name AS displayName, p.position_title AS positionTitle, p.employment_status AS employmentStatus, p.national_id_masked AS nationalIdMasked, t.name AS employmentTypeName, o.name AS organizationName, o.code AS organizationCode,
+       EXISTS (SELECT 1 FROM identity_link l WHERE l.person_id = p.id) AS providerLinked,
+       EXISTS (SELECT 1 FROM audit_event e WHERE e.action = 'identity.thaid_login' AND e.target_id = p.id AND e.result = 'SUCCESS') AS thaidLinked
        FROM person p
        ${scope.organizationIds === 'all' ? 'LEFT' : ''} JOIN employment_assignment a ON a.person_id = p.id AND a.effective_until IS NULL
        LEFT JOIN organization o ON o.id = a.organization_id
@@ -25,6 +28,7 @@ export class HrDirectory {
        ORDER BY o.name, p.display_name, p.employee_code`,
       scope.organizationIds === 'all' ? [] : scope.organizationIds
     );
+    return rows.map((row) => ({ ...row, providerLinked: Number(row.providerLinked) === 1, thaidLinked: Number(row.thaidLinked) === 1 }));
   }
 
   async listOrganizations(): Promise<DirectoryOrganization[]> {

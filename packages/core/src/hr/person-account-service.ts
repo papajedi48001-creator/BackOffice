@@ -16,7 +16,7 @@ type QueryDatabase = Pick<Database, 'query' | 'execute'>;
 type DuplicateCode = 'DUPLICATE_NATIONAL_ID' | 'DUPLICATE_EMPLOYEE_CODE' | 'DUPLICATE_USERNAME';
 type ProfileCode = Extract<UpdateProfileResult, { ok: false }>['code'];
 export type CreatePersonResult = { ok: true; id: string } | { ok: false; code: DuplicateCode | ProfileCode };
-export type IdentityResult = { ok: true } | { ok: false; code: 'NOT_FOUND' | 'FORBIDDEN' | DuplicateCode };
+export type IdentityResult = { ok: true } | { ok: false; code: 'NOT_FOUND' | 'FORBIDDEN' | 'SELF_STATUS' | DuplicateCode };
 export type ChangeOwnPasswordResult = { ok: true } | { ok: false; code: 'NO_ACCOUNT' | 'WRONG_PASSWORD' | 'SAME_PASSWORD' };
 export type PasswordResult = { ok: true } | { ok: false; code: 'NOT_FOUND' | 'FORBIDDEN' | 'NO_ACCOUNT' | 'PROTECTED_ACCOUNT' };
 export type CreateAccountResult = { ok: true } | { ok: false; code: 'NOT_FOUND' | 'FORBIDDEN' | 'ACCOUNT_EXISTS' | 'DUPLICATE_USERNAME' };
@@ -33,9 +33,10 @@ export class PersonAccountService {
   constructor(private readonly database: Pick<Database, 'query' | 'transaction'>, private readonly protector: NationalIdProtector, private readonly createId: () => string = randomUUID) {}
 
   async create(input: CreatePersonWithAccountInput, actor: AccessSubject): Promise<CreatePersonResult> {
-    const { nationalId, employeeCode, username, password, phone, ...profile } = createPersonWithAccountInputSchema.parse(input);
+    const { nationalId, employeeCode, username, phone, ...profile } = createPersonWithAccountInputSchema.parse(input);
     if (!canManagePeople(actor)) return { ok: false, code: 'FORBIDDEN' };
-    const passwordHash = await hashPassword(password);
+    // The account starts on the temporary password; its owner must choose their own at the first login.
+    const passwordHash = await hashPassword(DEFAULT_RESET_PASSWORD);
     const id = this.createId();
     return refusals(() => this.database.transaction(async (database): Promise<CreatePersonResult> => {
       const duplicate = await findDuplicate(database, { lookup: this.protector.lookup(nationalId), employeeCode: employeeCode ?? null, username });
@@ -60,22 +61,22 @@ export class PersonAccountService {
   async updateIdentity(personId: string, input: UpdatePersonIdentityInput, actor: AccessSubject): Promise<IdentityResult> {
     const valid = updatePersonIdentityInputSchema.parse(input);
     if (!canManagePeople(actor)) return { ok: false, code: 'FORBIDDEN' };
+    // Nobody changes their own สถานะ, whatever their role.
+    if (valid.employmentStatus !== undefined && personId === actor.personId) return { ok: false, code: 'SELF_STATUS' };
     return refusals(() => this.database.transaction(async (database): Promise<IdentityResult> => {
       const [stored] = await database.query<{ employeeCode: string | null; status: string; lookup: string }>('SELECT employee_code AS employeeCode, employment_status AS status, national_id_lookup AS lookup FROM person WHERE id = ? FOR UPDATE', [personId]);
       if (!stored) return { ok: false, code: 'NOT_FOUND' };
       const lookup = valid.nationalId ? this.protector.lookup(valid.nationalId) : stored.lookup;
       const changedFields = [
-        ...(valid.employeeCode !== undefined && valid.employeeCode !== stored.employeeCode ? ['employeeCode'] : []),
         ...(valid.employmentStatus !== undefined && valid.employmentStatus !== stored.status ? ['employmentStatus'] : []),
         ...(lookup !== stored.lookup ? ['nationalId'] : [])
       ];
       if (changedFields.length === 0) return { ok: true };
-      const duplicate = await findDuplicate(database, { lookup: changedFields.includes('nationalId') ? lookup : null, employeeCode: changedFields.includes('employeeCode') ? valid.employeeCode ?? null : null, username: null }, personId);
+      const duplicate = await findDuplicate(database, { lookup: changedFields.includes('nationalId') ? lookup : null, employeeCode: null, username: null }, personId);
       if (duplicate) return { ok: false, code: duplicate };
-      if (changedFields.includes('employeeCode')) await database.execute('UPDATE person SET employee_code = ? WHERE id = ?', [valid.employeeCode ?? null, personId]);
       if (changedFields.includes('employmentStatus')) await database.execute('UPDATE person SET employment_status = ? WHERE id = ?', [valid.employmentStatus!, personId]);
-      // A person who has left (พ้นสภาพ) is signed out now; login refuses them until they are active again.
-      if (changedFields.includes('employmentStatus') && valid.employmentStatus === 'INACTIVE') await database.execute('UPDATE user_session SET revoked_at = UTC_TIMESTAMP() WHERE person_id = ? AND revoked_at IS NULL', [personId]);
+      // A person who left or moved away (ลาออก, ย้าย) is signed out now; login refuses them until they are ปฏิบัติงาน again.
+      if (changedFields.includes('employmentStatus') && valid.employmentStatus !== 'ACTIVE') await database.execute('UPDATE user_session SET revoked_at = UTC_TIMESTAMP() WHERE person_id = ? AND revoked_at IS NULL', [personId]);
       if (changedFields.includes('nationalId')) await database.execute('UPDATE person SET national_id_ciphertext = ?, national_id_lookup = ?, national_id_masked = ? WHERE id = ?', [this.protector.encrypt(valid.nationalId!), lookup, this.protector.mask(valid.nationalId!), personId]);
       await this.audit(database, actor.personId!, 'hr.person.identity.update', 'person', personId, { changedFields });
       return { ok: true };
@@ -144,7 +145,7 @@ export class PersonAccountService {
   async createAccount(personId: string, input: LocalAccountInput, actor: AccessSubject): Promise<CreateAccountResult> {
     const valid = localAccountInputSchema.parse(input);
     if (!canManagePeople(actor)) return { ok: false, code: 'FORBIDDEN' };
-    const passwordHash = await hashPassword(valid.password);
+    const passwordHash = await hashPassword(DEFAULT_RESET_PASSWORD);
     return refusals(() => this.database.transaction(async (database): Promise<CreateAccountResult> => {
       const [person] = await database.query<{ id: string }>('SELECT id FROM person WHERE id = ? FOR UPDATE', [personId]);
       if (!person) return { ok: false, code: 'NOT_FOUND' };

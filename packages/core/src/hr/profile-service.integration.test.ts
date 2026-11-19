@@ -289,6 +289,16 @@ describeWithDatabase('HrProfileService writes against MariaDB', () => {
     expect(await service.photoAttachmentOf(noProfile)).toBe(second);
   });
 
+  it('lets a ผู้ดูแลระบบ change another person\'s photo', async () => {
+    const adminId = randomUUID();
+    await database.execute("INSERT INTO person (id, national_id_ciphertext, national_id_lookup, display_name, created_at) VALUES (?, 'c', ?, 'ผู้ดูแลระบบ', UTC_TIMESTAMP())", [adminId, randomUUID()]);
+    const admin: AccessSubject = { authenticated: true, personId: adminId, roles: [{ name: 'admin', organizationId: null }], dataOwnerModules: [], hospitalWideDataOwnerModules: [] };
+    const id = await person(await organization());
+    const photo = await attachment(adminId);
+    expect(await service.setPersonPhoto(id, photo, admin)).toEqual({ ok: true });
+    expect(await service.photoAttachmentOf(id)).toBe(photo);
+  });
+
   it('lets HR set and remove another person\'s photo they uploaded, audited as HR', async () => {
     const id = await person(await organization());
     const photo = await attachment(manager.personId!);

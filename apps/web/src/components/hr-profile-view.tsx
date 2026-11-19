@@ -7,6 +7,7 @@ import { CivilServiceForm, EducationForm, PositionHistoryForm } from './hr-kp7-s
 import { ContactForm, PersonalForm, PhotoForm, ProfileForm, type ProfileFormPosition, type ProfileFormUnit } from './hr-profile-forms';
 import { initialsOf } from '../lib/initials';
 import { SectionEditor } from './section-editor';
+import { employmentStatusLabel } from './people-table';
 
 const day = (value: string | null) => value ? formatBangkokDate(value) : t('notAssigned');
 const text = (value: string | null) => value ?? t('notAssigned');
@@ -39,7 +40,7 @@ export function HrProfileView({ view, contactEndpoint, personalEndpoint, photo, 
         {rows([
           [t('employeeCode'), text(work.employeeCode)], [t('hrFieldOrganization'), text(work.organizationName)], [t('hrFieldPositionTitle'), text(work.positionTitle)],
           [t('hrFieldPositionLevel'), text(work.positionLevel)], [t('hrFieldEmploymentType'), text(work.employmentTypeName)], [t('hrFieldAppointedOn'), day(work.appointedOn)],
-          [t('employmentStatus'), work.employmentStatus === 'ACTIVE' ? t('employmentActive') : t('employmentInactive')]
+          [t('employmentStatus'), employmentStatusLabel(work.employmentStatus)]
         ])}
       </section>
     {personal ? <>

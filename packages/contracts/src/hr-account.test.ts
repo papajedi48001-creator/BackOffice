@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createPersonWithAccountInputSchema, localAccountInputSchema, setPasswordInputSchema, thaiNationalIdSchema, updatePersonIdentityInputSchema, usernameSchema } from './hr-account';
 
-const person = { nationalId: '1101700230708', firstName: 'สมใจ', lastName: 'ใจดี', username: 'somjai.j', password: 'a-long-secret' };
+const person = { nationalId: '1101700230708', firstName: 'สมใจ', lastName: 'ใจดี', username: 'somjai.j' };
 
 describe('person account contracts', () => {
   it('accepts a 13-digit national ID with a valid check digit, with or without dashes', () => {
@@ -16,17 +16,18 @@ describe('person account contracts', () => {
     expect(usernameSchema.safeParse('ab').success).toBe(false);
   });
 
-  it('needs a name, a username and a password of 8 to 128 characters to create a person', () => {
+  it('needs a name and a username, but no password, to create a person or an account', () => {
     expect(createPersonWithAccountInputSchema.parse(person)).toMatchObject({ nationalId: '1101700230708', username: 'somjai.j' });
-    expect(createPersonWithAccountInputSchema.safeParse({ ...person, password: 'short' }).success).toBe(false);
-    expect(createPersonWithAccountInputSchema.safeParse({ ...person, password: 'x'.repeat(129) }).success).toBe(false);
+    expect(createPersonWithAccountInputSchema.safeParse({ ...person, password: 'a-long-secret' }).success).toBe(false);
     expect(createPersonWithAccountInputSchema.safeParse({ ...person, firstName: undefined }).success).toBe(false);
-    expect(localAccountInputSchema.safeParse({ username: 'somjai.j', password: 'a-long-secret' }).success).toBe(true);
+    expect(localAccountInputSchema.safeParse({ username: 'somjai.j' }).success).toBe(true);
+    expect(localAccountInputSchema.safeParse({ username: 'somjai.j', password: 'a-long-secret' }).success).toBe(false);
     expect(setPasswordInputSchema.safeParse({ password: '1234567' }).success).toBe(false);
   });
 
-  it('has no username among the identity fields HR can change', () => {
-    expect(updatePersonIdentityInputSchema.parse({ employeeCode: ' E001 ', employmentStatus: 'INACTIVE' })).toEqual({ employeeCode: 'E001', employmentStatus: 'INACTIVE' });
+  it('has no username or รหัสบุคลากร among the identity fields HR can change, and knows ย้าย', () => {
+    expect(updatePersonIdentityInputSchema.parse({ employmentStatus: 'TRANSFERRED' })).toEqual({ employmentStatus: 'TRANSFERRED' });
+    expect(updatePersonIdentityInputSchema.safeParse({ employeeCode: 'E001' }).success).toBe(false);
     expect(updatePersonIdentityInputSchema.safeParse({ username: 'new.name' }).success).toBe(false);
   });
 });

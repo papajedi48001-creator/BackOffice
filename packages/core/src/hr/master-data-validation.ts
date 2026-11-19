@@ -12,7 +12,7 @@ export type MasterDataErrorCode =
 /** A validation problem. It names the cell, never its value, so national IDs cannot leak through the report. */
 export interface MasterDataError { file: MasterDataFile; row: number | null; column: string | null; code: MasterDataErrorCode; }
 export interface MasterDataFiles { organizations?: string; people?: string; }
-export type EmploymentStatus = 'ACTIVE' | 'INACTIVE';
+export type EmploymentStatus = 'ACTIVE' | 'INACTIVE' | 'TRANSFERRED';
 
 export interface ExistingOrganization { id: string; code: string | null; name: string; parentId: string | null; unitType?: OrganizationUnitType | null; headPersonId?: string | null; headEffectiveFrom?: Date | null; }
 export interface ExistingAssignment { organizationId: string; managerPersonId: string | null; effectiveFrom: Date; }
@@ -245,7 +245,7 @@ export function isValidNationalId(value: string): boolean {
 function parseStatus(value: string | undefined): EmploymentStatus | null {
   const normalised = (value ?? '').toUpperCase();
   if (!normalised) return 'ACTIVE';
-  return normalised === 'ACTIVE' || normalised === 'INACTIVE' ? normalised : null;
+  return normalised === 'ACTIVE' || normalised === 'INACTIVE' || normalised === 'TRANSFERRED' ? normalised : null;
 }
 
 /** Accepts YYYY-MM-DD or D/M/YYYY; a year after 2400 is read as Buddhist era. Returns Bangkok midnight as a UTC instant. */
