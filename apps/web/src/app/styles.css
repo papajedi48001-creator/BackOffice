@@ -1150,56 +1150,44 @@ h2.chat-window-title { cursor: default; }
 .money-nowrap { white-space: nowrap; }
 .money-code { display: inline-block; padding: 1px 6px; border-radius: 6px; background: var(--line-soft); font-family: ui-monospace, 'Cascadia Mono', monospace; font-size: .82rem; }
 .money-note { margin: 10px 0 0; color: var(--muted); font-size: .85rem; }
-/* กราฟแท่ง (components/bar-chart.tsx): value text on every bar; --bar-size is the share of the largest value. */
-.bar-chart { margin: 0; }
-.bar-chart.is-empty p { color: var(--muted); }
-.bar-chart ul { margin: 0; padding: 0; list-style: none; }
-.bar-chart-legend { display: flex; gap: 16px; margin-bottom: 10px; color: var(--muted); font-size: .85rem; }
+/* กราฟแท่ง (components/chart-frame.tsx, bar-chart.tsx, grouped-bar-chart.tsx), style chosen 2026-11-19: upright bars over a value axis
+   with a gridline per tick, names slanted 45° under the bars, sideways scroll when there are many. --bar-size is the share of the axis top. */
+.chart-frame { margin: 12px 0; --plot-h: 240px; --label-h: 100px; --axis-w: 56px; --label-w: 124px; --column-min: 30px; }
+.chart-frame.is-compact { margin: 6px 0 0; --plot-h: 130px; --label-h: 72px; --axis-w: 46px; --label-w: 82px; --column-min: 20px; }
+.bar-chart.is-empty p, .grouped-chart.is-empty p { color: var(--muted); }
+.chart-body { position: relative; padding-top: 8px; }
+.chart-scroll { overflow-x: auto; overflow-y: hidden; padding-left: calc(var(--axis-w) + 8px); }
+.chart-columns { display: flex; margin: 0; padding: 0; list-style: none; }
+.chart-columns > li { position: relative; flex: 1 0 var(--column-min); padding-bottom: var(--label-h); }
+.chart-plot { display: flex; gap: 2px; align-items: stretch; justify-content: center; height: var(--plot-h); padding: 0 12%;
+  background: linear-gradient(to top, var(--line-soft) 1px, transparent 1px) left bottom / 100% calc(var(--plot-h) / var(--chart-steps));
+  box-shadow: inset 0 1px var(--line-soft), inset 0 -1px var(--line-strong); }
+.chart-columns > li:hover .chart-plot { background-color: var(--line-soft); }
+.bar-chart-bar, .grouped-chart-bar { display: flex; flex: 1; flex-direction: column; justify-content: flex-end; min-width: 0; max-width: 56px; }
+.bar-chart-fill, .grouped-chart-fill, .grouped-chart-track { display: block; width: 100%; height: var(--bar-size); border-radius: 3px 3px 0 0; }
+.bar-chart-fill { background: var(--accent); }
+.bar-chart-bar.is-secondary .bar-chart-fill { background: var(--chart-series-2); }
+.bar-chart-fill.is-stacked { position: relative; overflow: hidden; }
+.bar-chart-stack { position: absolute; left: 0; right: 0; top: 0; height: var(--stack-size); background: var(--chart-series-2); }
+.bar-chart li.is-alert .bar-chart-bar.is-primary .bar-chart-fill { background: var(--chart-alert); }
+.grouped-chart-track { display: flex; flex-direction: column-reverse; overflow: hidden; }
+.grouped-chart-track .grouped-chart-fill { height: var(--bar-size); border-radius: 0; }
+.bar-chart-value, .grouped-chart-value { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.chart-label { position: absolute; top: calc(var(--plot-h) + 6px); right: 50%; max-width: var(--label-w); overflow: hidden; color: var(--ink-2); font-size: .74rem; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; transform: rotate(-45deg); transform-origin: right top; }
+.chart-frame.is-compact .chart-label { font-size: .66rem; }
+.bar-chart-label { display: flex; gap: 4px; }
+.chart-label-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.bar-chart-label small.bar-chart-alert { flex-shrink: 0; }
+.chart-label small.bar-chart-alert { color: var(--chart-alert-ink); font-size: inherit; font-weight: 700; }
+.chart-axis { position: absolute; top: 8px; left: 0; z-index: 1; width: var(--axis-w); height: var(--plot-h); margin: 0; padding: 0; list-style: none; background: var(--surface); }
+.chart-axis li { position: absolute; right: 6px; bottom: var(--tick-at); transform: translateY(50%); color: var(--muted); font-size: .7rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart-frame.is-compact .chart-axis li { font-size: .62rem; }
+.chart-axis-title { margin: 0; color: var(--muted); font-size: .8rem; text-align: center; }
+.bar-chart-legend, .grouped-chart-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-bottom: 6px; color: var(--muted); font-size: .82rem; }
 .bar-chart-legend span::before { content: ''; display: inline-block; width: 12px; height: 12px; margin-right: 6px; border-radius: 3px; vertical-align: -1px; background: var(--accent); }
 .bar-chart-legend .is-secondary::before { background: var(--chart-series-2); }
-.bar-chart-fill { display: block; border-radius: 6px; background: var(--accent); }
-.bar-chart-bar.is-secondary .bar-chart-fill { background: var(--chart-series-2); }
-/* ส่วนซ้อน (stack): the part of a bar in orange at its end; red bars (is-alert) carry their reason as text under the label. */
-.bar-chart-fill.is-stacked { position: relative; overflow: hidden; }
-.bar-chart-stack { position: absolute; background: var(--chart-series-2); }
-.bar-chart li.is-alert .bar-chart-bar.is-primary .bar-chart-fill { background: var(--chart-alert); }
-.bar-chart-label small.bar-chart-alert { color: var(--chart-alert-ink); }
-.bar-chart-label small.bar-chart-stack-note { color: var(--chart-stack-ink); }
-.bar-chart[data-orientation="vertical"] .bar-chart-stack { left: 0; right: 0; top: 0; height: var(--stack-size); }
-.bar-chart[data-orientation="horizontal"] .bar-chart-stack { top: 0; bottom: 0; right: 0; width: var(--stack-size); }
-.bar-chart-value { font-size: .8rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.bar-chart-label { font-size: .82rem; color: var(--ink-2); }
-.bar-chart-label small { display: block; color: var(--muted); }
-.bar-chart[data-orientation="vertical"] ul { display: flex; gap: 10px; align-items: flex-end; min-height: 260px; overflow-x: auto; padding-bottom: 4px; }
-.bar-chart[data-orientation="vertical"] li { display: flex; flex: 1 0 56px; flex-direction: column; align-items: center; gap: 6px; max-width: 120px; }
-.bar-chart[data-orientation="vertical"] .bar-chart-bars { display: flex; gap: 4px; align-items: flex-end; justify-content: center; width: 100%; height: 220px; }
-.bar-chart[data-orientation="vertical"] .bar-chart-bar { display: flex; flex: 1; flex-direction: column-reverse; align-items: center; gap: 4px; height: 100%; max-width: 48px; }
-.bar-chart[data-orientation="vertical"] .bar-chart-fill { width: 100%; height: var(--bar-size); min-height: 2px; border-radius: 6px 6px 0 0; }
-.bar-chart[data-orientation="vertical"] .bar-chart-label { text-align: center; }
-.bar-chart[data-orientation="horizontal"] ul { display: grid; gap: 8px; }
-.bar-chart[data-orientation="horizontal"] li { display: grid; grid-template-columns: minmax(120px, 34%) minmax(0, 1fr); gap: 10px; align-items: center; }
-.bar-chart[data-orientation="horizontal"] .bar-chart-label { order: -1; text-align: right; }
-.bar-chart[data-orientation="horizontal"] .bar-chart-bars { display: grid; gap: 3px; }
-.bar-chart[data-orientation="horizontal"] .bar-chart-bar { display: flex; align-items: center; gap: 8px; }
-.bar-chart[data-orientation="horizontal"] .bar-chart-fill { width: calc(var(--bar-size) * .82); min-width: 2px; height: 22px; border-radius: 0 6px 6px 0; }
-/* กราฟแท่งหลายชุด (components/grouped-bar-chart.tsx): one row per group, a bar per series with its value as text. */
-.grouped-chart { margin: 12px 0; }
-.grouped-chart.is-empty p { color: var(--muted); }
-.grouped-chart ul { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
-.grouped-chart li { display: grid; grid-template-columns: minmax(110px, 26%) minmax(0, 1fr); gap: 10px; align-items: center; }
-.grouped-chart-label { font-size: .82rem; color: var(--ink-2); }
-.grouped-chart-bars { display: grid; gap: 3px; }
-.grouped-chart-bar { display: flex; align-items: center; gap: 6px; min-width: 0; }
-.grouped-chart-fill, .grouped-chart-track { display: block; flex: 0 0 auto; width: calc(var(--bar-size) * .78); height: 12px; min-width: 2px; border-radius: 0 4px 4px 0; }
-.grouped-chart-track { display: flex; overflow: hidden; }
-.grouped-chart-track .grouped-chart-fill { width: var(--bar-size); border-radius: 0; height: 100%; min-width: 0; }
-.grouped-chart-value { font-size: .76rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.grouped-chart-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-bottom: 10px; color: var(--muted); font-size: .8rem; }
 .grouped-chart-swatch { display: inline-block; width: 11px; height: 11px; margin-right: 5px; border-radius: 3px; vertical-align: -1px; }
-.grouped-chart.is-compact ul { gap: 4px; }
-.grouped-chart.is-compact li { grid-template-columns: minmax(80px, 34%) minmax(0, 1fr); gap: 6px; }
-.grouped-chart.is-compact .grouped-chart-fill { height: 6px; }
-.grouped-chart.is-compact .grouped-chart-label, .grouped-chart.is-compact .grouped-chart-value { font-size: .7rem; }
+.grouped-chart.is-compact .grouped-chart-legend { font-size: .7rem; }
 .tone-0 { background: var(--accent); } .tone-1 { background: var(--chart-1); } .tone-2 { background: var(--chart-2); } .tone-3 { background: var(--chart-3); }
 .tone-4 { background: var(--chart-4); } .tone-5 { background: var(--chart-5); } .tone-6 { background: var(--chart-6); } .tone-7 { background: var(--chart-7); }
 .grouped-chart .is-faded { opacity: .45; }
@@ -1328,15 +1316,13 @@ h2.chat-window-title { cursor: default; }
 .fdh-kv dd { margin: 0; font-weight: 700; overflow-wrap: anywhere; }
 @media (max-width: 1200px) { .fdh-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 640px) { .fdh-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .fdh-pager { justify-content: flex-start; } }
-@media (max-width: 760px) { .grouped-chart li { grid-template-columns: 1fr; gap: 4px; } .nhso-fund-grid { grid-template-columns: 1fr; } }
+@media (max-width: 760px) { .nhso-fund-grid { grid-template-columns: 1fr; } }
 @media (max-width: 960px) { .money-kpis, .money-kpis.is-five { grid-template-columns: repeat(2, minmax(0, 1fr)); } .money-grid-2 { grid-template-columns: 1fr; } }
 @media (max-width: 640px) {
   .money-kpis { gap: 10px; }
   .money-kpi { padding: 12px; }
   .money-kpi strong { font-size: 1.2rem; }
   .money-export { margin-left: 0; }
-  .bar-chart[data-orientation="horizontal"] li { grid-template-columns: 1fr; gap: 4px; }
-  .bar-chart[data-orientation="horizontal"] .bar-chart-label { order: 0; text-align: left; }
 }
 @media (prefers-reduced-motion: reduce) { .money-tile { transition: none; } .money-tile:hover { transform: none; } }
 /* ระบบลงเวลา */

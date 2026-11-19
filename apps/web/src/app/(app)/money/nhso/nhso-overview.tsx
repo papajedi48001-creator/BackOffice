@@ -46,7 +46,7 @@ export function NhsoOverview({ datasets, dash }: { datasets: readonly NhsoHospit
           <span className="nhso-badge">{card.share.toFixed(1)}% ของยอดรวม</span>
           {card.change != null && <span className={`nhso-badge ${card.change >= 0 ? 'is-up' : 'is-down'}`}>{card.change >= 0 ? '▲' : '▼'} {Math.abs(card.change).toFixed(1)}% เทียบ {first}</span>}
         </div>
-        <GroupedBarChart compact ariaLabel={`${card.key} เทียบรายโรงพยาบาล`} series={series} valueFormat={formatMoney}
+        <GroupedBarChart compact axisTitle="เทียบรายโรงพยาบาล" ariaLabel={`${card.key} เทียบรายโรงพยาบาล`} series={series} valueFormat={formatMoney}
           groups={card.hospitals.map((hospital) => ({ label: shortHospital(hospital.name), title: hospital.name, values: shownYears.map((year) => hospital.byYear[year] || 0) }))} />
       </li>)}
     </ol>}

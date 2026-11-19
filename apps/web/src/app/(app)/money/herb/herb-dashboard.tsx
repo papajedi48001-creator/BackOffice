@@ -94,8 +94,8 @@ function HerbDrugChart({ drugs }: { drugs: readonly HerbDrug[] }) {
       </div>
     </div>
     {metric === 'value'
-      ? <BarChart ariaLabel="มูลค่าการจ่ายยาสมุนไพร แยกรายยา" orientation="horizontal" valueFormat={ttmBaht} legend={['มูลค่าจริง (บาท)', 'ต้นทุน (บาท)']} bars={bars} />
-      : <BarChart ariaLabel="จำนวนครั้งที่จ่ายยาสมุนไพร แยกรายยา" orientation="horizontal" valueFormat={herbCount} bars={bars} />}
+      ? <BarChart ariaLabel="มูลค่าการจ่ายยาสมุนไพร แยกรายยา" valueFormat={ttmBaht} legend={['มูลค่าจริง (บาท)', 'ต้นทุน (บาท)']} bars={bars} />
+      : <BarChart ariaLabel="จำนวนครั้งที่จ่ายยาสมุนไพร แยกรายยา" valueFormat={herbCount} bars={bars} />}
   </section>;
 }
 

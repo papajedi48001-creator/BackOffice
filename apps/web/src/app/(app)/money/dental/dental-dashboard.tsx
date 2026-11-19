@@ -63,7 +63,7 @@ function DentalBody({ outcome, group, period, groupLabel, showConnectionLink }: 
     </section>
     <section className="money-card">
       <h3>มูลค่า{period === 'month' ? 'รายเดือน' : 'รายวัน'}</h3>
-      <BarChart ariaLabel={`มูลค่า${period === 'month' ? 'รายเดือน' : 'รายวัน'}`} orientation="vertical" legend={['ค่ารักษารวม', 'ลูกหนี้']} valueFormat={formatWhole} bars={summary.byPeriod.map((row) => ({ label: periodLabel(row.key, period), value: row.total, secondary: row.claim, note: `${formatWhole(row.patients)} คน (${formatWhole(row.visits)} visit)` }))} />
+      <BarChart ariaLabel={`มูลค่า${period === 'month' ? 'รายเดือน' : 'รายวัน'}`} legend={['ค่ารักษารวม', 'ลูกหนี้']} valueFormat={formatWhole} bars={summary.byPeriod.map((row) => ({ label: periodLabel(row.key, period), value: row.total, secondary: row.claim, note: `${formatWhole(row.patients)} คน (${formatWhole(row.visits)} visit)` }))} />
     </section>
     <div className="money-grid-2">
       <section className="money-card">

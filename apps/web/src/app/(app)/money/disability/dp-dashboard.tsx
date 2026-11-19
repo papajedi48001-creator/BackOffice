@@ -133,13 +133,13 @@ export function DpDashboard({ canManage }: { canManage: boolean }) {
           {view.services.length === 0 && <tr><td colSpan={8} className="fdh-muted">ไม่มีบริการในช่วงเวลา/ตัวกรองนี้</td></tr>}
           {view.services.length > 1 && <tr className="fdh-sum"><td>{`รวม ${int(view.services.length)} บริการ`}</td><td></td>{row(view.total)}</tr>}
         </tbody></table></div>
-        <BarChart ariaLabel="กราฟรวมราคาที่พึงเบิกได้รายบริการฟื้นฟู" orientation="horizontal" valueFormat={money} bars={view.services.map((r) => ({ label: r.service, value: r.eligible }))} />
+        <BarChart ariaLabel="กราฟรวมราคาที่พึงเบิกได้รายบริการฟื้นฟู" valueFormat={money} bars={view.services.map((r) => ({ label: r.service, value: r.eligible }))} />
         <p className="money-note">ขอเบิก = คอลัมน์ AE &quot;รวมราคาที่ขอเบิก&quot; · พึงเบิก = คอลัมน์ AF &quot;รวมราคาที่พึงเบิกได้&quot; ไม่รวมแถวที่ช่องสถานะมีรหัส (ติดสถานะ ดูรหัสได้ในแท็บด้านล่าง) · กราฟแสดงรวมราคาที่พึงเบิกได้ · คน = นับเลขบัตรประชาชนไม่ซ้ำ</p>
       </section>
 
       <section className="money-card">
         <h3>{`แนวโน้ม${daily ? 'รายวัน' : 'รายเดือน'}`} <small>{state.mode === 'day' ? 'ทั้งเดือนของวันที่เลือก · ' : ''}{`กดวันที่หรือเดือนในตารางเพื่อดู${daily ? 'วันนั้น' : 'เดือนนั้น'}`}</small></h3>
-        <BarChart ariaLabel="กราฟจำนวนครั้งและราคาพึงเบิกตามช่วงเวลา" orientation="vertical" valueFormat={int}
+        <BarChart ariaLabel="กราฟจำนวนครั้งและราคาพึงเบิกตามช่วงเวลา" valueFormat={int}
           bars={view.trend.buckets.map((b) => ({ label: dpTrendLabel(view.trend.unit, b.key), sublabel: `พึงเบิก ${money(b.eligible)}`, value: b.visits }))} />
         <details className="dp-trend-table"><summary>ตารางแนวโน้ม</summary>
           <div className="money-table-wrap"><table aria-label="ตารางแนวโน้ม"><thead><tr><th>{daily ? 'วันที่' : 'เดือน'}</th><th className="money-number">ครั้ง</th><th className="money-number">ขอเบิก</th><th className="money-number">พึงเบิก</th></tr></thead><tbody>

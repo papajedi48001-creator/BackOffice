@@ -96,11 +96,11 @@ function TtmBody({ summary: s, start, end, single, afterFrom, query }: { summary
     <div className="money-grid-2">
       <section className="money-card">
         <h3>รวมค่าบริการแยกตามสิทธิ</h3>
-        <BarChart ariaLabel="รวมค่าบริการแยกตามสิทธิ" orientation="horizontal" valueFormat={ttmBaht} bars={s.groups.filter((group) => group.total > 0).map((group) => ({ label: group.name, sublabel: `(${ttmNum(group.patients)} คน)`, value: group.total }))} />
+        <BarChart ariaLabel="รวมค่าบริการแยกตามสิทธิ" valueFormat={ttmBaht} bars={s.groups.filter((group) => group.total > 0).map((group) => ({ label: group.name, sublabel: `(${ttmNum(group.patients)} คน)`, value: group.total }))} />
       </section>
       <section className="money-card">
         <h3>ประเภทบริการ <small>(จำนวนรายการ)</small></h3>
-        <BarChart ariaLabel="ประเภทบริการ" orientation="horizontal" valueFormat={ttmNum} bars={s.byType.slice(0, 12).map((type) => ({ label: type.name, sublabel: `${ttmNum(type.patients)} คน`, value: type.count }))} />
+        <BarChart ariaLabel="ประเภทบริการ" valueFormat={ttmNum} bars={s.byType.slice(0, 12).map((type) => ({ label: type.name, sublabel: `${ttmNum(type.patients)} คน`, value: type.count }))} />
       </section>
     </div>
 

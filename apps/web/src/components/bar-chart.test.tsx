@@ -5,30 +5,40 @@ import { BarChart } from './bar-chart';
 const format = (value: number) => value.toLocaleString('th-TH', { maximumFractionDigits: 0 });
 const bars = (count: number) => Array.from({ length: count }, (_, index) => ({ label: `กลุ่ม ${index + 1}`, sublabel: `(${index + 1} คน)`, value: (index + 1) * 1000 }));
 
-it('draws a few bars upright with every value as text', () => {
-  render(<BarChart bars={bars(3)} valueFormat={format} ariaLabel="ค่ารักษารวม" />);
+it('draws bars upright over a value axis, keeping every value as text for screen readers and the tooltip', () => {
+  render(<BarChart bars={bars(3)} valueFormat={format} ariaLabel="ค่ารักษารวม" axisTitle="เทียบรายกลุ่ม" />);
   const chart = screen.getByRole('figure', { name: 'ค่ารักษารวม' });
-  expect(chart).toHaveAttribute('data-orientation', 'vertical');
-  expect(within(chart).getAllByRole('listitem')).toHaveLength(3);
-  for (const text of ['1,000', '2,000', '3,000', 'กลุ่ม 2', '(2 คน)']) expect(within(chart).getByText(text)).toBeInTheDocument();
+  const items = within(chart).getAllByRole('listitem');
+  expect(items).toHaveLength(3);
+  for (const [index, text] of ['1,000', '2,000', '3,000'].entries()) expect(within(items[index]!).getByText(text)).toBeInTheDocument();
+  for (const text of ['กลุ่ม 2', '(2 คน)']) expect(within(items[1]!).getByText(text)).toBeInTheDocument();
+  expect(items[1]).toHaveAttribute('title', 'กลุ่ม 2 (2 คน): 2,000');
+  const axis = chart.querySelector('.chart-axis')!;
+  expect(axis).toHaveAttribute('aria-hidden', 'true');
+  expect([...axis.querySelectorAll('li')].map((tick) => tick.textContent)).toEqual(['0', '500', '1,000', '1,500', '2,000', '2,500', '3,000']);
+  expect(within(chart).getByText('เทียบรายกลุ่ม')).toBeInTheDocument();
 });
 
-it('lays more than 8 bars on their side', () => {
-  render(<BarChart bars={bars(9)} valueFormat={format} ariaLabel="ค่ารักษารวม" />);
-  expect(screen.getByRole('figure', { name: 'ค่ารักษารวม' })).toHaveAttribute('data-orientation', 'horizontal');
+it('keeps many bars upright', () => {
+  render(<BarChart bars={bars(20)} valueFormat={format} ariaLabel="ค่ารักษารวม" />);
+  const chart = screen.getByRole('figure', { name: 'ค่ารักษารวม' });
+  expect(chart).not.toHaveAttribute('data-orientation');
+  expect(chart).toHaveClass('chart-frame');
 });
 
-it('sizes each bar against the largest value', () => {
-  render(<BarChart bars={[{ label: 'ก', value: 50 }, { label: 'ข', value: 200 }]} valueFormat={format} ariaLabel="กราฟ" />);
+it('sizes each bar against the top of the value axis', () => {
+  render(<BarChart bars={[{ label: 'ก', value: 50 }, { label: 'ข', value: 180 }]} valueFormat={format} ariaLabel="กราฟ" />);
   const fills = screen.getByRole('figure', { name: 'กราฟ' }).querySelectorAll<HTMLElement>('.bar-chart-fill');
-  expect([...fills].map((fill) => fill.style.getPropertyValue('--bar-size'))).toEqual(['25%', '100%']);
+  expect([...fills].map((fill) => fill.style.getPropertyValue('--bar-size'))).toEqual(['25%', '90%']);
 });
 
 it('shows a second series beside the first with a legend', () => {
   render(<BarChart bars={[{ label: '1 พ.ย.', value: 800, secondary: 300 }]} legend={['ค่ารักษารวม', 'ลูกหนี้']} valueFormat={format} ariaLabel="แนวโน้ม" />);
   const chart = screen.getByRole('figure', { name: 'แนวโน้ม' });
-  expect(within(chart).getByText('800')).toBeInTheDocument();
-  expect(within(chart).getByText('300')).toBeInTheDocument();
+  const bar = within(chart).getByRole('listitem');
+  expect(within(bar).getByText('800')).toBeInTheDocument();
+  expect(within(bar).getByText('300')).toBeInTheDocument();
+  expect(bar).toHaveAttribute('title', '1 พ.ย.: ค่ารักษารวม 800 · ลูกหนี้ 300');
   expect(chart.querySelector('figcaption')).toHaveTextContent('ค่ารักษารวมลูกหนี้');
 });
 
@@ -48,7 +58,7 @@ it('marks an alert bar and says so in text, not colour alone', () => {
 it('stacks a part of the bar in its own colour, with the total as the value and the part in a legend', () => {
   render(<BarChart bars={[{ label: 'ก', value: 1000, stack: 250, stackNote: 'ฟันปลอม 250' }]} stackLegend={['ลูกหนี้ (ไม่รวมฟันปลอม)', 'ลูกหนี้งานฟันปลอม']} valueFormat={format} ariaLabel="กราฟ" />);
   const chart = screen.getByRole('figure', { name: 'กราฟ' });
-  expect(within(chart).getByText('1,000')).toBeInTheDocument();
+  expect(within(within(chart).getByRole('listitem')).getByText('1,000')).toBeInTheDocument();
   expect(within(chart).getByText('ฟันปลอม 250')).toBeInTheDocument();
   expect(chart.querySelector<HTMLElement>('.bar-chart-stack')!.style.getPropertyValue('--stack-size')).toBe('25%');
   expect(chart.querySelector('figcaption')).toHaveTextContent('ลูกหนี้ (ไม่รวมฟันปลอม)ลูกหนี้งานฟันปลอม');
