@@ -98,7 +98,7 @@ export function PeopleTable({ people, canExport = false, actions }: { people: Di
         <td>{person.nationalIdMasked ?? t('notAssigned')}</td>
         <td><span className={`status-chip status-${person.employmentStatus.toLowerCase()}`}>{employmentStatusLabel(person.employmentStatus)}</span></td>
         <td><span className="two-factor"><TwoFactorLogo kind="provider" linked={person.providerLinked} /><TwoFactorLogo kind="thaid" linked={person.thaidLinked} /></span></td>
-        <td className="row-actions"><Link className="icon-button" href={`/hr/people/${person.id}`} aria-label={`${t('editItem')} ${person.displayName ?? person.employeeCode ?? ''}`.trim()} scroll={false}>
+        <td className="row-actions"><Link className="icon-button" href={`/hr/people?edit=${encodeURIComponent(person.id)}`} aria-label={`${t('editItem')} ${person.displayName ?? person.employeeCode ?? ''}`.trim()} scroll={false}>
           <svg viewBox="0 0 24 24" width="17" height="17" {...icon}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
         </Link></td>
       </tr>)}</tbody>

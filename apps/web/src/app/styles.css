@@ -1623,3 +1623,7 @@ h2.chat-window-title { cursor: default; }
 .row-actions { width: 1%; white-space: nowrap; text-align: right; }
 .icon-button { display: inline-grid; place-items: center; width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--accent); }
 .icon-button:hover, .icon-button:focus-visible { border-color: var(--accent); outline: none; }
+/* popup แก้ไขบุคลากร from the pencil: wide enough for the profile boxes, scrolling inside. */
+.route-dialog { width: min(1100px, calc(100vw - 32px)); max-height: calc(100vh - 32px); }
+.route-dialog .form-dialog-body { overflow: auto; max-height: calc(100vh - 200px); }
+.person-editor { display: grid; gap: 16px; min-width: 0; }

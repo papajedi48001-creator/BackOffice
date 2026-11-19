@@ -52,7 +52,7 @@ describe('PeopleTable', () => {
     const links = within(row).getAllByRole('link');
     expect(links).toHaveLength(1);
     expect(links[0]).toHaveAccessibleName('แก้ไข นางมาลี ดีงาม');
-    expect(links[0]).toHaveAttribute('href', '/hr/people/p1');
+    expect(links[0]).toHaveAttribute('href', '/hr/people?edit=p1');
     expect(row.lastElementChild).toContainElement(links[0]!);
   });
 
