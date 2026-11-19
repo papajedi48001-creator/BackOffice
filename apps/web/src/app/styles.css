@@ -1585,7 +1585,7 @@ h2.chat-window-title { cursor: default; }
 .imc-switch input:focus-visible { outline: 3px solid var(--accent-tint); outline-offset: 2px; }
 .imc-hidden-note { margin: 10px 0 0; color: var(--muted); font-size: .85rem; }
 .imc-range { position: sticky; top: calc(var(--topbar-height) + 6px); z-index: 20; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-bottom: 14px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-md); }
-.imc-range > span { color: var(--muted); }
+.imc-range > label { color: var(--ink); font-weight: 700; }
 .imc-range-shortcuts { display: flex; flex-wrap: wrap; gap: 6px; }
 .app-main .imc-range-shortcuts button { min-height: 36px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink); font-size: .85rem; font-weight: 400; }
 .app-main .imc-range-shortcuts button:hover:not(:disabled) { background: var(--accent-soft); }
