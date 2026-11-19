@@ -16,7 +16,7 @@ const overview: ImcOverview & { updatedAt: string } = {
   ],
   lines: [{ date: '2026-10-01', code: 'H9339.1', claim: 450 }, { date: '2026-11-01', code: 'H9340', claim: 200 }],
   services: [{ code: 'H9339.1', name: 'กายภาพบำบัด' }, { code: 'H9340', name: 'ให้บริการIMCที่บ้าน' }],
-  totals: { people: 4, visits: 68, claim: 25600, pending: 3, paid: 8950, noRep: 16650, repOutside: 0, diseases: [['Stroke', 3], ['TBI', 1]] }
+  totals: { people: 4, visits: 68, claim: 25600, pending: 3, paid: 8950, noRep: 16650, repOutside: 0, diseases: [['Stroke', 3], ['Traumatic brain injury (TBI)', 1]] }
 };
 const serve = (body: unknown, status = 200) => vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(body), { status })));
 const rows = (table: HTMLElement) => within(table).getAllByRole('row').slice(1) as HTMLTableRowElement[];

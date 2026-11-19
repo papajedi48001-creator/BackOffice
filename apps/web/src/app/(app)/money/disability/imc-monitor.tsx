@@ -14,6 +14,8 @@ const FILTERS: [Filter, string][] = [['all', 'ทั้งหมด'], ['soon', 
 const UNITS: [ImcUnit, string][] = [['day', 'รายวัน'], ['month', 'รายเดือน'], ['year', 'รายปี']];
 const RING = 2 * Math.PI * 31;
 const DAY = 86_400_000;
+/** "Traumatic brain injury (TBI)" → "TBI" for the summary card. */
+const short = (disease: string) => /\(([^)]+)\)\s*$/.exec(disease)?.[1] ?? disease;
 const stamp = new Intl.DateTimeFormat('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
 function Segmented<T extends string>({ label, items, value, onChange }: { label: string; items: [T, string][]; value: T; onChange: (value: T) => void }) {
@@ -62,7 +64,7 @@ export function ImcMonitor({ canManage, today = bangkokToday() }: { canManage: b
 
     {totals && persons.length > 0 && <>
       <section className="money-kpis imc-kpis" aria-label="สรุป IMC">
-        <div className="money-kpi"><span>ทะเบียน IMC</span><strong>{int(totals.people)} <em>คน</em></strong><small>{totals.diseases.map(([name, count]) => `${name} ${int(count)}`).join(' · ')}</small></div>
+        <div className="money-kpi"><span>ทะเบียน IMC</span><strong>{int(totals.people)} <em>คน</em></strong><small>{totals.diseases.map(([name, count]) => `${short(name)} ${int(count)}`).join(' · ')}</small></div>
         <div className="money-kpi"><span>เรียกเก็บ IMC</span><strong>{money(totals.claim)} <em>บาท</em></strong><small>{`${int(totals.visits)} ครั้ง${totals.pending ? ` (รอประมวลผล ${int(totals.pending)})` : ''}`}</small></div>
         <div className="money-kpi is-accent"><span>REP</span><strong>{money(totals.paid)} <em>บาท</em></strong><small>{`ยังไม่มี REP ${money(totals.noRep)} บาท`}{totals.repOutside ? ` · ${int(totals.repOutside)} รายการไม่อยู่ในทะเบียน` : ''}</small></div>
         <div className="money-kpi"><span>ใกล้ครบกำหนด (≤ 30 วัน)</span><strong>{int(persons.filter((person) => person.remain.group === 'soon').length)} <em>คน</em></strong><small>นัดให้บริการก่อนครบกำหนด</small></div>
