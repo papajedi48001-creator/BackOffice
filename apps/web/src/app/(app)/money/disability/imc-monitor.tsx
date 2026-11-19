@@ -92,10 +92,11 @@ export function ImcMonitor({ canManage, today = bangkokToday() }: { canManage: b
       <p>{canManage ? 'กด "นำเข้าไฟล์ IMC" แล้วเลือกไฟล์ทะเบียนคนไข้ IMC (.csv) และไฟล์ REP (.xlsx)' : 'ติดต่อผู้ดูแล Smart Money เพื่อนำเข้าไฟล์ IMC'}</p></div>}
 
     {totals && persons.length > 0 && <>
-      <div className="imc-range" role="group" aria-label="ช่วงวันที่" style={stickTop === undefined ? undefined : { top: stickTop }}>
-        <ThaiDateInput aria-label="ตั้งแต่วันที่" value={from} max={to} onChange={(day) => { if (day) setPicked({ from: day, to }); }} />
-        <span>ถึง</span>
-        <ThaiDateInput aria-label="ถึงวันที่" value={to} min={from} onChange={(day) => { if (day) setPicked({ from, to: day }); }} />
+      <div className="imc-range search-card" role="group" aria-label="ช่วงวันที่" style={stickTop === undefined ? undefined : { top: stickTop }}>
+        <label htmlFor="imc-range-from">ตั้งแต่วันที่</label>
+        <ThaiDateInput id="imc-range-from" value={from} max={to} onChange={(day) => { if (day) setPicked({ from: day, to }); }} />
+        <label htmlFor="imc-range-to">ถึงวันที่</label>
+        <ThaiDateInput id="imc-range-to" value={to} min={from} onChange={(day) => { if (day) setPicked({ from, to: day }); }} />
         <div className="imc-range-shortcuts" role="group" aria-label="ช่วงลัด">
           {presets.map((preset) => { const on = preset.from === from && preset.to === to;
             return <button key={preset.key} type="button" className={on ? 'is-active' : ''} aria-pressed={on} onClick={() => setPicked({ from: preset.from, to: preset.to })}>{preset.label}</button>; })}
