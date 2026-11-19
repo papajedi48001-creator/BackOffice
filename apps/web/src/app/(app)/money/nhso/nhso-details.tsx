@@ -33,7 +33,7 @@ function FundSection({ datasets, dash, funds }: { datasets: readonly NhsoHospita
         <select id={`${id}-fund`} value={picked ?? ALL} onChange={(event) => setFund(event.target.value)}><option value={ALL}>{`ทุก${dash.keyLabel}รวมกัน`}</option>{funds.map((key) => <option key={key} value={key}>{fundName(key)}</option>)}</select></span>
       <MetricSelect label="เรียงโรงพยาบาลตาม" metrics={dash.metrics} value={metric} onChange={setMetric} />
     </div>
-    <div className="money-table-wrap"><table aria-label="ยอดเงินตามกองทุน เทียบทุกโรงพยาบาล">
+    <div className="money-table-wrap is-matrix"><table aria-label="ยอดเงินตามกองทุน เทียบทุกโรงพยาบาล">
       <thead><tr><th>โรงพยาบาล</th><th className="money-number">จำนวนรายการ</th>{dash.metrics.map((column) => <th key={column} className="money-number">{column}</th>)}</tr></thead>
       <tbody>{view.table.map((row) => <tr key={row.name}><td>{row.name}</td><td className="money-number">{row.count ? row.count : <span className="nhso-missing">ไม่มี</span>}</td>{dash.metrics.map((column) => <td key={column} className="money-number">{formatMoney(row.sums[column]!)}</td>)}</tr>)}</tbody>
       <tfoot><tr><th>รวม {view.table.length} โรงพยาบาล</th><th className="money-number">{view.table.reduce((sum, row) => sum + row.count, 0)}</th>{dash.metrics.map((column) => <th key={column} className="money-number">{formatMoney(view.totals[column]!)}</th>)}</tr></tfoot>
@@ -74,7 +74,7 @@ function MultiSection({ datasets, dash }: { datasets: readonly NhsoHospital[]; d
     <GroupedBarChart ariaLabel="รายรับแยกรายกองทุน" series={series} stacked={stacked} valueFormat={formatMoney}
       emptyText={!picked.length ? 'คลิกเลือกกองทุนด้านบนอย่างน้อย 1 กองทุน' : 'เลือกปีงบอย่างน้อย 1 ปี'}
       groups={shownYears.length ? rows.map((row) => ({ label: shortHospital(row.name), title: row.name, values: picked.flatMap((key) => shownYears.map((year) => row.cells[`${key}|${year}`] || 0)) })) : []} />
-    <div className="money-table-wrap"><table aria-label="รายรับแยกรายกองทุน">
+    <div className="money-table-wrap is-matrix"><table aria-label="รายรับแยกรายกองทุน">
       <thead><tr><th>โรงพยาบาล</th>{columns.map(([key, label]) => <th key={key} className="money-number">{label}</th>)}</tr></thead>
       <tbody>{rows.map((row) => <tr key={row.name}><td>{row.name}</td>{columns.map(([key]) => <td key={key} className="money-number">{key.startsWith('T|') ? <b>{formatMoney(row.cells[key] || 0)}</b> : formatMoney(row.cells[key] || 0)}</td>)}</tr>)}</tbody>
       <tfoot><tr><th>รวม {rows.length} โรงพยาบาล</th>{columns.map(([key]) => <th key={key} className="money-number">{formatMoney(rows.reduce((sum, row) => sum + (row.cells[key] || 0), 0))}</th>)}</tr></tfoot>
@@ -108,7 +108,7 @@ function YearSection({ datasets, dash, choice, setChoice, toggleYear, allYears }
     </div>
     <GroupedBarChart ariaLabel="เทียบรายกองทุน ตามปีงบประมาณ" series={yearSeries(choice.years, yearLabel)} valueFormat={formatMoney} emptyText="เลือกปีงบอย่างน้อย 1 ปี"
       groups={choice.years.length ? view.rows.map((row) => ({ label: fundName(row.key), values: choice.years.map((year) => row.byYear[year]!) })) : []} />
-    <div className="money-table-wrap"><table aria-label="เทียบรายกองทุน ตามปีงบประมาณ">
+    <div className="money-table-wrap is-matrix"><table aria-label="เทียบรายกองทุน ตามปีงบประมาณ">
       <thead><tr><th>{dash.keyLabel}</th>{choice.years.map((year) => <th key={year} className="money-number">ปีงบ {year}</th>)}{many && <><th className="money-number">ผลต่าง {first}→{last}</th><th className="money-number">เปลี่ยนแปลง</th></>}</tr></thead>
       <tbody>{view.rows.map((row) => <tr key={row.key}><td>{fundName(row.key)}</td>{choice.years.map((year) => <td key={year} className="money-number">{formatMoney(row.byYear[year]!)}</td>)}{diffCells(row.byYear)}</tr>)}</tbody>
       <tfoot><tr><th>รวม</th>{choice.years.map((year) => <th key={year} className="money-number">{formatMoney(view.totals[year]!)}</th>)}{diffCells(view.totals)}</tr></tfoot>

@@ -38,6 +38,9 @@ describe('NhsoDashboard', () => {
     expect(within(details).getByText('โรงพยาบาล', { selector: 'dt' }).nextSibling).toHaveTextContent('3');
     const fundTable = within(details).getByRole('table', { name: 'ยอดเงินตามกองทุน เทียบทุกโรงพยาบาล' });
     expect(within(fundTable).getByText('รวม 3 โรงพยาบาล').parentElement).toHaveTextContent('345.00');
+    for (const name of ['ยอดเงินตามกองทุน เทียบทุกโรงพยาบาล', 'รายรับแยกรายกองทุน', 'เทียบรายกองทุน ตามปีงบประมาณ']) {
+      expect(within(details).getByRole('table', { name }).parentElement, name).toHaveClass('money-table-wrap', 'is-matrix');
+    }
     const tabs = within(details).getAllByRole('tab').map((tab) => tab.textContent);
     expect(tabs).toEqual(['สรุป (3)', 'เทียบยอด คงเหลือ (4)', 'แถวที่ขาด (2)', 'ตารางมี-ไม่มี (3)', 'ค่าไม่ตรงกัน (2)', 'ยอดตามกองทุน-รพ (5)', 'เทียบปีงบ (3)']);
     fireEvent.click(within(details).getByRole('tab', { name: 'แถวที่ขาด (2)' }));
