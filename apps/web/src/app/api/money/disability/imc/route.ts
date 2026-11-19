@@ -16,7 +16,7 @@ export async function GET(request: Request): Promise<Response> {
   return withSessionAndDatabase(request, async (session, database) => {
     const result = await service(database).overview(session);
     if (!result.ok) return failed(result);
-    return NextResponse.json({ updatedAt: result.updatedAt, persons: result.persons, lines: result.lines, services: result.services, totals: result.totals }, { headers: { 'cache-control': 'no-store' } });
+    return NextResponse.json({ updatedAt: result.updatedAt, persons: result.persons, lines: result.lines, reps: result.reps, services: result.services, totals: result.totals }, { headers: { 'cache-control': 'no-store' } });
   });
 }
 

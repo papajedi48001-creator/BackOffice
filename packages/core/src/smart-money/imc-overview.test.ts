@@ -26,11 +26,19 @@ describe('buildImcOverview', () => {
   it('sums the totals, counts lines still waiting and REP lines outside the register, and keeps no HN', () => {
     expect(overview.totals).toEqual({ people: 2, visits: 3, claim: 1100, pending: 1, paid: 750, noRep: 650, repOutside: 1, diseases: [['Stroke', 1], ['TBI', 1]] });
     expect(overview.services).toEqual([{ code: 'H9339.1', name: 'กายภาพบำบัด' }, { code: 'H9340', name: 'ให้บริการIMCที่บ้าน' }]);
-    expect(overview.lines).toEqual([{ date: '2025-10-27', code: 'H9339.1', claim: 450 }, { date: '2025-11-03', code: 'H9340', claim: 200 }, { date: '2025-12-01', code: 'H9339.1', claim: 450 }]);
+    expect(overview.lines).toEqual([
+      { person: 2, date: '2025-10-27', code: 'H9339.1', claim: 450, pending: false, repNo: 'DDSA1, DDSA2' },
+      { person: 2, date: '2025-11-03', code: 'H9340', claim: 200, pending: true, repNo: '' },
+      { person: 1, date: '2025-12-01', code: 'H9339.1', claim: 450, pending: false, repNo: '' }
+    ]);
+    expect(overview.reps).toEqual([
+      { person: 2, date: '2025-10-27', repNo: 'DDSA1', paid: 0 }, { person: 2, date: '2025-10-27', repNo: 'DDSA2', paid: 450 },
+      { person: null, date: '2025-10-27', repNo: 'DDSA1', paid: 300 }
+    ]);
     expect(JSON.stringify(overview)).not.toMatch(/"hn"|"A"|"B"|"Z"/);
   });
 
   it('is empty with no files', () => {
-    expect(buildImcOverview([], [])).toEqual({ persons: [], lines: [], services: [], totals: { people: 0, visits: 0, claim: 0, pending: 0, paid: 0, noRep: 0, repOutside: 0, diseases: [] } });
+    expect(buildImcOverview([], [])).toEqual({ persons: [], lines: [], reps: [], services: [], totals: { people: 0, visits: 0, claim: 0, pending: 0, paid: 0, noRep: 0, repOutside: 0, diseases: [] } });
   });
 });

@@ -69,3 +69,20 @@ Component split, CSS names (reuse Smart Money style 2 classes), chart day range 
 - เรียกเก็บเทียบ REP and the KPI cards keep everyone: money already claimed still counts.
 - Choosing the ครบกำหนดแล้ว filter turns the switch off, since that asks to see them. (Builder's call.)
 - "เรียกเก็บ … ครั้ง" counts register lines (one รหัสบริการ on one date); unchanged.
+
+## Follow-up: date range and claim lines per person (wasan, 2026-11-19, แบบ 3 from three mockups)
+
+- A bar "ช่วงวันที่" sticks to the top of Monitor IMC: ตั้งแต่วันที่ – ถึงวันที่ in `ThaiDateInput`, plus shortcuts
+  ทั้งหมด / วันนี้ / 7 วันล่าสุด / เดือนนี้ / เดือนก่อน / ปีงบนี้ / ปีงบก่อน. It starts on ทั้งหมด (first service date to today or the
+  latest service date, whichever is later), so the page opens as before.
+- The range filters by วันที่รับบริการ: the เรียกเก็บ and REP summary cards, the chart, the counts and amounts in
+  รายละเอียดรายบุคคล and เรียกเก็บเทียบ REP. ทะเบียน IMC, ใกล้ครบกำหนด and the patient cards stay as of today.
+- The chart has its own "กราฟราย" toggle: อัตโนมัติ (รายวัน up to 62 days, else รายเดือน) / รายวัน / รายเดือน / รายปีงบ.
+  It changes only the bars, never the range. Every day, month or ปีงบ inside the range is drawn, empty ones too.
+- Clicking a row in รายละเอียดรายบุคคล opens that person's register lines in the range under it (newest first): วันที่รับบริการ,
+  รหัสบริการ, บริการ, เรียกเก็บ, สถานะ (รอประมวลผล), REP No. or "ยังไม่มี REP", with a total row. Clicking again closes it.
+- The overview gives each chart line its person id, REP numbers of the same HN and date, and whether it is still waiting; it adds
+  REP lines as {person (null when outside the register), date, repNo, paid}. Still no HN, name or national ID per line.
+- Approaches: (1) filter in the browser from the one overview (chosen: the whole register is a few thousand lines at most);
+  (2) a server query per range: more round trips and a second API for no gain at this size.
+- Dates in Monitor IMC read "16 พ.ย. 2569" (wasan, 2026-11-19: every date the system shows uses this form).

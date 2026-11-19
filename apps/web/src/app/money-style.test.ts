@@ -58,5 +58,10 @@ describe('Monitor IMC hide switch', () => {
     expect(rule('.imc-switch input')).toMatch(/appearance: none/);
     expect(rule('.imc-switch input:checked')).toMatch(/background: var\(--accent\)/);
     expect(rule('.imc-switch input:checked::after')).toMatch(/transform: translateX/);
+    expect(rule('.imc-range')).toMatch(/position: sticky/);
+    expect(rule('.app-main .imc-range-shortcuts button.is-active')).toMatch(/background: var\(--brand-deep\)/);
+    expect(rule('.imc-row')).toMatch(/cursor: pointer/);
+    expect(rule('.imc-row-toggle[aria-expanded="true"]::before')).toMatch(/rotate\(90deg\)/);
+    expect(css).toMatch(/\n\.imc-lines \{[^}]*animation: rise-in/);
   });
 });

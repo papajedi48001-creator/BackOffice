@@ -29,11 +29,11 @@ describe('Monitor IMC route', () => {
 
   it('gives the overview without caching, and 403 when the service refuses', async () => {
     ready(manager);
-    mocks.overview.mockResolvedValue({ ok: true, updatedAt: null, persons: [], lines: [], services: [], totals: {} });
+    mocks.overview.mockResolvedValue({ ok: true, updatedAt: null, persons: [], lines: [], reps: [{ person: null, date: '2026-10-01', repNo: 'R1', paid: 1 }], services: [], totals: {} });
     const answer = await GET(new Request(url));
     expect(answer.status).toBe(200);
     expect(answer.headers.get('cache-control')).toBe('no-store');
-    expect(await answer.json()).toMatchObject({ persons: [], updatedAt: null });
+    expect(await answer.json()).toEqual({ persons: [], updatedAt: null, lines: [], reps: [{ person: null, date: '2026-10-01', repNo: 'R1', paid: 1 }], services: [], totals: {} });
     mocks.overview.mockResolvedValue({ ok: false, code: 'FORBIDDEN' });
     expect((await GET(new Request(url))).status).toBe(403);
   });
