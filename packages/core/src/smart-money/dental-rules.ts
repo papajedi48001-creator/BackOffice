@@ -21,3 +21,22 @@ export const DENTURE_ICODES = [
   '3015287', // ฟันเทียมบางส่วนถอดได้ฐานอคริลิก 1-5 ซี่
   '3013072' // ฟันเทียมบางส่วนถอดได้ มากกว่า 5 ซี่
 ] as const;
+
+/** สิทธิ shown as a red bar in "แยกตามสิทธิ" besides ผัง UC ใน CUP: 25 PP Workload (asked by งานประกัน 2026-11-19). */
+export const RED_PTTYPES: readonly string[] = ['25'];
+
+/**
+ * สิทธิ counted only by some icodes (asked by งานประกัน 2026-11-19): 23 OP ส่งเสริมและป้องกันโรค = icode 3015628 only.
+ * Constants, so the reader may inline them in its SQL.
+ */
+export const DENTAL_PTTYPE_ICODES: Readonly<Record<string, readonly string[]>> = { '23': ['3015628'] };
+
+/**
+ * A visit whose สิทธิ is in `DENTAL_PTTYPE_ICODES` counts only the `sum_price` of those icodes: that is its ค่ารักษารวม and ลูกหนี้, ชำระแล้ว 0.
+ * Without them (`itemAmount` null or 0) the visit is left out. Other สิทธิ are unchanged.
+ */
+export function applyPttypeItems<T extends { pttypeCode: string; totalAmount: number; paidMoney: number; claimAmount: number }>(row: T, itemAmount: number | null): T | null {
+  if (!(row.pttypeCode in DENTAL_PTTYPE_ICODES)) return row;
+  if (!itemAmount) return null;
+  return { ...row, totalAmount: itemAmount, paidMoney: 0, claimAmount: itemAmount };
+}

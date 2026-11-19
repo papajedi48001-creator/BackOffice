@@ -53,11 +53,11 @@ function DentalBody({ outcome, group, period, groupLabel, showConnectionLink }: 
       <div className="money-kpi is-accent"><span>คาดการณ์รายรับทันตกรรม (บาท)</span><strong>{formatMoney(summary.forecast)}</strong><small>ลูกหนี้ทุกผังบัญชี ยกเว้น UC-OP ใน CUP และ PP</small></div>
     </section>
     <section className="money-card">
-      <h3>มูลค่าลูกหนี้แยกตาม{groupLabel} <small>(ตัวเลขในวงเล็บ = จำนวนคน · ส่วนซ้อนสีส้ม = งานฟันปลอม · แท่งสีแดง = {group === 'paccount' ? 'ผัง UC ใน CUP และ PP' : 'สิทธิในผัง UC ใน CUP'})</small></h3>
+      <h3>มูลค่าลูกหนี้แยกตาม{groupLabel} <small>(ตัวเลขในวงเล็บ = จำนวนคน · ส่วนซ้อนสีส้ม = งานฟันปลอม · แท่งสีแดง = {group === 'paccount' ? 'ผัง UC ใน CUP และ PP' : 'สิทธิในผัง UC ใน CUP และ 25 PP Workload'})</small></h3>
       <BarChart ariaLabel={`มูลค่าลูกหนี้แยกตาม${groupLabel}`} valueFormat={formatWhole} stackLegend={['ลูกหนี้ (ไม่รวมฟันปลอม)', 'ลูกหนี้งานฟันปลอม']} bars={[...summary.byGroup].sort((a, b) => b.claim - a.claim).map((row) => ({
         label: group === 'pttype' && row.code ? `${row.code} ${groupName(row)}` : groupName(row), sublabel: `(${formatWhole(row.patients)} คน)`, value: row.claim,
         stack: row.dentureClaim, stackNote: row.dentureVisits > 0 ? `งานฟันปลอม ${formatMoney(row.dentureClaim)} บาท (${formatWhole(row.denturePatients)} คน)` : undefined,
-        alert: row.red ? (group === 'paccount' ? 'ไม่นับในคาดการณ์รายรับ' : 'ผัง UC ใน CUP') : undefined,
+        alert: row.red ? (group === 'paccount' ? 'ไม่นับในคาดการณ์รายรับ' : row.code === '25' ? 'PP Workload' : 'ผัง UC ใน CUP') : undefined,
         note: `มูลค่าลูกหนี้ ${formatMoney(row.claim)} บาท · ค่ารักษารวม ${formatMoney(row.total)} บาท · ผู้รับบริการ ${formatWhole(row.patients)} คน (${formatWhole(row.visits)} visit)`
       }))} />
     </section>
