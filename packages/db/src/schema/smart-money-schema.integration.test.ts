@@ -39,4 +39,12 @@ describeWithDatabase('smart money schema (migration 0038)', () => {
     const indexes = await db.query<{ name: string }>("SELECT DISTINCT index_name AS name FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'money_dp_record' AND column_name = 'fy'");
     expect(indexes.length).toBeGreaterThan(0);
   });
+
+  it('keeps one Monitor IMC register line per line key and one REP line per REP No., Trans ID and ลำดับที่, with no name or HN in clear (migration 0044)', async () => {
+    const key = async (table: string) => (await db.query<{ name: string }>(`SELECT column_name AS name FROM information_schema.key_column_usage WHERE table_schema = DATABASE() AND table_name = '${table}' AND constraint_name = 'PRIMARY' ORDER BY ordinal_position`)).map((row) => row.name);
+    expect(await key('money_imc_visit')).toEqual(['line_key']);
+    expect(await key('money_imc_rep')).toEqual(['rep_no', 'trans_id', 'item_no']);
+    const plain = await db.query<{ name: string }>("SELECT column_name AS name FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name IN ('money_imc_visit', 'money_imc_rep') AND column_name IN ('cid', 'pid', 'name', 'hn')");
+    expect(plain).toEqual([]);
+  });
 });

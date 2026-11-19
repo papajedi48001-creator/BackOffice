@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { permissionModules } from './access.ts';
 import { grantableRoleSchema, testerModuleCodes } from './admin.ts';
-import { dentalGroupSchema, dentalPeriodSchema, MONEY_MODULE, moneyMemberInputSchema, moneyPageSchema, nhsoUploadSchema, fdhUploadSchema, fdhKindSchema, fdhRemoveSchema, dpUploadSchema, dpRemoveSchema } from './smart-money.ts';
+import { dentalGroupSchema, dentalPeriodSchema, MONEY_MODULE, moneyMemberInputSchema, moneyPageSchema, nhsoUploadSchema, fdhUploadSchema, fdhKindSchema, fdhRemoveSchema, dpUploadSchema, dpRemoveSchema, imcUploadSchema } from './smart-money.ts';
 
 const uuid = '0b6f3c1e-5d1a-4c8e-9a51-2f7c1d9e8b10';
 
@@ -110,5 +110,21 @@ describe('dpRemoveSchema', () => {
     expect(dpRemoveSchema.safeParse({ fy: 2569.5 }).success).toBe(false);
     expect(dpRemoveSchema.safeParse({ fy: '2569' }).success).toBe(false);
     expect(dpRemoveSchema.safeParse({ fy: 2569, all: true }).success).toBe(false);
+  });
+});
+
+describe('imcUploadSchema', () => {
+  const uploadId = '7c9e6679-7425-40de-944b-e07fc1f90ae7';
+  const rows = [['REP No.', 'Trans ID'], [null, 'ชดเชย'], ['DDSA1', '69', 450, null]];
+  it('accepts a register or REP part of up to 1,502 rows (two header rows and 1,500 data rows)', () => {
+    expect(imcUploadSchema.safeParse({ kind: 'rep', fileName: 'REP.xlsx', uploadId, rows }).success).toBe(true);
+    expect(imcUploadSchema.safeParse({ kind: 'register', fileName: 'ทะเบียน IMC.csv', uploadId, rows: Array(1502).fill(Array(80).fill('x')) }).success).toBe(true);
+  });
+  it('rejects another kind, 1,503 rows, 81 cells, a bad upload id and an extra key', () => {
+    expect(imcUploadSchema.safeParse({ kind: 'service', fileName: 'a.csv', uploadId, rows }).success).toBe(false);
+    expect(imcUploadSchema.safeParse({ kind: 'rep', fileName: 'a.csv', uploadId, rows: Array(1503).fill(['x']) }).success).toBe(false);
+    expect(imcUploadSchema.safeParse({ kind: 'rep', fileName: 'a.csv', uploadId, rows: [Array(81).fill('x')] }).success).toBe(false);
+    expect(imcUploadSchema.safeParse({ kind: 'rep', fileName: 'a.csv', uploadId: 'abc', rows }).success).toBe(false);
+    expect(imcUploadSchema.safeParse({ kind: 'rep', fileName: 'a.csv', uploadId, rows, fy: 2569 }).success).toBe(false);
   });
 });
