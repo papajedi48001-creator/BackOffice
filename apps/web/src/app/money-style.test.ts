@@ -52,4 +52,3 @@ describe('Monitor IMC cards', () => {
     expect(rule('.imc-tag.is-bad')).toMatch(/color:/);
   });
 });
-
