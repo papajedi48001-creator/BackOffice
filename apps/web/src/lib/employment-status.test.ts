@@ -6,7 +6,7 @@ describe('employmentStatusLabel', () => {
     const { employmentStatusLabel } = await import('./employment-status');
     expect(employmentStatusLabel('ACTIVE')).toBe('ปฏิบัติงาน');
     expect(employmentStatusLabel('TRANSFERRED')).toBe('ย้าย');
-    expect(readFileSync('src/lib/employment-status.ts', 'utf8')).not.toContain("'use client'");
+    expect(readFileSync('src/lib/employment-status.ts', 'utf8').trimStart().startsWith("'use client'")).toBe(false);
   });
 
   it('is not imported by the server-rendered profile view from a client module', () => {
