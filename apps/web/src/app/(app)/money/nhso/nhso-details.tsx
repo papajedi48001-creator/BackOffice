@@ -66,7 +66,9 @@ function MultiSection({ datasets, dash }: { datasets: readonly NhsoHospital[]; d
     <div className="nhso-toolbar">
       <MetricSelect label="ยอด" metrics={dash.metrics} value={metric} onChange={setMetric} />
       {years.length > 0 && <Chips label="ปีงบที่จะเทียบ" options={years} selected={selectedYears} onToggle={toggleYear} />}
-      <span className="nhso-field"><label htmlFor={`${id}-stack`}>รูปแบบ</label><select id={`${id}-stack`} value={stacked ? 'stack' : 'group'} onChange={(event) => setStacked(event.target.value === 'stack')}><option value="group">แท่งเรียงกัน</option><option value="stack">แท่งซ้อนกัน</option></select></span>
+      <div className="money-segmented" role="group" aria-label="รูปแบบ"><span aria-hidden="true">รูปแบบ</span>
+        {([[false, 'แท่งเรียงกัน'], [true, 'แท่งซ้อนกัน']] as const).map(([value, label]) => <button key={label} type="button" className={stacked === value ? 'is-active' : undefined} aria-pressed={stacked === value} onClick={() => setStacked(value)}>{label}</button>)}
+      </div>
       <button type="button" className="button-secondary" onClick={() => setFunds([...funds])}>เลือกทุกกองทุน</button>
       <button type="button" className="button-secondary" onClick={() => setFunds([])}>ล้าง</button>
     </div>
