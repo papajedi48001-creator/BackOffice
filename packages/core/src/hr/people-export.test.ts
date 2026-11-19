@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { exportPeople, peopleCsv } from './people-export';
 
-const person = { id: 'p1', employeeCode: 'RN001', displayName: '=HYPERLINK("x")', positionTitle: 'พยาบาลวิชาชีพ', employmentStatus: 'ACTIVE', nationalIdMasked: 'X-XXXX-XXXXX-12-3', employmentTypeName: 'ข้าราชการ', organizationName: null, organizationCode: null };
+const person = { id: 'p1', employeeCode: 'RN001', displayName: '=HYPERLINK("x")', positionTitle: 'พยาบาลวิชาชีพ', employmentStatus: 'ACTIVE', nationalIdMasked: 'X-XXXX-XXXXX-12-3', employmentTypeName: 'ข้าราชการ', organizationName: null, organizationCode: null, providerLinked: false, thaidLinked: false };
 
 describe('peopleCsv', () => {
   it('writes the table columns for Excel, the masked ID only, and no formulas', () => {

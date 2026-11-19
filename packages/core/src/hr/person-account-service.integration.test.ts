@@ -188,6 +188,17 @@ describeWithDatabase('PersonAccountService against MariaDB', () => {
     await expect(service.deletePerson(id, admin)).resolves.toEqual({ ok: true });
   });
 
+  it('lists whether each person has linked Provider ID and has signed in with ThaiD (2FA)', async () => {
+    const neither = created(await service.create(input(), hrManager));
+    const linked = created(await service.create(input(), hrManager));
+    await database.execute('INSERT INTO identity_link (id, person_id, issuer, subject, created_at) VALUES (?, ?, ?, ?, UTC_TIMESTAMP())', [randomUUID(), linked, `provider-${short()}`, randomUUID()]);
+    await database.execute("INSERT INTO audit_event (id, actor_person_id, action, target_type, target_id, result, metadata, created_at) VALUES (?, ?, 'identity.thaid_login', 'person', ?, 'SUCCESS', '{}', UTC_TIMESTAMP())", [randomUUID(), linked, linked]);
+    await database.execute("INSERT INTO audit_event (id, actor_person_id, action, target_type, target_id, result, metadata, created_at) VALUES (?, ?, 'identity.thaid_login', 'person', ?, 'FAILURE', '{}', UTC_TIMESTAMP())", [randomUUID(), neither, neither]);
+    const people = await new HrDirectory(database).listPeople({ organizationIds: 'all' });
+    expect(people.find((person) => person.id === linked)).toMatchObject({ providerLinked: true, thaidLinked: true });
+    expect(people.find((person) => person.id === neither)).toMatchObject({ providerLinked: false, thaidLinked: false });
+  });
+
   it('records the phone among the fields of the creation audit', async () => {
     const id = created(await service.create(input(), hrManager));
     const [audit] = await database.query<{ metadata: string }>('SELECT metadata FROM audit_event WHERE target_id = ? AND action = ?', [id, 'hr.person.create']);
