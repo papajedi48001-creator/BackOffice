@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import { ModuleSubnav } from './module-subnav';
 
@@ -30,4 +30,17 @@ it('marks only the most specific section when one sits inside another', () => {
   expect(screen.getByRole('link', { name: 'จองห้อง' })).toHaveAttribute('aria-current', 'page');
   expect(screen.getByRole('link', { name: 'การจองของฉัน' })).not.toHaveAttribute('aria-current');
   path.current = '/hr/people/123';
+});
+
+it('slides the glowing button to a section as soon as it is clicked', () => {
+  const { container } = render(<ModuleSubnav sections={[{ href: '/hr/people', labelKey: 'people' }, { href: '/hr/organizations', labelKey: 'organizations' }]} />);
+  const thumb = container.querySelector('.subnav-thumb')!;
+  expect(thumb).toHaveAttribute('aria-hidden', 'true');
+  expect(thumb).toHaveAttribute('data-at', '/hr/people');
+  expect(container.querySelector('.module-subnav ul')).toHaveClass('is-ready');
+  expect(screen.getByRole('link', { name: 'บุคลากร' })).toHaveClass('is-active');
+  fireEvent.click(screen.getByRole('link', { name: 'หน่วยงาน' }));
+  expect(thumb).toHaveAttribute('data-at', '/hr/organizations');
+  expect(screen.getByRole('link', { name: 'หน่วยงาน' })).toHaveClass('is-active');
+  expect(screen.getByRole('link', { name: 'บุคลากร' })).not.toHaveClass('is-active');
 });
