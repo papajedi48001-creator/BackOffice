@@ -40,10 +40,17 @@ export async function PersonEditor({ personId, session, inDialog = false }: { pe
   const resetsPasswords = managesPeople || isAdmin(session);
   const account = resetsPasswords ? await localAccountOf(database, personId) : null;
   const title = view.work.displayName ?? view.work.employeeCode ?? t('notAssigned');
-  return { title, body: <div className={inDialog ? 'person-editor in-dialog' : 'person-editor'}>
-    <HrProfileView view={view} contactEndpoint={`/api/hr/people/${personId}/contact`} employmentTypes={employmentTypes} units={units} positions={positions} uploadsEnabled={attachmentsEnabled()} personPhoto={{ url: attachmentsEnabled() && view.work.photoAttachmentId ? profilePhotoUrl(personId, view.work.photoAttachmentId) : null, uploadsEnabled: attachmentsEnabled() }} />
+  const accountForms = <>
     {managesPeople ? <IdentityForm personId={personId} values={{ employeeCode: view.work.employeeCode, employmentStatus: view.work.employmentStatus }} username={account?.username ?? null} self={personId === session.personId} /> : null}
     {resetsPasswords ? <AccountForm personId={personId} username={account?.username ?? null} self={personId === session.personId} passwordOpen={await isPasswordSignInOpen()} /> : null}
     {resetsPasswords && personId !== session.personId ? <DeletePersonButton personId={personId} name={view.work.displayName ?? view.work.employeeCode ?? t('notAssigned')} /> : null}
+  </>;
+  const hasAccountTab = managesPeople || resetsPasswords;
+  // In the popup the boxes sit in tabs (ข้อมูลงาน … บัญชีผู้ใช้); the full page keeps them stacked.
+  const profile = <HrProfileView view={view} contactEndpoint={`/api/hr/people/${personId}/contact`} employmentTypes={employmentTypes} units={units} positions={positions} uploadsEnabled={attachmentsEnabled()} personPhoto={{ url: attachmentsEnabled() && view.work.photoAttachmentId ? profilePhotoUrl(personId, view.work.photoAttachmentId) : null, uploadsEnabled: attachmentsEnabled() }}
+    tabbed={inDialog} extraTabs={inDialog && hasAccountTab ? [{ key: 'account', label: t('hrTabAccount'), content: <div className="person-editor-account">{accountForms}</div> }] : []} />;
+  return { title, body: <div className={inDialog ? 'person-editor in-dialog' : 'person-editor'}>
+    {profile}
+    {inDialog ? null : accountForms}
   </div> };
 }

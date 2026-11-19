@@ -1627,3 +1627,5 @@ h2.chat-window-title { cursor: default; }
 .route-dialog { width: min(1100px, calc(100vw - 32px)); max-height: calc(100vh - 32px); }
 .route-dialog .form-dialog-body { overflow: auto; max-height: calc(100vh - 200px); }
 .person-editor { display: grid; gap: 16px; min-width: 0; }
+.profile-tabs .nhso-tabs { margin-top: 0; }
+.profile-tabs > .profile { margin-top: 8px; }
