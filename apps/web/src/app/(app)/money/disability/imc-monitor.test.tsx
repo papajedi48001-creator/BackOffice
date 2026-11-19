@@ -41,7 +41,8 @@ describe('ImcMonitor', () => {
   it('lists the patient cards with days left and filters them with the toggle', async () => {
     serve(overview);
     render(<ImcMonitor canManage today="2026-11-19" />);
-    const cards = await screen.findByRole('list', { name: 'ผู้ป่วยในทะเบียน' });
+    fireEvent.click(await screen.findByRole('switch', { name: /ซ่อนคนที่จำหน่าย/ }));
+    const cards = screen.getByRole('list', { name: 'ผู้ป่วยในทะเบียน' });
     const items = within(cards).getAllByRole('listitem');
     expect(items.map((item) => within(item).getByRole('heading').textContent)).toEqual(['นางสมมติ หนึ่ง', 'นายสมมติ สอง', 'นายสมมติ สาม', 'นางสมมติ สี่']);
     expect(items[0]).toHaveTextContent('ครบกำหนดแล้ว 40 วัน');
@@ -64,7 +65,8 @@ describe('ImcMonitor', () => {
   it('shows the person table, the chart with its period toggle and claims against REP', async () => {
     serve(overview);
     render(<ImcMonitor canManage={false} today="2026-11-19" />);
-    const people = await screen.findByRole('table', { name: 'รายละเอียดรายบุคคล' });
+    fireEvent.click(await screen.findByRole('switch', { name: /ซ่อนคนที่จำหน่าย/ }));
+    const people = screen.getByRole('table', { name: 'รายละเอียดรายบุคคล' });
     expect(rows(people)[1]!.textContent).toBe('2นายสมมติ สองTBI3/4/256913/4/25697 วัน22 ครั้ง');
     const chart = screen.getByRole('figure', { name: 'กราฟการเรียกเก็บ IMC' });
     expect(within(chart).getAllByText('กายภาพบำบัด').length).toBeGreaterThan(0);
@@ -87,5 +89,24 @@ describe('ImcMonitor', () => {
     serve({ error: 'FORBIDDEN' }, 403);
     render(<ImcMonitor canManage={false} today="2026-11-19" />);
     expect(await screen.findByRole('alert')).toHaveTextContent('โหลดข้อมูล IMC ไม่ได้');
+  });
+
+  it('hides people who are discharged or past their due date behind a switch that starts on, in the cards and the person table', async () => {
+    serve(overview);
+    render(<ImcMonitor canManage={false} today="2026-11-19" />);
+    const toggle = await screen.findByRole('switch', { name: 'ซ่อนคนที่จำหน่าย/ครบกำหนดแล้ว (2)' });
+    expect(toggle).toBeChecked();
+    const names = () => within(screen.getByRole('list', { name: 'ผู้ป่วยในทะเบียน' })).getAllByRole('listitem').map((item) => within(item).getByRole('heading').textContent);
+    expect(names()).toEqual(['นายสมมติ สอง', 'นายสมมติ สาม']);
+    expect(screen.getByText('ซ่อนอยู่ 2 คน')).toBeInTheDocument();
+    expect(rows(screen.getByRole('table', { name: 'รายละเอียดรายบุคคล' })).map((row) => row.cells[1]!.firstChild!.textContent)).toEqual(['นายสมมติ สอง', 'นายสมมติ สาม']);
+    expect(rows(screen.getByRole('table', { name: 'เรียกเก็บเทียบ REP' }))).toHaveLength(5); // everyone and the total: money owed does not hide
+    fireEvent.click(toggle);
+    expect(names()).toHaveLength(4);
+    expect(rows(screen.getByRole('table', { name: 'รายละเอียดรายบุคคล' }))).toHaveLength(4);
+    fireEvent.click(toggle);
+    fireEvent.click(within(screen.getByRole('group', { name: 'กรองผู้ป่วย' })).getByRole('button', { name: 'ครบกำหนดแล้ว' }));
+    expect(toggle).not.toBeChecked();
+    expect(names()).toEqual(['นางสมมติ หนึ่ง', 'นางสมมติ สี่']);
   });
 });

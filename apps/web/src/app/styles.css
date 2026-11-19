@@ -1576,3 +1576,11 @@ h2.chat-window-title { cursor: default; }
 .imc-tag.is-mute { background: var(--line-soft); color: var(--muted); }
 .imc-none { color: var(--muted); padding: 12px; }
 @media (max-width: 640px) { .imc-cards { grid-template-columns: 1fr; } }
+.imc-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.imc-switch { display: inline-flex; align-items: center; gap: 10px; min-height: 40px; color: var(--ink); font-size: .9rem; cursor: pointer; user-select: none; }
+.imc-switch input { appearance: none; position: relative; flex: 0 0 auto; width: 44px; height: 24px; margin: 0; border-radius: 999px; background: var(--line-strong); cursor: pointer; transition: background var(--motion-fast) var(--ease-out); }
+.imc-switch input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: var(--shadow-sm); transition: transform var(--motion-fast) var(--ease-out); }
+.imc-switch input:checked { background: var(--accent); }
+.imc-switch input:checked::after { transform: translateX(20px); }
+.imc-switch input:focus-visible { outline: 3px solid var(--accent-tint); outline-offset: 2px; }
+.imc-hidden-note { margin: 10px 0 0; color: var(--muted); font-size: .85rem; }

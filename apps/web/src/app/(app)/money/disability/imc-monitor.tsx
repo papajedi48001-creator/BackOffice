@@ -32,6 +32,7 @@ export function ImcMonitor({ canManage, today = bangkokToday() }: { canManage: b
   const [data, setData] = useState<Payload | null>(null);
   const [failure, setFailure] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
+  const [hideDone, setHideDone] = useState(true);
   const [unit, setUnit] = useState<ImcUnit>('month');
 
   const load = useCallback(async () => {
@@ -48,7 +49,11 @@ export function ImcMonitor({ canManage, today = bangkokToday() }: { canManage: b
   useEffect(() => { void load(); }, [load]);
 
   const persons = useMemo(() => (data?.persons ?? []).map((person) => ({ ...person, remain: imcRemain(person, today) })), [data, today]);
-  const shown = persons.filter((person) => filter === 'all' || person.remain.group === filter);
+  const doneCount = persons.filter((person) => person.remain.group === 'done').length;
+  const inCare = hideDone ? persons.filter((person) => person.remain.group !== 'done') : persons;
+  const shown = inCare.filter((person) => filter === 'all' || person.remain.group === filter);
+  // Asking for ครบกำหนดแล้ว means wanting to see them, so the switch turns off.
+  const pickFilter = (next: Filter) => { setFilter(next); if (next === 'done') setHideDone(false); };
   const groups = useMemo(() => (data ? imcBuckets(data.lines, data.services, unit) : []), [data, unit]);
   const totals = data?.totals;
 
@@ -71,7 +76,11 @@ export function ImcMonitor({ canManage, today = bangkokToday() }: { canManage: b
       </section>
 
       <section className="imc-block" aria-labelledby="imc-people-title">
-        <div className="imc-block-head"><h4 id="imc-people-title">ผู้ป่วยในทะเบียน</h4><Segmented label="กรองผู้ป่วย" items={FILTERS} value={filter} onChange={setFilter} /></div>
+        <div className="imc-block-head"><h4 id="imc-people-title">ผู้ป่วยในทะเบียน</h4>
+          <div className="imc-tools">
+            <label className="imc-switch"><input type="checkbox" role="switch" checked={hideDone} onChange={(event) => setHideDone(event.target.checked)} />{`ซ่อนคนที่จำหน่าย/ครบกำหนดแล้ว (${int(doneCount)})`}</label>
+            <Segmented label="กรองผู้ป่วย" items={FILTERS} value={filter} onChange={pickFilter} />
+          </div></div>
         <ul className="imc-cards" aria-label="ผู้ป่วยในทะเบียน">
           {shown.map((person, index) => {
             const span = person.due && person.discharge ? Math.max(1, (Date.parse(person.due) - Date.parse(person.discharge)) / DAY) : 1;
@@ -90,12 +99,13 @@ export function ImcMonitor({ canManage, today = bangkokToday() }: { canManage: b
           })}
           {shown.length === 0 && <li className="imc-none">ไม่มีผู้ป่วยในกลุ่มนี้</li>}
         </ul>
+        {hideDone && doneCount > 0 && <p className="imc-hidden-note">{`ซ่อนอยู่ ${int(doneCount)} คน`}</p>}
       </section>
 
       <section className="imc-block" aria-labelledby="imc-detail-title">
         <h4 id="imc-detail-title">รายละเอียดรายบุคคล</h4>
         <div className="money-table-wrap"><table aria-label="รายละเอียดรายบุคคล"><thead><tr><th className="money-number">ลำดับ</th><th>ชื่อ-สกุล</th><th>วันเริ่มป่วย</th><th>วันจำหน่าย</th><th>เหลืออีก</th><th className="money-number">เรียกเก็บ</th></tr></thead><tbody>
-          {persons.map((person, index) => <tr key={person.id}>
+          {inCare.map((person, index) => <tr key={person.id}>
             <td className="money-number">{index + 1}</td><td>{person.name}<br /><small className="fdh-muted">{person.disease}</small></td><td>{imcDate(person.onset)}</td><td>{imcDate(person.discharge)}</td>
             <td><span className={`imc-tag is-${person.remain.tone}`}>{person.remain.text}</span></td><td className="money-number">{`${int(person.visits)} ครั้ง`}</td></tr>)}
         </tbody></table></div>
