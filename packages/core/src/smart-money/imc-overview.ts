@@ -21,6 +21,9 @@ export type ImcOverview = {
 };
 
 const round2 = (value: number) => Math.round(value * 100) / 100;
+/** One IMC visit is one ให้บริการ IMC ที่บ้าน line (H9340); other lines on the same day (กายภาพบำบัด …) are services within it. */
+export const IMC_VISIT_CODE = 'H9340';
+const isVisit = (item: { code: string }) => item.code === IMC_VISIT_CODE;
 const later = (a: ImcLine, b: ImcLine) => a.date > b.date || (a.date === b.date && a.visitNo > b.visitNo);
 
 export function buildImcOverview(lines: readonly ImcLine[], reps: readonly ImcRepLine[]): ImcOverview {
@@ -51,7 +54,7 @@ export function buildImcOverview(lines: readonly ImcLine[], reps: readonly ImcRe
   return {
     persons: people.map((person, index) => ({
       id: index + 1, name: person.latest.name, disease: person.latest.disease, right: person.latest.right, onset: person.latest.onset, discharge: person.latest.discharge,
-      due: person.latest.due, status: person.latest.status, visits: person.lines.length, claim: person.claim, paid: person.paid, repNos: person.repNos, lastVisit: person.lastVisit
+      due: person.latest.due, status: person.latest.status, visits: person.lines.filter(isVisit).length, claim: person.claim, paid: person.paid, repNos: person.repNos, lastVisit: person.lastVisit
     })),
     lines: [...lines].sort((a, b) => a.date.localeCompare(b.date) || a.code.localeCompare(b.code)).map((item) => ({
       person: idOf.get(item.hn)!, date: item.date, code: item.code, claim: item.claim, pending: pending(item),
@@ -61,7 +64,7 @@ export function buildImcOverview(lines: readonly ImcLine[], reps: readonly ImcRe
       .sort((a, b) => a.date.localeCompare(b.date) || (a.person ?? Infinity) - (b.person ?? Infinity) || a.repNo.localeCompare(b.repNo)),
     services: [...services].sort(([a], [b]) => a.localeCompare(b)).map(([code, name]) => ({ code, name })),
     totals: {
-      people: people.length, visits: lines.length, claim: round2(lines.reduce((sum, item) => sum + item.claim, 0)),
+      people: people.length, visits: lines.filter(isVisit).length, claim: round2(lines.reduce((sum, item) => sum + item.claim, 0)),
       pending: lines.filter(pending).length,
       paid: round2(reps.reduce((sum, item) => sum + item.paid, 0)),
       noRep: round2(lines.filter((item) => !repDays.has(`${item.hn}|${item.date}`)).reduce((sum, item) => sum + item.claim, 0)),

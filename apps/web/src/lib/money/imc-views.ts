@@ -12,6 +12,8 @@ type Line = { date: string; code: string; claim: number };
 
 const TH_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 export const IMC_DISCHARGED = 'จำหน่ายจาก IMC แล้ว';
+/** The รหัสบริการ that counts as one IMC visit (ให้บริการ IMC ที่บ้าน); kept in step with `IMC_VISIT_CODE` in core. */
+export const IMC_VISIT_CODE = 'H9340';
 const DAY = 86_400_000;
 const utc = (iso: string) => Date.parse(`${iso}T00:00:00Z`);
 const iso = (time: number) => new Date(time).toISOString().slice(0, 10);
@@ -101,7 +103,7 @@ export function imcInRange(data: { lines: readonly ImcRangeLine[]; reps: readonl
   const reps = data.reps.filter((rep) => inside(rep.date));
   const people = new Map<number, ImcRangePerson>();
   const own = (id: number) => people.get(id) ?? people.set(id, { visits: 0, claim: 0, paid: 0, repNos: [], lines: [] }).get(id)!;
-  for (const line of lines) { const person = own(line.person); person.visits++; person.claim = round2(person.claim + line.claim); person.lines.push(line); }
+  for (const line of lines) { const person = own(line.person); if (line.code === IMC_VISIT_CODE) person.visits++; person.claim = round2(person.claim + line.claim); person.lines.push(line); }
   for (const rep of reps) {
     if (rep.person === null) continue;
     const person = own(rep.person);
@@ -109,7 +111,7 @@ export function imcInRange(data: { lines: readonly ImcRangeLine[]; reps: readonl
     if (!person.repNos.includes(rep.repNo)) person.repNos = [...person.repNos, rep.repNo].sort();
   }
   return {
-    lines, people, visits: lines.length, claim: round2(lines.reduce((sum, line) => sum + line.claim, 0)), pending: lines.filter((line) => line.pending).length,
+    lines, people, visits: lines.filter((line) => line.code === IMC_VISIT_CODE).length, claim: round2(lines.reduce((sum, line) => sum + line.claim, 0)), pending: lines.filter((line) => line.pending).length,
     paid: round2(reps.reduce((sum, rep) => sum + rep.paid, 0)), noRep: round2(lines.filter((line) => !line.repNo).reduce((sum, line) => sum + line.claim, 0)),
     repOutside: reps.filter((rep) => rep.person === null).length
   };
