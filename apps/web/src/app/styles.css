@@ -1532,7 +1532,7 @@ h2.chat-window-title { cursor: default; }
 .money-ttm .ttm-banner h3 { color: #fff; }
 .money-date-filter .thai-date-field input { width: 22ch; }
 /* การจ่ายยาสมุนไพร (/money/herb): the แพทย์แผนไทย look plus its own cards and the สิทธิ table that opens to drugs. */
-.money-herb .ttm-banner h2 { margin: 0; font-size: 1.4rem; color: #fff; }
+.money-herb .ttm-banner h2, .money-ofc .ttm-banner h2 { margin: 0; font-size: 1.4rem; color: #fff; }
 .herb-kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
 .herb-kpis .money-kpi strong { font-size: 1.35rem; }
 .ttm-tag.is-herb { background: #e7f3e2; color: var(--ttm-herb); font-weight: 600; }
@@ -1547,7 +1547,7 @@ h2.chat-window-title { cursor: default; }
 .herb-toggle[aria-expanded="true"]::before { transform: rotate(90deg); }
 .money-herb table[aria-label="รายยาสมุนไพร"] { min-width: 900px; }
 @media (max-width: 1100px) { .herb-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 640px) { .herb-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .money-herb .ttm-banner h2 { font-size: 1.15rem; } }
+@media (max-width: 640px) { .herb-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .money-herb .ttm-banner h2, .money-ofc .ttm-banner h2 { font-size: 1.15rem; } }
 
 /* Monitor IMC (กองทุนฟื้นฟูสมรรถภาพ): summary, patient cards with a ring of days left, tables and the claim chart. */
 .imc-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-bottom: 14px; }

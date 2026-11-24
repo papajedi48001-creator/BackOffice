@@ -24,9 +24,13 @@ Requested by wasan, 2026-11-24.
 - รายการอุปกรณ์: per icode, คน/ครั้ง/ชิ้น/บาท.
 - Dates read `16 พ.ย. 2569`.
 
-## Round 2 (after sample files)
+## REP / Statement (samples received 2026-11-24)
 
-นำเข้า REP / Statement ของ OFC, stored encrypted like IMC REP, matched to HOSxP lines (expected by HN + date, or VN/claim number — decided from the real columns) to show REP/Statement amounts, ยังไม่มีผล, and a เรียกเก็บเทียบ REP/Statement table.
+- REP `eclaim_<hcode>_OPCS_….xls`: sheet Detail (REP, TRAN_ID, วันเข้ารักษา, SEQ NO) and Data Instrument (TRAN_ID, ลำดับที่, รหัส/ชื่ออุปกรณ์, จำนวนชิ้นและเงินที่เรียกเก็บ, จ่ายชดเชย, ปฏิเสธ, Error Code). Lines are joined by TRAN_ID.
+- Statement `STM_<hcode>_OP<yyyymm>_<nn>.xls`: sheet พึงรับ, one block per REP NO, column ค่าอวัยวะฯ and พึงรับทั้งหมด per SEQ NO; document number from "เลขที่เอกสาร".
+- SEQ NO is the HOSxP vn, so matching is by vn. Only ADP 8610 REP lines count.
+- Stored (migration 0046) without name, HN or PID: `money_ofc_rep` (REP, TRAN_ID, ลำดับที่, vn, date, ADP, item, qty, claim, paid, deny, error) and `money_ofc_stm` (document, REP, vn, date, claim, ค่าอวัยวะฯ, total). The browser blanks 13-digit IDs before sending. Re-importing replaces.
+- Status per visit: ได้รับแล้ว (Statement ค่าอวัยวะฯ > 0) · รอ Statement (REP paid > 0) · ปฏิเสธ (REP paid 0) · ยังไม่มี REP.
 
 ## Open
 
