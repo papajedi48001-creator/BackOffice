@@ -165,7 +165,12 @@ h1 { margin: 0; font-size: clamp(2rem, 6vw, 3.25rem); line-height: 1.15; letter-
 .summary-grid article, table, .detail-list { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); box-shadow: var(--shadow-sm); }
 .summary-grid article { display: grid; gap: 6px; padding: 20px; }
 .summary-grid strong { color: var(--accent); font-size: 2rem; }
-table { width: 100%; border-collapse: separate; border-spacing: 0; overflow: hidden; }
+table { width: 100%; border-collapse: separate; border-spacing: 0; overflow: clip; }
+/* กฎตาราง (DESIGN.md): every table head stays pinned while its rows scroll, page or box. Sticky covers both; components/sticky-table-headers.tsx
+   marks page-level tables and shifts a boxed table's head (--thead-shift) under the sticky bars when the page scrolls. */
+thead { position: sticky; top: 0; z-index: 3; transform: translateY(var(--thead-shift, 0px)); }
+table[data-sticky-head="page"] > thead { top: var(--table-sticky-top, var(--topbar-height)); }
+thead th { box-shadow: inset 0 -1px var(--line); }
 th, td { border-bottom: 1px solid var(--line-soft); padding: 9px 14px; text-align: left; }
 th { background: var(--accent-soft); color: var(--accent-strong); font-size: .92rem; }
 tbody tr:hover td { background: color-mix(in srgb, var(--accent) 3%, white); }
@@ -1064,6 +1069,7 @@ h2.chat-window-title { cursor: default; }
   .mci-triage-count { font-size: 1.6rem; }
 }
 @media print { .mci-no-print { display: none !important; } }
+@media print { thead { position: static; transform: none; } }
 
 /* วัสดุคงคลัง Lab: accent from [data-module="lab-inventory"]. */
 .lab-banner { border-left: 4px solid var(--dev-amber); border-radius: 8px; background: #fff4ce; color: #714d00; padding: 10px 14px; font-weight: 700; }
@@ -1149,7 +1155,7 @@ h2.chat-window-title { cursor: default; }
 .money-table-wrap.is-tall table { min-width: 920px; }
 .money-table-wrap table { width: 100%; border-collapse: collapse; font-size: .9rem; }
 .money-table-wrap th, .money-table-wrap td { padding: 8px 10px; border-bottom: 1px solid var(--line-soft); text-align: left; vertical-align: top; }
-.money-table-wrap thead th { position: sticky; top: 0; background: var(--page); color: var(--ink-2); font-weight: 700; }
+.money-table-wrap thead th { background: var(--page); color: var(--ink-2); font-weight: 700; }
 .money-table-wrap tfoot th { border-top: 2px solid var(--line); }
 .money-number { text-align: right !important; font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* ตารางเทียบ (กองทุน × โรงพยาบาล/ปีงบ): the name column keeps its width and stays put while scrolling; money columns share one width with headers wrapping. */
