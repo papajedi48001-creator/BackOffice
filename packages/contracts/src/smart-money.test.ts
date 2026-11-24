@@ -133,10 +133,10 @@ describe('ofcUploadSchema', () => {
   it('accepts the sheets of one OFC REP or Statement as the browser read them', () => {
     expect(ofcUploadSchema.safeParse({ fileName: 'eclaim_11093_OPCS.xls', sheets: { Detail: [['REP', 'TRAN_ID']], 'Data Instrument': [['TRAN_ID', 8610, null]] } }).success).toBe(true);
   });
-  it('rejects more than four sheets, more than 5,000 rows, an empty name and an extra key', () => {
+  it('rejects more than four sheets, more than 20,000 rows, an empty name and an extra key', () => {
     const sheet = [['x']];
     expect(ofcUploadSchema.safeParse({ fileName: 'a.xls', sheets: { a: sheet, b: sheet, c: sheet, d: sheet, e: sheet } }).success).toBe(false);
-    expect(ofcUploadSchema.safeParse({ fileName: 'a.xls', sheets: { a: Array(5001).fill(['x']) } }).success).toBe(false);
+    expect(ofcUploadSchema.safeParse({ fileName: 'a.xls', sheets: { a: Array(20001).fill(['x']) } }).success).toBe(false);
     expect(ofcUploadSchema.safeParse({ fileName: ' ', sheets: { a: sheet } }).success).toBe(false);
     expect(ofcUploadSchema.safeParse({ fileName: 'a.xls', sheets: { a: sheet }, kind: 'rep' }).success).toBe(false);
   });

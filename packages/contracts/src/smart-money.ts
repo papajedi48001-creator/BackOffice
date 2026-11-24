@@ -64,7 +64,7 @@ export type ImcUpload = z.infer<typeof imcUploadSchema>;
 /** Monitor Instrument OFC: one REP (Detail, Data Instrument) or Statement (พึงรับ) file as the browser read it; the server finds which. */
 export const ofcUploadSchema = z.object({
   fileName: z.string().trim().min(1).max(255),
-  sheets: z.record(z.string().max(100), z.array(z.array(nhsoCellSchema).max(80)).max(5000)).refine((sheets) => Object.keys(sheets).length >= 1 && Object.keys(sheets).length <= 4, { message: 'sheets' })
+  sheets: z.record(z.string().max(100), z.array(z.array(nhsoCellSchema).max(80)).max(20000)).refine((sheets) => Object.keys(sheets).length >= 1 && Object.keys(sheets).length <= 4, { message: 'sheets' })
 }).strict();
 export type OfcUpload = z.infer<typeof ofcUploadSchema>;
 

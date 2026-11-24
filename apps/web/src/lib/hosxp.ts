@@ -1,4 +1,4 @@
-import { connectionSecretBoxFrom, DentalService, HerbService, readHerb, readTtm, TtmService, PttypeMappingService, HolidaySyncService, HosxpSettingsService, readDentalClaims, readHosxpHolidays } from '@backoffice/core';
+import { connectionSecretBoxFrom, DentalService, HerbService, OfcService, readHerb, readOfc, readTtm, TtmService, PttypeMappingService, HolidaySyncService, HosxpSettingsService, readDentalClaims, readHosxpHolidays } from '@backoffice/core';
 import type { Database } from '@backoffice/db';
 import { readRuntimeValue } from './runtime-env';
 
@@ -14,3 +14,5 @@ export const pttypeMappingService = (database: Database) => { const settings = h
 export const ttmService = (database: Database) => { const settings = hosxpSettings(database); return new TtmService(() => settings.resolve(), readTtm); };
 /** การจ่ายยาสมุนไพร read live from HOSxP over the same connection, in a READ ONLY transaction. */
 export const herbService = (database: Database) => { const settings = hosxpSettings(database); return new HerbService(() => settings.resolve(), readHerb); };
+/** Monitor Instrument OFC: visits read live from HOSxP (READ ONLY) matched to the stored OFC REP and Statement. */
+export const ofcService = (database: Database) => { const settings = hosxpSettings(database); return new OfcService(database, () => settings.resolve(), readOfc); };
