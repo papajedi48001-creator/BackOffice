@@ -7,7 +7,9 @@ export type OfcRow = { vstdate: string; vn: string; hn: string; name: string; ic
 export type OfcStatus = 'none' | 'denied' | 'rep' | 'paid';
 export type OfcVisit = {
   vn: string; date: string; hn: string; name: string; pttypeName: string; items: { icode: string; name: string; qty: number; claim: number }[];
-  qty: number; claim: number; repPaid: number | null; stmPaid: number | null; repNos: string[]; errors: string[]; status: OfcStatus
+  qty: number; claim: number; repPaid: number | null; stmPaid: number | null; repNos: string[]; errors: string[]; status: OfcStatus;
+  /** Statement งวด (เลขที่เอกสาร without the hcode, e.g. OP202609_02); ส่วนต่าง = paid − claim once paid or denied, else null. */
+  periods: string[]; diff: number | null
 };
 export type OfcPerson = { hn: string; name: string; pttypeName: string; visits: number; qty: number; claim: number; repPaid: number; stmPaid: number; last: string; vns: string[] };
 export type OfcItem = { icode: string; name: string; people: number; visits: number; qty: number; claim: number };
@@ -18,6 +20,8 @@ export type OfcSummary = {
 
 /** The ADP code a REP line must carry to count (same as the HOSxP filter). */
 const ADP = '8610';
+/** The Statement งวด from its เลขที่เอกสาร: `11093_OP202609_02` → `OP202609_02`. */
+const stmPeriod = (docNo: string) => docNo.trim().replace(/^\d+_/, '');
 const round2 = (value: number) => Math.round(value * 100) / 100;
 
 /** Visits newest first, each with its REP and Statement result matched by vn (= SEQ NO); persons newest first; items by claim. */
@@ -26,7 +30,7 @@ export function summarizeOfc(rows: readonly OfcRow[], reps: readonly OfcRepLine[
   for (const row of rows) {
     let visit = byVn.get(row.vn);
     if (!visit) {
-      visit = { vn: row.vn, date: row.vstdate, hn: row.hn, name: row.name, pttypeName: row.pttypeName, items: [], qty: 0, claim: 0, repPaid: null, stmPaid: null, repNos: [], errors: [], status: 'none' };
+      visit = { vn: row.vn, date: row.vstdate, hn: row.hn, name: row.name, pttypeName: row.pttypeName, items: [], qty: 0, claim: 0, repPaid: null, stmPaid: null, repNos: [], errors: [], status: 'none', periods: [], diff: null };
       byVn.set(row.vn, visit);
     }
     visit.items.push({ icode: row.icode, name: row.itemName, qty: row.qty, claim: row.sumPrice });
@@ -44,11 +48,15 @@ export function summarizeOfc(rows: readonly OfcRow[], reps: readonly OfcRepLine[
   }
   for (const line of stms) {
     const visit = byVn.get(line.vn);
-    if (visit) visit.stmPaid = round2((visit.stmPaid ?? 0) + line.inst);
+    if (!visit) continue;
+    visit.stmPaid = round2((visit.stmPaid ?? 0) + line.inst);
+    const period = stmPeriod(line.docNo);
+    if (period && !visit.periods.includes(period)) visit.periods.push(period);
   }
   const visits = [...byVn.values()].sort((a, b) => (a.date === b.date ? a.vn.localeCompare(b.vn) : b.date.localeCompare(a.date)));
   for (const visit of visits) {
     visit.status = (visit.stmPaid ?? 0) > 0 ? 'paid' : visit.repPaid === null ? 'none' : visit.repPaid > 0 ? 'rep' : 'denied';
+    visit.diff = visit.status === 'paid' ? round2((visit.stmPaid ?? 0) - visit.claim) : visit.status === 'denied' ? round2((visit.repPaid ?? 0) - visit.claim) : null;
   }
   const persons = new Map<string, OfcPerson>();
   const items = new Map<string, OfcItem & { hns: Set<string> }>();
