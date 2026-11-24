@@ -48,3 +48,18 @@ export const moneyImcReps = mysqlTable('money_imc_rep', {
   serviceDate: date('service_date', { mode: 'string' }).notNull(), claim: decimal('claim', { precision: 15, scale: 2 }).notNull(), paid: decimal('paid', { precision: 15, scale: 2 }).notNull(),
   recordCiphertext: mediumtext('record_ciphertext').notNull(), uploadedAt: datetime('uploaded_at', { mode: 'date' }).notNull(), uploadedBy: uuid('uploaded_by').notNull()
 }, (t) => [primaryKey({ columns: [t.repNo, t.transId, t.itemNo] }), index('money_imc_rep_date').on(t.serviceDate)]);
+
+/** Monitor Instrument OFC (migration 0046): one Data Instrument line of an OFC REP; `vn` is the REP's SEQ NO. No name, HN or PID. */
+export const moneyOfcReps = mysqlTable('money_ofc_rep', {
+  repNo: varchar('rep_no', { length: 30 }).notNull(), tranId: varchar('tran_id', { length: 30 }).notNull(), itemNo: int('item_no').notNull(), vn: varchar('vn', { length: 20 }).notNull(),
+  serviceDate: date('service_date', { mode: 'string' }), adpCode: varchar('adp_code', { length: 15 }).notNull(), itemName: varchar('item_name', { length: 255 }).notNull(),
+  qty: decimal('qty', { precision: 12, scale: 2 }).notNull(), claim: decimal('claim', { precision: 15, scale: 2 }).notNull(), paid: decimal('paid', { precision: 15, scale: 2 }).notNull(),
+  deny: varchar('deny', { length: 10 }).notNull(), errorCode: varchar('error_code', { length: 100 }).notNull(), uploadedAt: datetime('uploaded_at', { mode: 'date' }).notNull(), uploadedBy: uuid('uploaded_by').notNull()
+}, (t) => [primaryKey({ columns: [t.repNo, t.tranId, t.itemNo] }), index('money_ofc_rep_vn').on(t.vn), index('money_ofc_rep_date').on(t.serviceDate)]);
+
+/** One row of an OFC Statement (พึงรับ): ค่าอวัยวะฯ (`inst`) and พึงรับทั้งหมด per SEQ NO (`vn`). */
+export const moneyOfcStms = mysqlTable('money_ofc_stm', {
+  docNo: varchar('doc_no', { length: 40 }).notNull(), repNo: varchar('rep_no', { length: 30 }).notNull(), vn: varchar('vn', { length: 20 }).notNull(), serviceDate: date('service_date', { mode: 'string' }),
+  claim: decimal('claim', { precision: 15, scale: 2 }).notNull(), inst: decimal('inst', { precision: 15, scale: 2 }).notNull(), total: decimal('total', { precision: 15, scale: 2 }).notNull(),
+  uploadedAt: datetime('uploaded_at', { mode: 'date' }).notNull(), uploadedBy: uuid('uploaded_by').notNull()
+}, (t) => [primaryKey({ columns: [t.docNo, t.repNo, t.vn] }), index('money_ofc_stm_vn').on(t.vn)]);

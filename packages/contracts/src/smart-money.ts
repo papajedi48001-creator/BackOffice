@@ -4,7 +4,7 @@ import { z } from 'zod';
 export const MONEY_MODULE = 'smart-money';
 
 /** หน้า Smart Money a เจ้าหน้าที่ may be given. Rounds 2–6 add `nhso`, `fdh`, `disability`, `ttm`, `herb`. */
-export const moneyPageSchema = z.enum(['dental', 'nhso', 'fdh', 'disability', 'ttm', 'herb']);
+export const moneyPageSchema = z.enum(['dental', 'nhso', 'fdh', 'disability', 'ttm', 'herb', 'ofc']);
 export type MoneyPage = z.infer<typeof moneyPageSchema>;
 
 /** One เจ้าหน้าที่ Smart Money and the pages they may open (at least one). */
@@ -60,6 +60,13 @@ export const imcUploadSchema = z.object({
   rows: z.array(z.array(nhsoCellSchema).max(80)).max(1502)
 }).strict();
 export type ImcUpload = z.infer<typeof imcUploadSchema>;
+
+/** Monitor Instrument OFC: one REP (Detail, Data Instrument) or Statement (พึงรับ) file as the browser read it; the server finds which. */
+export const ofcUploadSchema = z.object({
+  fileName: z.string().trim().min(1).max(255),
+  sheets: z.record(z.string().max(100), z.array(z.array(nhsoCellSchema).max(80)).max(5000)).refine((sheets) => Object.keys(sheets).length >= 1 && Object.keys(sheets).length <= 4, { message: 'sheets' })
+}).strict();
+export type OfcUpload = z.infer<typeof ofcUploadSchema>;
 
 // monitor แพทย์แผนไทย labels (here so client components can show them; the rules live in core `ttm-rules`).
 /** กลุ่มสิทธิ in the order of the กลุ่มงาน daily report. */

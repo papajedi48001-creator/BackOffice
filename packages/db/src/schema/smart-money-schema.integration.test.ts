@@ -47,4 +47,12 @@ describeWithDatabase('smart money schema (migration 0038)', () => {
     const plain = await db.query<{ name: string }>("SELECT column_name AS name FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name IN ('money_imc_visit', 'money_imc_rep') AND column_name IN ('cid', 'pid', 'name', 'hn')");
     expect(plain).toEqual([]);
   });
+
+  it('keeps one Monitor Instrument OFC REP line per REP, TRAN_ID and ลำดับที่ and one Statement row per document, REP and VN, with no name, HN or PID (migration 0046)', async () => {
+    const key = async (table: string) => (await db.query<{ name: string }>(`SELECT column_name AS name FROM information_schema.key_column_usage WHERE table_schema = DATABASE() AND table_name = '${table}' AND constraint_name = 'PRIMARY' ORDER BY ordinal_position`)).map((row) => row.name);
+    expect(await key('money_ofc_rep')).toEqual(['rep_no', 'tran_id', 'item_no']);
+    expect(await key('money_ofc_stm')).toEqual(['doc_no', 'rep_no', 'vn']);
+    const plain = await db.query<{ name: string }>("SELECT column_name AS name FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name IN ('money_ofc_rep', 'money_ofc_stm') AND column_name IN ('cid', 'pid', 'name', 'hn')");
+    expect(plain).toEqual([]);
+  });
 });

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { permissionModules } from './access.ts';
 import { grantableRoleSchema, testerModuleCodes } from './admin.ts';
-import { dentalGroupSchema, dentalPeriodSchema, MONEY_MODULE, moneyMemberInputSchema, moneyPageSchema, nhsoUploadSchema, fdhUploadSchema, fdhKindSchema, fdhRemoveSchema, dpUploadSchema, dpRemoveSchema, imcUploadSchema } from './smart-money.ts';
+import { dentalGroupSchema, dentalPeriodSchema, MONEY_MODULE, moneyMemberInputSchema, moneyPageSchema, nhsoUploadSchema, fdhUploadSchema, fdhKindSchema, fdhRemoveSchema, dpUploadSchema, dpRemoveSchema, imcUploadSchema, ofcUploadSchema } from './smart-money.ts';
 
 const uuid = '0b6f3c1e-5d1a-4c8e-9a51-2f7c1d9e8b10';
 
@@ -32,7 +32,7 @@ describe('moneyMemberInputSchema', () => {
 
 describe('dental filter enums', () => {
   it('lists the pages, groups and periods', () => {
-    expect(moneyPageSchema.options).toEqual(['dental', 'nhso', 'fdh', 'disability', 'ttm', 'herb']);
+    expect(moneyPageSchema.options).toEqual(['dental', 'nhso', 'fdh', 'disability', 'ttm', 'herb', 'ofc']);
     expect(dentalGroupSchema.options).toEqual(['pttype', 'paccount']);
     expect(dentalPeriodSchema.options).toEqual(['day', 'month']);
   });
@@ -126,5 +126,18 @@ describe('imcUploadSchema', () => {
     expect(imcUploadSchema.safeParse({ kind: 'rep', fileName: 'a.csv', uploadId, rows: [Array(81).fill('x')] }).success).toBe(false);
     expect(imcUploadSchema.safeParse({ kind: 'rep', fileName: 'a.csv', uploadId: 'abc', rows }).success).toBe(false);
     expect(imcUploadSchema.safeParse({ kind: 'rep', fileName: 'a.csv', uploadId, rows, fy: 2569 }).success).toBe(false);
+  });
+});
+
+describe('ofcUploadSchema', () => {
+  it('accepts the sheets of one OFC REP or Statement as the browser read them', () => {
+    expect(ofcUploadSchema.safeParse({ fileName: 'eclaim_11093_OPCS.xls', sheets: { Detail: [['REP', 'TRAN_ID']], 'Data Instrument': [['TRAN_ID', 8610, null]] } }).success).toBe(true);
+  });
+  it('rejects more than four sheets, more than 5,000 rows, an empty name and an extra key', () => {
+    const sheet = [['x']];
+    expect(ofcUploadSchema.safeParse({ fileName: 'a.xls', sheets: { a: sheet, b: sheet, c: sheet, d: sheet, e: sheet } }).success).toBe(false);
+    expect(ofcUploadSchema.safeParse({ fileName: 'a.xls', sheets: { a: Array(5001).fill(['x']) } }).success).toBe(false);
+    expect(ofcUploadSchema.safeParse({ fileName: ' ', sheets: { a: sheet } }).success).toBe(false);
+    expect(ofcUploadSchema.safeParse({ fileName: 'a.xls', sheets: { a: sheet }, kind: 'rep' }).success).toBe(false);
   });
 });
