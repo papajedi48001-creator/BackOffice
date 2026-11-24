@@ -20,3 +20,9 @@
 ## Verification
 
 `pnpm lint && pnpm typecheck && pnpm test`, integration with `DATABASE_URL`/`DATABASE_ADMIN_URL`, `git diff --check`.
+
+## Follow-up: ตารางรายครั้ง
+
+- [x] Core: `OfcVisit.periods` and `OfcVisit.diff`, set in `summarizeOfc`. Test: `ofc-summary.test.ts` "gives each visit its Statement งวด…". Ran it red, then green.
+- [x] Web: `OfcMonitor` shows the per-visit table "รายละเอียดรายครั้ง" with status filtering. Tests: `ofc-monitor.test.tsx` "lists each visit…" and "filters visits by status". Ran them red, then green.
+- [x] Verify: `pnpm lint && pnpm typecheck && pnpm test` and `git diff --check`.
