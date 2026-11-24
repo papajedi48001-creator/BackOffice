@@ -12,7 +12,7 @@ const header = ['รหัสบุคลากร', 'ชื่อ-นามส�
 export function peopleCsv(people: ReadonlyArray<DirectoryPerson>): string {
   return csvOf([header, ...people.map((person) => [
     person.employeeCode ?? NOT_SET, person.displayName ?? NOT_SET, person.positionTitle ?? NOT_SET, person.employmentTypeName ?? NOT_SET,
-    person.organizationName ?? NOT_SET, person.nationalIdMasked ?? NOT_SET, person.employmentStatus === 'ACTIVE' ? 'คงอยู่' : 'ลาออก'
+    person.organizationName ?? NOT_SET, person.nationalIdMasked ?? NOT_SET, employmentStatusLabel(person.employmentStatus)
   ])]);
 }
 
@@ -20,4 +20,9 @@ export function peopleCsv(people: ReadonlyArray<DirectoryPerson>): string {
 export async function exportPeople(database: Pick<Database, 'transaction'>, actorPersonId: string, people: ReadonlyArray<DirectoryPerson>, createId: () => string = randomUUID): Promise<string> {
   await database.transaction((tx) => new AuditService(new DatabaseAuditRepository(tx), createId).recordAudit({ actorPersonId, action: 'hr.people.export', targetType: 'module', targetId: 'hr', result: 'SUCCESS', metadata: { exportKind: 'people', rows: people.length } }));
   return peopleCsv(people);
+}
+
+/** ปฏิบัติงาน, ย้าย or ลาออก: the same words the register shows. */
+export function employmentStatusLabel(status: string): string {
+  return status === 'ACTIVE' ? 'ปฏิบัติงาน' : status === 'TRANSFERRED' ? 'ย้าย' : 'ลาออก';
 }

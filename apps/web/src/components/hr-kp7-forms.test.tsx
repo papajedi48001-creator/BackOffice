@@ -81,4 +81,18 @@ describe('HrProfileView ก.พ.7 boxes', () => {
     expect(screen.queryByRole('button', { name: 'ลบไฟล์ ก.พ.7' })).toBeNull();
     expect(screen.getByRole('link', { name: 'เปิดไฟล์ ก.พ.7' })).toBeInTheDocument();
   });
+
+  it('splits the popup into tabs, one group shown at a time, with extra tabs (บัญชีผู้ใช้) at the end', () => {
+    render(<HrProfileView view={view(true)} contactEndpoint="/x" uploadsEnabled tabbed extraTabs={[{ key: 'account', label: 'บัญชีผู้ใช้', content: <p>ฟอร์มบัญชี</p> }]} />);
+    const tabs = screen.getAllByRole('tab').map((tab) => tab.textContent);
+    expect(tabs).toEqual(['ข้อมูลงาน', 'ข้อมูลส่วนตัว', 'ที่อยู่และการติดต่อ', 'ครอบครัว', 'การศึกษา', 'ก.พ.7', 'ประวัติการแก้ไข', 'บัญชีผู้ใช้']);
+    expect(screen.getByRole('tab', { name: 'ข้อมูลงาน' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText('E1')).toBeVisible();
+    expect(screen.queryByRole('region', { name: 'ข้อมูลส่วนตัวและครอบครัว (ก.พ.7)' })).toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: 'ครอบครัว' }));
+    expect(screen.getByRole('region', { name: 'ข้อมูลส่วนตัวและครอบครัว (ก.พ.7)' })).toBeInTheDocument();
+    expect(screen.queryByText('E1')).toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: 'บัญชีผู้ใช้' }));
+    expect(screen.getByText('ฟอร์มบัญชี')).toBeInTheDocument();
+  });
 });

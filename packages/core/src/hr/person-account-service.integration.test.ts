@@ -26,7 +26,7 @@ describeWithDatabase('PersonAccountService against MariaDB', () => {
   const login = (username: string, password: string) => new LocalAuthService(new DatabaseLocalAccountRepository(database)).authenticateLocal({ username, password });
   const input = (overrides: Record<string, unknown> = {}) => ({
     nationalId: newId(), employeeCode: `E${short()}`, namePrefix: 'นางสาว', firstName: 'สมใจ', lastName: 'ใจดี', positionTitle: 'เจ้าพนักงานธุรการ', positionLevel: 'ชำนาญงาน',
-    phone: '0812345678', username: `user.${short()}`, password: 'initial-secret-1', ...overrides
+    phone: '0812345678', username: `user.${short()}`, ...overrides
   });
   const created = (result: Awaited<ReturnType<PersonAccountService['create']>>) => { if (!result.ok) throw new Error(result.code); return result.id; };
   const count = async (sql: string, parameters: unknown[]) => Number((await database.query<{ n: number }>(sql, parameters))[0]!.n);
@@ -47,11 +47,11 @@ describeWithDatabase('PersonAccountService against MariaDB', () => {
     expect(person).toEqual({ displayName: 'นางสาวสมใจ ใจดี', employeeCode: values.employeeCode, positionTitle: 'เจ้าพนักงานธุรการ', masked: protector.mask(values.nationalId), lookup: protector.lookup(values.nationalId), status: 'ACTIVE' });
     expect(await count('SELECT COUNT(*) AS n FROM hr_person_profile WHERE person_id = ? AND phone = ? AND position_level = ? AND position_id IS NOT NULL', [id, '0812345678', 'ชำนาญงาน'])).toBe(1);
     if (unit) expect(await count('SELECT COUNT(*) AS n FROM employment_assignment WHERE person_id = ? AND organization_id = ? AND effective_until IS NULL', [id, unit.id])).toBe(1);
-    await expect(login(values.username, values.password)).resolves.toMatchObject({ personId: id });
+    await expect(login(values.username, DEFAULT_RESET_PASSWORD)).resolves.toMatchObject({ personId: id, mustChangePassword: true });
     const audits = await database.query<{ action: string; metadata: string }>('SELECT action, metadata FROM audit_event WHERE target_id = ?', [id]);
     expect(audits.map((audit) => audit.action)).toEqual(['hr.person.create']);
     expect(audits[0]!.metadata).not.toContain(values.nationalId);
-    expect(audits[0]!.metadata).not.toContain(values.password);
+    expect(audits[0]!.metadata).not.toContain(DEFAULT_RESET_PASSWORD);
     expect(audits[0]!.metadata).not.toContain('0812345678');
     await expect(service.getAccount(id)).resolves.toEqual({ username: values.username });
   });
@@ -74,21 +74,28 @@ describeWithDatabase('PersonAccountService against MariaDB', () => {
     await expect(service.resetPassword(id, scoped)).resolves.toEqual({ ok: false, code: 'FORBIDDEN' });
   });
 
-  it('changes the employee code, status and national ID, refusing one already in use', async () => {
+  it('changes the status and national ID but never the employee code, refusing an ID already in use', async () => {
     const other = input();
     created(await service.create(other, hrManager));
-    const id = created(await service.create(input(), hrManager));
+    const values = input();
+    const id = created(await service.create(values, hrManager));
     const replacement = newId();
-    const code = `E${short()}`;
-    await expect(service.updateIdentity(id, { employeeCode: code, employmentStatus: 'INACTIVE', nationalId: replacement }, hrManager)).resolves.toEqual({ ok: true });
+    await expect(service.updateIdentity(id, { employeeCode: `E${short()}` } as never, hrManager)).rejects.toThrow();
+    await expect(service.updateIdentity(id, { employmentStatus: 'TRANSFERRED', nationalId: replacement }, hrManager)).resolves.toEqual({ ok: true });
     const [person] = await database.query<{ employeeCode: string; status: string; lookup: string; masked: string; ciphertext: string }>('SELECT employee_code AS employeeCode, employment_status AS status, national_id_lookup AS lookup, national_id_masked AS masked, national_id_ciphertext AS ciphertext FROM person WHERE id = ?', [id]);
-    expect(person).toMatchObject({ employeeCode: code, status: 'INACTIVE', lookup: protector.lookup(replacement), masked: protector.mask(replacement) });
+    expect(person).toMatchObject({ employeeCode: values.employeeCode, status: 'TRANSFERRED', lookup: protector.lookup(replacement), masked: protector.mask(replacement) });
     expect(protector.decrypt(person!.ciphertext)).toBe(replacement);
+    await expect(login(values.username, DEFAULT_RESET_PASSWORD)).rejects.toThrow('INVALID_CREDENTIALS');
     await expect(service.updateIdentity(id, { nationalId: other.nationalId }, hrManager)).resolves.toEqual({ ok: false, code: 'DUPLICATE_NATIONAL_ID' });
-    await expect(service.updateIdentity(id, { employeeCode: other.employeeCode }, hrManager)).resolves.toEqual({ ok: false, code: 'DUPLICATE_EMPLOYEE_CODE' });
     await expect(service.updateIdentity(randomUUID(), { employmentStatus: 'ACTIVE' }, hrManager)).resolves.toEqual({ ok: false, code: 'NOT_FOUND' });
     const [audit] = await database.query<{ metadata: string }>('SELECT metadata FROM audit_event WHERE target_id = ? AND action = ?', [id, 'hr.person.identity.update']);
-    expect(JSON.parse(audit!.metadata)).toEqual({ changedFields: ['employeeCode', 'employmentStatus', 'nationalId'] });
+    expect(JSON.parse(audit!.metadata)).toEqual({ changedFields: ['employmentStatus', 'nationalId'] });
+  });
+
+  it('never lets anyone change their own สถานะ', async () => {
+    await expect(service.updateIdentity(actor, { employmentStatus: 'INACTIVE' }, hrManager)).resolves.toEqual({ ok: false, code: 'SELF_STATUS' });
+    const [me] = await database.query<{ status: string }>('SELECT employment_status AS status FROM person WHERE id = ?', [actor]);
+    expect(me!.status).toBe('ACTIVE');
   });
 
   it('resets to the default password, ends the person\'s sessions, and makes them change it at the next login', async () => {
@@ -97,7 +104,6 @@ describeWithDatabase('PersonAccountService against MariaDB', () => {
     await database.execute('INSERT INTO user_session (id, token_hash, person_id, created_at, last_seen_at, expires_at) VALUES (?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP(), UTC_TIMESTAMP() + INTERVAL 1 DAY)', [randomUUID(), randomUUID().replace(/-/g, '').padEnd(64, '0'), id]);
     await expect(service.resetPassword(id, hrManager)).resolves.toEqual({ ok: true });
     await expect(login(values.username, DEFAULT_RESET_PASSWORD)).resolves.toMatchObject({ personId: id, mustChangePassword: true });
-    await expect(login(values.username, values.password)).rejects.toThrow('INVALID_CREDENTIALS');
     expect(await count('SELECT COUNT(*) AS n FROM user_session WHERE person_id = ? AND revoked_at IS NULL', [id])).toBe(0);
     const [audit] = await database.query<{ metadata: string }>('SELECT metadata FROM audit_event WHERE target_id IS NOT NULL AND action = ? ORDER BY created_at DESC LIMIT 1', ['hr.person.password.reset']);
     expect(audit!.metadata).not.toContain(DEFAULT_RESET_PASSWORD);
@@ -106,8 +112,7 @@ describeWithDatabase('PersonAccountService against MariaDB', () => {
   it('lets only the person change their own password: forced after a reset, else with the current password; then every session ends', async () => {
     const values = input();
     const id = created(await service.create(values, hrManager));
-    await expect(login(values.username, values.password)).resolves.toMatchObject({ mustChangePassword: true });
-    await expect(service.changeOwnPassword(id, { newPassword: values.password })).resolves.toEqual({ ok: false, code: 'SAME_PASSWORD' });
+    await expect(login(values.username, DEFAULT_RESET_PASSWORD)).resolves.toMatchObject({ mustChangePassword: true });
     await expect(service.changeOwnPassword(id, { newPassword: DEFAULT_RESET_PASSWORD })).resolves.toEqual({ ok: false, code: 'SAME_PASSWORD' });
     await database.execute('INSERT INTO user_session (id, token_hash, person_id, created_at, last_seen_at, expires_at) VALUES (?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP(), UTC_TIMESTAMP() + INTERVAL 1 DAY)', [randomUUID(), randomUUID().replace(/-/g, '').padEnd(64, '0'), id]);
     await expect(service.changeOwnPassword(id, { newPassword: 'my-own-secret-9' })).resolves.toEqual({ ok: true });
@@ -126,9 +131,9 @@ describeWithDatabase('PersonAccountService against MariaDB', () => {
     await expect(service.getAccount(someone)).resolves.toBeNull();
     await expect(service.resetPassword(someone, hrManager)).resolves.toEqual({ ok: false, code: 'NO_ACCOUNT' });
     const username = `late.${short()}`;
-    await expect(service.createAccount(someone, { username, password: 'first-secret-1' }, hrManager)).resolves.toEqual({ ok: true });
-    await expect(login(username, 'first-secret-1')).resolves.toMatchObject({ personId: someone });
-    await expect(service.createAccount(someone, { username: `other.${short()}`, password: 'first-secret-1' }, hrManager)).resolves.toEqual({ ok: false, code: 'ACCOUNT_EXISTS' });
+    await expect(service.createAccount(someone, { username }, hrManager)).resolves.toEqual({ ok: true });
+    await expect(login(username, DEFAULT_RESET_PASSWORD)).resolves.toMatchObject({ personId: someone, mustChangePassword: true });
+    await expect(service.createAccount(someone, { username: `other.${short()}` }, hrManager)).resolves.toEqual({ ok: false, code: 'ACCOUNT_EXISTS' });
     await expect(service.getAccount(someone)).resolves.toEqual({ username });
     expect('updateUsername' in service).toBe(false);
   });
@@ -139,9 +144,9 @@ describeWithDatabase('PersonAccountService against MariaDB', () => {
     await database.execute('INSERT INTO user_session (id, token_hash, person_id, created_at, last_seen_at, expires_at) VALUES (?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP(), UTC_TIMESTAMP() + INTERVAL 1 DAY)', [randomUUID(), randomUUID().replace(/-/g, '').padEnd(64, '0'), id]);
     await expect(service.updateIdentity(id, { employmentStatus: 'INACTIVE' }, hrManager)).resolves.toEqual({ ok: true });
     expect(await count('SELECT COUNT(*) AS n FROM user_session WHERE person_id = ? AND revoked_at IS NULL', [id])).toBe(0);
-    await expect(login(values.username, values.password)).rejects.toThrow('INVALID_CREDENTIALS');
+    await expect(login(values.username, DEFAULT_RESET_PASSWORD)).rejects.toThrow('INVALID_CREDENTIALS');
     await expect(service.updateIdentity(id, { employmentStatus: 'ACTIVE' }, hrManager)).resolves.toEqual({ ok: true });
-    await expect(login(values.username, values.password)).resolves.toMatchObject({ personId: id });
+    await expect(login(values.username, DEFAULT_RESET_PASSWORD)).resolves.toMatchObject({ personId: id });
   });
 
   it('will not set the password of the HR manager themself or of anyone holding a role in the system', async () => {
@@ -152,7 +157,7 @@ describeWithDatabase('PersonAccountService against MariaDB', () => {
     await database.execute('INSERT INTO role (id, name, created_at) VALUES (?, ?, UTC_TIMESTAMP())', [roleId, `admin-${short()}`]);
     await database.execute('INSERT INTO role_assignment (id, person_id, role_id, organization_id, created_at) VALUES (?, ?, ?, NULL, UTC_TIMESTAMP())', [randomUUID(), id, roleId]);
     await expect(service.resetPassword(id, hrManager)).resolves.toEqual({ ok: false, code: 'PROTECTED_ACCOUNT' });
-    await expect(login(values.username, values.password)).resolves.toMatchObject({ personId: id });
+    await expect(login(values.username, DEFAULT_RESET_PASSWORD)).resolves.toMatchObject({ personId: id });
     // A ผู้ดูแลระบบ may reset a role holder's password, but never their own.
     await expect(service.resetPassword(id, admin)).resolves.toEqual({ ok: true });
     await expect(service.resetPassword(admin.personId, admin)).resolves.toEqual({ ok: false, code: 'PROTECTED_ACCOUNT' });
@@ -165,7 +170,7 @@ describeWithDatabase('PersonAccountService against MariaDB', () => {
     await expect(service.deletePerson(id, hrManager)).resolves.toEqual({ ok: true });
     expect(await count('SELECT COUNT(*) AS n FROM person WHERE id = ? AND deleted_at IS NOT NULL AND employment_status = ?', [id, 'INACTIVE'])).toBe(1);
     expect(await count('SELECT COUNT(*) AS n FROM user_session WHERE person_id = ? AND revoked_at IS NULL', [id])).toBe(0);
-    await expect(login(values.username, values.password)).rejects.toThrow('INVALID_CREDENTIALS');
+    await expect(login(values.username, DEFAULT_RESET_PASSWORD)).rejects.toThrow('INVALID_CREDENTIALS');
     expect(await count('SELECT COUNT(*) AS n FROM audit_event WHERE target_id = ? AND action = ?', [id, 'hr.person.delete'])).toBe(1);
     await expect(service.deletePerson(id, hrManager)).resolves.toEqual({ ok: false, code: 'NOT_FOUND' });
     expect((await new HrDirectory(database).listPeople({ organizationIds: 'all' })).some((person) => person.id === id)).toBe(false);
@@ -181,6 +186,17 @@ describeWithDatabase('PersonAccountService against MariaDB', () => {
     await database.execute('INSERT INTO role_assignment (id, person_id, role_id, organization_id, created_at) VALUES (?, ?, ?, NULL, UTC_TIMESTAMP())', [randomUUID(), id, roleId]);
     await expect(service.deletePerson(id, hrManager)).resolves.toEqual({ ok: false, code: 'PROTECTED_ACCOUNT' });
     await expect(service.deletePerson(id, admin)).resolves.toEqual({ ok: true });
+  });
+
+  it('lists whether each person has linked Provider ID and has signed in with ThaiD (2FA)', async () => {
+    const neither = created(await service.create(input(), hrManager));
+    const linked = created(await service.create(input(), hrManager));
+    await database.execute('INSERT INTO identity_link (id, person_id, issuer, subject, created_at) VALUES (?, ?, ?, ?, UTC_TIMESTAMP())', [randomUUID(), linked, `provider-${short()}`, randomUUID()]);
+    await database.execute("INSERT INTO audit_event (id, actor_person_id, action, target_type, target_id, result, metadata, created_at) VALUES (?, ?, 'identity.thaid_login', 'person', ?, 'SUCCESS', '{}', UTC_TIMESTAMP())", [randomUUID(), linked, linked]);
+    await database.execute("INSERT INTO audit_event (id, actor_person_id, action, target_type, target_id, result, metadata, created_at) VALUES (?, ?, 'identity.thaid_login', 'person', ?, 'FAILURE', '{}', UTC_TIMESTAMP())", [randomUUID(), neither, neither]);
+    const people = await new HrDirectory(database).listPeople({ organizationIds: 'all' });
+    expect(people.find((person) => person.id === linked)).toMatchObject({ providerLinked: true, thaidLinked: true });
+    expect(people.find((person) => person.id === neither)).toMatchObject({ providerLinked: false, thaidLinked: false });
   });
 
   it('records the phone among the fields of the creation audit', async () => {
