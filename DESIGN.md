@@ -96,6 +96,8 @@ signature ของระบบคือ “สถานะงานเป็น
 
 **หัวโมดูลตรึงด้านบน** แถบบน (ปุ่มยื่นคำขอ ป้ายสิทธิ์ ชิปโปรไฟล์) ติดด้านบนเมื่อเลื่อนเนื้อหา พื้นทึบ `--page` เส้นล่างและเงาเบา แถบย่อยของโมดูลติดถัดลงมา (จอกว้างกว่า 960px)
 
+**หัวตารางตรึงด้านบน (กฎตาราง)** ทุกตาราง ทั้งที่มีอยู่และที่จะสร้างใหม่: เมื่อเลื่อนหน้าหรือเลื่อนในกล่องตาราง ส่วนหัวตาราง (`<thead>`) ต้องติดอยู่ด้านบนเสมอ (wasan กำหนดเมื่อ 24 พ.ย. 2569) ทำที่จุดเดียว ไม่ต้องใส่ class หรือห่อ component เพิ่ม: `styles.css` ตั้ง `thead { position: sticky }` และ `components/sticky-table-headers.tsx` (วางครั้งเดียวใน `app/layout.tsx`) วัดแถบที่ติดด้านบนอยู่แล้ว (`.app-topbar`, `.module-subnav`, `.imc-range` ใน `STICKY_CHROME_SELECTOR` ของ `lib/sticky-table-head.ts`) ให้หัวตารางหยุดใต้แถบเหล่านั้น ตารางที่อยู่ในกล่องเลื่อนแนวนอน (`overflow-x: auto` เช่น `.money-table-wrap`) ยังเลื่อนซ้ายขวาได้ และหัวตารางเลื่อนลงตามหน้าด้วย `--thead-shift` ตารางในกล่องสูงจำกัดตรึงที่ขอบบนของกล่อง ตารางใน popup ตรึงที่ขอบบนของ popup กติกาเวลาสร้างตาราง: ใส่หัวใน `<thead>` เสมอ (หัวหลายแถวอยู่ใน `<thead>` เดียวกัน) พื้นหลัง `th` ต้องทึบ ห้ามตั้ง `overflow: hidden` บน `table` (ใช้ `overflow: clip` ที่ตั้งไว้แล้ว) ห้ามตั้ง `position: sticky` ทีละ `th` ถ้าเพิ่มแถบใหม่ที่ติดด้านบน ให้เพิ่ม selector ใน `STICKY_CHROME_SELECTOR` (ทดสอบที่ `app/styles-tables.test.ts`, `lib/sticky-table-head.test.ts`)
+
 ## Motion
 
 การเคลื่อนไหวมีไว้บอกว่าหน้าโหลดเสร็จหรือปุ่มตอบสนอง ไม่ใช่การตกแต่ง ใช้ CSS เท่านั้น (ท้าย `apps/web/src/app/styles.css`) ไม่เพิ่ม library token: `--motion-fast` 150ms (hover, กดปุ่ม), `--motion-base` 220ms (popup, ข้อความแจ้ง, เมนูโปรไฟล์), `--motion-slow` 380ms (เนื้อหาหน้าเข้า), `--motion-stagger` 40ms, `--ease-out` `cubic-bezier(.2, .8, .2, 1)` ห้ามใช้เวลาเกิน 400ms หรือ easing แบบเด้ง

@@ -3,38 +3,28 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const css = readFileSync(join(__dirname, 'styles.css'), 'utf8');
+const rule = (selector: string) => css.match(new RegExp(`(?:^|\\n)${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} \\{([^}]*)\\}`))?.[1] ?? '';
 
-describe('ตาราง: ปุ่มจัดการท้ายแถว', () => {
-  it('keeps a td.request-actions a real table cell, so its buttons stay inside their row', () => {
-    // .request-actions is a flex box with a bottom margin for button rows under a request; on a <td> that turns the cell
-    // into a flex box outside the table grid, and the buttons drift out of their row (ตั้งค่าโปรแกรม, กำหนดสิทธิ์, ...).
-    expect(css).toMatch(/td\.request-actions \{[^}]*display: table-cell/);
-    expect(css).toMatch(/td\.request-actions \{[^}]*margin: 0/);
+describe('กฎตาราง: หัวตารางตรึงด้านบนเสมอ (DESIGN.md)', () => {
+  it('pins every table head and lets the shared script shift it under the sticky bars', () => {
+    expect(rule('thead')).toMatch(/position: sticky/);
+    expect(rule('thead')).toMatch(/top: 0/);
+    expect(rule('thead')).toMatch(/z-index: \d/);
+    expect(rule('thead')).toMatch(/transform: translateY\(var\(--thead-shift, 0px\)\)/);
   });
-  it('keeps rows compact: 9px above and below each cell', () => {
-    expect(css).toMatch(/\nth, td \{[^}]*padding: 9px 14px/);
+  it('sits a page-level table head under the top bar and module menu', () => {
+    expect(rule('table[data-sticky-head="page"] > thead')).toMatch(/top: var\(--table-sticky-top/);
   });
-});
-
-describe('ตั้งค่าโปรแกรม: ชื่อโมดูล (L5)', () => {
-  it('bounces the module chip and lights it in the module colour when the row is pointed at', () => {
-    expect(css).toMatch(/\.admin-module-table tr:hover \.module-chip[^{]*\{[^}]*transform:[^}]*scale[^}]*box-shadow/);
+  it('never lets a table become its own scroll box (overflow: hidden breaks sticky)', () => {
+    expect(rule('table')).toMatch(/overflow: clip/);
+    for (const m of css.matchAll(/(?:^|\n)([^{}\n]*\btable\b[^{}\n]*)\{([^}]*)\}/g)) {
+      if (/(^|[\s,>])table\s*$/.test(m[1]!.trim()) || /(^|[\s,])table\s*,/.test(m[1]!)) expect(m[2]).not.toMatch(/overflow: hidden/);
+    }
   });
-  it('turns the name the module colour on hover without a filled background, and shows the head count', () => {
-    expect(css).toMatch(/\.app-main button\.module-name-link:hover:not\(:disabled\)[^{]*\{[^}]*background: none[^}]*color: var\(--accent\)/);
-    expect(css).toMatch(/\.module-headcount \{[^}]*opacity: 0/);
-    expect(css).toMatch(/\.admin-module-table tr:hover \.module-headcount[^{]*\{[^}]*opacity: 1/);
+  it('does not pin header cells one by one (multi-row heads would overlap)', () => {
+    expect(css).not.toMatch(/thead th \{[^}]*position: sticky;[^}]*top:/);
   });
-});
-
-describe('ตั้งค่าโปรแกรม: สีและไอคอน', () => {
-  it('draws the palette button as a small outlined square, not a filled button', () => {
-    expect(css).toMatch(/\.app-main button\.module-paint, \.app-main button\.module-paint:hover:not\(:disabled\) \{[^}]*background: var\(--surface\)/);
-  });
-  it('marks the chosen swatch and icon, and hides the radio inside without making it unfocusable', () => {
-    expect(css).toMatch(/\.appearance-swatch:has\(input:checked\) \{[^}]*box-shadow/);
-    expect(css).toMatch(/\.appearance-icon:has\(input:checked\) \{[^}]*background: var\(--accent\)/);
-    expect(css).toMatch(/\.appearance-swatch input, \.appearance-icon input \{[^}]*opacity: 0/);
-    expect(css).toMatch(/:has\(input:focus-visible\)[^{]*\{[^}]*outline: 3px solid/);
+  it('lets the head scroll normally when printing', () => {
+    expect(css).toMatch(/@media print \{[^@]*thead \{ position: static; transform: none; \}/);
   });
 });

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { StickyTableHeaders } from '../components/sticky-table-headers';
 import './styles.css';
 
 export const metadata: Metadata = {
@@ -15,7 +16,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         {/* Tahoma first (--font-family in styles.css); Noto Sans Thai where Tahoma is missing. Falls back to the system font when Google Fonts is blocked. */}
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" />
       </head>
-      <body>{children}</body>
+      <body>{children}<StickyTableHeaders /></body>
     </html>
   );
 }
