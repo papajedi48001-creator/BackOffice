@@ -23,7 +23,7 @@ export const FAKE_HOSXP_TABLES = [
   'CREATE TABLE income (income VARCHAR(2) PRIMARY KEY, name VARCHAR(150) NULL) DEFAULT CHARSET=latin1',
   'CREATE TABLE drugitems (icode VARCHAR(7) PRIMARY KEY, name VARCHAR(150) NULL, strength VARCHAR(100) NULL, units VARCHAR(50) NULL, unitcost DECIMAL(12,2) NULL, stdprice DECIMAL(12,2) NULL) DEFAULT CHARSET=latin1',
   'CREATE TABLE ipt (an VARCHAR(9) PRIMARY KEY, vn VARCHAR(13) NULL, pttype VARCHAR(2) NULL) DEFAULT CHARSET=latin1',
-  'CREATE TABLE nondrugitems (icode VARCHAR(7) PRIMARY KEY, name VARCHAR(150) NULL) DEFAULT CHARSET=latin1',
+  'CREATE TABLE nondrugitems (icode VARCHAR(7) PRIMARY KEY, name VARCHAR(150) NULL, nhso_adp_code VARCHAR(15) NULL) DEFAULT CHARSET=latin1',
   `CREATE TABLE vn_stat (vn VARCHAR(13) PRIMARY KEY, ${Array.from({ length: 16 }, (_, i) => `inc${String(i + 1).padStart(2, '0')} DECIMAL(12,2) NOT NULL DEFAULT 0`).join(', ')}, paid_money DECIMAL(12,2) NOT NULL DEFAULT 0, rcpt_money DECIMAL(12,2) NOT NULL DEFAULT 0)`
 ];
 
@@ -66,7 +66,7 @@ export async function seedFakeTtm(database: Database, data: { types: [id: number
   for (const [id, name] of data.treatments) await database.execute('INSERT INTO health_med_treatment_type VALUES (?, ?)', [id, tis(name)]);
   for (const [code, name] of data.incomes) await database.execute('INSERT INTO income VALUES (?, ?)', [code, tis(name)]);
   for (const [icode, name] of data.drugs) await database.execute('INSERT INTO drugitems (icode, name) VALUES (?, ?)', [icode, tis(name)]);
-  for (const [icode, name] of data.nondrugs) await database.execute('INSERT INTO nondrugitems VALUES (?, ?)', [icode, tis(name)]);
+  for (const [icode, name] of data.nondrugs) await database.execute('INSERT INTO nondrugitems (icode, name) VALUES (?, ?)', [icode, tis(name)]);
   for (const row of data.services) await database.execute('INSERT INTO health_med_service (vn, hn, an, service_date, service_time, health_med_service_type_id, health_med_doctor_id, health_med_treatment_type_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [row.vn, row.hn, row.an ?? null, row.date, row.time, row.type, row.doctor, row.treatment]);
   for (const row of data.charges) await database.execute('INSERT INTO opitemrece (vn, icode, income, qty, sum_price) VALUES (?, ?, ?, ?, ?)', [row.vn, row.icode, row.income, row.qty, row.price]);
 }
@@ -79,4 +79,13 @@ export async function seedFakeHerb(database: Database, data: { drugs: [icode: st
   for (const [icode, name, strength, units, unitcost, stdprice] of data.drugs) await database.execute('INSERT INTO drugitems (icode, name, strength, units, unitcost, stdprice) VALUES (?, ?, ?, ?, ?, ?)', [icode, tis(name), strength, units === null ? null : tis(units), unitcost, stdprice]);
   for (const [an, vn, pttype] of data.admissions) await database.execute('INSERT INTO ipt (an, vn, pttype) VALUES (?, ?, ?)', [an, vn, pttype]);
   for (const row of data.dispenses) await database.execute('INSERT INTO opitemrece (rxdate, vn, an, hn, icode, income, qty, sum_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [row.rxdate, row.vn, row.an ?? null, row.hn, row.icode, '17', row.qty, row.price]);
+}
+
+/** One instrument line in `opitemrece` for an outpatient visit. */
+export type FakeOfcCharge = { rxdate: string; vn: string; hn: string; icode: string; qty: number; price: number };
+
+/** Adds Monitor Instrument OFC data: non-drug items with their ADP code and the charged lines. */
+export async function seedFakeOfc(database: Database, data: { items: [icode: string, name: string, adp: string | null][]; charges: FakeOfcCharge[] }): Promise<void> {
+  for (const [icode, name, adp] of data.items) await database.execute('INSERT INTO nondrugitems (icode, name, nhso_adp_code) VALUES (?, ?, ?)', [icode, tis(name), adp]);
+  for (const row of data.charges) await database.execute('INSERT INTO opitemrece (rxdate, vn, hn, icode, income, qty, sum_price) VALUES (?, ?, ?, ?, ?, ?, ?)', [row.rxdate, row.vn, row.hn, row.icode, '08', row.qty, row.price]);
 }

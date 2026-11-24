@@ -30,7 +30,7 @@ describe('runMigrations', () => {
     await runMigrations(database);
 
     expect(queried.some((sql) => sql.includes('CREATE TABLE IF NOT EXISTS schema_migration'))).toBe(false);
-    expect(queried.filter((sql) => sql.includes('SELECT version FROM schema_migration'))).toHaveLength(46);
+    expect(queried.filter((sql) => sql.includes('SELECT version FROM schema_migration'))).toHaveLength(47);
     expect(executed.some((sql) => sql.startsWith('ALTER TABLE notification'))).toBe(true);
     expect(executed.some((sql) => sql.includes('IF NOT EXISTS'))).toBe(true);
     expect(executed.some((sql) => sql.includes('ALTER TABLE admin_module_setting ADD COLUMN IF NOT EXISTS accent_color VARCHAR(7) NULL'))).toBe(true);
@@ -119,6 +119,8 @@ describe('runMigrations', () => {
     expect(executed.some((sql) => sql.startsWith('CREATE TABLE IF NOT EXISTS money_imc_visit (') && sql.includes('record_ciphertext MEDIUMTEXT'))).toBe(true);
     expect(executed.some((sql) => sql.startsWith('CREATE TABLE IF NOT EXISTS money_imc_rep (') && sql.includes('record_ciphertext MEDIUMTEXT'))).toBe(true);
     expect(executed.some((sql) => sql.startsWith('INSERT IGNORE INTO schema_migration') && sql.endsWith('|["0045_audit_action_target_index.sql"]'))).toBe(true);
+    expect(executed.some((sql) => sql.startsWith('CREATE TABLE IF NOT EXISTS money_ofc_rep (') && sql.includes('adp_code'))).toBe(true);
+    expect(executed.some((sql) => sql.startsWith('INSERT IGNORE INTO schema_migration') && sql.endsWith('|["0046_money_ofc.sql"]'))).toBe(true);
     expect(executed.some((sql) => sql.includes('CREATE TABLE IF NOT EXISTS organization'))).toBe(false);
   });
 
