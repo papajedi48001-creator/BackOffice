@@ -16,15 +16,15 @@ describe('buildImcOverview', () => {
   ];
   const overview = buildImcOverview(lines, [rep('A', '2025-10-27', 'DDSA2', 450), rep('A', '2025-10-27', 'DDSA1', 0), rep('Z', '2025-10-27', 'DDSA1', 300)]);
 
-  it('makes one person per HN from the latest line, nearest due date first, with lines, claim, REP paid and REP numbers', () => {
+  it('makes one person per HN from the latest line, nearest due date first, with IMC visits (H9340 only), claim, REP paid and REP numbers', () => {
     expect(overview.persons).toEqual([
-      { id: 1, name: 'คน B', disease: 'TBI', right: 'UCS', onset: '2025-09-27', discharge: '2025-10-06', due: '2026-01-15', status: 'ปกติ', visits: 1, claim: 450, paid: 0, repNos: [], lastVisit: '2025-12-01' },
-      { id: 2, name: 'คน A ใหม่', disease: 'Stroke', right: 'UCS', onset: '2025-09-27', discharge: '2025-10-06', due: '2026-05-01', status: 'ปกติ', visits: 2, claim: 650, paid: 450, repNos: ['DDSA1', 'DDSA2'], lastVisit: '2025-11-03' }
+      { id: 1, name: 'คน B', disease: 'TBI', right: 'UCS', onset: '2025-09-27', discharge: '2025-10-06', due: '2026-01-15', status: 'ปกติ', visits: 0, claim: 450, paid: 0, repNos: [], lastVisit: '2025-12-01' },
+      { id: 2, name: 'คน A ใหม่', disease: 'Stroke', right: 'UCS', onset: '2025-09-27', discharge: '2025-10-06', due: '2026-05-01', status: 'ปกติ', visits: 1, claim: 650, paid: 450, repNos: ['DDSA1', 'DDSA2'], lastVisit: '2025-11-03' }
     ]);
   });
 
   it('sums the totals, counts lines still waiting and REP lines outside the register, and keeps no HN', () => {
-    expect(overview.totals).toEqual({ people: 2, visits: 3, claim: 1100, pending: 1, paid: 750, noRep: 650, repOutside: 1, diseases: [['Stroke', 1], ['TBI', 1]] });
+    expect(overview.totals).toEqual({ people: 2, visits: 1, claim: 1100, pending: 1, paid: 750, noRep: 650, repOutside: 1, diseases: [['Stroke', 1], ['TBI', 1]] });
     expect(overview.services).toEqual([{ code: 'H9339.1', name: 'กายภาพบำบัด' }, { code: 'H9340', name: 'ให้บริการIMCที่บ้าน' }]);
     expect(overview.lines).toEqual([
       { person: 2, date: '2025-10-27', code: 'H9339.1', claim: 450, pending: false, repNo: 'DDSA1, DDSA2' },

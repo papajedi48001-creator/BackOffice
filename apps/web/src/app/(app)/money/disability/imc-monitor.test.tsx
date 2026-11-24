@@ -36,7 +36,7 @@ describe('ImcMonitor', () => {
     expect(within(kpis).getByText('ทะเบียน IMC').parentElement).toHaveTextContent('4 คน');
     expect(within(kpis).getByText('ทะเบียน IMC').parentElement).toHaveTextContent('Stroke 3 · TBI 1');
     expect(within(kpis).getByText('เรียกเก็บ IMC').parentElement).toHaveTextContent('1,100.00 บาท');
-    expect(within(kpis).getByText('เรียกเก็บ IMC').parentElement).toHaveTextContent('3 ครั้ง (รอประมวลผล 1)');
+    expect(within(kpis).getByText('เรียกเก็บ IMC').parentElement).toHaveTextContent('1 ครั้ง (รอประมวลผล 1)') // only H9340 counts as a visit;
     expect(within(kpis).getByText('REP').parentElement).toHaveTextContent('9,050.00 บาท');
     expect(within(kpis).getByText('REP').parentElement).toHaveTextContent('ยังไม่มี REP 650.00 บาท · 1 รายการไม่อยู่ในทะเบียน');
     expect(within(kpis).getByText('ใกล้ครบกำหนด (≤ 30 วัน)').parentElement).toHaveTextContent('1 คน');
@@ -72,7 +72,8 @@ describe('ImcMonitor', () => {
     render(<ImcMonitor canManage={false} today="2026-11-19" />);
     fireEvent.click(await screen.findByRole('switch', { name: /ซ่อนคนที่จำหน่าย/ }));
     const people = screen.getByRole('table', { name: 'รายละเอียดรายบุคคล' });
-    expect(rows(people)[1]!.textContent).toBe('2นายสมมติ สองTBI3 เม.ย. 256913 เม.ย. 25697 วัน2 ครั้ง650.00');
+    expect(within(people).getAllByRole('columnheader').slice(0, 8).map((cell) => cell.textContent)).toEqual(['ลำดับ', 'ชื่อ-สกุล', 'วันเริ่มป่วย', 'วันจำหน่าย', 'วันครบ IMC', 'เหลืออีก', 'เรียกเก็บ', 'บาท']);
+    expect(rows(people)[1]!.textContent).toBe('2นายสมมติ สองTBI3 เม.ย. 256913 เม.ย. 256926 พ.ย. 25697 วัน1 ครั้ง650.00');
     const chart = () => screen.getByRole('figure', { name: 'กราฟการเรียกเก็บ IMC' });
     expect(within(chart()).getAllByText('กายภาพบำบัด').length).toBeGreaterThan(0);
     const period = screen.getByRole('group', { name: 'กราฟราย' });
@@ -128,13 +129,13 @@ describe('ImcMonitor', () => {
     fireEvent.click(within(shortcuts).getByRole('button', { name: 'เดือนนี้' }));
     expect(within(bar).getByLabelText('ตั้งแต่วันที่')).toHaveValue('อาทิตย์ 1 พ.ย. 2569');
     const kpis = screen.getByRole('region', { name: 'สรุป IMC' });
-    expect(within(kpis).getByText('เรียกเก็บ IMC').parentElement).toHaveTextContent('650.00 บาท2 ครั้ง (รอประมวลผล 1)');
+    expect(within(kpis).getByText('เรียกเก็บ IMC').parentElement).toHaveTextContent('650.00 บาท1 ครั้ง (รอประมวลผล 1)');
     expect(within(kpis).getByText('REP').parentElement).toHaveTextContent('100.00 บาท');
     expect(within(kpis).getByText('ทะเบียน IMC').parentElement).toHaveTextContent('4 คน');
     expect(within(screen.getByRole('table', { name: 'เรียกเก็บเทียบ REP' }).querySelector('tbody')!).getAllByRole('row')[0]!.textContent).toBe('1นางสมมติ หนึ่ง0.00ยังไม่มี REP-');
     fireEvent.change(within(bar).getByLabelText('ตั้งแต่วันที่'), { target: { value: '2/11/2569' } });
     expect(within(shortcuts).getByRole('button', { name: 'เดือนนี้' })).toHaveAttribute('aria-pressed', 'false');
-    expect(within(kpis).getByText('เรียกเก็บ IMC').parentElement).toHaveTextContent('450.00 บาท1 ครั้ง');
+    expect(within(kpis).getByText('เรียกเก็บ IMC').parentElement).toHaveTextContent('450.00 บาท0 ครั้ง');
     expect(within(screen.getByRole('list', { name: 'ผู้ป่วยในทะเบียน' })).getAllByRole('listitem')[0]).toHaveTextContent('22 ครั้ง · 7,650 บาท');
   });
 
@@ -150,7 +151,7 @@ describe('ImcMonitor', () => {
     expect(rows(lines).map((row) => row.textContent)).toEqual([
       '3 พ.ย. 2569H9339.1กายภาพบำบัด450.00ยังไม่มี REP',
       '1 พ.ย. 2569H9340ให้บริการIMCที่บ้าน200.00รอประมวลผลยังไม่มี REP',
-      'รวม 2 ครั้ง650.00REP 0.00'
+      'รวม 2 รายการ · IMC 1 ครั้ง650.00REP 0.00'
     ]);
     fireEvent.click(open);
     expect(screen.queryByRole('table', { name: 'รายการเรียกเก็บ นายสมมติ สอง' })).not.toBeInTheDocument();

@@ -86,3 +86,10 @@ Component split, CSS names (reuse Smart Money style 2 classes), chart day range 
 - Approaches: (1) filter in the browser from the one overview (chosen: the whole register is a few thousand lines at most);
   (2) a server query per range: more round trips and a second API for no gain at this size.
 - Dates in Monitor IMC read "16 พ.ย. 2569" (wasan, 2026-11-19: every date the system shows uses this form).
+
+## Follow-up (wasan, 2026-11-24)
+
+- "ครั้ง" counts IMC visits only: register lines with รหัสบริการ H9340 (ให้บริการ IMC ที่บ้าน). Other lines on the visit
+  (กายภาพบำบัด …) still add to เรียกเก็บ (บาท). Applies to the KPI, the cards, รายละเอียดรายบุคคล and the claim-line total
+  ("รวม n รายการ · IMC m ครั้ง").
+- รายละเอียดรายบุคคล gets a "วันครบ IMC" column (วันที่ครบกำหนดการให้บริการ) after วันจำหน่าย.

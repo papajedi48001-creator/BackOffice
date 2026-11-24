@@ -71,9 +71,9 @@ describeWithDatabase('ImcService against MariaDB', () => {
     expect(overview.ok).toBe(true);
     if (!overview.ok) return;
     expect(overview.persons.map((person) => [person.name, person.visits, person.claim, person.paid, person.repNos])).toEqual([
-      ['ทดสอบ สมมติ900001', 2, 700, 400, ['DDSA69022800075']], ['ทดสอบ สมมติ900002', 1, 450, 0, []]
+      ['ทดสอบ สมมติ900001', 1, 700, 400, ['DDSA69022800075']], ['ทดสอบ สมมติ900002', 0, 450, 0, []] // visits = H9340 lines only
     ]);
-    expect(overview.totals).toMatchObject({ people: 2, visits: 3, claim: 1150, paid: 700, repOutside: 1, noRep: 700 });
+    expect(overview.totals).toMatchObject({ people: 2, visits: 1, claim: 1150, paid: 700, repOutside: 1, noRep: 700 });
     expect(overview.updatedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     expect(await service.overview(subject(outsider, null))).toEqual({ ok: false, code: 'FORBIDDEN' });
   });

@@ -138,22 +138,22 @@ export function ImcMonitor({ canManage, today = bangkokToday() }: { canManage: b
 
       <section className="imc-block" aria-labelledby="imc-detail-title">
         <h4 id="imc-detail-title">รายละเอียดรายบุคคล</h4>
-        <div className="money-table-wrap"><table aria-label="รายละเอียดรายบุคคล"><thead><tr><th className="money-number">ลำดับ</th><th>ชื่อ-สกุล</th><th>วันเริ่มป่วย</th><th>วันจำหน่าย</th><th>เหลืออีก</th><th className="money-number">เรียกเก็บ</th><th className="money-number">บาท</th></tr></thead><tbody>
+        <div className="money-table-wrap"><table aria-label="รายละเอียดรายบุคคล"><thead><tr><th className="money-number">ลำดับ</th><th>ชื่อ-สกุล</th><th>วันเริ่มป่วย</th><th>วันจำหน่าย</th><th>วันครบ IMC</th><th>เหลืออีก</th><th className="money-number">เรียกเก็บ</th><th className="money-number">บาท</th></tr></thead><tbody>
           {inCare.map((person, index) => { const own = inRange(person.id); const isOpen = opened === person.id;
             const toggle = () => setOpened(isOpen ? null : person.id);
             return <Fragment key={person.id}>
               <tr className={`imc-row${isOpen ? ' is-open' : ''}`} onClick={toggle}>
                 <td className="money-number">{index + 1}</td>
                 <td><button type="button" className="imc-row-toggle" aria-expanded={isOpen} onClick={(event) => { event.stopPropagation(); toggle(); }}>{person.name}</button><br /><small className="fdh-muted">{person.disease}</small></td>
-                <td>{imcDate(person.onset)}</td><td>{imcDate(person.discharge)}</td>
+                <td>{imcDate(person.onset)}</td><td>{imcDate(person.discharge)}</td><td>{imcDate(person.due)}</td>
                 <td><span className={`imc-tag is-${person.remain.tone}`}>{person.remain.text}</span></td><td className="money-number">{`${int(own.visits)} ครั้ง`}</td><td className="money-number">{money(own.claim)}</td></tr>
-              {isOpen && <tr className="imc-lines-row"><td colSpan={7}>
+              {isOpen && <tr className="imc-lines-row"><td colSpan={8}>
                 {own.lines.length === 0 ? <p className="imc-none">ไม่มีการเรียกเก็บในช่วงนี้</p>
                   : <table className="imc-lines" aria-label={`รายการเรียกเก็บ ${person.name}`}><thead><tr><th>วันที่รับบริการ</th><th>รหัสบริการ</th><th>บริการ</th><th className="money-number">เรียกเก็บ (บาท)</th><th>สถานะ</th><th>REP NO</th></tr></thead><tbody>
                     {[...own.lines].reverse().map((line, at) => <tr key={at}><td>{imcDate(line.date)}</td><td className="fdh-mono">{line.code}</td><td>{serviceName.get(line.code) ?? line.code}</td>
                       <td className="money-number">{money(line.claim)}</td><td>{line.pending ? <span className="imc-tag is-warn">รอประมวลผล</span> : ''}</td>
                       <td className="fdh-mono">{line.repNo || <span className="imc-tag is-warn">ยังไม่มี REP</span>}</td></tr>)}
-                  </tbody><tfoot><tr><th colSpan={3}>{`รวม ${int(own.visits)} ครั้ง`}</th><th className="money-number">{money(own.claim)}</th><th></th><th>{`REP ${money(own.paid)}`}</th></tr></tfoot></table>}
+                  </tbody><tfoot><tr><th colSpan={3}>{`รวม ${int(own.lines.length)} รายการ · IMC ${int(own.visits)} ครั้ง`}</th><th className="money-number">{money(own.claim)}</th><th></th><th>{`REP ${money(own.paid)}`}</th></tr></tfoot></table>}
               </td></tr>}
             </Fragment>; })}
         </tbody></table></div>
