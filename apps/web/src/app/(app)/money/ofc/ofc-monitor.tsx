@@ -12,7 +12,7 @@ import { TtmFilter } from '../ttm/ttm-filter';
 import { OfcUpload } from './ofc-upload';
 
 export type OfcOutcome = { kind: 'data'; summary: OfcSummary; updatedAt: string | null } | { kind: 'error'; code: 'NOT_CONFIGURED' | 'HOSXP_FAILED' };
-export interface OfcMonitorProps { start: string; end: string; presets: readonly TtmPreset[]; periodText: string; canManage: boolean; showConnectionLink: boolean; outcome: OfcOutcome }
+export interface OfcMonitorProps { start: string; end: string; presets: readonly TtmPreset[]; periodText: string; canManage: boolean; showConnectionLink: boolean; outcome: OfcOutcome; path?: string; query?: Readonly<Record<string, string>> }
 
 type ChartUnit = 'auto' | ImcUnit;
 const UNITS: [ChartUnit, string][] = [['auto', 'อัตโนมัติ'], ['day', 'รายวัน'], ['month', 'รายเดือน'], ['year', 'รายปีงบ']];
@@ -30,15 +30,15 @@ const StatusTag = ({ visit }: { visit: OfcVisit }) => <><span className={`imc-ta
  * Monitor Instrument OFC: OFC outpatients given ADP 8610 instruments in the range (live from HOSxP), each visit matched to the
  * imported REP and Statement. Same layout as Monitor IMC; ผู้ดูแล Smart Money also get นำเข้า REP / Statement.
  */
-export function OfcMonitor({ start, end, presets, periodText, canManage, showConnectionLink, outcome }: OfcMonitorProps) {
+export function OfcMonitor({ start, end, presets, periodText, canManage, showConnectionLink, outcome, path = '/money/disability', query = { tab: 'ofc' } }: OfcMonitorProps) {
   const router = useRouter();
   const summary = outcome.kind === 'data' ? outcome.summary : null;
   return <section className="money-ttm money-ofc">
-    <TtmFilter key={`filter-${start}|${end}`} path="/money/ofc" start={start} end={end} presets={presets}>
+    <TtmFilter key={`filter-${start}|${end}`} path={path} query={query} start={start} end={end} presets={presets}>
       {canManage && <OfcUpload onDone={() => router.refresh()} />}
     </TtmFilter>
     <header className="ttm-banner">
-      <div><h2>Monitor Instrument OFC</h2><p>ผู้ป่วยนอกสิทธิข้าราชการ (OFC) ที่ได้รับอุปกรณ์บำบัดรักษา ADP 8610 · ข้อมูลจาก HOSxP เทียบ REP และ Statement</p></div>
+      <div><h3>Monitor Instrument OFC</h3><p>ผู้ป่วยนอกสิทธิข้าราชการ (OFC) ที่ได้รับอุปกรณ์บำบัดรักษา ADP 8610 · ข้อมูลจาก HOSxP เทียบ REP และ Statement</p></div>
       <p className="ttm-date">{periodText}</p>
     </header>
     {outcome.kind === 'error'

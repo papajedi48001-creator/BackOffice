@@ -7,13 +7,13 @@ import type { TtmPreset } from '@backoffice/core';
 import { ThaiDateInput } from '../../../../components/thai-date-input';
 import { endFollowingStart } from '../../../../lib/date-range';
 
-/** ตั้งแต่วันที่ / ถึงวันที่ with the legacy preset chips; `path` is the page it reloads (dashboard or ตรวจสอบการจับคู่รหัส). */
-export function TtmFilter({ path, start, end, presets, children }: { path: string; start: string; end: string; presets: readonly TtmPreset[]; children?: React.ReactNode }) {
+/** ตั้งแต่วันที่ / ถึงวันที่ with the legacy preset chips; `path` is the page it reloads (dashboard or ตรวจสอบการจับคู่รหัส), `query` stays in its link (e.g. the tab). */
+export function TtmFilter({ path, query: keep = {}, start, end, presets, children }: { path: string; query?: Readonly<Record<string, string>>; start: string; end: string; presets: readonly TtmPreset[]; children?: React.ReactNode }) {
   const router = useRouter();
   const ids = useId();
   const [from, setFrom] = useState(start);
   const [to, setTo] = useState(end);
-  const query = (s: string, e: string) => `${path}?${new URLSearchParams({ start: s, end: e }).toString()}`;
+  const query = (s: string, e: string) => `${path}?${new URLSearchParams({ ...keep, start: s, end: e }).toString()}`;
   return <div className="money-filter search-card ttm-filter">
     <form className="money-date-filter" aria-label="ช่วงวันที่" onSubmit={(event) => { event.preventDefault(); router.push(query(from, to)); }}>
       <label htmlFor={`${ids}-from`}>ตั้งแต่วันที่</label>

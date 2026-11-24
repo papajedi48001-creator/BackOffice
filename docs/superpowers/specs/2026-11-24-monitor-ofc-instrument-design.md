@@ -40,3 +40,9 @@ Requested by wasan, 2026-11-24.
 
 1. Live HOSxP read per range (chosen): no copy of patient data, same as herb/TTM, always current.
 2. Nightly copy into BackOffice: faster pages but a second copy of patient data to keep in step; not needed at this volume.
+
+## Follow-up: one page with การ์ดเมนู (2026-11-24, user chose แบบ 2)
+
+- Monitor Instrument OFC moves into กองทุนฟื้นฟูสมรรถภาพ (`/money/disability?tab=imc|ofc|dp`); the separate menu item goes and `/money/ofc` redirects to the OFC tab, keeping its range.
+- Three cards above the content: Monitor IMC (ทะเบียน คน · เรียกเก็บ, ใกล้ครบกำหนด ≤ 30 วัน), Instrument OFC (คน · ครั้ง · บาท of the range, ยังไม่มี REP / ปฏิเสธ / รอ Statement), บริการฟื้นฟู (newest ปีงบ: ครั้ง · ขอเบิก, ติดสถานะ or ข้อมูลล่าสุด). The open card is outlined.
+- A tab shows only to whom may open it: IMC and บริการฟื้นฟู need the `disability` page, OFC the `ofc` page; the menu item shows for either.

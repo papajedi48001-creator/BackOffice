@@ -13,7 +13,7 @@ const summary = summarizeOfc(
   [rep('v1', 4000), rep('v2', 0, 'C438')],
   [{ docNo: '11093_OP202610_01', repNo: '691000117', vn: 'v1', date: '2026-10-20', claim: 4300, inst: 4000, total: 4300 }]
 );
-const base: OfcMonitorProps = { start: '2026-10-01', end: '2026-10-31', presets: ttmPresets('2026-10-31'), periodText: '1 ตุลาคม 2569 – 31 ตุลาคม 2569', canManage: false, showConnectionLink: false, outcome: { kind: 'data', summary, updatedAt: null } };
+const base: OfcMonitorProps = { start: '2026-10-01', end: '2026-10-31', presets: ttmPresets('2026-10-31'), periodText: '1 ตุลาคม 2569 – 31 ตุลาคม 2569', canManage: false, showConnectionLink: false, path: '/money/disability', query: { tab: 'ofc' }, outcome: { kind: 'data', summary, updatedAt: null } };
 
 describe('OfcMonitor', () => {
   it('sums people, claims, REP and Statement on the cards', () => {
@@ -25,6 +25,11 @@ describe('OfcMonitor', () => {
     expect(within(cards).getByText('REP ชดเชย').parentElement).toHaveTextContent('4,000.00 บาทปฏิเสธ 1 ครั้ง · รอ Statement 0 ครั้ง');
     expect(within(cards).getByText('Statement ค่าอวัยวะฯ').parentElement).toHaveTextContent('4,000.00 บาท');
     expect(screen.queryByRole('button', { name: 'นำเข้า REP / Statement' })).toBeNull();
+  });
+
+  it('keeps the OFC tab in the range links', () => {
+    render(<OfcMonitor {...base} />);
+    expect(screen.getByRole('link', { name: 'เดือนนี้' }).getAttribute('href')).toMatch(/^\/money\/disability\?tab=ofc&start=\d{4}-\d{2}-\d{2}&end=/);
   });
 
   it('opens a person to show each visit with its REP, Statement and status', () => {

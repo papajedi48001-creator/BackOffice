@@ -90,11 +90,13 @@ const labWaiting = (kind: 'decide' | 'issue') => async (db: Database, subject: A
   return kind === 'decide' ? new LabQueries(db).pendingDecisionCount() : new LabQueries(db).pendingIssueCount();
 };
 /** What the person may open in Smart Money, from money_member or `money.manage`. Hides links only; every page and API checks again. */
-const moneyMay = (page: MoneyPage | 'manage' | 'any') => async (db: Database, subject: AccessSubject) => {
+/** One page, or any of several (กองทุนฟื้นฟูสมรรถภาพ also holds Instrument OFC). */
+const moneyMay = (page: MoneyPage | readonly MoneyPage[] | 'manage' | 'any') => async (db: Database, subject: AccessSubject) => {
   if (canManageMoney(subject)) return true;
   if (!subject.personId || page === 'manage') return false;
   const member = await loadMoneyMember(db, subject.personId);
-  return page === 'any' ? (member?.pages.length ?? 0) > 0 : moneyCan(member, false, page);
+  if (page === 'any') return (member?.pages.length ?? 0) > 0;
+  return (typeof page === 'string' ? [page] : page).some((one) => moneyCan(member, false, one));
 };
 const labBadge = async (db: Database, subject: AccessSubject) => (await labWaiting('decide')(db, subject)) + (await labWaiting('issue')(db, subject));
 
@@ -205,11 +207,10 @@ export const moduleRegistry: readonly ModuleEntry[] = [
     { href: '/money/nhso/files', labelKey: 'moneyNhsoFiles', visible: everyone, available: moneyMay('manage') },
     { href: '/money/fdh', labelKey: 'moneyFdh', visible: everyone, available: moneyMay('fdh') },
     { href: '/money/fdh/files', labelKey: 'moneyFdhFiles', visible: everyone, available: moneyMay('manage') },
-    { href: '/money/disability', labelKey: 'moneyDisability', visible: everyone, available: moneyMay('disability') },
+    { href: '/money/disability', labelKey: 'moneyDisability', visible: everyone, available: moneyMay(['disability', 'ofc']) },
     { href: '/money/disability/files', labelKey: 'moneyDisabilityFiles', visible: everyone, available: moneyMay('manage') },
     { href: '/money/ttm', labelKey: 'moneyTtm', visible: everyone, available: moneyMay('ttm') },
     { href: '/money/herb', labelKey: 'moneyHerb', visible: everyone, available: moneyMay('herb') },
-    { href: '/money/ofc', labelKey: 'moneyOfc', visible: everyone, available: moneyMay('ofc') },
     { href: '/money/settings', labelKey: 'moneySettings', visible: everyone, available: moneyMay('manage') }
   ]), available: moneyMay('any') },
   // Mapping สิทธิ: ผู้ดูแลระบบ and ผู้จัดการโมดูล only; every page and API checks canManagePttypeMapping again.
