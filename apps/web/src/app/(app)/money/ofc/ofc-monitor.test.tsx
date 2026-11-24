@@ -32,28 +32,26 @@ describe('OfcMonitor', () => {
     expect(screen.getByRole('link', { name: 'เดือนนี้' }).getAttribute('href')).toMatch(/^\/money\/disability\?tab=ofc&start=\d{4}-\d{2}-\d{2}&end=/);
   });
 
-  it('opens a person to show each visit with its REP, Statement and status', () => {
+  it('lists each visit newest first with its REP, Statement, ส่วนต่าง, Error, REP No. and งวด STM', () => {
     render(<OfcMonitor {...base} canManage />);
     expect(screen.getByRole('button', { name: 'นำเข้า REP / Statement' })).toBeInTheDocument();
-    const table = screen.getByRole('table', { name: 'รายละเอียดรายบุคคล' });
-    const toggle = within(table).getByRole('button', { name: 'นาย สมมุติ หนึ่ง' });
-    expect(toggle).toHaveAttribute('aria-expanded', 'false');
-    fireEvent.click(toggle);
-    const visits = screen.getByRole('table', { name: 'การรับอุปกรณ์ นาย สมมุติ หนึ่ง' });
-    expect(within(visits).getAllByRole('row').map((r) => r.textContent)).toEqual([
-      'วันที่รับบริการVNรายการชิ้นเรียกเก็บREPStatementสถานะREP NO',
-      '25 ต.ค. 2569v3อุปกรณ์พยุงส้นเท้า12,000.00--ยังไม่มี REP-',
-      '20 ต.ค. 2569v1อุปกรณ์พยุงส้นเท้า24,000.004,000.004,000.00ได้รับแล้ว691000117',
-      'รวม 2 ครั้ง36,000.004,000.004,000.00'
+    const table = screen.getByRole('table', { name: 'รายละเอียดรายครั้ง' });
+    expect(within(table).getAllByRole('row').map((r) => r.textContent)).toEqual([
+      'ลำดับวันที่รับบริการชื่อ-สกุลรายการชิ้นเรียกเก็บชดเชย REPได้รับ STMส่วนต่างสถานะErrorREP No.งวด STM',
+      '125 ต.ค. 2569นาย สมมุติ หนึ่งHN h1อุปกรณ์พยุงส้นเท้า12,000.00---ยังไม่มี REP--',
+      '221 ต.ค. 2569นาง สมมุติ สองHN h2อุปกรณ์พยุงส้นเท้า24,000.000.00--4,000.00ปฏิเสธC438691000117-',
+      '320 ต.ค. 2569นาย สมมุติ หนึ่งHN h1อุปกรณ์พยุงส้นเท้า24,000.004,000.004,000.000.00ได้รับแล้ว691000117OP202610_01',
+      'รวม 3 ครั้ง · 2 คน510,000.004,000.004,000.00'
     ]);
   });
 
-  it('filters people by status', () => {
+  it('filters visits by status', () => {
     render(<OfcMonitor {...base} />);
     fireEvent.click(screen.getByRole('button', { name: 'ปฏิเสธ (1)' }));
-    const table = screen.getByRole('table', { name: 'รายละเอียดรายบุคคล' });
-    expect(within(table).queryByRole('button', { name: 'นาย สมมุติ หนึ่ง' })).toBeNull();
-    expect(within(table).getByRole('button', { name: 'นาง สมมุติ สอง' })).toBeInTheDocument();
+    const rows = within(screen.getByRole('table', { name: 'รายละเอียดรายครั้ง' })).getAllByRole('row');
+    expect(rows).toHaveLength(3);
+    expect(rows[1]).toHaveTextContent(/^121 ต.ค. 2569นาง สมมุติ สอง/);
+    expect(rows[2]).toHaveTextContent(/^รวม 1 ครั้ง · 1 คน/);
   });
 
   it('says when HOSxP is not set up, fails, or has nothing in the range', () => {

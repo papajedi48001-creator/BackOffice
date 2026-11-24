@@ -46,3 +46,19 @@ Requested by wasan, 2026-11-24.
 - Monitor Instrument OFC moves into กองทุนฟื้นฟูสมรรถภาพ (`/money/disability?tab=imc|ofc|dp`); the separate menu item goes and `/money/ofc` redirects to the OFC tab, keeping its range.
 - Three cards above the content: Monitor IMC (ทะเบียน คน · เรียกเก็บ, ใกล้ครบกำหนด ≤ 30 วัน), Instrument OFC (คน · ครั้ง · บาท of the range, ยังไม่มี REP / ปฏิเสธ / รอ Statement), บริการฟื้นฟู (newest ปีงบ: ครั้ง · ขอเบิก, ติดสถานะ or ข้อมูลล่าสุด). The open card is outlined.
 - A tab shows only to whom may open it: IMC and บริการฟื้นฟู need the `disability` page, OFC the `ofc` page; the menu item shows for either.
+
+## Follow-up: ตารางรายครั้ง (2026-11-24)
+
+The user asked for วันที่รับบริการ, REP No. and งวด STM in the table, saw three mockups, and picked แบบ 2: replace the per-person table with a per-visit table laid out like the FDH detail.
+
+- Columns: ลำดับ, วันที่รับบริการ, ชื่อ-สกุล (with HN), รายการ, ชิ้น, เรียกเก็บ, ชดเชย REP, ได้รับ STM, ส่วนต่าง, สถานะ, Error, REP No., งวด STM. Newest visit first.
+- The footer gives the visit and person count and the sums.
+- The status filter applies to visits.
+- งวด STM is the Statement's เลขที่เอกสาร without the hcode (`11093_OP202609_02` → `OP202609_02`), because the file's own งวด column is "-".
+- ส่วนต่าง is shown only once the result is final:
+  - paid: Statement minus เรียกเก็บ
+  - denied: REP (0) minus เรียกเก็บ
+  - otherwise "-"
+- Rejected approaches:
+  - แบบ 1: extra columns on the per-person table
+  - แบบ 3: a toggle between per-person and per-visit

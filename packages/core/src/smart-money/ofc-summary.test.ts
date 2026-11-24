@@ -18,6 +18,13 @@ describe('summarizeOfc', () => {
     expect(s.visits.find((v) => v.vn === 'v1')!.repNos).toEqual(['691000117']);
   });
 
+  it('gives each visit its Statement งวด (เลขที่เอกสาร without the hcode) and ส่วนต่าง once its result is final', () => {
+    const two = summarizeOfc(rows, [rep('v1', 4000), rep('v2', 0)], [stm('v1', 3000), { ...stm('v1', 1000), docNo: '11093_OP202611_02' }, stm('v1', 0)]);
+    expect(two.visits.map((v) => [v.vn, v.periods, v.diff])).toEqual([
+      ['v5', [], null], ['v4', [], null], ['v3', [], null], ['v1', ['OP202610_01', 'OP202611_02'], 0], ['v2', [], -4000]
+    ]);
+  });
+
   it('totals people, visits, pieces, claim, REP and Statement, and counts REP lines outside the HOSxP visits', () => {
     expect(s.totals).toEqual({ people: 4, visits: 5, qty: 9, claim: 18000, repPaid: 8000, stmPaid: 4000, noRep: 6000, denied: 1, waitStm: 1, repOutside: 1 });
   });

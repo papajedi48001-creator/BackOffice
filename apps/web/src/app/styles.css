@@ -1561,6 +1561,10 @@ h2.chat-window-title { cursor: default; }
 .dis-tab-main { color: var(--muted); font-size: .9rem; }
 .dis-tab-alert { font-size: .85rem; font-weight: 600; }
 .dis-tab-alert.is-warn { color: #9a3412; } .dis-tab-alert.is-bad { color: var(--chart-alert-ink); } .dis-tab-alert.is-ok { color: var(--success); } .dis-tab-alert.is-mute { color: var(--muted); font-weight: 400; }
+/* Monitor Instrument OFC รายละเอียดรายครั้ง: 13 columns scroll sideways instead of wrapping names and amounts. */
+.ofc-visits table { min-width: 1080px; }
+.ofc-visits td, .ofc-visits th { white-space: nowrap; vertical-align: middle; }
+.ofc-visits td.ofc-wrap { white-space: normal; min-width: 130px; }
 .imc-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-bottom: 14px; }
 .imc-head h3 { margin: 0; }
 .imc-head [role="status"] { flex: 1 1 auto; }
