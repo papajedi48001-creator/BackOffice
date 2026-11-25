@@ -130,8 +130,10 @@ describeWithDatabase('room booking on MariaDB', () => {
     const room = await createRoom();
     const booking = await submitted(booker, input(room.id, ['2026-11-25']));
     const queries = new RoomBookingQueries(database);
-    expect((await queries.pendingForApprover(approver)).map((entry) => entry.id)).toContain(booking.id);
-    expect(await queries.pendingForApprover({ personId: otherBookerId, roles: [{ name: 'room-booking-approver', organizationId: bookerUnit }] })).toEqual([]);
+    // A fixed clock: pendingForApprover hides bookings whose last day has ended, and 25 พ.ย. 2569 is no longer ahead.
+    const beforeTheBooking = new Date('2026-11-24T00:00:00Z');
+    expect((await queries.pendingForApprover(approver, beforeTheBooking)).map((entry) => entry.id)).toContain(booking.id);
+    expect(await queries.pendingForApprover({ personId: otherBookerId, roles: [{ name: 'room-booking-approver', organizationId: bookerUnit }] }, beforeTheBooking)).toEqual([]);
     expect((await queries.myBookings(bookerId)).map((entry) => entry.id)).toContain(booking.id);
   });
 
