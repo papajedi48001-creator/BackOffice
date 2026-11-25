@@ -54,3 +54,8 @@ it('links to openHref but stays current anywhere under href', () => {
   expect(link).toHaveAttribute('href', '/hr/people');
   expect(link).toHaveAttribute('aria-current', 'page');
 });
+
+it('wraps each name so the narrow menu can put it under the icon', () => {
+  render(<SidebarNav items={[{ href: '/leave', label: 'moduleLeave', icon: 'leave' }]} />);
+  expect(screen.getByRole('link', { name: 'การลา' }).querySelector('.nav-label')).toHaveTextContent('การลา');
+});

@@ -9,16 +9,17 @@ import type { ModuleIconName } from '../lib/modules';
 import { SignOutButton } from './sign-out-button';
 import { RequestAction } from './request-action';
 import { SupportChat } from './support-chat';
+import type { SidebarWidth } from '../lib/sidebar-width';
 
 /** `development`: the module is in DEVELOPMENT mode (ตั้งค่าโปรแกรม), shown with a กำลังพัฒนา marker. */
 /** `openHref`: where the menu item links when not `href`; `href` still marks the item current for every page under it. */
 export interface NavigationItem { href: string; openHref?: string; label: MessageKey; badge?: number; module?: string; icon?: ModuleIconName; development?: boolean; submitAction?: SubmitAction; }
 const noProfile: ShellProfile = { displayName: null, positionTitle: null, photoUrl: null };
-/** `chat`: the แชตกับผู้ดูแลระบบ button; left out (tests, pages without a database), there is no button. */
-export function AppShell({ navigation, profile = noProfile, bell = { unread: 0, items: [] }, chat, role = null, children }: { navigation: NavigationItem[]; role?: ShellRole | null; profile?: ShellProfile; bell?: { unread: number; items: BellItem[] }; chat?: { admin: boolean; images: boolean; unread: number }; children: React.ReactNode }) {
-  return <ShellFrame navigation={navigation}>
+/** `chat`: the แชตกับผู้ดูแลระบบ button; left out (tests, pages without a database), there is no button. `sidebar`: the saved menu width (cookie). */
+export function AppShell({ navigation, profile = noProfile, bell = { unread: 0, items: [] }, chat, role = null, sidebar, children }: { navigation: NavigationItem[]; role?: ShellRole | null; sidebar?: SidebarWidth; profile?: ShellProfile; bell?: { unread: number; items: BellItem[] }; chat?: { admin: boolean; images: boolean; unread: number }; children: React.ReactNode }) {
+  return <ShellFrame navigation={navigation} sidebar={sidebar}>
     <aside className="sidebar">
-      <div className="brand-block"><BrandLogo size={44} decorative className="brand-mark" /><div><p className="brand">{t('hospitalName')}</p><h1><AppName /></h1></div></div>
+      <div className="brand-block"><BrandLogo size={44} decorative className="brand-mark" /><div className="brand-text"><p className="brand">{t('hospitalName')}</p><h1><AppName /></h1></div></div>
       <SidebarNav items={navigation} />
       <SignOutButton />
     </aside>
