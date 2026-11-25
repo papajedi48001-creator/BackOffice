@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import { AppShell } from './app-shell';
 
@@ -26,4 +26,24 @@ it('puts the module submit action first in the top row, before the permission no
 it('puts the แชตกับผู้ดูแลระบบ button on every page', () => {
   render(<AppShell navigation={[{ href: '/dashboard', label: 'dashboard', module: 'home' }]} chat={{ admin: false, images: true, unread: 1 }}><p>เนื้อหา</p></AppShell>);
   expect(screen.getByRole('button', { name: 'แชตกับผู้ดูแลระบบ 1 ข้อความที่ยังไม่อ่าน' })).toBeInTheDocument();
+});
+
+it('draws the menu at the saved width, as a rail when it was folded, with the edge tab to change it', () => {
+  const { container } = render(<AppShell navigation={[{ href: '/dashboard', label: 'dashboard', module: 'home' }]} sidebar={{ width: 300, lastWide: 300 }}><p>เนื้อหา</p></AppShell>);
+  const shell = container.querySelector<HTMLElement>('.app-shell')!;
+  expect(shell.style.getPropertyValue('--sidebar-w')).toBe('300px');
+  expect(shell).not.toHaveAttribute('data-sidebar-rail');
+  expect(screen.getByRole('button', { name: 'ย่อเมนู' })).toBeInTheDocument();
+  const rail = render(<AppShell navigation={[{ href: '/dashboard', label: 'dashboard', module: 'home' }]} sidebar={{ width: 92, lastWide: 300 }}><p>เนื้อหา</p></AppShell>);
+  expect(rail.container.querySelector('.app-shell')).toHaveAttribute('data-sidebar-rail');
+  expect(rail.getByRole('button', { name: 'ขยายเมนู' })).toBeInTheDocument();
+});
+
+it('saves the width in a cookie when the menu is folded', () => {
+  const { container } = render(<AppShell navigation={[{ href: '/dashboard', label: 'dashboard', module: 'home' }]}><p>เนื้อหา</p></AppShell>);
+  fireEvent.click(screen.getByRole('button', { name: 'ย่อเมนู' }));
+  const shell = container.querySelector<HTMLElement>('.app-shell')!;
+  expect(shell.style.getPropertyValue('--sidebar-w')).toBe('92px');
+  expect(shell).toHaveAttribute('data-sidebar-rail');
+  expect(document.cookie).toContain('bo_sidebar=92:272');
 });

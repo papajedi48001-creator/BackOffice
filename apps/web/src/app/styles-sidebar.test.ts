@@ -31,3 +31,26 @@ describe('เมนูด้านซ้าย (DESIGN.md, แบบผสม 10
     expect(sidebar).toMatch(/background: url\("data:image\/svg\+xml,[^"]*feTurbulence[^"]*"\)[^;]*var\(--brand-deep\)/);
   });
 });
+
+describe('เมนูซ้ายลากปรับขนาด + แท็บขอบ (DESIGN.md)', () => {
+  it('sizes the menu column from --sidebar-w and stops animating while it is being dragged', () => {
+    expect(css).toMatch(/\.app-shell \{[^}]*grid-template-columns: var\(--sidebar-w, 272px\) minmax\(0, 1fr\)/);
+    expect(css).toMatch(/\.app-shell\.is-resizing[^{]*\{[^}]*transition: none/);
+  });
+  it('puts a draggable edge on the menu with a blue tab that sticks out of it', () => {
+    expect(css).toMatch(/\.sidebar-edge \{[^}]*position: fixed[^}]*left: calc\(var\(--sidebar-w, 272px\) - 6px\)[^}]*cursor: col-resize/);
+    expect(css).toMatch(/\.sidebar-tab \{[^}]*border-radius: 0 12px 12px 0[^}]*background: var\(--brand-deep\)/);
+    expect(css).toMatch(/\[data-sidebar-rail\] \.sidebar-tab svg \{[^}]*rotate\(180deg\)/);
+  });
+  it('folds to a rail with the icon on top and the name under it, only on wide screens', () => {
+    const rail = css.match(/@media \(min-width: 721px\) \{\n {2}\.app-shell\[data-sidebar-rail\]([\s\S]*?)\n\}/)?.[0] ?? '';
+    expect(rail).toMatch(/\[data-sidebar-rail\] \.brand-text \{ display: none/);
+    expect(rail).toMatch(/\[data-sidebar-rail\] \.sidebar \.nav-track a \{[^}]*flex-direction: column/);
+    expect(rail).toMatch(/\[data-sidebar-rail\] \.nav-label \{[^}]*-webkit-line-clamp: 2/);
+    expect(rail).toMatch(/\[data-sidebar-rail\] \.nav-badge \{[^}]*position: absolute/);
+  });
+  it('hides the edge on phones and when printing', () => {
+    expect(css).toMatch(/@media \(max-width: 720px\) \{ \.sidebar-edge \{ display: none/);
+    expect(css).toMatch(/@media print \{[^}]*\.sidebar-edge/);
+  });
+});

@@ -41,6 +41,14 @@ export function SidebarNav({ items }: { items: NavigationItem[] }) {
 
   useBrowserLayoutEffect(() => { place(pill.current, active); setReady(true); }, [active, items, place]);
   useBrowserLayoutEffect(() => { place(ghost.current, hovered); }, [hovered, items, place]);
+  // The menu can be dragged wider or folded to the rail (SidebarEdge); keep both pills on their items as it changes.
+  useEffect(() => {
+    const element = track.current;
+    if (!element || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => { place(pill.current, active); place(ghost.current, hovered); });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [active, hovered, place]);
 
   return <nav aria-label={t('appName')}><div ref={track} className={`nav-track${ready ? ' is-ready' : ''}`} onPointerLeave={() => setHovered(active)}>
     <span ref={ghost} className="nav-ghost" aria-hidden="true" data-at={hovered ?? undefined} />
@@ -50,7 +58,7 @@ export function SidebarNav({ items }: { items: NavigationItem[] }) {
       aria-current={isCurrent(item.href) ? 'page' : undefined}
       onPointerEnter={() => setHovered(item.href)} onFocus={() => setHovered(item.href)} onClick={() => setActive(item.href)}>
       {item.icon ? <span className="nav-icon" aria-hidden="true"><ModuleIcon name={item.icon} /></span> : null}
-      {t(item.label)}{item.development ? <span className="nav-dev-tag">{t('moduleDevelopmentShort')}</span> : null}{item.badge ? <span className="nav-badge" aria-label={`${item.badge} ${t(item.href === '/notifications' ? 'unreadNotifications' : 'launcherBadgeSuffix')}`}>{item.badge}</span> : null}
+      <span className="nav-label">{t(item.label)}</span>{item.development ? <span className="nav-dev-tag">{t('moduleDevelopmentShort')}</span> : null}{item.badge ? <span className="nav-badge" aria-label={`${item.badge} ${t(item.href === '/notifications' ? 'unreadNotifications' : 'launcherBadgeSuffix')}`}>{item.badge}</span> : null}
     </Link></li>)}</ul>
   </div></nav>;
 }
