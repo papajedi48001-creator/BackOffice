@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import type { SidebarWidth } from '../lib/sidebar-width';
 import { SidebarEdge } from './sidebar-edge';
 
@@ -51,4 +51,25 @@ it('toggles with Ctrl B, but not while typing in a field', () => {
   expect(screen.getByTestId('width')).toHaveTextContent('272:272');
   fireEvent.keyDown(document.body, { key: 'b', ctrlKey: true });
   expect(screen.getByTestId('width')).toHaveTextContent('92:272');
+});
+
+it('never captures the pointer, because Chromium then sends the click to the edge and the tab stops working', () => {
+  const capture = vi.fn();
+  Element.prototype.setPointerCapture = capture;
+  render(<Harness start={{ width: 272, lastWide: 272 }} />);
+  const tab = screen.getByRole('button', { name: 'ย่อเมนู' });
+  fireEvent.pointerDown(tab, { clientX: 272, pointerId: 1, button: 0 });
+  fireEvent.pointerUp(window, { clientX: 272, pointerId: 1 });
+  fireEvent.click(tab);
+  expect(capture).not.toHaveBeenCalled();
+  expect(screen.getByTestId('width')).toHaveTextContent('92:272');
+});
+
+it('keeps following a drag that leaves the narrow edge', () => {
+  render(<Harness start={{ width: 272, lastWide: 272 }} />);
+  const edge = screen.getByRole('separator', { name: /ความกว้างเมนู/ });
+  fireEvent.pointerDown(edge, { clientX: 272, pointerId: 1, button: 0 });
+  fireEvent.pointerMove(window, { clientX: 340, pointerId: 1 });
+  fireEvent.pointerUp(window, { clientX: 340, pointerId: 1 });
+  expect(screen.getByTestId('width')).toHaveTextContent('340:340');
 });

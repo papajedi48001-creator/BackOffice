@@ -45,7 +45,7 @@ export function SidebarEdge({ state, onChange }: { state: SidebarWidth; onChange
     let raw = startWidth;
     let moving = false;
     dragged.current = false;
-    element.setPointerCapture?.(event.pointerId);
+    // Listen on the window instead of capturing the pointer: with capture, Chromium sends the click to the edge, not the tab.
     const move = (moveEvent: PointerEvent) => {
       if (!moving && Math.abs(moveEvent.clientX - startX) < DRAG_START) return;
       if (!moving) { moving = true; dragged.current = true; shell?.classList.add('is-resizing'); }
@@ -55,15 +55,15 @@ export function SidebarEdge({ state, onChange }: { state: SidebarWidth; onChange
       shell?.toggleAttribute('data-sidebar-rail', raw <= SIDEBAR_SNAP);
     };
     const up = () => {
-      element.removeEventListener('pointermove', move);
-      element.removeEventListener('pointerup', up);
-      element.removeEventListener('pointercancel', up);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
       shell?.classList.remove('is-resizing');
       if (moving) onChange(widthState(clampSidebarWidth(raw), state.lastWide));
     };
-    element.addEventListener('pointermove', move);
-    element.addEventListener('pointerup', up);
-    element.addEventListener('pointercancel', up);
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
   }
 
   function onKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
